@@ -1,0 +1,16 @@
+{
+  "x": 1296,
+  "y": 364,
+  "width": 240,
+  "mode": 3,
+  "height": 460,
+  "collapsed_height": 28,
+  "is_collapsed": false,
+  "always_on_top": true,
+  "opacity": 1.0,
+  "snap_distance": 20,
+  "idle_threshold": 60.0,
+  "lock_mode": true,
+  "lock_position": true,
+  "lock_opacity": true
+}

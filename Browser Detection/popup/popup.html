@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Activity & Media Sentinel</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="sentinel-app">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <img src="../icons/icon32.png" alt="Logo" class="brand-icon">
+        <div class="brand-text">
+          <h1 class="brand-title">Media Sentinel</h1>
+          <span id="brandSubtitle" class="brand-subtitle">Activity & Media Telemetry</span>
+        </div>
+      </div>
+      <div class="header-badges">
+        <div id="hubStatusBadge" class="ws-badge disconnected" title="Standalone SQLite Data Hub (ws://127.0.0.1:65433)">
+          <span class="ws-dot"></span>
+          <span id="hubStatusText" class="ws-text">Hub Offline</span>
+        </div>
+        <div id="wsStatusBadge" class="ws-badge disconnected" title="Video Detector HUD Link">
+          <span class="ws-dot"></span>
+          <span id="wsStatusText" class="ws-text">HUD Offline</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Primary Multi-Tabs Navigation -->
+    <nav class="top-nav-tabs" role="tablist">
+      <button id="mainTabMedia" class="top-tab-btn active" data-view="media" role="tab" aria-selected="true" aria-controls="viewMediaPane">
+        <span class="top-tab-icon">🎬</span>
+        <span id="topTabMediaText" class="top-tab-label">Live Media</span>
+        <span id="tabMediaLiveDot" class="tab-live-dot hidden" title="Media Active"></span>
+      </button>
+      <button id="mainTabTracking" class="top-tab-btn" data-view="tracking" role="tab" aria-selected="false" aria-controls="viewTrackingPane">
+        <span class="top-tab-icon">⏱️</span>
+        <span id="topTabTrackingText" class="top-tab-label">Time Tracking</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: Live Media Player View Pane -->
+    <div id="viewMediaPane" class="tab-pane active" role="tabpanel" aria-labelledby="mainTabMedia">
+      <!-- Live Media Sentinel Card -->
+      <section id="mediaSentinelCard" class="media-card idle">
+        <!-- Top Row: Card Title & The Single Dynamic Interactive Status Button -->
+        <div class="media-card-top">
+          <div class="media-card-title-group">
+            <span id="mediaPulseIcon" class="media-pulse-icon">●</span>
+            <span id="mediaStatusHeading" class="media-status-heading">LIVE MEDIA SENTINEL</span>
+          </div>
+          
+          <!-- The Single Dynamic Status Button (Switches dynamically: Playing / Paused / Buffering / Muted / Stopped / Idle) -->
+          <button id="dynamicStatusBtn" class="dynamic-status-btn idle" title="Click to Toggle Play / Pause">
+            <span id="dynamicStatusDot" class="status-dot"></span>
+            <span id="dynamicStatusText" class="status-btn-text">⚪ Idle</span>
+          </button>
+        </div>
+
+        <!-- Media Details Body -->
+        <div id="mediaDetailsBody" class="media-details-body">
+          <!-- Media Meta Header: Platform pill & Resolution badge -->
+          <div class="media-header-meta">
+            <span id="mediaPlatformTag" class="media-platform-tag">NO MEDIA</span>
+            <span id="mediaQualityBadge" class="badge badge-quality">Idle</span>
+          </div>
+
+          <!-- Full Video Title (Multi-line, no cutting/ellipsis) -->
+          <div class="media-title-container">
+            <div id="mediaTitleText" class="media-title" title="Full Video Title">
+              No Active Media Stream Detected
+            </div>
+          </div>
+
+          <!-- Progress Bar & Numerical Readout (Watched / Total / Percentage) -->
+          <div id="mediaProgressSection" class="media-progress-section hidden">
+            <div id="progressBarContainer" class="progress-bar-container" title="Click to Seek" tabindex="0">
+              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="progress-stats-row">
+              <div class="time-group">
+                <span id="lblTimeElapsed" class="time-label">Watched:</span>
+                <span id="timeElapsed" class="time-val">00:00</span>
+              </div>
+              <div class="pct-group">
+                <span id="timeProgressPercent" class="time-pct">0.0%</span>
+              </div>
+              <div class="time-group">
+                <span id="lblTimeDuration" class="time-label">Total:</span>
+                <span id="timeDuration" class="time-val">00:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Volume Progress Bar & Control Section -->
+          <div id="mediaVolumeSection" class="media-volume-section hidden">
+            <div class="volume-header-row">
+              <div class="volume-label-group">
+                <span id="volumeIcon" class="volume-icon">🔊</span>
+                <span id="lblVolume" class="volume-title">Volume:</span>
+                <span id="volumePercentReadout" class="volume-pct">100%</span>
+              </div>
+              <button id="btnQuickMute" class="btn-quick-mute" title="Toggle Mute">
+                <span id="quickMuteText">🔊 Normal</span>
+              </button>
+            </div>
+            <div id="volumeBarContainer" class="volume-bar-container" title="Click or Drag to Adjust Volume" tabindex="0" role="slider" aria-label="Volume Control" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+              <div id="volumeBarFill" class="volume-bar-fill" style="width: 100%;">
+                <span class="volume-thumb"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Metrics Badges Row (Resolution, Playback Speed, Volume, Domain) -->
+          <div id="mediaMetaRow" class="media-meta-row hidden">
+            <span id="mediaDomainBadge" class="badge badge-dim" title="Domain">-</span>
+            <span id="mediaResolutionBadge" class="badge badge-accent" title="Video Resolution">1080p FHD</span>
+            <span id="mediaSpeedBadge" class="badge badge-dim" title="Playback Speed">⚡ 1.0x</span>
+            <span id="mediaVolumeBadge" class="badge badge-dim" title="Volume State">🔊 100%</span>
+          </div>
+
+          <!-- Interactive Quick Action Controls Row -->
+          <div id="mediaControlsRow" class="media-controls-row hidden">
+            <button id="btnCtrlRewind" class="ctrl-btn" title="10s Rewind">⏪ -10s</button>
+            <button id="btnCtrlTogglePlay" class="ctrl-btn primary" title="Play / Pause">⏯️ Play</button>
+            <button id="btnCtrlForward" class="ctrl-btn" title="10s Forward">⏩ +10s</button>
+            <button id="btnCtrlToggleMute" class="ctrl-btn" title="Mute / Unmute">🔊 Mute</button>
+            <div class="speed-stepper-container" title="Adjust playback speed (-0.25x / +0.25x)">
+              <button id="btnCtrlSpeedDown" class="ctrl-btn-stepper" title="Decrease speed (-0.25x)">➖</button>
+              <span id="ctrlSpeedDisplay" class="ctrl-speed-val">⚡ 1.0x</span>
+              <button id="btnCtrlSpeedUp" class="ctrl-btn-stepper" title="Increase speed (+0.25x)">➕</button>
+            </div>
+          </div>
+
+          <!-- Extra Horizontal Row for Advanced Controls & Window Modes -->
+          <div id="mediaAdvancedRow" class="media-advanced-row hidden">
+            <button id="btnCtrlFullscreen" class="ctrl-btn-adv" title="Toggle Fullscreen">
+              <span class="adv-icon">⛶</span> <span id="ctrlFullscreenText">Fullscreen</span>
+            </button>
+            <button id="btnCtrlPip" class="ctrl-btn-adv" title="Toggle Picture-in-Picture">
+              <span class="adv-icon">🪟</span> <span id="ctrlPipText">Pop-up PiP</span>
+            </button>
+            <button id="btnCtrlTheater" class="ctrl-btn-adv" title="Toggle Theater Mode">
+              <span class="adv-icon">🎬</span> <span id="ctrlTheaterText">Theater</span>
+            </button>
+            <div class="quality-stepper-container" title="Change video quality">
+              <button id="btnCtrlQualityDown" class="ctrl-btn-stepper" title="Decrease quality">🔽</button>
+              <span id="ctrlQualityDisplay" class="ctrl-quality-val">Quality</span>
+              <button id="btnCtrlQualityUp" class="ctrl-btn-stepper" title="Increase quality">🔼</button>
+            </div>
+          </div>
+
+          <!-- Idle Empty Guidance Container (when no media is playing) -->
+          <div id="mediaEmptyPrompt" class="media-empty-prompt">
+            <div class="empty-media-icon">📺</div>
+            <div id="emptyMediaText" class="empty-media-text">Play YouTube, Netflix or any media in any browser tab. Live player and controls will appear here.</div>
+            <button id="btnGoToTracking" class="btn-jump-tab" title="View Time Tracking">
+              ⏱️ View Time Tracking
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: Time Tracking View Pane -->
+    <div id="viewTrackingPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabTracking">
+      <!-- Donut Chart & Overview Hero -->
+      <section class="chart-section">
+        <div class="donut-wrapper">
+          <svg id="donutSvg" class="donut-chart" viewBox="0 0 200 200" width="170" height="170">
+            <circle cx="100" cy="100" r="76" class="donut-track" />
+            <g id="donutSlicesGroup"></g>
+          </svg>
+          <div class="donut-center-readout">
+            <span id="donutCenterTime" class="center-time">0h 00m</span>
+            <span id="donutCenterLabel" class="center-label">Today's Time</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Temporal Tabs Navigation -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="today">
+          <span id="subtabTodayText">Today</span>
+        </button>
+        <button class="tab-btn" data-tab="daily">
+          <span id="subtabDailyText">Daily Avg</span>
+        </button>
+        <button class="tab-btn" data-tab="total">
+          <span id="subtabTotalText">Total Time</span>
+        </button>
+      </nav>
+
+      <!-- Quick Stats Pills -->
+      <section class="stats-pills">
+        <div class="stat-pill">
+          <span id="pillTodayLabel" class="pill-label">Today</span>
+          <span id="pillTodayTime" class="pill-value">0h 00m</span>
+        </div>
+        <div class="stat-pill">
+          <span id="pillDailyLabel" class="pill-label">Daily Avg</span>
+          <span id="pillDailyAvg" class="pill-value">0h 00m</span>
+        </div>
+        <div class="stat-pill">
+          <span id="pillSessionsLabel" class="pill-label">Sessions</span>
+          <span id="pillSessionsCount" class="pill-value">0</span>
+        </div>
+      </section>
+
+      <!-- Domain Usage Breakdown Section -->
+      <section class="breakdown-section">
+        <div class="section-header">
+          <h2 id="sectionDomainTitle" class="section-title">Domain Breakdown</h2>
+          <input type="text" id="domainSearchInput" class="search-input" placeholder="Search domain...">
+        </div>
+
+        <div id="domainsListContainer" class="domains-list">
+          <div class="empty-state">
+            <span id="emptyDomainStateText">No browsing activity recorded yet. Browse any website to start tracking!</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Action Footer -->
+    <footer class="footer">
+      <button id="btnRefresh" class="footer-btn" title="Refresh Telemetry">
+        <span class="refresh-spinner-icon">🔄</span>
+        <span id="btnRefreshText">Refresh</span>
+      </button>
+      <button id="btnReconnectWs" class="footer-btn btn-hud-action" title="Launch & Connect Video Detector HUD">
+        <span id="btnReconnectWsIcon">⚡</span>
+        <span id="btnReconnectWsText">HUD</span>
+      </button>
+      <button id="btnSwitchMediaTab" class="footer-btn btn-switch-tab" title="Switch to Media Tab">
+        <span id="btnSwitchMediaTabIcon">🎯</span>
+        <span id="btnSwitchMediaTabText">Switch Tab</span>
+      </button>
+      <button id="btnOpenDashboard" class="footer-btn btn-dashboard-primary" title="Open Dashboard">
+        <span id="btnOpenDashboardText">📊 Dashboard</span>
+      </button>
+    </footer>
+
+    <!-- Toast Notification Floating Banner (Bottom Pinned - Zero Layout Shift Standard) -->
+    <div id="popupToastNotification" class="toast-banner hidden" role="status" aria-live="polite">
+      <span id="popupToastIcon" class="toast-icon">ℹ️</span>
+      <span id="popupToastMessage" class="toast-msg">Telemetry Refreshed</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

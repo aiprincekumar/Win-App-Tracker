@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Web Activity & Media Sentinel</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" type="image/png" href="../icons/icon32.png">
+</head>
+<body class="theme-dark">
+  <div class="dashboard-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="../icons/icon48.png" alt="Sentinel Logo" class="brand-logo">
+        <div class="brand-info">
+          <h1 class="brand-title">Media Sentinel</h1>
+          <span id="brandEditionLabel" class="brand-edition">Enterprise Analytics</span>
+        </div>
+      </div>
+
+      <!-- Main Navigation Menu -->
+      <nav class="sidebar-nav" role="tablist">
+        <button id="navTabTracking" class="nav-item active" data-tab="tracking" role="tab" aria-selected="true" aria-controls="paneTracking">
+          <span class="nav-icon">⏱️</span>
+          <span id="navTrackingText" class="nav-text">Time Tracking</span>
+        </button>
+        <button id="navTabMedia" class="nav-item" data-tab="media" role="tab" aria-selected="false" aria-controls="paneMedia">
+          <span class="nav-icon">🎬</span>
+          <span id="navMediaText" class="nav-text">Media Analytics</span>
+          <span id="sidebarLiveDot" class="nav-live-dot hidden" title="Media Active"></span>
+        </button>
+        <button id="navTabSettings" class="nav-item" data-tab="settings" role="tab" aria-selected="false" aria-controls="paneSettings">
+          <span class="nav-icon">⚙️</span>
+          <span id="navSettingsText" class="nav-text">Settings & Data</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer Data Hub Status Widget -->
+      <div class="sidebar-hud-card">
+        <div class="hud-card-header">
+          <span class="hud-card-title">SQLite Data Hub</span>
+          <span id="dataHubSidebarDot" class="hud-dot offline"></span>
+        </div>
+        <div class="hud-card-body">
+          <span id="dataHubSidebarLabel" class="hud-status-text">Hub Offline</span>
+          <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
+        </div>
+        <button id="btnSidebarReconnectHub" class="btn-hud-reconnect" title="Reconnect to SQLite Data Hub">
+          ⚡ Reconnect Hub
+        </button>
+      </div>
+
+      <!-- Sidebar Footer HUD Status Widget -->
+      <div class="sidebar-hud-card">
+        <div class="hud-card-header">
+          <span class="hud-card-title">Video Detector HUD</span>
+          <span id="hudStatusDot" class="hud-dot offline"></span>
+        </div>
+        <div class="hud-card-body">
+          <span id="hudStatusLabel" class="hud-status-text">HUD Offline</span>
+          <span class="hud-address">ws://127.0.0.1:65432</span>
+        </div>
+        <button id="btnSidebarReconnect" class="btn-hud-reconnect" title="Reconnect to HUD">
+          ⚡ Reconnect HUD
+        </button>
+      </div>
+
+      <!-- Version & Profile footer -->
+      <div class="sidebar-footer">
+        <span class="version-label">v1.0.0 Production Edition</span>
+        <span class="author-label">Lead Architect: Atul Verma</span>
+      </div>
+    </aside>
+
+    <!-- Main Content Stage Area -->
+    <main class="main-stage">
+      <!-- Top App Bar -->
+      <header class="top-app-bar">
+        <div class="app-bar-left">
+          <h2 id="topBarTitle" class="current-page-title">⏱️ Time Tracking Analytics</h2>
+          <span id="topBarSubtitle" class="current-page-subtitle">Detailed breakdown of daily browsing time and website usage</span>
+        </div>
+
+        <div class="app-bar-right">
+          <!-- Multi-Browser Filter Selector -->
+          <div class="browser-filter-container" title="Filter analytics by browser">
+            <span class="browser-filter-icon">🌐</span>
+            <select id="browserFilterSelect" class="browser-filter-select" aria-label="Filter Analytics by Browser">
+              <option value="all">🌐 All Browsers</option>
+              <option value="chrome">Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="brave">Brave</option>
+              <option value="opera">Opera</option>
+            </select>
+          </div>
+
+          <!-- Standalone SQLite Data Hub Status Badge -->
+          <div id="dataHubBadge" class="datahub-status-badge offline" title="Standalone SQLite Data Hub (ws://127.0.0.1:65433) - Click to Reconnect">
+            <span class="datahub-dot"></span>
+            <span id="dataHubBadgeText">Hub Offline</span>
+          </div>
+
+          <div id="liveClockPill" class="live-clock-pill">
+            <span class="clock-icon">🕒</span>
+            <span id="liveClockText">--:--:--</span>
+          </div>
+          <!-- 1-Click Language Switcher (English / हिंदी) -->
+          <button id="btnLangToggle" class="btn-action-outline btn-lang-toggle" title="Switch Language (English / हिंदी)">
+            <span class="lang-icon">🌐</span>
+            <span id="langToggleText">English</span>
+          </button>
+          <button id="btnGlobalRefresh" class="btn-action-outline" title="Refresh Data">
+            <span class="refresh-spinner-icon">🔄</span>
+            <span id="btnGlobalRefreshText">Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Tab Content Area -->
+      <div class="tab-content-container">
+
+        <!-- ================================================================= -->
+        <!-- TAB A: TIME TRACKING ANALYTICS                                     -->
+        <!-- ================================================================= -->
+        <section id="paneTracking" class="tab-pane active" role="tabpanel" aria-labelledby="navTabTracking">
+          
+          <!-- Key Metrics Cards Row -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMetricToday" class="metric-label">Today's Browsing Time</span>
+                <span class="metric-icon-box cyan">⏱️</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="trackMetricTodayTime" class="metric-big-num">0h 00m</span>
+              </div>
+              <div class="metric-footer">
+                <span id="lblMetricTodaySub" class="metric-subtext">Active browser sessions</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMetricDaily" class="metric-label">Daily Average</span>
+                <span class="metric-icon-box emerald">📊</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="trackMetricDailyAvg" class="metric-big-num">0h 00m</span>
+              </div>
+              <div class="metric-footer">
+                <span id="trackMetricHistoryDays" class="metric-subtext">Average over past 1 day</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMetricTotal" class="metric-label">Total Tracked Time</span>
+                <span class="metric-icon-box violet">⏳</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="trackMetricTotalTime" class="metric-big-num">0h 00m</span>
+              </div>
+              <div class="metric-footer">
+                <span id="trackMetricFirstDate" class="metric-subtext">Since tracking began</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMetricTopDomain" class="metric-label">Top Website</span>
+                <span class="metric-icon-box amber">🏆</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="trackMetricTopDomain" class="metric-big-num text-truncate">-</span>
+              </div>
+              <div class="metric-footer">
+                <span id="trackMetricTopDomainTime" class="metric-subtext">Most active domain</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Temporal Subtabs & Visual Graph Row -->
+          <div class="analytics-hero-card">
+            <div class="card-top-bar">
+              <div class="card-title-group">
+                <h3 id="headingUsageDist" class="card-heading">Website Usage Time Distribution</h3>
+                <span id="captionUsageDist" class="card-caption">Select time range: Today, Daily Average, or Total Time</span>
+              </div>
+
+              <!-- Temporal Subtabs Toggle -->
+              <div class="temporal-subtabs" role="tablist">
+                <button class="subtab-btn active" data-temporal="today" role="tab" aria-selected="true">
+                  <span id="subtabTodayText">📅 Today</span>
+                </button>
+                <button class="subtab-btn" data-temporal="daily" role="tab" aria-selected="false">
+                  <span id="subtabDailyText">📈 Daily Avg</span>
+                </button>
+                <button class="subtab-btn" data-temporal="total" role="tab" aria-selected="false">
+                  <span id="subtabTotalText">🌐 Total Time</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Visualization Content Grid (Donut Chart + Top 5 Distribution Bars) -->
+            <div class="visual-charts-layout">
+              <!-- Donut Chart Widget -->
+              <div class="donut-chart-container">
+                <div class="donut-svg-wrapper">
+                  <svg id="dashboardDonutSvg" class="dashboard-donut-svg" viewBox="0 0 240 240" width="220" height="220">
+                    <circle cx="120" cy="120" r="90" class="donut-background-track"></circle>
+                    <g id="dashboardDonutSlices"></g>
+                  </svg>
+                  <div class="donut-center-info">
+                    <span id="donutCenterBigTime" class="donut-center-time">0h 00m</span>
+                    <span id="donutCenterSubLabel" class="donut-center-label">Today's Total Time</span>
+                  </div>
+                </div>
+                <div id="donutLegendList" class="donut-legend-grid">
+                  <!-- Generated via JS -->
+                </div>
+              </div>
+
+              <!-- Top Domains Bar Distribution -->
+              <div class="top-distribution-bars">
+                <h4 id="headingTopBreakdown" class="sub-heading">Top Activity Breakdown</h4>
+                <div id="topBarsListContainer" class="top-bars-list">
+                  <!-- Generated via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comprehensive Domain Breakdown Table Card -->
+          <div class="data-table-card">
+            <div class="table-header-controls">
+              <div class="table-title-group">
+                <h3 id="headingDomainTable" class="table-heading">Domain Breakdown Table</h3>
+                <span id="tableDomainCountLabel" class="table-count-badge">0 domains</span>
+              </div>
+
+              <div class="table-search-filter">
+                <div class="search-input-wrapper">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="tableDomainSearch" class="styled-search-input" placeholder="Search domain (e.g. youtube, github)...">
+                </div>
+                <div class="table-sort-wrapper">
+                  <label for="tableSortSelect" id="lblTableSort" class="sort-label">Sort by:</label>
+                  <select id="tableSortSelect" class="styled-select">
+                    <option value="time_desc" selected>Time: High to Low</option>
+                    <option value="time_asc">Time: Low to High</option>
+                    <option value="sessions_desc">Sessions: High to Low</option>
+                    <option value="name_asc">Domain Name (A to Z)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- The Table -->
+            <div class="table-responsive-container">
+              <table class="modern-data-table" id="domainAnalyticsTable">
+                <thead>
+                  <tr>
+                    <th id="thColDomain" class="col-domain">Website / Domain</th>
+                    <th id="thColTime" class="col-time">Time Spent</th>
+                    <th id="thColRatio" class="col-ratio">Ratio</th>
+                    <th id="thColSessions" class="col-sessions">Sessions</th>
+                    <th id="thColLast" class="col-last">Last Active</th>
+                  </tr>
+                </thead>
+                <tbody id="domainTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="domainTableEmptyState" class="table-empty-box hidden">
+              <span class="empty-icon">🌐</span>
+              <p id="txtDomainEmpty" class="empty-text">No browsing activity recorded yet. Browse any website to start tracking!</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB B: MEDIA ANALYTICS & PLAYBACK HISTORY                         -->
+        <!-- ================================================================= -->
+        <section id="paneMedia" class="tab-pane" role="tabpanel" aria-labelledby="navTabMedia">
+          
+          <!-- Key Media Summary Metrics Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaTotalWatch" class="metric-label">Total Video Watch Time</span>
+                <span class="metric-icon-box rose">🎬</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricTotalWatch" class="metric-big-num">0h 00m</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaTotalWatch" class="metric-subtext">Total Watch Time</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaAvgWatch" class="metric-label">Avg Watch Time per Video</span>
+                <span class="metric-icon-box cyan">⏱️</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricAvgWatch" class="metric-big-num">0m 00s</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaAvgWatch" class="metric-subtext">Average per Video</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaAvgVolume" class="metric-label">Average Volume</span>
+                <span class="metric-icon-box emerald">🔊</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricAvgVolume" class="metric-big-num">0%</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaAvgVolume" class="metric-subtext">Average Volume Level</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaPeakVolume" class="metric-label">Peak Volume</span>
+                <span class="metric-icon-box amber">⚡</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricPeakVolume" class="metric-big-num">0%</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaPeakVolume" class="metric-subtext">Highest Recorded Volume</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaLowVolume" class="metric-label">Lowest Volume</span>
+                <span class="metric-icon-box violet">🔉</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricLowVolume" class="metric-big-num">0%</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaLowVolume" class="metric-subtext">Lowest Recorded Volume</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-header">
+                <span id="lblMediaSessions" class="metric-label">Total Media Sessions</span>
+                <span class="metric-icon-box blue">🎞️</span>
+              </div>
+              <div class="metric-value-container">
+                <span id="mediaMetricSessionsCount" class="metric-big-num">0</span>
+              </div>
+              <div class="metric-footer">
+                <span id="subMediaSessions" class="metric-subtext">Tracked Sessions</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Widget: Live Media Player Sentinel Card -->
+          <div class="live-player-hero-card">
+            <div class="player-hero-header">
+              <div class="player-title-badge-group">
+                <span id="playerPulseDot" class="player-pulse-dot idle">●</span>
+                <h3 id="headingPlayerHero" class="player-hero-heading">Live Media Player Status</h3>
+                <span id="playerStatusBadge" class="status-pill idle">⚪ Idle - No Media</span>
+              </div>
+
+              <!-- Quick Remote Media Controls -->
+              <div id="heroMediaControls" class="hero-controls-group hidden">
+                <button id="btnHeroRewind" class="btn-ctrl-hero" title="Rewind 10s">⏪ -10s</button>
+                <button id="btnHeroPlayPause" class="btn-ctrl-hero primary" title="Play / Pause">⏯️ Play / Pause</button>
+                <button id="btnHeroForward" class="btn-ctrl-hero" title="Forward 10s">⏩ +10s</button>
+                <button id="btnHeroMute" class="btn-ctrl-hero" title="Toggle Mute">🔊 Mute</button>
+                <div class="hero-speed-stepper" title="Adjust playback speed (-0.25x / +0.25x)">
+                  <button id="btnHeroSpeedDown" class="btn-ctrl-hero-stepper" title="Decrease speed (-0.25x)">➖</button>
+                  <span id="heroSpeedDisplay" class="hero-speed-val">⚡ 1.0x</span>
+                  <button id="btnHeroSpeedUp" class="btn-ctrl-hero-stepper" title="Increase speed (+0.25x)">➕</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Video Details or Idle State -->
+            <div class="player-hero-body">
+              <div id="playerActiveContent" class="player-active-box hidden">
+                <div class="video-meta-row">
+                  <span id="heroPlatformTag" class="tag-platform">YouTube</span>
+                  <span id="heroResolutionBadge" class="badge-accent">1080p FHD</span>
+                  <span id="heroDomainBadge" class="badge-dim">youtube.com</span>
+                </div>
+
+                <h4 id="heroVideoTitle" class="hero-video-title">Video Title Placeholder</h4>
+
+                <!-- Video Progress Bar -->
+                <div class="hero-progress-section">
+                  <div id="heroProgressBar" class="hero-progress-track" title="Click to seek" tabindex="0">
+                    <div id="heroProgressFill" class="hero-progress-fill" style="width: 0%;"></div>
+                  </div>
+                  <div class="hero-progress-labels">
+                    <span id="heroTimeElapsed" class="progress-time">00:00</span>
+                    <span id="heroProgressPercent" class="progress-pct">0.0%</span>
+                    <span id="heroTimeDuration" class="progress-time">00:00</span>
+                  </div>
+                </div>
+
+                <!-- Volume Slider -->
+                <div class="hero-volume-section">
+                  <div class="volume-info-group">
+                    <span id="heroVolumeIcon" class="vol-icon">🔊</span>
+                    <span id="lblHeroVolume" class="vol-label">Live Volume:</span>
+                    <span id="heroVolumeText" class="vol-pct-value">100%</span>
+                  </div>
+                  <div id="heroVolumeBar" class="hero-volume-track" title="Click or drag to adjust volume" tabindex="0" role="slider">
+                    <div id="heroVolumeFill" class="hero-volume-fill" style="width: 100%;">
+                      <span class="vol-thumb"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Extra Horizontal Row for Advanced Controls & Window Modes -->
+                <div id="heroAdvancedRow" class="hero-advanced-row">
+                  <div class="adv-modes-group">
+                    <button id="btnHeroFullscreen" class="btn-adv-mode" title="Toggle Fullscreen">
+                      <span class="adv-icon">⛶</span> <span id="btnHeroFullscreenText">Fullscreen</span>
+                    </button>
+                    <button id="btnHeroPip" class="btn-adv-mode" title="Toggle Picture-in-Picture">
+                      <span class="adv-icon">🪟</span> <span id="btnHeroPipText">Pop-up PiP</span>
+                    </button>
+                    <button id="btnHeroTheater" class="btn-adv-mode" title="Toggle Theater Mode">
+                      <span class="adv-icon">🎬</span> <span id="btnHeroTheaterText">Theater Mode</span>
+                    </button>
+                    <!-- Switch to Media Tab Button -->
+                    <button id="btnHeroSwitchTab" class="btn-adv-mode btn-switch-tab-hero" title="Switch to Media Tab">
+                      <span class="adv-icon">🎯</span> <span id="btnHeroSwitchTabText">Switch to Tab</span>
+                    </button>
+                  </div>
+                  <div class="hero-quality-stepper" title="Change video quality">
+                    <button id="btnHeroQualityDown" class="btn-adv-mode-mini" title="Decrease Quality">🔽 Quality -</button>
+                    <span id="heroQualityDisplay" class="hero-quality-val">Quality</span>
+                    <button id="btnHeroQualityUp" class="btn-adv-mode-mini" title="Increase Quality">🔼 Quality +</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty / Standby Placeholder -->
+              <div id="playerIdleContent" class="player-idle-box">
+                <div class="idle-radar-ring">
+                  <span class="radar-pulse"></span>
+                  <span class="idle-icon">📺</span>
+                </div>
+                <h4 id="headingPlayerIdle" class="idle-heading">No Media Currently Playing</h4>
+                <p id="subPlayerIdle" class="idle-sub">Play YouTube, Netflix, Hotstar or any media in any browser tab. Live status and controls will appear here.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Playback History Table Card -->
+          <div class="data-table-card">
+            <div class="table-header-controls">
+              <div class="table-title-group">
+                <h3 id="headingMediaHistory" class="table-heading">Media Playback History</h3>
+                <span id="tableMediaCountLabel" class="table-count-badge">0 videos</span>
+              </div>
+
+              <div class="table-search-filter">
+                <div class="search-input-wrapper">
+                  <span class="search-icon">🔍</span>
+                  <input type="text" id="tableMediaSearch" class="styled-search-input" placeholder="Search video title or platform...">
+                </div>
+                <div class="table-sort-wrapper">
+                  <label for="tableMediaPlatformFilter" id="lblMediaPlatform" class="sort-label">Platform:</label>
+                  <select id="tableMediaPlatformFilter" class="styled-select">
+                    <option value="all" selected>All Platforms</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="netflix">Netflix</option>
+                    <option value="vimeo">Vimeo</option>
+                    <option value="twitch">Twitch</option>
+                    <option value="other">Other Websites</option>
+                  </select>
+                </div>
+                <div class="table-sort-wrapper">
+                  <label for="tableMediaSortSelect" id="lblMediaSort" class="sort-label">Sort by:</label>
+                  <select id="tableMediaSortSelect" class="styled-select">
+                    <option value="time_desc" selected>Latest First</option>
+                    <option value="duration_desc">Longest Duration</option>
+                    <option value="vol_desc">Highest Volume</option>
+                    <option value="title_asc">Title (A to Z)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Media Table -->
+            <div class="table-responsive-container">
+              <table class="modern-data-table" id="mediaHistoryTable">
+                <thead>
+                  <tr>
+                    <th id="thColMediaTitle" class="col-media-title">Video Title</th>
+                    <th id="thColMediaPlatform" class="col-media-platform">Platform</th>
+                    <th id="thColMediaDuration" class="col-media-duration">Watch Duration</th>
+                    <th id="thColMediaVolume" class="col-media-volume">Volume Profile</th>
+                    <th id="thColMediaRes" class="col-media-res">Resolution</th>
+                    <th id="thColMediaDate" class="col-media-date">Date & Time</th>
+                  </tr>
+                </thead>
+                <tbody id="mediaTableBody">
+                  <!-- Populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="mediaTableEmptyState" class="table-empty-box hidden">
+              <span class="empty-icon">🎬</span>
+              <p id="txtMediaEmpty" class="empty-text">No media playback history recorded yet.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB C: SETTINGS & DATA MANAGEMENT                                 -->
+        <!-- ================================================================= -->
+        <section id="paneSettings" class="tab-pane" role="tabpanel" aria-labelledby="navTabSettings">
+          
+          <div class="settings-grid">
+            <!-- Card 1: Extension General Settings -->
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">⚙️</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingGeneralSettings" class="settings-card-title">General Settings</h3>
+                  <span id="subGeneralSettings" class="settings-card-sub">Timeout, language, auto-connect and telemetry options</span>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <!-- Idle Timeout -->
+                <div class="form-row">
+                  <div class="form-label-group">
+                    <label for="settingIdleTimeout" id="lblSettingIdle" class="form-label">Idle Timeout Buffer</label>
+                    <span id="descSettingIdle" class="form-desc">Duration before tracking pauses when user is idle</span>
+                  </div>
+                  <select id="settingIdleTimeout" class="styled-select form-control-select">
+                    <option value="30">30 seconds (Ultra-sensitive)</option>
+                    <option value="60" selected>60 seconds (Recommended)</option>
+                    <option value="120">120 seconds (2 minutes)</option>
+                    <option value="300">300 seconds (5 minutes)</option>
+                  </select>
+                </div>
+
+                <!-- Language Preference -->
+                <div class="form-row">
+                  <div class="form-label-group">
+                    <label for="settingLanguage" id="lblSettingLanguage" class="form-label">Language Preference</label>
+                    <span id="descSettingLanguage" class="form-desc">Display language for Dashboard and Extension Popup</span>
+                  </div>
+                  <select id="settingLanguage" class="styled-select form-control-select">
+                    <option value="en" selected>English (Default)</option>
+                    <option value="hi">हिन्दी (Hindi)</option>
+                  </select>
+                </div>
+
+                <!-- WebSocket HUD Link Configuration -->
+                <div class="form-row">
+                  <div class="form-label-group">
+                    <label for="settingWsUrl" id="lblSettingWsUrl" class="form-label">Video Detector HUD WebSocket URL</label>
+                    <span id="descSettingWsUrl" class="form-desc">Local telemetry bridge communication port</span>
+                  </div>
+                  <div class="input-with-button">
+                    <input type="text" id="settingWsUrl" class="styled-input" value="ws://127.0.0.1:65432" placeholder="ws://127.0.0.1:65432">
+                    <button id="btnTestWsConnection" class="btn-secondary" title="Test Connection">⚡ Test / Reconnect</button>
+                  </div>
+                </div>
+
+                <!-- Media Tracking Toggle -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="settingMediaToggle" id="lblSettingMediaToggle" class="form-label">Media Sentinel Telemetry</label>
+                    <span id="descSettingMediaToggle" class="form-desc">Record web video, resolution, volume and playback sessions</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="settingMediaToggle" checked>
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <!-- Auto Reconnect WebSocket -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="settingAutoWsToggle" id="lblSettingAutoWs" class="form-label">Auto-Connect to HUD</label>
+                    <span id="descSettingAutoWs" class="form-desc">Automatically connect to HUD when browser starts</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="settingAutoWsToggle" checked>
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <!-- History Retention -->
+                <div class="form-row">
+                  <div class="form-label-group">
+                    <label for="settingHistoryDays" id="lblSettingHistoryDays" class="form-label">History Retention Window</label>
+                    <span id="descSettingHistoryDays" class="form-desc">Number of days to preserve data in local storage</span>
+                  </div>
+                  <select id="settingHistoryDays" class="styled-select form-control-select">
+                    <option value="30">30 Days</option>
+                    <option value="60" selected>60 Days</option>
+                    <option value="90">90 Days</option>
+                    <option value="365">365 Days</option>
+                  </select>
+                </div>
+
+                <div class="settings-actions-bar">
+                  <button id="btnSaveGeneralSettings" class="btn-save-primary">
+                    💾 Save & Sync Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Export Data Section -->
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">📥</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingExportCard" class="settings-card-title">Export Data</h3>
+                  <span id="subExportCard" class="settings-card-sub">Download tracking metrics and media history as JSON or CSV</span>
+                </div>
+              </div>
+
+              <div class="export-options-grid">
+                <div class="export-tile">
+                  <div class="export-tile-info">
+                    <span class="export-format-badge json">JSON</span>
+                    <h4 id="titleExportJson" class="export-tile-title">Full Master Export</h4>
+                    <p id="descExportJson" class="export-tile-desc">Download all browsing time, daily metrics, settings and media history into a JSON file.</p>
+                  </div>
+                  <button id="btnExportFullJson" class="btn-export-tile primary">
+                    <span>📥 Download JSON</span>
+                  </button>
+                </div>
+
+                <div class="export-tile">
+                  <div class="export-tile-info">
+                    <span class="export-format-badge csv">CSV</span>
+                    <h4 id="titleExportTrackingCsv" class="export-tile-title">Time Tracking CSV</h4>
+                    <p id="descExportTrackingCsv" class="export-tile-desc">Export website domains, time spent, session counts and timestamps for Excel or spreadsheets.</p>
+                  </div>
+                  <button id="btnExportTrackingCsv" class="btn-export-tile">
+                    <span>📊 Download CSV (Time Tracking)</span>
+                  </button>
+                </div>
+
+                <div class="export-tile">
+                  <div class="export-tile-info">
+                    <span class="export-format-badge csv">CSV</span>
+                    <h4 id="titleExportMediaCsv" class="export-tile-title">Media History CSV</h4>
+                    <p id="descExportMediaCsv" class="export-tile-desc">Export video titles, platforms, watch durations, volume profiles, resolutions and timestamps.</p>
+                  </div>
+                  <button id="btnExportMediaCsv" class="btn-export-tile">
+                    <span>🎬 Download CSV (Media History)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Danger Zone / Clear Data -->
+            <div class="settings-card danger-card">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">⚠️</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingDangerZone" class="settings-card-title text-danger">Danger Zone: Data Management</h3>
+                  <span id="subDangerZone" class="settings-card-sub">Protected action zone for irreversible data resets</span>
+                </div>
+              </div>
+
+              <div class="danger-warning-notice">
+                <span class="warning-icon">🛑</span>
+                <p id="txtDangerNotice" class="warning-text">
+                  <strong>Important Notice:</strong> Deleting data is permanent and irreversible. Old data cannot be recovered. Please export necessary data first.
+                </p>
+              </div>
+
+              <div class="danger-actions-list">
+                <!-- Clear Media History Only -->
+                <div class="danger-action-item">
+                  <div class="danger-action-info">
+                    <h4 id="titleClearMedia" class="danger-action-title">Clear Media History Only</h4>
+                    <p id="descClearMedia" class="danger-action-desc">All recorded video playback sessions and volume telemetry will be erased. Time tracking remains safe.</p>
+                  </div>
+                  <button id="btnTriggerClearMedia" class="btn-danger-outline">
+                    🗑️ Clear Media History
+                  </button>
+                </div>
+
+                <!-- Clear Time Tracking Only -->
+                <div class="danger-action-item">
+                  <div class="danger-action-info">
+                    <h4 id="titleClearTime" class="danger-action-title">Clear Time Tracking Only</h4>
+                    <p id="descClearTime" class="danger-action-desc">All domain browsing durations and session logs will be erased. Media history remains safe.</p>
+                  </div>
+                  <button id="btnTriggerClearTime" class="btn-danger-outline">
+                    🗑️ Clear Time Tracking
+                  </button>
+                </div>
+
+                <!-- Wipe All Extension Data -->
+                <div class="danger-action-item highlight-danger">
+                  <div class="danger-action-info">
+                    <h4 id="titleWipeAll" class="danger-action-title text-danger">Wipe All Extension Data</h4>
+                    <p id="descWipeAll" class="danger-action-desc">All local data, domain tracking, and media history will be permanently deleted.</p>
+                  </div>
+                  <button id="btnTriggerWipeAll" class="btn-danger-solid">
+                    💥 Full Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal Dialog -->
+  <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="modalIcon" class="modal-icon">⚠️</span>
+        <h3 id="modalTitle" class="modal-title">Confirm Data Deletion</h3>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage" class="modal-message">Are you sure you want to permanently delete this data? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="modalBtnCancel" class="btn-modal-secondary">Cancel</button>
+        <button id="modalBtnConfirm" class="btn-modal-danger">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Floating Banner (Bottom Pinned - Zero Layout Shift Standard) -->
+  <div id="toastNotification" class="toast-banner hidden" role="status" aria-live="polite">
+    <span id="toastIcon" class="toast-icon">ℹ️</span>
+    <span id="toastMessage" class="toast-msg">Settings saved successfully</span>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

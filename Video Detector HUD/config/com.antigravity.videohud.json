@@ -1,0 +1,11 @@
+{
+  "name": "com.antigravity.videohud",
+  "description": "Video Detector HUD Native Host Launcher",
+  "path": "..\\scripts\\launch_hud_native.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://plbckkomfjfiennfeiiemhjpmhfdffac/",
+    "chrome-extension://ihfjdgiggeobgfalcificfpplpbgbffd/",
+    "chrome-extension://bbokfekppobgfopnjfogbgamkggghpba/"
+  ]
+}
