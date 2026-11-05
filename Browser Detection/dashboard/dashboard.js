@@ -1851,23 +1851,23 @@ function setupEventListeners() {
     });
   }
 
-  // Standalone SQLite Data Hub Reconnect Button
+  // Standalone SQLite Data Hub Reconnect & Auto-Launch Button
+  function triggerDataHubConnectAndLaunch() {
+    browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
+    showToast('Starting & connecting to SQLite Data Hub (port 65433)...');
+    setTimeout(() => refreshDashboard(true), 800);
+    setTimeout(() => refreshDashboard(true), 1800);
+    setTimeout(() => refreshDashboard(true), 3200);
+  }
+
   const btnReconnectHub = document.getElementById('btnSidebarReconnectHub');
   if (btnReconnectHub) {
-    btnReconnectHub.addEventListener('click', () => {
-      browserAPI.runtime.sendMessage({ type: 'TRIGGER_DATA_HUB_RECONNECT' });
-      showToast('Connecting to Data Hub (port 65433)...');
-      setTimeout(() => refreshDashboard(true), 1000);
-    });
+    btnReconnectHub.addEventListener('click', triggerDataHubConnectAndLaunch);
   }
 
   const dataHubBadge = document.getElementById('dataHubBadge');
   if (dataHubBadge) {
-    dataHubBadge.addEventListener('click', () => {
-      browserAPI.runtime.sendMessage({ type: 'TRIGGER_DATA_HUB_RECONNECT' });
-      showToast('Connecting to Data Hub (port 65433)...');
-      setTimeout(() => refreshDashboard(true), 1000);
-    });
+    dataHubBadge.addEventListener('click', triggerDataHubConnectAndLaunch);
   }
 
   // 1. Navigation Tab Switching

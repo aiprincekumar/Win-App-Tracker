@@ -1826,10 +1826,30 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async sendResponse
   }
 
-  // Manually trigger Data Hub WebSocket reconnection
-  if (message.type === 'TRIGGER_DATA_HUB_RECONNECT') {
+  // Manually trigger Data Hub WebSocket reconnection and silent auto-launch
+  if (message.type === 'TRIGGER_DATA_HUB_RECONNECT' || message.type === 'LAUNCH_DATA_HUB') {
+    let nativeDispatched = false;
+    if (!dataHubConnected && typeof browserAPI.runtime.sendNativeMessage === 'function') {
+      try {
+        browserAPI.runtime.sendNativeMessage(
+          'com.antigravity.videohud',
+          { action: 'launch_hub', timestamp: Date.now() },
+          (response) => {
+            console.log('[MediaSentinel] Data Hub launch signal sent to Native Host:', response);
+          }
+        );
+        nativeDispatched = true;
+      } catch (e) {
+        console.warn('[MediaSentinel] Could not dispatch native message for Data Hub:', e);
+      }
+    }
     connectDataHub();
-    sendResponse({ initiated: true, dataHubConnected });
+    [500, 1200, 2500, 4000].forEach((delay) => {
+      setTimeout(() => {
+        if (!dataHubConnected) connectDataHub();
+      }, delay);
+    });
+    sendResponse({ initiated: true, dataHubConnected, nativeDispatched });
     return true;
   }
 });

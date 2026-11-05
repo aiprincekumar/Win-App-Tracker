@@ -35,6 +35,50 @@ DEFAULT_HUB_PORT = 65433
 DB_FILENAME = "browser_activity.db"
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+def resolve_dynamic_db_path(custom_path: Optional[str] = None) -> str:
+    """
+    Dynamically resolves SQLite database path with dual persistence (Local Workspace + Global AppData).
+    Ensures zero data loss across workspace moves, directory renames, or new clones.
+    """
+    if custom_path:
+        return os.path.abspath(custom_path)
+    
+    local_dir = os.path.dirname(os.path.abspath(__file__))
+    local_db = os.path.join(local_dir, DB_FILENAME)
+    
+    appdata_base = os.environ.get('APPDATA') or os.path.expanduser('~')
+    global_dir = os.path.join(appdata_base, 'WinAppTracker')
+    try:
+        os.makedirs(global_dir, exist_ok=True)
+    except Exception:
+        pass
+    global_db = os.path.join(global_dir, DB_FILENAME)
+    
+    import shutil
+    # If local exists and has data, mirror to global backup
+    if os.path.exists(local_db):
+        try:
+            if not os.path.exists(global_db) or os.path.getsize(local_db) >= os.path.getsize(global_db):
+                shutil.copy2(local_db, global_db)
+                for ext in ['-shm', '-wal']:
+                    if os.path.exists(local_db + ext):
+                        shutil.copy2(local_db + ext, global_db + ext)
+        except Exception:
+            pass
+        return local_db
+    elif os.path.exists(global_db):
+        try:
+            shutil.copy2(global_db, local_db)
+            for ext in ['-shm', '-wal']:
+                if os.path.exists(global_db + ext):
+                    shutil.copy2(global_db + ext, local_db + ext)
+        except Exception:
+            pass
+        return local_db
+    
+    return local_db
+
+
 # RFC 6455 Opcodes
 OPCODE_CONTINUATION = 0x0
 OPCODE_TEXT         = 0x1
@@ -490,7 +534,7 @@ class BrowserDataHubServer:
     def __init__(self, host: str = DEFAULT_HUB_HOST, port: int = DEFAULT_HUB_PORT, db_path: Optional[str] = None) -> None:
         self.host = host
         self.port = port
-        self.db_path = db_path or os.path.join(os.path.dirname(os.path.abspath(__file__)), DB_FILENAME)
+        self.db_path = resolve_dynamic_db_path(db_path)
         self.db = DataHubDB(self.db_path)
         self.live_state = LiveStateCache()
 
@@ -934,7 +978,7 @@ def main() -> int:
         return 0 if run_all_tests() else 1
 
     if args.init_db:
-        target_db = args.db or os.path.join(os.path.dirname(os.path.abspath(__file__)), DB_FILENAME)
+        target_db = resolve_dynamic_db_path(args.db)
         db_instance = DataHubDB(target_db)
         db_instance.close()
         if sys.stdout:

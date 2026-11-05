@@ -1249,9 +1249,10 @@ function setupEventListeners() {
   const hubBadge = document.getElementById('hubStatusBadge');
   if (hubBadge) {
     hubBadge.addEventListener('click', () => {
-      browserAPI.runtime.sendMessage({ type: 'TRIGGER_DATA_HUB_RECONNECT' });
-      showPopupToast('Reconnecting Data Hub (port 65433)...', 'info');
+      browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
+      showPopupToast('Starting & connecting to Data Hub (port 65433)...', 'info');
       setTimeout(() => refreshDashboard(true), 800);
+      setTimeout(() => refreshDashboard(true), 2000);
     });
   }
 

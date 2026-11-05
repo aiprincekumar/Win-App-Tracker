@@ -338,42 +338,51 @@ button.spinning .refresh-spinner-icon,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(15px);
+  min-height: 72px;
+  padding: 16px 28px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-dim);
   position: sticky;
   top: 0;
   z-index: 40;
   flex-wrap: nowrap !important;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .app-bar-left {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-width: 0;
   flex-shrink: 1;
-  overflow: hidden;
+  overflow: visible;
+  padding: 2px 0;
 }
 
 .current-page-title {
-  font-size: 17px;
+  font-size: 18px;
+  line-height: 1.35;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.01em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .current-page-subtitle {
-  font-size: 11.5px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--text-secondary);
   display: block;
-  margin-top: 1px;
+  margin-top: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -382,7 +391,7 @@ button.spinning .refresh-spinner-icon,
 .app-bar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
   flex-wrap: nowrap !important;
   white-space: nowrap;
