@@ -4,10 +4,11 @@
 
 Option Explicit
 
-Dim fso, wsh, strDir, pyScript, pyExec, userProfile
+Dim fso, wsh, scriptPath, strDir, pyScript, pyExec, userProfile
 
 Set fso = CreateObject("Scripting.FileSystemObject")
-strDir = fso.GetParentFolderName(WScript.ScriptFullName)
+scriptPath = fso.GetAbsolutePathName(WScript.ScriptFullName)
+strDir = fso.GetParentFolderName(scriptPath)
 pyScript = strDir & "\browser_data_hub.py"
 
 Set wsh = CreateObject("WScript.Shell")
