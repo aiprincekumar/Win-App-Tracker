@@ -6,6 +6,7 @@
 - *(init)* Initialize Win App Tracker as standalone repository with dynamic architecture, comprehensive .gitignore, and documentation
 - *(github)* Add enterprise GitHub configuration, CI/CD pipeline, templates, dependabot, and root requirements.txt
 - *(startup)* Add automated Windows Startup auto-boot installer and silent background launcher for Browser Data Hub
+- *(popup)* Synchronize SQLite Data Hub analytics, domain distribution, and multi-browser filter into extension popup
 
 ### 🐛 Bug Fixes
 
@@ -17,3 +18,4 @@
 ### 📚 Documentation
 
 - *(readme)* Revamp README into comprehensive production-grade showcase with architecture diagrams, API specs, and CLI guide
+- *(changelog)* Initialize changelog using git-cliff
