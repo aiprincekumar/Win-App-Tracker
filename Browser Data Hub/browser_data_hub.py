@@ -153,12 +153,23 @@ class DataHubDB:
                         domain TEXT NOT NULL,
                         date_str TEXT NOT NULL,
                         seconds_active INTEGER NOT NULL DEFAULT 0,
+                        foreground_seconds INTEGER NOT NULL DEFAULT 0,
+                        background_media_seconds INTEGER NOT NULL DEFAULT 0,
                         session_count INTEGER NOT NULL DEFAULT 1,
                         last_active REAL NOT NULL,
                         favicon_url TEXT,
                         UNIQUE(browser_type, domain, date_str)
                     );
                 """)
+
+                # Automatic schema migration for existing databases
+                cur = conn.execute("PRAGMA table_info(domain_activity);")
+                existing_cols = {row["name"] for row in cur.fetchall()}
+                if "foreground_seconds" not in existing_cols:
+                    conn.execute("ALTER TABLE domain_activity ADD COLUMN foreground_seconds INTEGER NOT NULL DEFAULT 0;")
+                    conn.execute("UPDATE domain_activity SET foreground_seconds = seconds_active WHERE foreground_seconds = 0 AND seconds_active > 0;")
+                if "background_media_seconds" not in existing_cols:
+                    conn.execute("ALTER TABLE domain_activity ADD COLUMN background_media_seconds INTEGER NOT NULL DEFAULT 0;")
 
                 # 3. Media Sessions Table
                 conn.execute("""
@@ -217,10 +228,12 @@ class DataHubDB:
         seconds: int,
         date_str: Optional[str] = None,
         favicon_url: Optional[str] = None,
-        session_count: int = 0
+        session_count: int = 0,
+        tracking_type: str = "foreground"
     ) -> int:
         """
         Atomically increments active seconds for a browser and domain on a specific date.
+        Supports tracking_type: 'foreground' | 'background_media'.
         Returns the new total seconds for that domain on that date.
         """
         if not domain or seconds <= 0:
@@ -230,21 +243,27 @@ class DataHubDB:
         clean_domain = domain.lower().strip()
         today = date_str or date.today().isoformat()
         now = time.time()
+        tracking_type = (tracking_type or "foreground").lower().strip()
+
+        fg_sec = seconds if tracking_type == "foreground" else 0
+        bg_sec = seconds if tracking_type == "background_media" else 0
 
         with self._write_lock:
             conn = self._get_connection()
             with conn:
                 conn.execute("""
                     INSERT INTO domain_activity (
-                        browser_type, domain, date_str, seconds_active, session_count, last_active, favicon_url
+                        browser_type, domain, date_str, seconds_active, foreground_seconds, background_media_seconds, session_count, last_active, favicon_url
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(browser_type, domain, date_str) DO UPDATE SET
                         seconds_active = domain_activity.seconds_active + excluded.seconds_active,
+                        foreground_seconds = domain_activity.foreground_seconds + excluded.foreground_seconds,
+                        background_media_seconds = domain_activity.background_media_seconds + excluded.background_media_seconds,
                         session_count = domain_activity.session_count + excluded.session_count,
                         last_active = excluded.last_active,
                         favicon_url = COALESCE(excluded.favicon_url, domain_activity.favicon_url);
-                """, (browser_type, clean_domain, today, seconds, max(0, session_count), now, favicon_url))
+                """, (browser_type, clean_domain, today, seconds, fg_sec, bg_sec, max(0, session_count), now, favicon_url))
 
                 cur = conn.execute("""
                     SELECT seconds_active FROM domain_activity 
@@ -303,13 +322,16 @@ class DataHubDB:
         self,
         browser_filter: str = "all",
         target_date: Optional[str] = None,
-        days_for_average: int = 7
+        days_for_average: int = 7,
+        tracking_mode: str = "all"
     ) -> Dict[str, Any]:
         """
         Queries aggregated metrics across domains, browsers, and media sessions.
-        Supports filtering by browser_type ('all', 'chrome', 'edge', etc.).
+        Supports filtering by browser_type ('all', 'chrome', 'edge', etc.)
+        and tracking_mode ('all' [Combined], 'foreground' [Active only], 'background_media' [BG Media only]).
         """
         browser_filter = (browser_filter or "all").lower().strip()
+        tracking_mode = (tracking_mode or "all").lower().strip()
         query_date = target_date or date.today().isoformat()
         conn = self._get_connection()
 
@@ -318,14 +340,34 @@ class DataHubDB:
         browser_clause = "" if use_all else "AND browser_type = ?"
         browser_params = [] if use_all else [browser_filter]
 
+        # Which time column to use for primary metric sorting and sums
+        if tracking_mode == "foreground":
+            metric_col = "foreground_seconds"
+        elif tracking_mode == "background_media":
+            metric_col = "background_media_seconds"
+        else:
+            metric_col = "seconds_active"
+
         # 1. Total seconds today
         sql_today = f"""
-            SELECT COALESCE(SUM(seconds_active), 0) AS total_seconds
+            SELECT COALESCE(SUM(seconds_active), 0) AS total_seconds,
+                   COALESCE(SUM(foreground_seconds), 0) AS foreground_seconds,
+                   COALESCE(SUM(background_media_seconds), 0) AS background_media_seconds
             FROM domain_activity
             WHERE date_str = ? {browser_clause};
         """
         cur = conn.execute(sql_today, [query_date] + browser_params)
-        today_seconds = int(cur.fetchone()["total_seconds"])
+        today_row = cur.fetchone()
+        today_combined_sec = int(today_row["total_seconds"])
+        today_fg_sec = int(today_row["foreground_seconds"])
+        today_bg_sec = int(today_row["background_media_seconds"])
+
+        if tracking_mode == "foreground":
+            today_seconds = today_fg_sec
+        elif tracking_mode == "background_media":
+            today_seconds = today_bg_sec
+        else:
+            today_seconds = today_combined_sec
 
         # 2. Daily average over past N days
         try:
@@ -335,7 +377,7 @@ class DataHubDB:
         start_date = (target_dt - timedelta(days=days_for_average - 1)).isoformat()
 
         sql_avg = f"""
-            SELECT COALESCE(SUM(seconds_active), 0) AS window_seconds,
+            SELECT COALESCE(SUM({metric_col}), 0) AS window_seconds,
                    COUNT(DISTINCT date_str) AS distinct_days
             FROM domain_activity
             WHERE date_str >= ? AND date_str <= ? {browser_clause};
@@ -349,23 +391,29 @@ class DataHubDB:
         # 3. Domain Distribution
         sql_domains = f"""
             SELECT domain, 
+                   SUM({metric_col}) AS selected_seconds,
                    SUM(seconds_active) AS total_seconds,
+                   SUM(foreground_seconds) AS foreground_seconds,
+                   SUM(background_media_seconds) AS background_media_seconds,
                    SUM(session_count) AS total_sessions,
                    MAX(last_active) AS last_active,
                    MAX(favicon_url) AS favicon_url
             FROM domain_activity
             WHERE date_str = ? {browser_clause}
             GROUP BY domain
-            ORDER BY total_seconds DESC;
+            ORDER BY selected_seconds DESC;
         """
         cur = conn.execute(sql_domains, [query_date] + browser_params)
         domain_list = []
         for r in cur.fetchall():
-            s = int(r["total_seconds"])
+            s = int(r["selected_seconds"])
             pct = round((s / today_seconds * 100.0), 1) if today_seconds > 0 else 0.0
             domain_list.append({
                 "domain": r["domain"],
                 "seconds": s,
+                "foreground_seconds": int(r["foreground_seconds"]),
+                "background_media_seconds": int(r["background_media_seconds"]),
+                "combined_seconds": int(r["total_seconds"]),
                 "session_count": int(r["total_sessions"]),
                 "last_active": r["last_active"],
                 "favicon_url": r["favicon_url"] or "",
@@ -374,7 +422,10 @@ class DataHubDB:
 
         # 3b. All-Time Seconds & History Metadata
         sql_all_time = f"""
-            SELECT COALESCE(SUM(seconds_active), 0) AS total_seconds,
+            SELECT COALESCE(SUM({metric_col}), 0) AS selected_seconds,
+                   COALESCE(SUM(seconds_active), 0) AS total_seconds,
+                   COALESCE(SUM(foreground_seconds), 0) AS foreground_seconds,
+                   COALESCE(SUM(background_media_seconds), 0) AS background_media_seconds,
                    COUNT(DISTINCT date_str) AS distinct_days,
                    MIN(date_str) AS first_date
             FROM domain_activity
@@ -382,30 +433,39 @@ class DataHubDB:
         """
         cur = conn.execute(sql_all_time, browser_params)
         all_row = cur.fetchone()
-        all_time_seconds = int(all_row["total_seconds"]) if all_row else 0
+        all_time_seconds = int(all_row["selected_seconds"]) if all_row else 0
+        all_time_combined_sec = int(all_row["total_seconds"]) if all_row else 0
+        all_time_fg_sec = int(all_row["foreground_seconds"]) if all_row else 0
+        all_time_bg_sec = int(all_row["background_media_seconds"]) if all_row else 0
         total_tracked_days = max(1, int(all_row["distinct_days"])) if all_row and all_row["distinct_days"] else 1
         first_tracked_date = str(all_row["first_date"]) if all_row and all_row["first_date"] else query_date
 
         # 3c. All-Time Domain Distribution (Across All History Dates)
         sql_all_time_domains = f"""
             SELECT domain, 
+                   SUM({metric_col}) AS selected_seconds,
                    SUM(seconds_active) AS total_seconds,
+                   SUM(foreground_seconds) AS foreground_seconds,
+                   SUM(background_media_seconds) AS background_media_seconds,
                    SUM(session_count) AS total_sessions,
                    MAX(last_active) AS last_active,
                    MAX(favicon_url) AS favicon_url
             FROM domain_activity
             WHERE 1=1 {browser_clause}
             GROUP BY domain
-            ORDER BY total_seconds DESC;
+            ORDER BY selected_seconds DESC;
         """
         cur = conn.execute(sql_all_time_domains, browser_params)
         all_time_domain_list = []
         for r in cur.fetchall():
-            s = int(r["total_seconds"])
+            s = int(r["selected_seconds"])
             pct = round((s / all_time_seconds * 100.0), 1) if all_time_seconds > 0 else 0.0
             all_time_domain_list.append({
                 "domain": r["domain"],
                 "seconds": s,
+                "foreground_seconds": int(r["foreground_seconds"]),
+                "background_media_seconds": int(r["background_media_seconds"]),
+                "combined_seconds": int(r["total_seconds"]),
                 "session_count": int(r["total_sessions"]),
                 "last_active": r["last_active"],
                 "favicon_url": r["favicon_url"] or "",
@@ -470,7 +530,14 @@ class DataHubDB:
         return {
             "query_date": query_date,
             "filter_browser": browser_filter,
+            "tracking_mode": tracking_mode,
             "today_seconds": today_seconds,
+            "today_foreground_seconds": today_fg_sec,
+            "today_background_media_seconds": today_bg_sec,
+            "today_combined_seconds": today_combined_sec,
+            "all_time_foreground_seconds": all_time_fg_sec,
+            "all_time_background_media_seconds": all_time_bg_sec,
+            "all_time_combined_seconds": all_time_combined_sec,
             "today_formatted": today_formatted,
             "total_seconds": all_time_seconds,
             "all_time_seconds": all_time_seconds,
@@ -919,9 +986,10 @@ class BrowserDataHubServer:
                     d_sessions = int(item.get("session_count", 0))
                     d_btype = str(item.get("browser_type") or browser_type).lower()
                     d_date = item.get("date_str") or date_str
+                    d_tracking_type = item.get("tracking_type") or "foreground"
                     if d_domain and d_sec > 0:
                         self.db.upsert_activity_delta(
-                            d_btype, d_domain, d_sec, d_date, d_favicon, d_sessions
+                            d_btype, d_domain, d_sec, d_date, d_favicon, d_sessions, d_tracking_type
                         )
                         total_upserted += 1
                 self._send_json(sock, {
@@ -934,8 +1002,9 @@ class BrowserDataHubServer:
                 seconds = int(msg.get("seconds", 0))
                 favicon_url = msg.get("favicon_url")
                 session_count = int(msg.get("session_count", 0))
+                tracking_type = msg.get("tracking_type") or "foreground"
                 new_total = self.db.upsert_activity_delta(
-                    browser_type, domain, seconds, date_str, favicon_url, session_count
+                    browser_type, domain, seconds, date_str, favicon_url, session_count, tracking_type
                 )
                 self._send_json(sock, {
                     "type": "SYNC_RESPONSE",
@@ -995,11 +1064,13 @@ class BrowserDataHubServer:
         elif msg_type == "QUERY_ANALYTICS":
             browser_filter = str(msg.get("browser") or msg.get("browser_type") or "all")
             target_date = msg.get("date_str")
-            analytics_data = self.db.query_analytics(browser_filter, target_date)
+            tracking_mode = str(msg.get("tracking_mode") or "all")
+            analytics_data = self.db.query_analytics(browser_filter, target_date, tracking_mode=tracking_mode)
             resp = {
                 "type": "ANALYTICS_RESPONSE",
                 "success": True,
                 "filter_browser": browser_filter,
+            "tracking_mode": tracking_mode,
                 "data": analytics_data
             }
             if "requestId" in msg:

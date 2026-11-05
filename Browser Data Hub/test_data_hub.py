@@ -415,6 +415,43 @@ class TestBrowserDataHub(unittest.TestCase):
         finally:
             server.stop()
 
+    def test_07_dual_tracking_foreground_and_background_media(self) -> None:
+        db_file = os.path.join(self.temp_dir, "test_dual_tracking.db")
+        db = DataHubDB(db_file)
+        today = "2026-11-05"
+
+        try:
+            db.upsert_activity_delta("chrome", "youtube.com", 600, today, tracking_type="foreground")
+            db.upsert_activity_delta("chrome", "youtube.com", 1200, today, tracking_type="background_media")
+            db.upsert_activity_delta("chrome", "wikipedia.org", 300, today, tracking_type="foreground")
+
+            res_all = db.query_analytics("all", today, tracking_mode="all")
+            self.assertEqual(res_all["today_seconds"], 2100)
+            self.assertEqual(res_all["today_foreground_seconds"], 900)
+            self.assertEqual(res_all["today_background_media_seconds"], 1200)
+
+            dist_all = {d["domain"]: d for d in res_all["domain_distribution"]}
+            self.assertEqual(dist_all["youtube.com"]["seconds"], 1800)
+            self.assertEqual(dist_all["youtube.com"]["foreground_seconds"], 600)
+            self.assertEqual(dist_all["youtube.com"]["background_media_seconds"], 1200)
+            self.assertEqual(dist_all["wikipedia.org"]["seconds"], 300)
+            self.assertEqual(dist_all["wikipedia.org"]["foreground_seconds"], 300)
+            self.assertEqual(dist_all["wikipedia.org"]["background_media_seconds"], 0)
+
+            res_fg = db.query_analytics("all", today, tracking_mode="foreground")
+            self.assertEqual(res_fg["today_seconds"], 900)
+            dist_fg = {d["domain"]: d for d in res_fg["domain_distribution"]}
+            self.assertEqual(dist_fg["youtube.com"]["seconds"], 600)
+            self.assertEqual(dist_fg["wikipedia.org"]["seconds"], 300)
+
+            res_bg = db.query_analytics("all", today, tracking_mode="background_media")
+            self.assertEqual(res_bg["today_seconds"], 1200)
+            dist_bg = {d["domain"]: d for d in res_bg["domain_distribution"]}
+            self.assertEqual(dist_bg["youtube.com"]["seconds"], 1200)
+            self.assertEqual(dist_bg["wikipedia.org"]["seconds"], 0)
+        finally:
+            db.close()
+
 
 def run_all_tests() -> bool:
     """Entry point for automated test runner."""
