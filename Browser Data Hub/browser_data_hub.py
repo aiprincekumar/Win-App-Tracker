@@ -372,6 +372,46 @@ class DataHubDB:
                 "percent": pct
             })
 
+        # 3b. All-Time Seconds & History Metadata
+        sql_all_time = f"""
+            SELECT COALESCE(SUM(seconds_active), 0) AS total_seconds,
+                   COUNT(DISTINCT date_str) AS distinct_days,
+                   MIN(date_str) AS first_date
+            FROM domain_activity
+            WHERE 1=1 {browser_clause};
+        """
+        cur = conn.execute(sql_all_time, browser_params)
+        all_row = cur.fetchone()
+        all_time_seconds = int(all_row["total_seconds"]) if all_row else 0
+        total_tracked_days = max(1, int(all_row["distinct_days"])) if all_row and all_row["distinct_days"] else 1
+        first_tracked_date = str(all_row["first_date"]) if all_row and all_row["first_date"] else query_date
+
+        # 3c. All-Time Domain Distribution (Across All History Dates)
+        sql_all_time_domains = f"""
+            SELECT domain, 
+                   SUM(seconds_active) AS total_seconds,
+                   SUM(session_count) AS total_sessions,
+                   MAX(last_active) AS last_active,
+                   MAX(favicon_url) AS favicon_url
+            FROM domain_activity
+            WHERE 1=1 {browser_clause}
+            GROUP BY domain
+            ORDER BY total_seconds DESC;
+        """
+        cur = conn.execute(sql_all_time_domains, browser_params)
+        all_time_domain_list = []
+        for r in cur.fetchall():
+            s = int(r["total_seconds"])
+            pct = round((s / all_time_seconds * 100.0), 1) if all_time_seconds > 0 else 0.0
+            all_time_domain_list.append({
+                "domain": r["domain"],
+                "seconds": s,
+                "session_count": int(r["total_sessions"]),
+                "last_active": r["last_active"],
+                "favicon_url": r["favicon_url"] or "",
+                "percent": pct
+            })
+
         # 4. Browser Breakdown
         sql_breakdown = """
             SELECT browser_type, SUM(seconds_active) AS browser_seconds
@@ -423,12 +463,22 @@ class DataHubDB:
         mins = (today_seconds % 3600) // 60
         today_formatted = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
 
+        all_hours = all_time_seconds // 3600
+        all_mins = (all_time_seconds % 3600) // 60
+        all_time_formatted = f"{all_hours}h {all_mins}m" if all_hours > 0 else f"{all_mins}m"
+
         return {
             "query_date": query_date,
             "filter_browser": browser_filter,
             "today_seconds": today_seconds,
             "today_formatted": today_formatted,
+            "total_seconds": all_time_seconds,
+            "all_time_seconds": all_time_seconds,
+            "all_time_formatted": all_time_formatted,
             "daily_average_seconds": daily_average_seconds,
+            "first_tracked_date": first_tracked_date,
+            "total_tracked_days": total_tracked_days,
+            "all_time_domain_distribution": all_time_domain_list,
             "registered_browsers": registered_browsers,
             "browser_breakdown": browser_breakdown,
             "domain_distribution": domain_list,

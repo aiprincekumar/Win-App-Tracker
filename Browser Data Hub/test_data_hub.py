@@ -282,6 +282,8 @@ class TestBrowserDataHub(unittest.TestCase):
     def test_05_unified_and_filtered_analytics(self) -> None:
         """Tests that 'all', 'chrome', and 'edge' filters return exact expected distributions."""
         target_date = "2026-11-04"
+        prev_date = "2026-11-03"
+        self.db.upsert_activity_delta("chrome", "youtube.com", 2000, prev_date)
         self.db.upsert_activity_delta("chrome", "github.com", 3600, target_date)
         self.db.upsert_activity_delta("chrome", "google.com", 1800, target_date)
         self.db.upsert_activity_delta("edge", "microsoft.com", 2400, target_date)
@@ -292,6 +294,13 @@ class TestBrowserDataHub(unittest.TestCase):
         self.assertEqual(all_res["today_seconds"], 3600 + 1800 + 2400 + 1200)
         self.assertEqual(all_res["browser_breakdown"]["chrome"], 5400)
         self.assertEqual(all_res["browser_breakdown"]["edge"], 3600)
+        self.assertEqual(all_res["all_time_seconds"], 2000 + 3600 + 1800 + 2400 + 1200)
+        self.assertEqual(all_res["total_tracked_days"], 2)
+        self.assertEqual(all_res["first_tracked_date"], "2026-11-03")
+        all_time_domains = {d["domain"]: d["seconds"] for d in all_res["all_time_domain_distribution"]}
+        today_domains = {d["domain"]: d["seconds"] for d in all_res["domain_distribution"]}
+        self.assertIn("youtube.com", all_time_domains)
+        self.assertNotIn("youtube.com", today_domains)
 
         # Chrome only
         chrome_res = self.db.query_analytics("chrome", target_date)
