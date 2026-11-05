@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # Core System & Process Telemetry
-psutil>=5.9.0
+psutil>=7.2.2
 
 # Windows Native APIs & COM Interface Bridges (Required on Windows)
 pywin32>=306; sys_platform == 'win32'
