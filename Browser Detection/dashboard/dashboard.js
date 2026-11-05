@@ -1852,12 +1852,48 @@ function setupEventListeners() {
   }
 
   // Standalone SQLite Data Hub Reconnect & Auto-Launch Button
-  function triggerDataHubConnectAndLaunch() {
+  let hubConnectInProgress = false;
+  async function triggerDataHubConnectAndLaunch() {
+    if (hubConnectInProgress) return;
+    hubConnectInProgress = true;
+
+    const btn = document.getElementById('btnSidebarReconnectHub');
+    const badge = document.getElementById('dataHubBadge');
+    const badgeText = document.getElementById('dataHubBadgeText');
+    const sideDot = document.getElementById('dataHubSidebarDot');
+    const sideLabel = document.getElementById('dataHubSidebarLabel');
+
+    if (btn) btn.textContent = '⏳ Connecting...';
+    if (badge) badge.className = 'datahub-status-badge connecting';
+    if (badgeText) badgeText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+    if (sideDot) sideDot.className = 'hud-dot starting';
+    if (sideLabel) {
+      sideLabel.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+      sideLabel.style.color = '#f59e0b';
+    }
+
+    showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...');
     browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
-    showToast('Starting & connecting to SQLite Data Hub (port 65433)...');
-    setTimeout(() => refreshDashboard(true), 800);
-    setTimeout(() => refreshDashboard(true), 1800);
-    setTimeout(() => refreshDashboard(true), 3200);
+
+    let attempts = 0;
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      const res = await refreshDashboard(true);
+      if (res && res.dataHubConnected) {
+        clearInterval(pollInterval);
+        hubConnectInProgress = false;
+        if (btn) btn.textContent = '⚡ Reconnect Hub';
+        showToast((currentLang === 'hi') ? 'SQLite Data Hub सफलतापूर्वक कनेक्ट हो गया!' : 'SQLite Data Hub connected successfully!');
+      } else if (attempts >= 10) {
+        clearInterval(pollInterval);
+        hubConnectInProgress = false;
+        if (btn) btn.textContent = '⚡ Reconnect Hub';
+        if (!res || !res.dataHubConnected) {
+          updateDataHubStatus(false);
+          showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) चालू नहीं है या कनेक्ट नहीं हुआ' : 'Could not connect to SQLite Data Hub (port 65433)', true);
+        }
+      }
+    }, 500);
   }
 
   const btnReconnectHub = document.getElementById('btnSidebarReconnectHub');
@@ -2310,6 +2346,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentTab === 'media' && message.payload.primaryMedia) {
         renderHeroMediaPlayer(message.payload.primaryMedia);
       }
+    } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
+      refreshDashboard(true);
     }
   });
 });

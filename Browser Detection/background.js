@@ -171,6 +171,25 @@ async function initClientIdAndBrowser() {
  * Connects to Standalone Multi-Browser SQLite Data Hub on ws://127.0.0.1:65433
  */
 function connectDataHub() {
+  const force = arguments[0] === true;
+  if (force) {
+    if (dataHubReconnectTimer) {
+      clearTimeout(dataHubReconnectTimer);
+      dataHubReconnectTimer = null;
+    }
+    dataHubReconnectIndex = 0;
+    if (dataHubWs && dataHubWs.readyState !== WebSocket.OPEN) {
+      try {
+        dataHubWs.onopen = null;
+        dataHubWs.onmessage = null;
+        dataHubWs.onerror = null;
+        dataHubWs.onclose = null;
+        dataHubWs.close();
+      } catch (_) {}
+      dataHubWs = null;
+    }
+  }
+
   if (dataHubWs && (dataHubWs.readyState === WebSocket.OPEN || dataHubWs.readyState === WebSocket.CONNECTING)) {
     return;
   }
@@ -197,7 +216,12 @@ function connectDataHub() {
       };
       sendDataHubMessage(regMsg);
 
-      // 2. Start heartbeat timer every 25s
+      // Notify active views immediately
+      try {
+        browserAPI.runtime.sendMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: true });
+      } catch (_) {}
+
+      // 2. Start heartbeat timer every 10s (resilient against background throttling)
       if (dataHubHeartbeatInterval) clearInterval(dataHubHeartbeatInterval);
       dataHubHeartbeatInterval = setInterval(() => {
         if (dataHubConnected && dataHubWs && dataHubWs.readyState === WebSocket.OPEN) {
@@ -207,7 +231,7 @@ function connectDataHub() {
             timestamp: Date.now()
           });
         }
-      }, 25000);
+      }, 10000);
     };
 
     dataHubWs.onmessage = (event) => {
@@ -231,6 +255,9 @@ function connectDataHub() {
         clearInterval(dataHubHeartbeatInterval);
         dataHubHeartbeatInterval = null;
       }
+      try {
+        browserAPI.runtime.sendMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: false });
+      } catch (_) {}
       scheduleDataHubReconnect();
     };
   } catch (err) {
@@ -1297,6 +1324,10 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
       sendMediaTelemetryToHUD();
       sendActivityUpdateToHUD();
     }
+
+    if (!dataHubConnected) {
+      connectDataHub(true);
+    }
   }
 });
 
@@ -1843,10 +1874,11 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.warn('[MediaSentinel] Could not dispatch native message for Data Hub:', e);
       }
     }
-    connectDataHub();
-    [500, 1200, 2500, 4000].forEach((delay) => {
+    // Force immediate connection, resetting timers and stuck sockets
+    connectDataHub(true);
+    [250, 600, 1200, 2500].forEach((delay) => {
       setTimeout(() => {
-        if (!dataHubConnected) connectDataHub();
+        if (!dataHubConnected) connectDataHub(true);
       }, delay);
     });
     sendResponse({ initiated: true, dataHubConnected, nativeDispatched });

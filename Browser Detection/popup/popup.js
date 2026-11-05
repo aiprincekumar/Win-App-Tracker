@@ -1248,11 +1248,36 @@ function setupEventListeners() {
 
   const hubBadge = document.getElementById('hubStatusBadge');
   if (hubBadge) {
+    let popupHubConnecting = false;
     hubBadge.addEventListener('click', () => {
+      if (popupHubConnecting) return;
+      popupHubConnecting = true;
+      const hubText = document.getElementById('hubStatusText');
+      if (hubText) hubText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+      hubBadge.className = 'ws-badge starting';
+
       browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
-      showPopupToast('Starting & connecting to Data Hub (port 65433)...', 'info');
-      setTimeout(() => refreshDashboard(true), 800);
-      setTimeout(() => refreshDashboard(true), 2000);
+      showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...', 'info');
+
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        const res = await fetchDashboardData(true);
+        if (res && res.dataHubConnected) {
+          clearInterval(pollInterval);
+          popupHubConnecting = false;
+          renderDataHubBadge(true);
+          showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub सफलतापूर्वक कनेक्ट हो गया!' : 'SQLite Data Hub connected successfully!', 'success');
+          refreshDashboard(true);
+        } else if (attempts >= 10) {
+          clearInterval(pollInterval);
+          popupHubConnecting = false;
+          if (!res || !res.dataHubConnected) {
+            renderDataHubBadge(false);
+            showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub से कनेक्ट नहीं हो सका' : 'Could not connect to SQLite Data Hub', 'danger');
+          }
+        }
+      }, 500);
     });
   }
 
@@ -1510,6 +1535,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (message && message.type === 'LIVE_MEDIA_UPDATE' && message.payload) {
       renderMediaCard(message.payload);
       handleAutoTabSwitching({ globalMediaState: message.payload });
+    } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
+      renderDataHubBadge(Boolean(message.connected));
+      refreshDashboard(true);
     }
   });
 

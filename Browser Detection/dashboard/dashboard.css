@@ -488,12 +488,14 @@ button.spinning .refresh-spinner-icon,
   background-color: #ef4444;
 }
 
+.datahub-status-badge.connecting,
 .datahub-status-badge.fallback {
   border-color: rgba(245, 158, 11, 0.4);
   background: rgba(245, 158, 11, 0.1);
   color: #fde68a;
 }
 
+.datahub-status-badge.connecting .datahub-dot,
 .datahub-status-badge.fallback .datahub-dot {
   background-color: #f59e0b;
   box-shadow: 0 0 8px #f59e0b;

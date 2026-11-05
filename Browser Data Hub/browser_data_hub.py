@@ -613,7 +613,11 @@ class BrowserDataHubServer:
         while self._is_running and not self._stop_event.is_set():
             try:
                 client_sock, client_addr = self._server_socket.accept()
-                client_sock.settimeout(30.0)
+                try:
+                    client_sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                except Exception:
+                    pass
+                client_sock.settimeout(60.0)
                 client_thread = threading.Thread(
                     target=self._handle_client,
                     args=(client_sock, client_addr),
@@ -676,14 +680,24 @@ class BrowserDataHubServer:
                 if not chunk:
                     return None
                 data.extend(chunk)
+            except socket.timeout:
+                raise
             except Exception:
                 return None
         return bytes(data)
 
     def _parse_frame(self, sock: socket.socket) -> Tuple[Optional[int], Optional[bytes]]:
-        header = self._read_exact(sock, 2)
-        if not header:
-            return None, None
+        while self._is_running:
+            try:
+                header = self._read_exact(sock, 2)
+                if not header:
+                    return None, None
+                break
+            except socket.timeout:
+                # 60s idle threshold reached: verify client health by sending RFC 6455 PING
+                if not self._send_frame(sock, b'', OPCODE_PING):
+                    return None, None
+                continue
 
         b0, b1 = header[0], header[1]
         opcode = b0 & 0x0F
