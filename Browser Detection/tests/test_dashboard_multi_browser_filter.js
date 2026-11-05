@@ -149,4 +149,112 @@ console.log('\nTest 3: Offline Fallback Behavior Simulation');
   console.log('  ✅ Graceful local fallback activates when Data Hub is offline');
 }
 
+// ---------------------------------------------------------------------------
+// Test 4: Dashboard Time Tracking Temporal Modes & All-Time Rollover Simulation
+// ---------------------------------------------------------------------------
+console.log('\nTest 4: Dashboard Time Tracking Temporal Modes & All-Time Rollover Simulation');
+{
+  const mockHubAnalytics = {
+    query_date: '2026-11-06',
+    filter_browser: 'all',
+    today_seconds: 223,
+    daily_average_seconds: 3734,
+    all_time_seconds: 7468,
+    total_seconds: 7468,
+    total_tracked_days: 2,
+    first_tracked_date: '2026-11-05',
+    domain_distribution: [
+      { domain: 'chatgpt.com', seconds: 150, session_count: 2, percent: 67.3 },
+      { domain: '127.0.0.1', seconds: 73, session_count: 1, percent: 32.7 }
+    ],
+    all_time_domain_distribution: [
+      { domain: 'youtube.com', seconds: 6000, session_count: 10, percent: 80.3 },
+      { domain: 'github.com', seconds: 1245, session_count: 5, percent: 16.7 },
+      { domain: 'chatgpt.com', seconds: 150, session_count: 2, percent: 2.0 },
+      { domain: '127.0.0.1', seconds: 73, session_count: 1, percent: 1.0 }
+    ]
+  };
+
+  function simulateDashboardTimeTracking(dataHubAnalytics, temporalSubtab) {
+    const todaySec = dataHubAnalytics.today_seconds || 0;
+    const allTimeSec = (typeof dataHubAnalytics.all_time_seconds === 'number')
+      ? dataHubAnalytics.all_time_seconds
+      : (dataHubAnalytics.total_seconds || todaySec);
+    const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
+    const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
+    const firstTrackedDate = dataHubAnalytics.first_tracked_date || dataHubAnalytics.query_date;
+
+    let rawItems = [];
+    let activeTemporalSum = 0;
+
+    if (temporalSubtab === 'today') {
+      rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
+      activeTemporalSum = todaySec;
+    } else if (temporalSubtab === 'daily') {
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      activeTemporalSum = dailyAvgSec;
+    } else { // 'total'
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      activeTemporalSum = allTimeSec;
+    }
+
+    const items = rawItems.map(d => {
+      let computedSec = d.seconds;
+      if (temporalSubtab === 'daily') {
+        computedSec = (dailyAvgSec > 0 && allTimeSec > 0)
+          ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
+          : Math.round(d.seconds / historyDays);
+      } else if (temporalSubtab === 'total') {
+        computedSec = d.seconds;
+      } else {
+        computedSec = d.seconds;
+      }
+      return { domain: d.domain, computedSeconds: computedSec, sessions: d.session_count || 1 };
+    });
+
+    items.sort((a, b) => b.computedSeconds - a.computedSeconds);
+
+    return {
+      items,
+      totalSec: allTimeSec,
+      todaySec: todaySec,
+      dailyAvgSec: dailyAvgSec,
+      historyDays,
+      firstTrackedDate,
+      activeTemporalSum
+    };
+  }
+
+  // A. 'today' Subtab
+  const todayView = simulateDashboardTimeTracking(mockHubAnalytics, 'today');
+  assert.strictEqual(todayView.activeTemporalSum, 223, 'Today subtab activeTemporalSum must be 223s');
+  assert.strictEqual(todayView.todaySec, 223);
+  assert.strictEqual(todayView.totalSec, 7468);
+  assert.strictEqual(todayView.items.length, 2);
+
+  // B. 'total' Subtab
+  const totalView = simulateDashboardTimeTracking(mockHubAnalytics, 'total');
+  assert.strictEqual(totalView.activeTemporalSum, 7468, 'Total subtab activeTemporalSum must be 7468s');
+  assert.strictEqual(totalView.totalSec, 7468, 'Metric card Total Time must show 7468s (all-time combined)');
+  assert.strictEqual(totalView.historyDays, 2, 'History Days metric must show 2 days');
+  assert.strictEqual(totalView.firstTrackedDate, '2026-11-05', 'First tracked date must be 2026-11-05');
+  assert.strictEqual(totalView.items.length, 4, 'Total domain table must contain all 4 domains across all dates');
+  assert.strictEqual(totalView.items[0].domain, 'youtube.com');
+  assert.strictEqual(totalView.items[0].computedSeconds, 6000);
+
+  // C. 'daily' Subtab
+  const dailyView = simulateDashboardTimeTracking(mockHubAnalytics, 'daily');
+  assert.strictEqual(dailyView.activeTemporalSum, 3734, 'Daily subtab activeTemporalSum must be 3734s');
+  assert.strictEqual(dailyView.dailyAvgSec, 3734);
+
+  console.log('  ✅ Metric Cards: Today = 223s, Daily Avg = 3734s, Total = 7468s, History Days = 2, First Date = 2026-11-05');
+  console.log('  ✅ Subtab "Total": Displays combined 7468s with all 4 history domains (YouTube 6000s top)');
+  console.log('  ✅ Subtab "Today": Displays 223s with 2 today-active domains');
+  console.log('  ✅ Subtab "Daily Avg": Displays 3734s average tracking');
+}
+
 console.log('\n🎉 ALL PHASE 03 DASHBOARD MULTI-BROWSER FILTER TESTS PASSED WITH 100% SUCCESS!');

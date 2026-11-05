@@ -579,29 +579,51 @@ function sendMediaControl(action, data = {}) {
 function processDomainStats(data, tabType) {
   // 1. Standalone SQLite Data Hub Mode (Source of Truth when Connected)
   if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
-    const rawItems = dataHubAnalytics.domain_distribution;
     const todaySec = dataHubAnalytics.today_seconds || 0;
     const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
-    const totalSecAll = dataHubAnalytics.total_seconds || todaySec;
+    const allTimeSec = (typeof dataHubAnalytics.all_time_seconds === 'number')
+      ? dataHubAnalytics.all_time_seconds
+      : (dataHubAnalytics.total_seconds || todaySec);
+    const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
 
+    let rawItems = [];
     let targetTotal = todaySec;
-    if (tabType === 'daily') {
+
+    if (tabType === 'today') {
+      rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
+      targetTotal = todaySec;
+    } else if (tabType === 'daily') {
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
       targetTotal = dailyAvgSec;
-    } else if (tabType === 'total') {
-      targetTotal = totalSecAll;
+    } else { // 'total'
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      targetTotal = allTimeSec;
     }
 
     const items = rawItems.map(d => {
       let domainSec = d.seconds;
       if (tabType === 'daily') {
-        domainSec = (dailyAvgSec > 0 && todaySec > 0)
-          ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
-          : Math.round(d.seconds / 7);
+        domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
+          ? ((dailyAvgSec > 0 && allTimeSec > 0)
+              ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
+              : Math.round(d.seconds / historyDays))
+          : ((dailyAvgSec > 0 && todaySec > 0)
+              ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
+              : Math.round(d.seconds / 7));
       } else if (tabType === 'total') {
-        domainSec = (totalSecAll > 0 && totalSecAll !== todaySec && todaySec > 0)
-          ? Math.round(totalSecAll * ((d.percent || 0) / 100.0))
-          : d.seconds;
+        domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
+          ? d.seconds
+          : ((allTimeSec > 0 && allTimeSec !== todaySec && todaySec > 0)
+              ? Math.round(allTimeSec * ((d.percent || 0) / 100.0))
+              : d.seconds);
       }
+
+      const ratio = targetTotal > 0 ? (domainSec / targetTotal) : 0;
+      const pct = (ratio * 100);
 
       return {
         domain: d.domain,
@@ -609,7 +631,7 @@ function processDomainStats(data, tabType) {
         sessions: d.session_count || 1,
         favicon: d.favicon_url || getFaviconUrl(d.domain),
         lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now(),
-        percent: d.percent
+        percent: pct
       };
     });
 

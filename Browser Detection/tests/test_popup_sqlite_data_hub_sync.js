@@ -85,28 +85,47 @@ console.log('\nTest 2: processDomainStats SQLite Data Hub vs Local Fallback Simu
   // Replicate popup.js processDomainStats implementation
   function testProcessDomainStats(data, tabType, isHubConnected, hubAnalytics) {
     if (isHubConnected && hubAnalytics && Array.isArray(hubAnalytics.domain_distribution)) {
-      const rawItems = hubAnalytics.domain_distribution;
       const todaySec = hubAnalytics.today_seconds || 0;
       const dailyAvgSec = hubAnalytics.daily_average_seconds || 0;
-      const totalSecAll = hubAnalytics.total_seconds || todaySec;
+      const allTimeSec = (typeof hubAnalytics.all_time_seconds === 'number')
+        ? hubAnalytics.all_time_seconds
+        : (hubAnalytics.total_seconds || todaySec);
+      const historyDays = Math.max(1, hubAnalytics.total_tracked_days || 1);
 
+      let rawItems = [];
       let targetTotal = todaySec;
-      if (tabType === 'daily') {
+
+      if (tabType === 'today') {
+        rawItems = Array.isArray(hubAnalytics.domain_distribution) ? hubAnalytics.domain_distribution : [];
+        targetTotal = todaySec;
+      } else if (tabType === 'daily') {
+        rawItems = Array.isArray(hubAnalytics.all_time_domain_distribution) && hubAnalytics.all_time_domain_distribution.length > 0
+          ? hubAnalytics.all_time_domain_distribution
+          : (hubAnalytics.domain_distribution || []);
         targetTotal = dailyAvgSec;
-      } else if (tabType === 'total') {
-        targetTotal = totalSecAll;
+      } else { // 'total'
+        rawItems = Array.isArray(hubAnalytics.all_time_domain_distribution) && hubAnalytics.all_time_domain_distribution.length > 0
+          ? hubAnalytics.all_time_domain_distribution
+          : (hubAnalytics.domain_distribution || []);
+        targetTotal = allTimeSec;
       }
 
       const items = rawItems.map(d => {
         let domainSec = d.seconds;
         if (tabType === 'daily') {
-          domainSec = (dailyAvgSec > 0 && todaySec > 0)
-            ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
-            : Math.round(d.seconds / 7);
+          domainSec = (Array.isArray(hubAnalytics.all_time_domain_distribution) && hubAnalytics.all_time_domain_distribution.length > 0)
+            ? ((dailyAvgSec > 0 && allTimeSec > 0)
+                ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
+                : Math.round(d.seconds / historyDays))
+            : ((dailyAvgSec > 0 && todaySec > 0)
+                ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
+                : Math.round(d.seconds / 7));
         } else if (tabType === 'total') {
-          domainSec = (totalSecAll > 0 && totalSecAll !== todaySec && todaySec > 0)
-            ? Math.round(totalSecAll * ((d.percent || 0) / 100.0))
-            : d.seconds;
+          domainSec = (Array.isArray(hubAnalytics.all_time_domain_distribution) && hubAnalytics.all_time_domain_distribution.length > 0)
+            ? d.seconds
+            : ((allTimeSec > 0 && allTimeSec !== todaySec && todaySec > 0)
+                ? Math.round(allTimeSec * ((d.percent || 0) / 100.0))
+                : d.seconds);
         }
 
         return {
@@ -185,6 +204,38 @@ console.log('\nTest 2: processDomainStats SQLite Data Hub vs Local Fallback Simu
   assert.strictEqual(fallbackResult.items.length, 1);
   assert.strictEqual(fallbackResult.items[0].domain, 'wikipedia.org');
   console.log('  ✅ Offline Fallback activates seamlessly when Hub is disconnected');
+
+  // 5. Midnight Rollover Simulation (Yesterday + Today Combined Total & All-Time Domains)
+  const mockRolloverAnalytics = {
+    query_date: '2026-11-06',
+    filter_browser: 'all',
+    today_seconds: 223,
+    daily_average_seconds: 3734,
+    all_time_seconds: 7468,
+    total_tracked_days: 2,
+    first_tracked_date: '2026-11-05',
+    domain_distribution: [
+      { domain: 'chatgpt.com', seconds: 150, session_count: 2, percent: 67.3 },
+      { domain: '127.0.0.1', seconds: 73, session_count: 1, percent: 32.7 }
+    ],
+    all_time_domain_distribution: [
+      { domain: 'youtube.com', seconds: 6000, session_count: 10, percent: 80.3 },
+      { domain: 'github.com', seconds: 1245, session_count: 5, percent: 16.7 },
+      { domain: 'chatgpt.com', seconds: 150, session_count: 2, percent: 2.0 },
+      { domain: '127.0.0.1', seconds: 73, session_count: 1, percent: 1.0 }
+    ]
+  };
+
+  const rolloverToday = testProcessDomainStats(mockLocalStorageData, 'today', true, mockRolloverAnalytics);
+  assert.strictEqual(rolloverToday.totalSeconds, 223, 'Rollover Today must show exactly 223s');
+  assert.strictEqual(rolloverToday.items.length, 2, 'Today items must contain 2 domains');
+
+  const rolloverTotal = testProcessDomainStats(mockLocalStorageData, 'total', true, mockRolloverAnalytics);
+  assert.strictEqual(rolloverTotal.totalSeconds, 7468, 'Rollover Total must show combined 7468s (yesterday 7245s + today 223s)');
+  assert.strictEqual(rolloverTotal.items.length, 4, 'All-time domains must include yesterday and today domains');
+  assert.strictEqual(rolloverTotal.items[0].domain, 'youtube.com');
+  assert.strictEqual(rolloverTotal.items[0].seconds, 6000);
+  console.log('  ✅ Midnight Rollover Mode: Combined yesterday (7245s) + today (223s) = 7468s with full all-time domain distribution');
 }
 
 // ---------------------------------------------------------------------------

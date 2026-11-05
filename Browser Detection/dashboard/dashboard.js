@@ -930,29 +930,71 @@ function renderTimeTrackingTab(data) {
 
   if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
     const todaySec = dataHubAnalytics.today_seconds || 0;
+    const allTimeSec = (typeof dataHubAnalytics.all_time_seconds === 'number')
+      ? dataHubAnalytics.all_time_seconds
+      : (dataHubAnalytics.total_seconds || todaySec);
     const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
-    const rawItems = dataHubAnalytics.domain_distribution;
-    const items = rawItems.map(d => ({
-      domain: d.domain,
-      favicon: d.favicon_url || getFaviconUrl(d.domain),
-      computedSeconds: d.seconds,
-      totalSeconds: d.seconds,
-      todaySeconds: d.seconds,
-      dailyAvgSeconds: d.seconds,
-      sessions: d.session_count || 1,
-      lastActive: (d.last_active ? d.last_active * 1000 : Date.now()),
-      ratio: (d.percent / 100.0),
-      ratioPercent: (d.percent || 0).toFixed(1)
-    }));
+    const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
+    const firstTrackedDate = dataHubAnalytics.first_tracked_date || dataHubAnalytics.query_date || new Date().toISOString().split('T')[0];
+
+    let rawItems = [];
+    let activeTemporalSum = 0;
+
+    if (temporalSubtab === 'today') {
+      rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
+      activeTemporalSum = todaySec;
+    } else if (temporalSubtab === 'daily') {
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      activeTemporalSum = dailyAvgSec;
+    } else { // 'total'
+      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      activeTemporalSum = allTimeSec;
+    }
+
+    const items = rawItems.map(d => {
+      let computedSec = d.seconds;
+      if (temporalSubtab === 'daily') {
+        computedSec = (dailyAvgSec > 0 && allTimeSec > 0)
+          ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
+          : Math.round(d.seconds / historyDays);
+      } else if (temporalSubtab === 'total') {
+        computedSec = d.seconds;
+      } else { // 'today'
+        computedSec = d.seconds;
+      }
+
+      const ratio = activeTemporalSum > 0 ? (computedSec / activeTemporalSum) : 0;
+      const ratioPercent = (ratio * 100).toFixed(1);
+
+      return {
+        domain: d.domain,
+        favicon: d.favicon_url || getFaviconUrl(d.domain),
+        computedSeconds: computedSec,
+        totalSeconds: d.seconds,
+        todaySeconds: (temporalSubtab === 'today' ? d.seconds : 0),
+        dailyAvgSeconds: Math.round(d.seconds / historyDays),
+        sessions: d.session_count || 1,
+        lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now()),
+        ratio,
+        ratioPercent
+      };
+    });
+
+    items.sort((a, b) => b.computedSeconds - a.computedSeconds);
     const topDomain = items.length > 0 ? items[0] : null;
+
     stats = {
       items,
-      totalSec: todaySec,
+      totalSec: allTimeSec,
       todaySec: todaySec,
       dailyAvgSec: dailyAvgSec,
-      historyDays: 7,
-      firstTrackedDate: dataHubAnalytics.query_date,
-      activeTemporalSum: todaySec,
+      historyDays: historyDays,
+      firstTrackedDate: firstTrackedDate,
+      activeTemporalSum: activeTemporalSum,
       topDomain
     };
   } else {
