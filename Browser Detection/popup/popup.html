@@ -214,7 +214,16 @@
       <section class="breakdown-section">
         <div class="section-header">
           <h2 id="sectionDomainTitle" class="section-title">Domain Breakdown</h2>
-          <input type="text" id="domainSearchInput" class="search-input" placeholder="Search domain...">
+          <div class="filter-controls-group">
+            <select id="browserFilterSelect" class="browser-filter-select-popup" aria-label="Filter Analytics by Browser" title="Filter by Browser">
+              <option value="all">🌐 All</option>
+              <option value="chrome">Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="brave">Brave</option>
+              <option value="opera">Opera</option>
+            </select>
+            <input type="text" id="domainSearchInput" class="search-input" placeholder="Search domain...">
+          </div>
         </div>
 
         <div id="domainsListContainer" class="domains-list">

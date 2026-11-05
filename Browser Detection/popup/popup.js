@@ -359,6 +359,7 @@ function applyPopupLanguage(lang) {
   if (dashboardData) {
     renderWebSocketBadge(dashboardData.wsConnected);
     renderMediaCard(dashboardData.globalMediaState);
+    renderStatsPills(dashboardData);
     const { items, totalSeconds } = processDomainStats(dashboardData, currentTemporalTab);
     renderDonutChart(items, totalSeconds);
     renderDomainList(items, totalSeconds);
@@ -395,6 +396,38 @@ let currentTemporalTab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
 let searchQuery = '';
 let activeMediaCached = null;
+
+// Standalone SQLite Data Hub state & Multi-Browser Filter
+let dataHubConnected = false;
+let dataHubAnalytics = null;
+let selectedBrowser = 'all';
+
+/**
+ * Returns favicon URL with Google S2 service fallback
+ */
+function getFaviconUrl(domain) {
+  if (!domain || domain.includes(':')) return '../icons/icon32.png';
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+}
+
+/**
+ * Updates dynamic options in browser filter dropdown when Data Hub reports new clients
+ */
+function updateBrowserFilterOptions(registeredBrowsers = []) {
+  const sel = document.getElementById('browserFilterSelect');
+  if (!sel) return;
+
+  const existingValues = new Set(Array.from(sel.options).map(o => o.value));
+  registeredBrowsers.forEach(b => {
+    if (b && !existingValues.has(b)) {
+      const opt = document.createElement('option');
+      opt.value = b;
+      opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+      sel.appendChild(opt);
+    }
+  });
+  sel.value = selectedBrowser;
+}
 
 /**
  * Escapes HTML entities for safe DOM injection (OWASP / MV3 CSP compliant)
@@ -544,6 +577,47 @@ function sendMediaControl(action, data = {}) {
  * Extracts list of domains with duration and session stats based on active temporal tab
  */
 function processDomainStats(data, tabType) {
+  // 1. Standalone SQLite Data Hub Mode (Source of Truth when Connected)
+  if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
+    const rawItems = dataHubAnalytics.domain_distribution;
+    const todaySec = dataHubAnalytics.today_seconds || 0;
+    const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
+    const totalSecAll = dataHubAnalytics.total_seconds || todaySec;
+
+    let targetTotal = todaySec;
+    if (tabType === 'daily') {
+      targetTotal = dailyAvgSec;
+    } else if (tabType === 'total') {
+      targetTotal = totalSecAll;
+    }
+
+    const items = rawItems.map(d => {
+      let domainSec = d.seconds;
+      if (tabType === 'daily') {
+        domainSec = (dailyAvgSec > 0 && todaySec > 0)
+          ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
+          : Math.round(d.seconds / 7);
+      } else if (tabType === 'total') {
+        domainSec = (totalSecAll > 0 && totalSecAll !== todaySec && todaySec > 0)
+          ? Math.round(totalSecAll * ((d.percent || 0) / 100.0))
+          : d.seconds;
+      }
+
+      return {
+        domain: d.domain,
+        seconds: domainSec,
+        sessions: d.session_count || 1,
+        favicon: d.favicon_url || getFaviconUrl(d.domain),
+        lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now(),
+        percent: d.percent
+      };
+    });
+
+    items.sort((a, b) => b.seconds - a.seconds);
+    return { items, totalSeconds: targetTotal };
+  }
+
+  // 2. Graceful Local Fallback Mode (chrome.storage.local activityData)
   if (!data || !data.activityData || !data.activityData.domains) {
     return { items: [], totalSeconds: 0 };
   }
@@ -575,7 +649,7 @@ function processDomainStats(data, tabType) {
         domain,
         seconds: domainSec,
         sessions,
-        favicon: entry.favicon,
+        favicon: entry.favicon || getFaviconUrl(domain),
         lastActive: entry.lastActive
       });
       totalSec += domainSec;
@@ -712,15 +786,26 @@ function renderDomainList(items, totalSeconds) {
  * Renders quick stats pills
  */
 function renderStatsPills(data) {
-  const todayStats = processDomainStats(data, 'today');
-  const dailyStats = processDomainStats(data, 'daily');
-
+  let todaySeconds = 0;
+  let dailyAvgSeconds = 0;
   let totalSessions = 0;
-  if (data && data.activityData && data.activityData.domains) {
-    const todayStr = data.todayStr;
-    for (const d of Object.values(data.activityData.domains)) {
-      if (d.days && d.days[todayStr]) {
-        totalSessions += (d.days[todayStr].sessions || 1);
+
+  if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
+    todaySeconds = dataHubAnalytics.today_seconds || 0;
+    dailyAvgSeconds = dataHubAnalytics.daily_average_seconds || 0;
+    totalSessions = dataHubAnalytics.domain_distribution.reduce((acc, curr) => acc + (curr.session_count || 0), 0);
+  } else {
+    const todayStats = processDomainStats(data, 'today');
+    const dailyStats = processDomainStats(data, 'daily');
+    todaySeconds = todayStats.totalSeconds;
+    dailyAvgSeconds = dailyStats.totalSeconds;
+
+    if (data && data.activityData && data.activityData.domains) {
+      const todayStr = data.todayStr;
+      for (const d of Object.values(data.activityData.domains)) {
+        if (d.days && d.days[todayStr]) {
+          totalSessions += (d.days[todayStr].sessions || 1);
+        }
       }
     }
   }
@@ -729,8 +814,8 @@ function renderStatsPills(data) {
   const pDaily = document.getElementById('pillDailyAvg');
   const pSessions = document.getElementById('pillSessionsCount');
 
-  if (pToday) pToday.textContent = formatCenterTime(todayStats.totalSeconds);
-  if (pDaily) pDaily.textContent = formatCenterTime(dailyStats.totalSeconds);
+  if (pToday) pToday.textContent = formatCenterTime(todaySeconds);
+  if (pDaily) pDaily.textContent = formatCenterTime(dailyAvgSeconds);
   if (pSessions) pSessions.textContent = String(totalSessions);
 }
 
@@ -993,7 +1078,7 @@ function renderWebSocketBadge(isConnected) {
   }
 
   if (dashboardData) {
-    renderDataHubBadge(Boolean(dashboardData.dataHubConnected));
+    renderDataHubBadge(Boolean(dataHubConnected && dataHubAnalytics !== null));
   }
 }
 
@@ -1060,6 +1145,45 @@ function handleAutoTabSwitching(data) {
 async function refreshDashboard(forceRefresh = false) {
   dashboardData = await fetchDashboardData(forceRefresh);
   if (!dashboardData) return;
+
+  dataHubConnected = Boolean(dashboardData.dataHubConnected);
+
+  // If Standalone SQLite Data Hub is connected, query analytics matching dashboard.js pattern
+  if (dataHubConnected) {
+    try {
+      const hubRes = await new Promise((res) => {
+        browserAPI.runtime.sendMessage({
+          type: 'QUERY_DATA_HUB',
+          query: 'ANALYTICS',
+          browser: selectedBrowser || 'all',
+          date: dashboardData.todayStr || new Date().toISOString().split('T')[0]
+        }, (hr) => {
+          if (browserAPI.runtime.lastError || !hr || !hr.success) {
+            res(null);
+          } else {
+            res(hr.data || null);
+          }
+        });
+      });
+
+      if (hubRes) {
+        dataHubAnalytics = hubRes;
+        renderDataHubBadge(true);
+        if (Array.isArray(hubRes.registered_browsers)) {
+          updateBrowserFilterOptions(hubRes.registered_browsers);
+        }
+      } else {
+        dataHubAnalytics = null;
+        renderDataHubBadge(false);
+      }
+    } catch (_) {
+      dataHubAnalytics = null;
+      renderDataHubBadge(false);
+    }
+  } else {
+    dataHubAnalytics = null;
+    renderDataHubBadge(false);
+  }
 
   handleAutoTabSwitching(dashboardData);
   renderWebSocketBadge(dashboardData.wsConnected);
@@ -1140,6 +1264,19 @@ function setupEventListeners() {
       }
     });
   });
+
+  // Multi-Browser Dropdown Filter
+  const browserFilterSelect = document.getElementById('browserFilterSelect');
+  if (browserFilterSelect) {
+    browserFilterSelect.value = selectedBrowser;
+    browserFilterSelect.addEventListener('change', async (e) => {
+      selectedBrowser = e.target.value;
+      await browserAPI.storage.local.set({ selected_browser_filter: selectedBrowser });
+      await refreshDashboard(false);
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+      showPopupToast(`Filter: ${selectedText}`, 'info');
+    });
+  }
 
   // Domain search filter
   const searchInput = document.getElementById('domainSearchInput');
@@ -1515,13 +1652,18 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
-  // Load language preference from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings'], (res) => {
+  // Load language preference and browser filter from storage
+  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter'], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
     } else if (res && res.media_sentinel_settings && res.media_sentinel_settings.language) {
       lang = res.media_sentinel_settings.language;
+    }
+    if (res && res.selected_browser_filter) {
+      selectedBrowser = res.selected_browser_filter;
+      const sel = document.getElementById('browserFilterSelect');
+      if (sel) sel.value = selectedBrowser;
     }
     applyPopupLanguage(lang);
     refreshDashboard();
@@ -1541,13 +1683,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Reactive Language Synchronization across Dashboard & Popup
+  // Reactive Language and Browser Filter Synchronization across Dashboard & Popup
   browserAPI.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
       if (changes.language && changes.language.newValue) {
         applyPopupLanguage(changes.language.newValue);
       } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {
         applyPopupLanguage(changes.media_sentinel_settings.newValue.language);
+      }
+      if (changes.selected_browser_filter && changes.selected_browser_filter.newValue) {
+        selectedBrowser = changes.selected_browser_filter.newValue;
+        const sel = document.getElementById('browserFilterSelect');
+        if (sel) sel.value = selectedBrowser;
+        refreshDashboard(false);
       }
     }
   });
