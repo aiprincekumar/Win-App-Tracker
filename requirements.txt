@@ -12,7 +12,7 @@ pywin32>=306; sys_platform == 'win32'
 comtypes>=1.2.0; sys_platform == 'win32'
 
 # Core Audio Windows WASAPI Endpoint & Peak Metering (Audio Detector & Video Detector HUD)
-pycaw>=20240101; sys_platform == 'win32'
+pycaw>=20260927; sys_platform == 'win32'
 
 # Windows System Media Transport Controls (SMTC) Support (Optional / Enhanced)
 winsdk>=1.0.0b10; sys_platform == 'win32'
