@@ -401,6 +401,28 @@ let activeMediaCached = null;
 let dataHubConnected = false;
 let dataHubAnalytics = null;
 let selectedBrowser = 'all';
+let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
+let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
+
+function isInternalDomain(domain) {
+  if (!domain) return false;
+  const d = domain.toLowerCase();
+  return (
+    d === 'chrome' ||
+    d === 'edge' ||
+    d === 'about' ||
+    d === 'newtab' ||
+    d === 'dashboard' ||
+    d === 'extension' ||
+    d.startsWith('chrome://') ||
+    d.startsWith('edge://') ||
+    d.startsWith('about:') ||
+    d.startsWith('chrome-extension://') ||
+    d.startsWith('edge-extension://') ||
+    d.startsWith('moz-extension://') ||
+    d.startsWith('extension:')
+  );
+}
 
 /**
  * Returns favicon URL with Google S2 service fallback
@@ -628,10 +650,14 @@ function processDomainStats(data, tabType) {
       return {
         domain: d.domain,
         seconds: domainSec,
+        foreground_seconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : d.seconds),
+        background_media_seconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : 0),
+        combined_seconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : d.seconds),
         sessions: d.session_count || 1,
         favicon: d.favicon_url || getFaviconUrl(d.domain),
         lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now(),
-        percent: pct
+        percent: pct,
+        isInternal: isInternalDomain(d.domain)
       };
     });
 
@@ -652,27 +678,48 @@ function processDomainStats(data, tabType) {
   let totalSec = 0;
 
   for (const [domain, entry] of Object.entries(domains)) {
+    const combinedTotal = entry.totalSeconds || 0;
+    const fgTotal = (typeof entry.foregroundSeconds === 'number') ? entry.foregroundSeconds : combinedTotal;
+    const bgTotal = entry.backgroundMediaSeconds || 0;
+
+    const todayObj = (entry.days && entry.days[todayStr]) || null;
+    const combinedToday = todayObj ? (todayObj.seconds || 0) : 0;
+    const fgToday = (todayObj && typeof todayObj.foregroundSeconds === 'number') ? todayObj.foregroundSeconds : combinedToday;
+    const bgToday = (todayObj && typeof todayObj.backgroundMediaSeconds === 'number') ? todayObj.backgroundMediaSeconds : 0;
+
+    let targetTotalSec = combinedTotal;
+    let targetTodaySec = combinedToday;
+    if (selectedTrackingMode === 'foreground') {
+      targetTotalSec = fgTotal;
+      targetTodaySec = fgToday;
+    } else if (selectedTrackingMode === 'background_media') {
+      targetTotalSec = bgTotal;
+      targetTodaySec = bgToday;
+    }
+
     let domainSec = 0;
     let sessions = entry.sessionCount || 1;
 
     if (tabType === 'today') {
-      if (entry.days && entry.days[todayStr]) {
-        domainSec = entry.days[todayStr].seconds || 0;
-        sessions = entry.days[todayStr].sessions || 1;
-      }
+      domainSec = targetTodaySec;
+      sessions = todayObj ? (todayObj.sessions || 1) : 1;
     } else if (tabType === 'daily') {
-      domainSec = Math.round((entry.totalSeconds || 0) / historyDays);
+      domainSec = Math.round(targetTotalSec / historyDays);
     } else {
-      domainSec = entry.totalSeconds || 0;
+      domainSec = targetTotalSec;
     }
 
-    if (domainSec > 0) {
+    if (domainSec > 0 || (tabType === 'total' && combinedTotal > 0)) {
       items.push({
         domain,
         seconds: domainSec,
+        foreground_seconds: (tabType === 'today' ? fgToday : fgTotal),
+        background_media_seconds: (tabType === 'today' ? bgToday : bgTotal),
+        combined_seconds: (tabType === 'today' ? combinedToday : combinedTotal),
         sessions,
         favicon: entry.favicon || getFaviconUrl(domain),
-        lastActive: entry.lastActive
+        lastActive: entry.lastActive,
+        isInternal: isInternalDomain(domain)
       });
       totalSec += domainSec;
     }
@@ -758,9 +805,13 @@ function renderDomainList(items, totalSeconds) {
   if (!container) return;
   container.innerHTML = '';
 
-  const filtered = items.filter(it => 
-    !searchQuery || it.domain.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = items.filter(it => {
+    const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
+    if (selectedDomainCategory === 'web' && isInternal) return false;
+    if (selectedDomainCategory === 'internal' && !isInternal) return false;
+    if (searchQuery && !it.domain.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
   if (filtered.length === 0) {
     container.innerHTML = `
@@ -774,6 +825,14 @@ function renderDomainList(items, totalSeconds) {
   filtered.forEach((item, idx) => {
     const pct = totalSeconds > 0 ? Math.round((item.seconds / totalSeconds) * 100) : 0;
     const color = PALETTE[idx % PALETTE.length];
+    const isInternal = Boolean(item.isInternal || isInternalDomain(item.domain));
+
+    let badgeHtml = '';
+    if (item.domain === 'Dashboard' || item.domain === 'Extension') {
+      badgeHtml = `<span class="badge-mini-ext">🧩 Ext</span>`;
+    } else if (isInternal) {
+      badgeHtml = `<span class="badge-mini-int">⚙️ Int</span>`;
+    }
 
     const card = document.createElement('div');
     card.className = 'domain-item';
@@ -782,6 +841,7 @@ function renderDomainList(items, totalSeconds) {
         <div class="domain-brand-group">
           <img src="${escapeHtml(item.favicon || '../icons/icon32.png')}" class="domain-favicon" alt="">
           <span class="domain-name" title="${escapeHtml(item.domain)}">${escapeHtml(item.domain)}</span>
+          ${badgeHtml}
         </div>
         <div class="domain-time-group">
           <span class="domain-time">${formatDuration(item.seconds)}</span>
@@ -1178,6 +1238,7 @@ async function refreshDashboard(forceRefresh = false) {
           type: 'QUERY_DATA_HUB',
           query: 'ANALYTICS',
           browser: selectedBrowser || 'all',
+          tracking_mode: selectedTrackingMode || 'all',
           date: dashboardData.todayStr || new Date().toISOString().split('T')[0]
         }, (hr) => {
           if (browserAPI.runtime.lastError || !hr || !hr.success) {
@@ -1297,6 +1358,32 @@ function setupEventListeners() {
       await refreshDashboard(false);
       const selectedText = e.target.options[e.target.selectedIndex].text;
       showPopupToast(`Filter: ${selectedText}`, 'info');
+    });
+  }
+
+  // Tracking Mode Selector
+  const trackingModeSelect = document.getElementById('trackingModeSelect');
+  if (trackingModeSelect) {
+    trackingModeSelect.value = selectedTrackingMode;
+    trackingModeSelect.addEventListener('change', async (e) => {
+      selectedTrackingMode = e.target.value;
+      await browserAPI.storage.local.set({ selected_tracking_mode: selectedTrackingMode });
+      await refreshDashboard(false);
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+      showPopupToast(`Tracking: ${selectedText}`, 'info');
+    });
+  }
+
+  // Domain Category Scheme Filter
+  const domainCategorySelect = document.getElementById('domainCategorySelect');
+  if (domainCategorySelect) {
+    domainCategorySelect.value = selectedDomainCategory;
+    domainCategorySelect.addEventListener('change', async (e) => {
+      selectedDomainCategory = e.target.value;
+      await browserAPI.storage.local.set({ selected_domain_category: selectedDomainCategory });
+      await refreshDashboard(false);
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+      showPopupToast(`Category: ${selectedText}`, 'info');
     });
   }
 
@@ -1674,8 +1761,8 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
-  // Load language preference and browser filter from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter'], (res) => {
+  // Load language preference, browser filter, tracking mode, and category from storage
+  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
@@ -1686,6 +1773,16 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedBrowser = res.selected_browser_filter;
       const sel = document.getElementById('browserFilterSelect');
       if (sel) sel.value = selectedBrowser;
+    }
+    if (res && res.selected_tracking_mode) {
+      selectedTrackingMode = res.selected_tracking_mode;
+      const selTm = document.getElementById('trackingModeSelect');
+      if (selTm) selTm.value = selectedTrackingMode;
+    }
+    if (res && res.selected_domain_category) {
+      selectedDomainCategory = res.selected_domain_category;
+      const selCat = document.getElementById('domainCategorySelect');
+      if (selCat) selCat.value = selectedDomainCategory;
     }
     applyPopupLanguage(lang);
     refreshDashboard();

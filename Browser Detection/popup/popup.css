@@ -1295,3 +1295,30 @@ button.spinning .refresh-spinner-icon,
   border-color: rgba(239, 68, 68, 0.3);
   color: #fca5a5;
 }
+
+/* Mini Internal and Extension Badges in Domain List */
+.badge-mini-ext {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 4px;
+  color: #34d399;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.badge-mini-int {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 4px;
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
