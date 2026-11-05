@@ -17,6 +17,9 @@ pycaw>=20240101; sys_platform == 'win32'
 # Windows System Media Transport Controls (SMTC) Support (Optional / Enhanced)
 winsdk>=1.0.0b10; sys_platform == 'win32'
 
+# GUI & System Tray Icon Badging (Video Detector HUD)
+Pillow>=10.0.0
+
 # ------------------------------------------------------------------------------
 # NOTE ON WEBSOCKETS & ZERO EXTERNAL RUNTIME DEPENDENCIES:
 # Both WebSocket servers in this repository:

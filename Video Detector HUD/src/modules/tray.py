@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 modules/tray.py: Windows Dynamic System Tray Controller.
 Department 02: Solution Architecture & Systems Engineering.
@@ -15,7 +15,13 @@ import ctypes
 from ctypes import wintypes
 from typing import Optional, Callable, Dict, Any
 
-from PIL import Image, ImageDraw
+try:
+    from PIL import Image, ImageDraw
+    HAS_PIL = True
+except ImportError:
+    Image = None
+    ImageDraw = None
+    HAS_PIL = False
 
 # Status Color Accents
 COLOR_ACTIVE = "#10B981"      # Emerald Green - Active Video Playback
@@ -50,10 +56,12 @@ ID_REPORT = 1005
 ID_EXIT = 1006
 
 
-def create_status_icon(color_hex: str, size: int = 16) -> Image.Image:
+def create_status_icon(color_hex: str, size: int = 16) -> Optional[Any]:
     """
     Renders a crisp 16x16 vector-like circular status badge with specular glass highlight.
     """
+    if not HAS_PIL or Image is None or ImageDraw is None:
+        return None
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     # Outer dark stroke
@@ -125,7 +133,7 @@ class SystemTrayController:
         self._hicon: Optional[int] = None
         self._temp_ico_path: Optional[str] = None
 
-        if not headless and sys.platform == "win32":
+        if not headless and sys.platform == "win32" and HAS_PIL:
             try:
                 import pystray
                 self.backend_type = "pystray"
@@ -295,6 +303,8 @@ class SystemTrayController:
 
         # Generate temporary icon
         img = create_status_icon(self.current_color)
+        if not img:
+            return
         tf = tempfile.NamedTemporaryFile(suffix=".ico", delete=False)
         img.save(tf.name, format="ICO")
         tf.close()
