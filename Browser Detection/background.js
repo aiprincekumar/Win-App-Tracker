@@ -378,14 +378,16 @@ async function saveOfflineQueue() {
 }
 
 /**
- * Streams active seconds delta to Data Hub or offline queue
+ * Streams active seconds delta to Data Hub or offline queue.
+ * Supports trackingType: 'foreground' | 'background_media'.
  */
-function streamActivityDelta(domain, seconds, isNewSession = false) {
+function streamActivityDelta(domain, seconds, isNewSession = false, trackingType = 'foreground') {
   if (!domain || seconds <= 0) return;
 
   const delta = {
     domain,
     seconds,
+    tracking_type: trackingType,
     date_str: getTodayDateString(),
     browser_type: detectedBrowser,
     favicon_url: getFaviconUrl(domain),
@@ -398,6 +400,7 @@ function streamActivityDelta(domain, seconds, isNewSession = false) {
       browser_type: detectedBrowser,
       domain: delta.domain,
       seconds: delta.seconds,
+      tracking_type: delta.tracking_type,
       date_str: delta.date_str,
       favicon_url: delta.favicon_url,
       session_count: delta.session_count,
@@ -458,7 +461,32 @@ function getTodayDateString() {
 }
 
 /**
- * Extracts clean domain name from URL
+ * Classifies if a domain represents an internal browser scheme or extension page
+ */
+function isInternalDomain(domain) {
+  if (!domain) return false;
+  const d = domain.toLowerCase();
+  return (
+    d === 'chrome' ||
+    d === 'edge' ||
+    d === 'about' ||
+    d === 'newtab' ||
+    d === 'dashboard' ||
+    d === 'extension' ||
+    d.startsWith('chrome://') ||
+    d.startsWith('edge://') ||
+    d.startsWith('about:') ||
+    d.startsWith('chrome-extension://') ||
+    d.startsWith('edge-extension://') ||
+    d.startsWith('moz-extension://') ||
+    d.startsWith('extension:')
+  );
+}
+
+/**
+ * Extracts clean domain name from URL.
+ * Accurately classifies HTTP/HTTPS domains, extension pages (Dashboard / Extension),
+ * and internal browser schemes (chrome, edge, about, newtab).
  */
 function extractDomain(url) {
   if (!url) return null;
@@ -467,8 +495,33 @@ function extractDomain(url) {
     if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
       return parsed.hostname.toLowerCase();
     }
+    // Extension pages (Dashboard or Extension)
+    if (
+      parsed.protocol === 'chrome-extension:' ||
+      parsed.protocol === 'edge-extension:' ||
+      parsed.protocol === 'moz-extension:' ||
+      parsed.protocol === 'extension:'
+    ) {
+      if (parsed.pathname && parsed.pathname.includes('dashboard')) {
+        return 'Dashboard';
+      }
+      return 'Extension';
+    }
+    // Internal browser schemes
     if (parsed.protocol === 'chrome:' || parsed.protocol === 'edge:' || parsed.protocol === 'about:') {
-      return parsed.protocol.replace(':', '');
+      const scheme = parsed.protocol.replace(':', '');
+      const host = parsed.hostname ? parsed.hostname.toLowerCase() : '';
+      const path = parsed.pathname ? parsed.pathname.toLowerCase() : '';
+      if (host === 'newtab' || path === 'newtab' || url.includes('newtab')) {
+        return 'newtab';
+      }
+      if (host) {
+        return `${scheme}://${host}`;
+      }
+      if (path && path !== '/' && path !== 'blank') {
+        return `${scheme}:${path}`;
+      }
+      return scheme;
     }
   } catch (e) {}
   return null;
@@ -478,7 +531,7 @@ function extractDomain(url) {
  * Generates default Google favicon URL for domain
  */
 function getFaviconUrl(domain) {
-  if (!domain || domain.includes(':')) {
+  if (!domain || domain.includes(':') || isInternalDomain(domain)) {
     return 'icons/icon32.png';
   }
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
@@ -556,6 +609,8 @@ async function loadStorageData() {
             mergedDomains[dom] = {
               favicon: domVal.favicon || mergedDomains[dom].favicon || getFaviconUrl(dom),
               totalSeconds: Math.max(Number(domVal.totalSeconds) || 0, Number(mergedDomains[dom].totalSeconds) || 0),
+              foregroundSeconds: Math.max(Number(domVal.foregroundSeconds) || 0, Number(mergedDomains[dom].foregroundSeconds) || (Number(mergedDomains[dom].totalSeconds) || 0)),
+              backgroundMediaSeconds: Math.max(Number(domVal.backgroundMediaSeconds) || 0, Number(mergedDomains[dom].backgroundMediaSeconds) || 0),
               sessionCount: Math.max(Number(domVal.sessionCount) || 1, Number(mergedDomains[dom].sessionCount) || 1),
               lastActive: Math.max(Number(domVal.lastActive) || 0, Number(mergedDomains[dom].lastActive) || 0),
               days: {
@@ -705,9 +760,13 @@ function trackMediaSession(tabId, payload) {
 
     if (session) {
       // Calculate elapsed playback duration
-      const elapsedSec = Math.max(0, Math.min(30, (now - session.lastHeartbeat) / 1000));
+      const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
       if (elapsedSec > 0) {
         session.watchDuration += elapsedSec;
+        const isForeground = (tabId === activeTabId && isBrowserFocused);
+        if (!isForeground) {
+          commitBackgroundMediaDelta(session.domain, elapsedSec);
+        }
       }
       session.lastHeartbeat = now;
       session.lastUpdated = now;
@@ -755,9 +814,13 @@ function trackMediaSession(tabId, payload) {
   } else {
     // Media paused or stopped
     if (session) {
-      const elapsedSec = Math.max(0, Math.min(30, (now - session.lastHeartbeat) / 1000));
+      const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
       if (elapsedSec > 0 && session.isPlaying) {
         session.watchDuration += elapsedSec;
+        const isForeground = (tabId === activeTabId && isBrowserFocused);
+        if (!isForeground) {
+          commitBackgroundMediaDelta(session.domain, elapsedSec);
+        }
       }
       session.isPlaying = false;
       session.lastUpdated = now;
@@ -839,7 +902,7 @@ function updateMediaHistoryEntry(session, persist = false) {
 }
 
 /**
- * Commits elapsed seconds for current active domain
+ * Commits elapsed seconds for current active domain (Method A: Foreground Active Only)
  */
 function commitActiveInterval() {
   if (!activeDomain || !isBrowserFocused || !isUserActive) {
@@ -860,6 +923,8 @@ function commitActiveInterval() {
       activityData.domains[activeDomain] = {
         favicon: getFaviconUrl(activeDomain),
         totalSeconds: 0,
+        foregroundSeconds: 0,
+        backgroundMediaSeconds: 0,
         sessionCount: 1,
         lastActive: now,
         days: {}
@@ -868,18 +933,21 @@ function commitActiveInterval() {
 
     const domainEntry = activityData.domains[activeDomain];
     domainEntry.totalSeconds += validSec;
+    domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + validSec;
     domainEntry.lastActive = now;
 
     if (!domainEntry.days[today]) {
-      domainEntry.days[today] = { seconds: 0, sessions: 1 };
+      domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
     }
-    domainEntry.days[today].seconds += validSec;
+    const dayEntry = domainEntry.days[today];
+    dayEntry.seconds += validSec;
+    dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
 
     // Reset interval anchor
     intervalStartTime = now;
 
-    // Stream delta to Data Hub or buffer in offline queue
-    streamActivityDelta(activeDomain, validSec, false);
+    // Stream delta to Data Hub with tracking_type = 'foreground'
+    streamActivityDelta(activeDomain, validSec, false, 'foreground');
 
     // Debounced auto-save ensures freshly tracked seconds are never lost on reload
     scheduleStorageSave(false);
@@ -887,12 +955,62 @@ function commitActiveInterval() {
 }
 
 /**
- * Switches the actively tracked domain
+ * Commits elapsed seconds for background media playback on a domain (Method B: Background Media Playback Only)
+ */
+function commitBackgroundMediaDelta(domain, seconds) {
+  if (!domain || seconds <= 0) return;
+  const validSec = Math.min(seconds, 3600);
+  const today = getTodayDateString();
+  const now = Date.now();
+
+  if (!activityData.domains[domain]) {
+    activityData.domains[domain] = {
+      favicon: getFaviconUrl(domain),
+      totalSeconds: 0,
+      foregroundSeconds: 0,
+      backgroundMediaSeconds: 0,
+      sessionCount: 1,
+      lastActive: now,
+      days: {}
+    };
+  }
+
+  const domainEntry = activityData.domains[domain];
+  domainEntry.totalSeconds += validSec;
+  domainEntry.backgroundMediaSeconds = (domainEntry.backgroundMediaSeconds || 0) + validSec;
+  domainEntry.lastActive = now;
+
+  if (!domainEntry.days[today]) {
+    domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+  }
+  const dayEntry = domainEntry.days[today];
+  dayEntry.seconds += validSec;
+  dayEntry.backgroundMediaSeconds = (dayEntry.backgroundMediaSeconds || 0) + validSec;
+
+  // Stream delta to Data Hub with tracking_type = 'background_media'
+  streamActivityDelta(domain, validSec, false, 'background_media');
+
+  scheduleStorageSave(false);
+}
+
+/**
+ * Switches the actively tracked domain.
+ * If newDomain is null or an untracked page, clears activeDomain so seconds NEVER leak to previous tab!
  */
 function switchActiveDomain(newDomain, isNewSession = false) {
   commitActiveInterval();
 
-  if (newDomain && newDomain !== activeDomain) {
+  if (!newDomain) {
+    if (activeDomain !== null) {
+      activeDomain = null;
+      intervalStartTime = Date.now();
+      sendActivityUpdateToHUD();
+      scheduleStorageSave(true);
+    }
+    return;
+  }
+
+  if (newDomain !== activeDomain) {
     activeDomain = newDomain;
     intervalStartTime = Date.now();
     const today = getTodayDateString();
@@ -901,21 +1019,23 @@ function switchActiveDomain(newDomain, isNewSession = false) {
       activityData.domains[activeDomain] = {
         favicon: getFaviconUrl(activeDomain),
         totalSeconds: 0,
+        foregroundSeconds: 0,
+        backgroundMediaSeconds: 0,
         sessionCount: 1,
         lastActive: intervalStartTime,
         days: {
-          [today]: { seconds: 0, sessions: 1 }
+          [today]: { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 }
         }
       };
-      streamActivityDelta(activeDomain, 0, true);
+      streamActivityDelta(activeDomain, 0, true, 'foreground');
     } else if (isNewSession) {
       activityData.domains[activeDomain].sessionCount = (activityData.domains[activeDomain].sessionCount || 0) + 1;
       if (!activityData.domains[activeDomain].days[today]) {
-        activityData.domains[activeDomain].days[today] = { seconds: 0, sessions: 1 };
+        activityData.domains[activeDomain].days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
       } else {
         activityData.domains[activeDomain].days[today].sessions = (activityData.domains[activeDomain].days[today].sessions || 0) + 1;
       }
-      streamActivityDelta(activeDomain, 0, true);
+      streamActivityDelta(activeDomain, 0, true, 'foreground');
     }
 
     sendActivityUpdateToHUD();
@@ -1204,12 +1324,14 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
     const tab = await browserAPI.tabs.get(activeTabId);
     if (tab) {
       if (tab.windowId) activeWindowId = tab.windowId;
-      if (tab.url) {
-        const domain = extractDomain(tab.url);
-        switchActiveDomain(domain, true);
-      }
+      const domain = tab.url ? extractDomain(tab.url) : null;
+      switchActiveDomain(domain, true);
+    } else {
+      switchActiveDomain(null, false);
     }
-  } catch (e) {}
+  } catch (e) {
+    switchActiveDomain(null, false);
+  }
 });
 
 // Tab Updated (URL changed or page navigated)
@@ -1263,12 +1385,14 @@ browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
       if (tabs && tabs[0]) {
         activeTabId = tabs[0].id;
         if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
-        if (tabs[0].url) {
-          const domain = extractDomain(tabs[0].url);
-          switchActiveDomain(domain, false);
-        }
+        const domain = tabs[0].url ? extractDomain(tabs[0].url) : null;
+        switchActiveDomain(domain, false);
+      } else {
+        switchActiveDomain(null, false);
       }
-    } catch (e) {}
+    } catch (e) {
+      switchActiveDomain(null, false);
+    }
   }
   sendActivityUpdateToHUD();
 });
@@ -1308,10 +1432,14 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
     const now = Date.now();
     for (const [tabId, session] of activeMediaSessions.entries()) {
       if (session.isPlaying) {
-        const elapsedSec = Math.max(0, Math.min(60, (now - session.lastHeartbeat) / 1000));
+        const elapsedSec = Math.max(0, Math.min(60, Math.floor((now - session.lastHeartbeat) / 1000)));
         if (elapsedSec > 0) {
           session.watchDuration += elapsedSec;
           session.lastHeartbeat = now;
+          const isForeground = (tabId === activeTabId && isBrowserFocused);
+          if (!isForeground) {
+            commitBackgroundMediaDelta(session.domain, elapsedSec);
+          }
         }
         updateMediaHistoryEntry(session, false);
       }
@@ -1804,6 +1932,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const queryType = (message.queryType || message.query || 'ANALYTICS').toUpperCase();
     const reqBrowser = message.browser || message.browser_type || 'all';
     const reqDate = message.date || message.date_str || getTodayDateString();
+    const reqTrackingMode = message.tracking_mode || message.trackingMode || 'all';
 
     if (!dataHubConnected || !dataHubWs || dataHubWs.readyState !== WebSocket.OPEN) {
       sendResponse({
@@ -1850,6 +1979,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type: 'QUERY_ANALYTICS',
         browser: reqBrowser,
         date_str: reqDate,
+        tracking_mode: reqTrackingMode,
         requestId: reqId
       });
     }
@@ -1911,10 +2041,10 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     if (tabs && tabs[0]) {
       activeTabId = tabs[0].id;
       if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
-      if (tabs[0].url) {
-        const domain = extractDomain(tabs[0].url);
-        switchActiveDomain(domain, true);
-      }
+      const domain = tabs[0].url ? extractDomain(tabs[0].url) : null;
+      switchActiveDomain(domain, true);
+    } else {
+      switchActiveDomain(null, false);
     }
   } catch (e) {}
 
@@ -1925,11 +2055,29 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
   connectWebSocket();
   connectDataHub();
 
-  // Setup periodic 5-second streaming ticker for active domain delta commits
+  // Setup periodic 5-second streaming ticker for active domain delta commits and background media playback
   if (deltaCommitTicker) clearInterval(deltaCommitTicker);
   deltaCommitTicker = setInterval(() => {
+    // 1. Commit active foreground domain interval
     if (isBrowserFocused && isUserActive && activeDomain) {
       commitActiveInterval();
+    }
+    // 2. Commit background media sessions
+    const now = Date.now();
+    for (const [tabId, session] of activeMediaSessions.entries()) {
+      if (session && session.isPlaying) {
+        const isForeground = (tabId === activeTabId && isBrowserFocused);
+        if (!isForeground) {
+          const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
+          if (elapsedSec > 0) {
+            session.watchDuration += elapsedSec;
+            session.lastHeartbeat = now;
+            session.lastUpdated = now;
+            commitBackgroundMediaDelta(session.domain, elapsedSec);
+            updateMediaHistoryEntry(session, false);
+          }
+        }
+      }
     }
   }, CONFIG.DELTA_BATCH_INTERVAL_MS);
 })();
