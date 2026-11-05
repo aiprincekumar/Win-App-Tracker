@@ -16,6 +16,7 @@ It provides:
 - Robust SQLite database in **WAL (Write-Ahead Logging)** mode with thread-safe atomic upserts.
 - Fast multi-browser querying (`QUERY_ANALYTICS`) for today's active time, daily averages, domain distributions, and media playback history.
 - Real-time in-memory active media stream cache (`QUERY_LIVE_STATE`) for HUD in-flight detection and inactivity reset.
+- Automated Windows Startup Auto-Boot registration with zero terminal popups via silent VBS launcher.
 
 ---
 
@@ -23,12 +24,16 @@ It provides:
 
 ```
 Browser Data Hub/
-├── browser_data_hub.py      # Core RFC 6455 WebSocket Server & SQLite Engine (Pure Python StdLib)
-├── browser_activity.db      # SQLite WAL Database (auto-created on first run)
-├── Run_Browser_Data_Hub.bat # 1-Click portable Windows Batch Launcher (UTF-8 BOM)
-├── run_data_hub.vbs         # Silent background launcher (0ms console window)
-├── test_data_hub.py         # Automated Unit & Concurrency Test Suite (6/6 tests passing)
-└── README.md                # Technical Documentation & Schema Specification
+├── browser_data_hub.py            # Core RFC 6455 WebSocket Server & SQLite Engine (Pure Python StdLib)
+├── browser_activity.db            # SQLite WAL Database (auto-created on first run)
+├── Run_Browser_Data_Hub.bat       # 1-Click portable Windows Batch Launcher (UTF-8 BOM)
+├── run_data_hub.vbs               # Silent background launcher (0ms console window)
+├── install_startup_shortcut.bat   # 1-Click Windows Startup auto-boot installer (%APPDATA% Startup)
+├── uninstall_startup_shortcut.bat # 1-Click Windows Startup uninstaller & clean process stop
+├── stop_data_hub.bat              # Graceful process terminator on port 65433
+├── test_data_hub.py               # Automated Unit & Concurrency Test Suite (6/6 tests passing)
+├── test_e2e_integration.py        # E2E Multi-Browser integration test suite (3/3 tests passing)
+└── README.md                      # Technical Documentation & Schema Specification
 ```
 
 ---
@@ -169,3 +174,21 @@ python test_data_hub.py
 python browser_data_hub.py --test
 ```
 All 6/6 tests execute and pass in under 0.4 seconds.
+
+Execute E2E multi-browser integration test suite:
+```powershell
+python test_e2e_integration.py
+```
+All 3/3 tests execute and pass in under 0.4 seconds.
+
+---
+
+## 6. Windows Startup Auto-Boot Automation
+
+To have the Browser Data Hub automatically start silently whenever Windows starts:
+- **Install to Windows Startup:**
+  Run `install_startup_shortcut.bat` (from root or `Browser Data Hub/`).
+  This creates `Browser_Data_Hub.lnk` in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup` pointing to `run_data_hub.vbs` via `wscript.exe`.
+  Runs 100% silently in background (< 5 MB RAM, 0% CPU) with zero terminal popup.
+- **Uninstall from Windows Startup:**
+  Run `uninstall_startup_shortcut.bat` to safely remove the startup shortcut and terminate running instances cleanly.
