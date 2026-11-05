@@ -465,6 +465,28 @@ let temporalSubtab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
 let mediaHistoryData = [];
 let selectedBrowser = 'all'; // 'all' | 'chrome' | 'edge' | 'brave' | 'opera'
+let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
+let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
+
+function isInternalDomain(domain) {
+  if (!domain) return false;
+  const d = domain.toLowerCase();
+  return (
+    d === 'chrome' ||
+    d === 'edge' ||
+    d === 'about' ||
+    d === 'newtab' ||
+    d === 'dashboard' ||
+    d === 'extension' ||
+    d.startsWith('chrome://') ||
+    d.startsWith('edge://') ||
+    d.startsWith('about:') ||
+    d.startsWith('chrome-extension://') ||
+    d.startsWith('edge-extension://') ||
+    d.startsWith('moz-extension://') ||
+    d.startsWith('extension:')
+  );
+}
 let dataHubConnected = false;
 let dataHubAnalytics = null;
 let detectedBrowserType = 'chrome';
@@ -864,20 +886,35 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
   const processedList = [];
 
   for (const [domainName, domainObj] of Object.entries(domains)) {
-    const totalSec = domainObj.totalSeconds || 0;
-    totalTrackedSec += totalSec;
+    const combinedTotalSec = domainObj.totalSeconds || 0;
+    const fgTotalSec = (typeof domainObj.foregroundSeconds === 'number') ? domainObj.foregroundSeconds : combinedTotalSec;
+    const bgMediaTotalSec = domainObj.backgroundMediaSeconds || 0;
 
     const todayObj = (domainObj.days && domainObj.days[todayStr]) || null;
-    const todaySec = todayObj ? (todayObj.seconds || 0) : 0;
-    todayTotalSec += todaySec;
+    const combinedTodaySec = todayObj ? (todayObj.seconds || 0) : 0;
+    const fgTodaySec = (todayObj && typeof todayObj.foregroundSeconds === 'number') ? todayObj.foregroundSeconds : combinedTodaySec;
+    const bgMediaTodaySec = (todayObj && typeof todayObj.backgroundMediaSeconds === 'number') ? todayObj.backgroundMediaSeconds : 0;
+
+    let targetTotalSec = combinedTotalSec;
+    let targetTodaySec = combinedTodaySec;
+    if (selectedTrackingMode === 'foreground') {
+      targetTotalSec = fgTotalSec;
+      targetTodaySec = fgTodaySec;
+    } else if (selectedTrackingMode === 'background_media') {
+      targetTotalSec = bgMediaTotalSec;
+      targetTodaySec = bgMediaTodaySec;
+    }
+
+    totalTrackedSec += targetTotalSec;
+    todayTotalSec += targetTodaySec;
 
     let computedSec = 0;
     if (temporalMode === 'today') {
-      computedSec = todaySec;
+      computedSec = targetTodaySec;
     } else if (temporalMode === 'daily') {
-      computedSec = Math.round(totalSec / historyDays);
+      computedSec = Math.round(targetTotalSec / historyDays);
     } else {
-      computedSec = totalSec;
+      computedSec = targetTotalSec;
     }
 
     if (computedSec > 0 || temporalMode === 'total') {
@@ -885,11 +922,15 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
         domain: domainName,
         favicon: domainObj.favicon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domainName)}&sz=32`,
         computedSeconds: computedSec,
-        totalSeconds: totalSec,
-        todaySeconds: todaySec,
-        dailyAvgSeconds: Math.round(totalSec / historyDays),
+        totalSeconds: targetTotalSec,
+        foregroundSeconds: (temporalMode === 'today' ? fgTodaySec : fgTotalSec),
+        backgroundMediaSeconds: (temporalMode === 'today' ? bgMediaTodaySec : bgMediaTotalSec),
+        combinedSeconds: (temporalMode === 'today' ? combinedTodaySec : combinedTotalSec),
+        todaySeconds: targetTodaySec,
+        dailyAvgSeconds: Math.round(targetTotalSec / historyDays),
         sessions: domainObj.sessionCount || 1,
-        lastActive: domainObj.lastActive || Date.now()
+        lastActive: domainObj.lastActive || Date.now(),
+        isInternal: isInternalDomain(domainName)
       });
     }
   }
@@ -975,12 +1016,16 @@ function renderTimeTrackingTab(data) {
         favicon: d.favicon_url || getFaviconUrl(d.domain),
         computedSeconds: computedSec,
         totalSeconds: d.seconds,
+        foregroundSeconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : d.seconds),
+        backgroundMediaSeconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : 0),
+        combinedSeconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : d.seconds),
         todaySeconds: (temporalSubtab === 'today' ? d.seconds : 0),
         dailyAvgSeconds: Math.round(d.seconds / historyDays),
         sessions: d.session_count || 1,
         lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now()),
         ratio,
-        ratioPercent
+        ratioPercent,
+        isInternal: isInternalDomain(d.domain)
       };
     });
 
@@ -1163,6 +1208,11 @@ function renderDomainTable(items) {
   if (!tbody) return;
 
   let filtered = items.filter(it => {
+    // Category scheme filter (All / Websites Only / Internal Schemes)
+    const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
+    if (selectedDomainCategory === 'web' && isInternal) return false;
+    if (selectedDomainCategory === 'internal' && !isInternal) return false;
+
     if (!domainSearchQuery) return true;
     return it.domain.toLowerCase().includes(domainSearchQuery.toLowerCase());
   });
@@ -1189,17 +1239,29 @@ function renderDomainTable(items) {
   tbody.innerHTML = '';
 
   filtered.forEach(it => {
+    const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
+    let badgeHtml = '';
+    if (it.domain === 'Dashboard' || it.domain === 'Extension') {
+      badgeHtml = `<span class="badge-tag badge-extension" title="Extension Dashboard">🧩 ${escapeHtml(it.domain)}</span>`;
+    } else if (isInternal) {
+      badgeHtml = `<span class="badge-tag badge-internal" title="Internal Browser Scheme">⚙️ Internal</span>`;
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="col-domain">
         <div class="domain-cell">
           <img src="${escapeHtml(it.favicon || '../icons/icon32.png')}" alt="" class="domain-fav">
           <span class="domain-name-text">${escapeHtml(it.domain)}</span>
+          ${badgeHtml}
         </div>
       </td>
       <td class="col-time">
         <span class="time-cell-main">${formatDuration(it.computedSeconds)}</span>
-        <span class="time-cell-sub">(${it.computedSeconds}s)</span>
+        <div class="time-dual-pills">
+          <span class="pill-mini-fg" title="Foreground Active Time">🖥️ ${formatDuration(it.foregroundSeconds || 0)}</span>
+          <span class="pill-mini-bg" title="Background Media Playback Time">🎵 ${formatDuration(it.backgroundMediaSeconds || 0)}</span>
+        </div>
       </td>
       <td class="col-ratio">
         <div class="table-ratio-wrapper">
@@ -1812,6 +1874,7 @@ function refreshDashboard(forceRefresh = false) {
               type: 'QUERY_DATA_HUB',
               query: 'ANALYTICS',
               browser: selectedBrowser,
+              tracking_mode: selectedTrackingMode,
               date: response.todayStr || new Date().toISOString().split('T')[0]
             }, (hr) => {
               if (browserAPI.runtime.lastError || !hr || !hr.success) {
@@ -1890,6 +1953,32 @@ function setupEventListeners() {
       await refreshDashboard(false);
       const selectedText = e.target.options[e.target.selectedIndex].text;
       showToast(`Filter: ${selectedText}`);
+    });
+  }
+
+  // 0b. Tracking Mode Selector (Combined / Foreground Active / Background Media)
+  const trackingModeSelect = document.getElementById('trackingModeSelect');
+  if (trackingModeSelect) {
+    trackingModeSelect.value = selectedTrackingMode;
+    trackingModeSelect.addEventListener('change', async (e) => {
+      selectedTrackingMode = e.target.value;
+      await browserAPI.storage.local.set({ selected_tracking_mode: selectedTrackingMode });
+      await refreshDashboard(false);
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+      showToast(`Tracking: ${selectedText}`);
+    });
+  }
+
+  // 0c. Domain Category Filter (All / Websites Only / Internal Schemes)
+  const domainCategorySelect = document.getElementById('domainCategorySelect');
+  if (domainCategorySelect) {
+    domainCategorySelect.value = selectedDomainCategory;
+    domainCategorySelect.addEventListener('change', async (e) => {
+      selectedDomainCategory = e.target.value;
+      await browserAPI.storage.local.set({ selected_domain_category: selectedDomainCategory });
+      await refreshDashboard(false);
+      const selectedText = e.target.options[e.target.selectedIndex].text;
+      showToast(`Category: ${selectedText}`);
     });
   }
 
@@ -2358,8 +2447,8 @@ document.addEventListener('DOMContentLoaded', () => {
   startLiveClock();
   setupEventListeners();
 
-  // Load language preference and browser filter from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter'], (res) => {
+  // Load language preference, browser filter, tracking mode, and category from storage
+  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
@@ -2370,6 +2459,16 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedBrowser = res.selected_browser_filter;
       const sel = document.getElementById('browserFilterSelect');
       if (sel) sel.value = selectedBrowser;
+    }
+    if (res && res.selected_tracking_mode) {
+      selectedTrackingMode = res.selected_tracking_mode;
+      const selTm = document.getElementById('trackingModeSelect');
+      if (selTm) selTm.value = selectedTrackingMode;
+    }
+    if (res && res.selected_domain_category) {
+      selectedDomainCategory = res.selected_domain_category;
+      const selCat = document.getElementById('domainCategorySelect');
+      if (selCat) selCat.value = selectedDomainCategory;
     }
     applyDashboardLanguage(lang);
     refreshDashboard();
