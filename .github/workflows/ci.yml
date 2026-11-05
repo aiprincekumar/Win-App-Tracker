@@ -1,0 +1,56 @@
+name: Win App Tracker CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Windows Test Suite (Python & Node.js)
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Browser Data Hub Unit Tests (9 Tests)
+        run: |
+          python -m unittest discover -s "Browser Data Hub" -p "test_*.py" -v
+
+      - name: Run Video Detector HUD Unit Tests (98 Tests)
+        run: |
+          python -m unittest discover -s "Video Detector HUD/tests" -p "test_*.py" -v
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Browser Extension Test Suite (6 Suites)
+        run: |
+          node "Browser Detection/tests/test_media_tab_switch_and_i18n.js"
+          node "Browser Detection/tests/test_tab_switch_and_storage_persistence.js"
+          node "Browser Detection/tests/test_event_deduplication.js"
+          node "Browser Detection/tests/test_extension_delta_sync.js"
+          node "Browser Detection/tests/test_dashboard_multi_browser_filter.js"
+          node "Browser Detection/tests/test_jump_to_media_tab_and_bottom_toast.js"
