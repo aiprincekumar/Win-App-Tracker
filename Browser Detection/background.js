@@ -876,13 +876,21 @@ function finalizeMediaSession(tabId) {
 /**
  * Detects native Chrome tab.audible state changes to capture background media/audio playback
  */
-function handleTabAudibleStateChange(tabId, isAudible, tab) {
+async function handleTabAudibleStateChange(tabId, isAudible, tab) {
   if (!settings.mediaTrackingEnabled) return;
   const now = Date.now();
   if (isAudible) {
+    let tabObj = tab;
+    if (!tabObj || !tabObj.url) {
+      try {
+        if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
+          tabObj = await browserAPI.tabs.get(tabId);
+        }
+      } catch (_) {}
+    }
     let session = activeMediaSessions.get(tabId);
-    const domain = (tab && tab.url) ? extractDomain(tab.url) : 'web';
-    const title = (tab && tab.title) ? tab.title : 'Audio Playback';
+    const domain = (tabObj && tabObj.url) ? extractDomain(tabObj.url) : 'web';
+    const title = (tabObj && tabObj.title) ? tabObj.title : 'Audio Playback';
 
     if (!session) {
       session = {
@@ -891,7 +899,7 @@ function handleTabAudibleStateChange(tabId, isAudible, tab) {
         title,
         platform: domain,
         domain,
-        url: (tab && tab.url) || '',
+        url: (tabObj && tabObj.url) || '',
         mediaType: 'audio',
         resolution: 'Audio Stream',
         videoDuration: 0,
@@ -926,6 +934,17 @@ function handleTabAudibleStateChange(tabId, isAudible, tab) {
       session.isAudible = false;
       const tabMedia = tabMediaMap.get(tabId);
       if (!tabMedia || !tabMedia.anyPlaying) {
+        // Commit remaining elapsed playback seconds before concluding session to prevent data loss
+        const elapsedMs = now - session.lastHeartbeat;
+        const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+        if (elapsedSec > 0 && session.isPlaying) {
+          session.watchDuration += elapsedSec;
+          session.lastHeartbeat += (elapsedSec * 1000);
+          const isForeground = (tabId === activeTabId && isBrowserFocused);
+          if (!isForeground) {
+            commitBackgroundMediaDelta(session.domain, elapsedSec);
+          }
+        }
         session.isPlaying = false;
         session.lastUpdated = now;
         finalizeMediaSession(tabId);
@@ -2135,6 +2154,18 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
 
   // Re-inject content scripts to reconnect existing open tabs without page reload
   await reinjectContentScripts();
+
+  // Immediate audible tab sweep on boot: capture any background tabs already playing audio
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const initialAudible = await browserAPI.tabs.query({ audible: true });
+      if (initialAudible && initialAudible.length > 0) {
+        for (const aTab of initialAudible) {
+          handleTabAudibleStateChange(aTab.id, true, aTab);
+        }
+      }
+    }
+  } catch (_) {}
 
   // Connect to HUD (port 65432) and Standalone Data Hub (port 65433)
   connectWebSocket();

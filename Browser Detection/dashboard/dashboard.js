@@ -103,6 +103,8 @@ const DASHBOARD_I18N = {
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
     donut_empty: 'No browsing activity recorded',
+    donut_empty_bg_media: 'No background media playback recorded',
+    donut_empty_foreground: 'No foreground browsing recorded',
     others: 'Other Websites',
     top_breakdown: 'Top Activity Breakdown',
     no_data_available: 'No data available',
@@ -111,6 +113,7 @@ const DASHBOARD_I18N = {
     domain_table_heading: 'Domain Breakdown Table',
     domain_count_suffix: (n) => `${n} domain${n === 1 ? '' : 's'}`,
     search_domain_placeholder: 'Search domain (e.g. youtube, github)...',
+    no_matching_domain: 'No matching domains found.',
     sort_by: 'Sort by:',
     sort_time_desc: 'Time: High to Low',
     sort_time_asc: 'Time: Low to High',
@@ -122,6 +125,8 @@ const DASHBOARD_I18N = {
     th_sessions: 'Sessions',
     th_last_active: 'Last Active',
     domain_empty: 'No browsing activity recorded yet. Browse any website to start tracking!',
+    empty_bg_media: 'No background media playback recorded yet for this period. Play audio or video in a background tab (e.g. YouTube, Spotify) to see background playback time here!',
+    empty_foreground: 'No active foreground browsing recorded yet for this period. Browse any website in active focus to start tracking!',
     session_unit: (n) => `${n} session${n === 1 ? '' : 's'}`,
     
     // Tab B: Media Analytics
@@ -298,6 +303,8 @@ const DASHBOARD_I18N = {
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
     donut_empty: 'ब्राउज़िंग गतिविधि उपलब्ध नहीं है',
+    donut_empty_bg_media: 'कोई पृष्ठभूमि मीडिया गतिविधि दर्ज नहीं है',
+    donut_empty_foreground: 'कोई फ़ोरग्राउंड ब्राउज़िंग गतिविधि दर्ज नहीं है',
     others: 'अन्य वेबसाइट्स',
     top_breakdown: 'शीर्ष वेबसाइट्स समय अनुपात',
     no_data_available: 'कोई डेटा उपलब्ध नहीं है',
@@ -306,6 +313,7 @@ const DASHBOARD_I18N = {
     domain_table_heading: 'विस्तृत डोमेन उपयोग सूची',
     domain_count_suffix: (n) => `${n} डोमेन`,
     search_domain_placeholder: 'डोमेन खोजें...',
+    no_matching_domain: 'कोई मेल खाता डोमेन नहीं मिला।',
     sort_by: 'क्रमबद्ध करें:',
     sort_time_desc: 'सर्वाधिक समय',
     sort_time_asc: 'न्यूनतम समय',
@@ -317,6 +325,8 @@ const DASHBOARD_I18N = {
     th_sessions: 'सत्र संख्या',
     th_last_active: 'अंतिम सक्रिय',
     domain_empty: 'कोई डोमेन डेटा नहीं मिला। ब्राउज़िंग शुरू करने पर यहाँ आंकड़े दिखाई देंगे।',
+    empty_bg_media: 'इस अवधि के लिए कोई पृष्ठभूमि मीडिया (Background Media) प्लेबैक रिकॉर्ड नहीं हुआ है। समय देखने के लिए बैकग्राउंड टैब में मीडिया (जैसे YouTube, Spotify) चलाएं!',
+    empty_foreground: 'इस अवधि के लिए कोई सक्रिय फ़ोरग्राउंड ब्राउज़िंग गतिविधि दर्ज नहीं है। ट्रैकिंग शुरू करने के लिए कोई वेबसाइट खोलें!',
     session_unit: (n) => `${n} सत्र`,
     
     // Tab B: Media Analytics
@@ -666,7 +676,24 @@ function applyDashboardLanguage(lang) {
   setTxt('thColRatio', 'th_ratio');
   setTxt('thColSessions', 'th_sessions');
   setTxt('thColLast', 'th_last_active');
-  setTxt('txtDomainEmpty', 'domain_empty');
+
+  const emptyIconEl = document.querySelector('#domainTableEmptyState .empty-icon');
+  const emptyTextEl = document.getElementById('txtDomainEmpty');
+  if (emptyTextEl) {
+    if (domainSearchQuery) {
+      if (emptyIconEl) emptyIconEl.textContent = '🔍';
+      emptyTextEl.textContent = t('no_matching_domain');
+    } else if (selectedTrackingMode === 'background_media') {
+      if (emptyIconEl) emptyIconEl.textContent = '🎵';
+      emptyTextEl.textContent = t('empty_bg_media');
+    } else if (selectedTrackingMode === 'foreground') {
+      if (emptyIconEl) emptyIconEl.textContent = '🖥️';
+      emptyTextEl.textContent = t('empty_foreground');
+    } else {
+      if (emptyIconEl) emptyIconEl.textContent = '🌐';
+      emptyTextEl.textContent = t('domain_empty');
+    }
+  }
 
   // Tab B static texts
   setTxt('lblMediaTotalWatch', 'media_metric_total');
@@ -1168,7 +1195,13 @@ function renderDonutChart(items, totalSeconds, subtab) {
   }
 
   if (totalSeconds === 0 || items.length === 0) {
-    legendGrid.innerHTML = `<span class="empty-text">${t('donut_empty')}</span>`;
+    let emptyMsg = t('donut_empty');
+    if (selectedTrackingMode === 'background_media') {
+      emptyMsg = t('donut_empty_bg_media');
+    } else if (selectedTrackingMode === 'foreground') {
+      emptyMsg = t('donut_empty_foreground');
+    }
+    legendGrid.innerHTML = `<span class="empty-text">${emptyMsg}</span>`;
     return;
   }
 
@@ -1296,7 +1329,24 @@ function renderDomainTable(items) {
 
   if (filtered.length === 0) {
     tbody.innerHTML = '';
-    if (emptyBox) emptyBox.classList.remove('hidden');
+    if (emptyBox) {
+      emptyBox.classList.remove('hidden');
+      const emptyIconEl = emptyBox.querySelector('.empty-icon');
+      const emptyTextEl = document.getElementById('txtDomainEmpty');
+      if (domainSearchQuery) {
+        if (emptyIconEl) emptyIconEl.textContent = '🔍';
+        if (emptyTextEl) emptyTextEl.textContent = t('no_matching_domain');
+      } else if (selectedTrackingMode === 'background_media') {
+        if (emptyIconEl) emptyIconEl.textContent = '🎵';
+        if (emptyTextEl) emptyTextEl.textContent = t('empty_bg_media');
+      } else if (selectedTrackingMode === 'foreground') {
+        if (emptyIconEl) emptyIconEl.textContent = '🖥️';
+        if (emptyTextEl) emptyTextEl.textContent = t('empty_foreground');
+      } else {
+        if (emptyIconEl) emptyIconEl.textContent = '🌐';
+        if (emptyTextEl) emptyTextEl.textContent = t('domain_empty');
+      }
+    }
     return;
   }
 

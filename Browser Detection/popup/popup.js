@@ -153,6 +153,9 @@ const I18N_POPUP = {
     domain_breakdown: 'Domain Breakdown',
     search_domain_placeholder: 'Search domain...',
     no_activity: 'No browsing activity recorded yet. Browse any website to start tracking!',
+    empty_bg_media: 'No background media playback recorded yet. Play audio/video in a background tab (e.g. YouTube, Spotify) to see playback time here!',
+    empty_foreground: 'No active foreground browsing recorded yet. Browse any website to start tracking!',
+    center_bg_media: 'No BG Media',
     no_matching_domain: 'No matching domains found.',
     others: 'Others',
     
@@ -262,6 +265,9 @@ const I18N_POPUP = {
     domain_breakdown: 'डोमेन विवरण',
     search_domain_placeholder: 'डोमेन खोजें...',
     no_activity: 'कोई ब्राउज़िंग गतिविधि दर्ज नहीं है। ट्रैकिंग शुरू करने के लिए कोई वेबसाइट खोलें!',
+    empty_bg_media: 'कोई पृष्ठभूमि मीडिया (Background Media) प्लेबैक अभी तक रिकॉर्ड नहीं हुआ है। समय देखने के लिए बैकग्राउंड टैब में मीडिया चलाएं!',
+    empty_foreground: 'कोई सक्रिय फ़ोरग्राउंड ब्राउज़िंग गतिविधि दर्ज नहीं है। ट्रैकिंग शुरू करने के लिए कोई वेबसाइट खोलें!',
+    center_bg_media: 'कोई BG मीडिया नहीं',
     no_matching_domain: 'कोई मेल खाता डोमेन नहीं मिला।',
     others: 'अन्य',
     
@@ -345,7 +351,15 @@ function applyPopupLanguage(lang) {
   if (searchInput) searchInput.placeholder = t('search_domain_placeholder');
 
   const emptyDomainText = document.getElementById('emptyDomainStateText');
-  if (emptyDomainText) emptyDomainText.textContent = t('no_activity');
+  if (emptyDomainText) {
+    if (selectedTrackingMode === 'background_media') {
+      emptyDomainText.textContent = t('empty_bg_media');
+    } else if (selectedTrackingMode === 'foreground') {
+      emptyDomainText.textContent = t('empty_foreground');
+    } else {
+      emptyDomainText.textContent = t('no_activity');
+    }
+  }
 
   setTxt('btnRefreshText', 'btn_refresh');
   setTxt('btnReconnectWsText', 'btn_connect_hud');
@@ -806,7 +820,7 @@ function renderDonutChart(items, totalSeconds) {
 
   if (totalSeconds <= 0 || items.length === 0) {
     centerTimeEl.textContent = '0h 00m';
-    centerLabelEl.textContent = getLabel();
+    centerLabelEl.textContent = selectedTrackingMode === 'background_media' ? t('center_bg_media') : getLabel();
     return;
   }
 
@@ -874,9 +888,23 @@ function renderDomainList(items, totalSeconds) {
   });
 
   if (filtered.length === 0) {
+    let emptyMsg = searchQuery ? t('no_matching_domain') : t('no_activity');
+    let emptyIcon = '🌐';
+    if (!searchQuery) {
+      if (selectedTrackingMode === 'background_media') {
+        emptyMsg = t('empty_bg_media');
+        emptyIcon = '🎵';
+      } else if (selectedTrackingMode === 'foreground') {
+        emptyMsg = t('empty_foreground');
+        emptyIcon = '🖥️';
+      }
+    } else {
+      emptyIcon = '🔍';
+    }
     container.innerHTML = `
       <div class="empty-state">
-        <span>${searchQuery ? t('no_matching_domain') : t('no_activity')}</span>
+        <span class="empty-icon" style="font-size: 24px; margin-bottom: 6px; display: block;">${emptyIcon}</span>
+        <span>${emptyMsg}</span>
       </div>
     `;
     return;
