@@ -465,7 +465,15 @@ function getTodayDateString() {
  */
 function isInternalDomain(domain) {
   if (!domain) return false;
-  const d = domain.toLowerCase();
+  let d = String(domain).toLowerCase().trim();
+  if (d.startsWith('http://') || d.startsWith('https://')) {
+    try {
+      d = new URL(d).hostname.toLowerCase();
+    } catch (_) {
+      d = d.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+  const hostWithoutPort = d.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1').split(':')[0];
   return (
     d === 'chrome' ||
     d === 'edge' ||
@@ -473,6 +481,14 @@ function isInternalDomain(domain) {
     d === 'newtab' ||
     d === 'dashboard' ||
     d === 'extension' ||
+    hostWithoutPort === '127.0.0.1' ||
+    hostWithoutPort === 'localhost' ||
+    hostWithoutPort === '0.0.0.0' ||
+    hostWithoutPort === '::1' ||
+    d.startsWith('127.0.0.1') ||
+    d.startsWith('localhost') ||
+    d.startsWith('0.0.0.0') ||
+    d.startsWith('[::1]') ||
     d.startsWith('chrome://') ||
     d.startsWith('edge://') ||
     d.startsWith('about:') ||

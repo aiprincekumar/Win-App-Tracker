@@ -406,7 +406,15 @@ let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
 
 function isInternalDomain(domain) {
   if (!domain) return false;
-  const d = domain.toLowerCase();
+  let d = String(domain).toLowerCase().trim();
+  if (d.startsWith('http://') || d.startsWith('https://')) {
+    try {
+      d = new URL(d).hostname.toLowerCase();
+    } catch (_) {
+      d = d.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+  const hostWithoutPort = d.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1').split(':')[0];
   return (
     d === 'chrome' ||
     d === 'edge' ||
@@ -414,6 +422,14 @@ function isInternalDomain(domain) {
     d === 'newtab' ||
     d === 'dashboard' ||
     d === 'extension' ||
+    hostWithoutPort === '127.0.0.1' ||
+    hostWithoutPort === 'localhost' ||
+    hostWithoutPort === '0.0.0.0' ||
+    hostWithoutPort === '::1' ||
+    d.startsWith('127.0.0.1') ||
+    d.startsWith('localhost') ||
+    d.startsWith('0.0.0.0') ||
+    d.startsWith('[::1]') ||
     d.startsWith('chrome://') ||
     d.startsWith('edge://') ||
     d.startsWith('about:') ||
@@ -609,24 +625,29 @@ function processDomainStats(data, tabType) {
     const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
 
     let rawItems = [];
-    let targetTotal = todaySec;
 
     if (tabType === 'today') {
       rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
-      targetTotal = todaySec;
     } else if (tabType === 'daily') {
       rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
         ? dataHubAnalytics.all_time_domain_distribution
         : (dataHubAnalytics.domain_distribution || []);
-      targetTotal = dailyAvgSec;
     } else { // 'total'
       rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
         ? dataHubAnalytics.all_time_domain_distribution
         : (dataHubAnalytics.domain_distribution || []);
-      targetTotal = allTimeSec;
     }
 
-    const items = rawItems.map(d => {
+    // Filter rawItems by selectedDomainCategory before computing totals & percentages
+    const filteredRaw = rawItems.filter(d => {
+      const isInternal = isInternalDomain(d.domain);
+      if (selectedDomainCategory === 'web' && isInternal) return false;
+      if (selectedDomainCategory === 'internal' && !isInternal) return false;
+      return true;
+    });
+
+    let targetTotal = 0;
+    const items = filteredRaw.map(d => {
       let domainSec = d.seconds;
       if (tabType === 'daily') {
         domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
@@ -635,17 +656,18 @@ function processDomainStats(data, tabType) {
               : Math.round(d.seconds / historyDays))
           : ((dailyAvgSec > 0 && todaySec > 0)
               ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
-              : Math.round(d.seconds / 7));
+              : Math.round(d.seconds / historyDays));
       } else if (tabType === 'total') {
         domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
           ? d.seconds
           : ((allTimeSec > 0 && allTimeSec !== todaySec && todaySec > 0)
               ? Math.round(allTimeSec * ((d.percent || 0) / 100.0))
               : d.seconds);
+      } else { // 'today'
+        domainSec = d.seconds;
       }
 
-      const ratio = targetTotal > 0 ? (domainSec / targetTotal) : 0;
-      const pct = (ratio * 100);
+      targetTotal += domainSec;
 
       return {
         domain: d.domain,
@@ -656,9 +678,13 @@ function processDomainStats(data, tabType) {
         sessions: d.session_count || 1,
         favicon: d.favicon_url || getFaviconUrl(d.domain),
         lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now(),
-        percent: pct,
         isInternal: isInternalDomain(d.domain)
       };
+    });
+
+    items.forEach(it => {
+      const ratio = targetTotal > 0 ? (it.seconds / targetTotal) : 0;
+      it.percent = ratio * 100;
     });
 
     items.sort((a, b) => b.seconds - a.seconds);
@@ -678,6 +704,10 @@ function processDomainStats(data, tabType) {
   let totalSec = 0;
 
   for (const [domain, entry] of Object.entries(domains)) {
+    const isInternal = isInternalDomain(domain);
+    if (selectedDomainCategory === 'web' && isInternal) continue;
+    if (selectedDomainCategory === 'internal' && !isInternal) continue;
+
     const combinedTotal = entry.totalSeconds || 0;
     const fgTotal = (typeof entry.foregroundSeconds === 'number') ? entry.foregroundSeconds : combinedTotal;
     const bgTotal = entry.backgroundMediaSeconds || 0;
@@ -719,14 +749,19 @@ function processDomainStats(data, tabType) {
         sessions,
         favicon: entry.favicon || getFaviconUrl(domain),
         lastActive: entry.lastActive,
-        isInternal: isInternalDomain(domain)
+        isInternal: isInternal
       });
       totalSec += domainSec;
     }
   }
 
+  items.forEach(it => {
+    it.percent = totalSec > 0 ? (it.seconds / totalSec) * 100 : 0;
+  });
+
   items.sort((a, b) => b.seconds - a.seconds);
   return { items, totalSeconds: totalSec };
+}
 }
 
 /**
@@ -872,25 +907,11 @@ function renderStatsPills(data) {
   let dailyAvgSeconds = 0;
   let totalSessions = 0;
 
-  if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
-    todaySeconds = dataHubAnalytics.today_seconds || 0;
-    dailyAvgSeconds = dataHubAnalytics.daily_average_seconds || 0;
-    totalSessions = dataHubAnalytics.domain_distribution.reduce((acc, curr) => acc + (curr.session_count || 0), 0);
-  } else {
-    const todayStats = processDomainStats(data, 'today');
-    const dailyStats = processDomainStats(data, 'daily');
-    todaySeconds = todayStats.totalSeconds;
-    dailyAvgSeconds = dailyStats.totalSeconds;
-
-    if (data && data.activityData && data.activityData.domains) {
-      const todayStr = data.todayStr;
-      for (const d of Object.values(data.activityData.domains)) {
-        if (d.days && d.days[todayStr]) {
-          totalSessions += (d.days[todayStr].sessions || 1);
-        }
-      }
-    }
-  }
+  const todayStats = processDomainStats(data, 'today');
+  const dailyStats = processDomainStats(data, 'daily');
+  todaySeconds = todayStats.totalSeconds;
+  dailyAvgSeconds = dailyStats.totalSeconds;
+  totalSessions = todayStats.items.reduce((acc, curr) => acc + (curr.sessions || 0), 0);
 
   const pToday = document.getElementById('pillTodayTime');
   const pDaily = document.getElementById('pillDailyAvg');

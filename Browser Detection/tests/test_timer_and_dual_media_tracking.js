@@ -49,6 +49,42 @@ console.log('Test 1: DOM Architecture for Tracking Mode & Scheme Selectors');
   console.log('  ✅ popup.html includes #trackingModeSelect and #domainCategorySelect');
 }
 
+function isInternalDomain(domain) {
+  if (!domain) return false;
+  let d = String(domain).toLowerCase().trim();
+  if (d.startsWith('http://') || d.startsWith('https://')) {
+    try {
+      d = new URL(d).hostname.toLowerCase();
+    } catch (_) {
+      d = d.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+  const hostWithoutPort = d.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1').split(':')[0];
+  return (
+    d === 'chrome' ||
+    d === 'edge' ||
+    d === 'about' ||
+    d === 'newtab' ||
+    d === 'dashboard' ||
+    d === 'extension' ||
+    hostWithoutPort === '127.0.0.1' ||
+    hostWithoutPort === 'localhost' ||
+    hostWithoutPort === '0.0.0.0' ||
+    hostWithoutPort === '::1' ||
+    d.startsWith('127.0.0.1') ||
+    d.startsWith('localhost') ||
+    d.startsWith('0.0.0.0') ||
+    d.startsWith('[::1]') ||
+    d.startsWith('chrome://') ||
+    d.startsWith('edge://') ||
+    d.startsWith('about:') ||
+    d.startsWith('chrome-extension://') ||
+    d.startsWith('edge-extension://') ||
+    d.startsWith('moz-extension://') ||
+    d.startsWith('extension:')
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Test 2: extractDomain & Internal Schemes Identification
 // ---------------------------------------------------------------------------
@@ -59,25 +95,6 @@ console.log('\nTest 2: extractDomain & Internal Schemes Identification');
   assert(bgCode.includes('function isInternalDomain'), 'background.js must define isInternalDomain');
 
   // Replicate extractDomain logic from background.js
-  function isInternalDomain(domain) {
-    if (!domain) return false;
-    const d = domain.toLowerCase();
-    return (
-      d === 'chrome' ||
-      d === 'edge' ||
-      d === 'about' ||
-      d === 'newtab' ||
-      d === 'dashboard' ||
-      d === 'extension' ||
-      d.startsWith('chrome://') ||
-      d.startsWith('edge://') ||
-      d.startsWith('about:') ||
-      d.startsWith('chrome-extension://') ||
-      d.startsWith('edge-extension://') ||
-      d.startsWith('moz-extension://') ||
-      d.startsWith('extension:')
-    );
-  }
 
   function extractDomain(url) {
     if (!url) return null;
@@ -116,7 +133,18 @@ console.log('\nTest 2: extractDomain & Internal Schemes Identification');
   assert.strictEqual(extractDomain('https://www.youtube.com/watch?v=123'), 'www.youtube.com');
   assert.strictEqual(extractDomain('http://127.0.0.1:8000/api'), '127.0.0.1');
   assert.strictEqual(isInternalDomain('www.youtube.com'), false);
-  assert.strictEqual(isInternalDomain('127.0.0.1'), false);
+  assert.strictEqual(isInternalDomain('chatgpt.com'), false);
+  assert.strictEqual(isInternalDomain('github.com'), false);
+
+  // Localhost & loopback domains (now recognized as internal)
+  assert.strictEqual(isInternalDomain('127.0.0.1'), true);
+  assert.strictEqual(isInternalDomain('127.0.0.1:8000'), true);
+  assert.strictEqual(isInternalDomain('http://127.0.0.1:8000'), true);
+  assert.strictEqual(isInternalDomain('localhost'), true);
+  assert.strictEqual(isInternalDomain('localhost:3000'), true);
+  assert.strictEqual(isInternalDomain('0.0.0.0'), true);
+  assert.strictEqual(isInternalDomain('0.0.0.0:8080'), true);
+  assert.strictEqual(isInternalDomain('[::1]:8080'), true);
 
   // Extension Dashboard
   assert.strictEqual(extractDomain('chrome-extension://abcdefghijklm/dashboard/dashboard.html'), 'Dashboard');
@@ -136,6 +164,7 @@ console.log('\nTest 2: extractDomain & Internal Schemes Identification');
   assert.strictEqual(isInternalDomain('chrome://settings'), true);
 
   console.log('  ✅ Web domains correctly extracted and marked non-internal');
+  console.log('  ✅ Localhost & 127.0.0.1 addresses correctly marked internal');
   console.log('  ✅ Extension dashboard returns "Dashboard" and is marked internal');
   console.log('  ✅ Browser internal schemes (newtab, chrome://, edge://, about:) classified accurately');
 }
@@ -279,39 +308,56 @@ console.log('\nTest 4: Dual/Triple Media Tracking Architecture Simulation');
 }
 
 // ---------------------------------------------------------------------------
-// Test 5: Category Filtering (Websites Only vs Internal Schemes)
+// Test 5: Category Filtering (Websites Only vs Internal Schemes) & Live Card/Donut Sync
 // ---------------------------------------------------------------------------
-console.log('\nTest 5: Category Filtering (Websites Only vs Internal Schemes)');
+console.log('\nTest 5: Category Filtering (Websites Only vs Internal Schemes) & Live Card/Donut Sync');
 {
   const allItems = [
-    { domain: 'youtube.com', seconds: 1800, isInternal: false },
-    { domain: 'github.com', seconds: 1200, isInternal: false },
-    { domain: 'Dashboard', seconds: 400, isInternal: true },
-    { domain: 'chrome://settings', seconds: 150, isInternal: true }
+    { domain: '127.0.0.1', seconds: 780, isInternal: isInternalDomain('127.0.0.1') },
+    { domain: 'youtube.com', seconds: 360, isInternal: isInternalDomain('youtube.com') },
+    { domain: 'chatgpt.com', seconds: 60, isInternal: isInternalDomain('chatgpt.com') },
+    { domain: 'Dashboard', seconds: 60, isInternal: isInternalDomain('Dashboard') },
+    { domain: 'chrome://settings', seconds: 30, isInternal: isInternalDomain('chrome://settings') },
+    { domain: 'localhost:8000', seconds: 120, isInternal: isInternalDomain('localhost:8000') }
   ];
 
-  function filterItems(items, category) {
-    return items.filter(it => {
+  function computeStats(items, category) {
+    const filtered = items.filter(it => {
       if (category === 'web') return !it.isInternal;
       if (category === 'internal') return it.isInternal;
       return true;
     });
+    filtered.sort((a, b) => b.seconds - a.seconds);
+    const totalSec = filtered.reduce((acc, curr) => acc + curr.seconds, 0);
+    const topDomain = filtered.length > 0 ? filtered[0] : null;
+    return { items: filtered, totalSec, topDomain };
   }
 
-  const webOnly = filterItems(allItems, 'web');
-  assert.strictEqual(webOnly.length, 2);
-  assert(webOnly.every(it => !it.isInternal));
+  // 1. All Pages
+  const allStats = computeStats(allItems, 'all');
+  assert.strictEqual(allStats.items.length, 6);
+  assert.strictEqual(allStats.totalSec, 1410, 'All pages total is 1410s (~23.5m)');
+  assert.strictEqual(allStats.topDomain.domain, '127.0.0.1');
 
-  const internalOnly = filterItems(allItems, 'internal');
-  assert.strictEqual(internalOnly.length, 2);
-  assert(internalOnly.every(it => it.isInternal));
+  // 2. Websites Only
+  const webStats = computeStats(allItems, 'web');
+  assert.strictEqual(webStats.items.length, 2, 'Only youtube.com and chatgpt.com should be websites');
+  assert.strictEqual(webStats.totalSec, 420, 'Websites total must drop to 420s (7m), excluding 127.0.0.1 and localhost');
+  assert.strictEqual(webStats.topDomain.domain, 'youtube.com', 'Top website must now be youtube.com, NOT 127.0.0.1');
+  assert(webStats.items.every(it => !it.isInternal), 'All items in webStats must have isInternal === false');
 
-  const allFiltered = filterItems(allItems, 'all');
-  assert.strictEqual(allFiltered.length, 4);
+  // 3. Internal Only
+  const internalStats = computeStats(allItems, 'internal');
+  assert.strictEqual(internalStats.items.length, 4, 'Internal must include 127.0.0.1, Dashboard, chrome://settings, localhost:8000');
+  assert.strictEqual(internalStats.totalSec, 990, 'Internal total must be 780 + 60 + 30 + 120 = 990s');
+  assert.strictEqual(internalStats.topDomain.domain, '127.0.0.1');
+  assert(internalStats.items.every(it => it.isInternal), 'All items in internalStats must have isInternal === true');
 
-  console.log('  ✅ "Websites Only" filters out internal pages (YouTube, GitHub only)');
-  console.log('  ✅ "Internal Only" isolates Dashboard and chrome://settings');
-  console.log('  ✅ "All Pages" includes entire browsing distribution');
+  console.log('  ✅ "Websites Only" filters out 127.0.0.1, localhost, Dashboard, and internal schemes');
+  console.log('  ✅ Total time drops from 1410s (~23.5m) to 420s (7m) in cards and donut');
+  console.log('  ✅ Top Domain switches from 127.0.0.1 to youtube.com');
+  console.log('  ✅ "Internal Only" isolates 127.0.0.1, localhost, Dashboard, and chrome://settings');
+  console.log('  ✅ "All Pages" accurately includes entire browsing distribution');
 }
 
 console.log('\n🎉 ALL ACTIVE TAB TIMER & DUAL MEDIA TRACKING TESTS PASSED WITH 100% SUCCESS!');

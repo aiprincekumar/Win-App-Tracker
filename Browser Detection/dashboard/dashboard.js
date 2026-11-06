@@ -470,7 +470,15 @@ let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
 
 function isInternalDomain(domain) {
   if (!domain) return false;
-  const d = domain.toLowerCase();
+  let d = String(domain).toLowerCase().trim();
+  if (d.startsWith('http://') || d.startsWith('https://')) {
+    try {
+      d = new URL(d).hostname.toLowerCase();
+    } catch (_) {
+      d = d.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+  const hostWithoutPort = d.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1').split(':')[0];
   return (
     d === 'chrome' ||
     d === 'edge' ||
@@ -478,6 +486,14 @@ function isInternalDomain(domain) {
     d === 'newtab' ||
     d === 'dashboard' ||
     d === 'extension' ||
+    hostWithoutPort === '127.0.0.1' ||
+    hostWithoutPort === 'localhost' ||
+    hostWithoutPort === '0.0.0.0' ||
+    hostWithoutPort === '::1' ||
+    d.startsWith('127.0.0.1') ||
+    d.startsWith('localhost') ||
+    d.startsWith('0.0.0.0') ||
+    d.startsWith('[::1]') ||
     d.startsWith('chrome://') ||
     d.startsWith('edge://') ||
     d.startsWith('about:') ||
@@ -886,6 +902,10 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
   const processedList = [];
 
   for (const [domainName, domainObj] of Object.entries(domains)) {
+    const isInternal = isInternalDomain(domainName);
+    if (selectedDomainCategory === 'web' && isInternal) continue;
+    if (selectedDomainCategory === 'internal' && !isInternal) continue;
+
     const combinedTotalSec = domainObj.totalSeconds || 0;
     const fgTotalSec = (typeof domainObj.foregroundSeconds === 'number') ? domainObj.foregroundSeconds : combinedTotalSec;
     const bgMediaTotalSec = domainObj.backgroundMediaSeconds || 0;
@@ -970,29 +990,42 @@ function renderTimeTrackingTab(data) {
   let stats;
 
   if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
-    const todaySec = dataHubAnalytics.today_seconds || 0;
-    const allTimeSec = (typeof dataHubAnalytics.all_time_seconds === 'number')
-      ? dataHubAnalytics.all_time_seconds
-      : (dataHubAnalytics.total_seconds || todaySec);
-    const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
     const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
     const firstTrackedDate = dataHubAnalytics.first_tracked_date || dataHubAnalytics.query_date || new Date().toISOString().split('T')[0];
+
+    // Filter raw domain distributions by selectedDomainCategory before aggregating
+    const rawTodayList = (Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : []).filter(d => {
+      const isInternal = isInternalDomain(d.domain);
+      if (selectedDomainCategory === 'web' && isInternal) return false;
+      if (selectedDomainCategory === 'internal' && !isInternal) return false;
+      return true;
+    });
+
+    const rawAllTimeList = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+      ? dataHubAnalytics.all_time_domain_distribution
+      : (dataHubAnalytics.domain_distribution || [])).filter(d => {
+      const isInternal = isInternalDomain(d.domain);
+      if (selectedDomainCategory === 'web' && isInternal) return false;
+      if (selectedDomainCategory === 'internal' && !isInternal) return false;
+      return true;
+    });
+
+    // Recompute category-filtered totals for metric cards
+    const todaySec = rawTodayList.reduce((acc, curr) => acc + (curr.seconds || 0), 0);
+    const allTimeSec = rawAllTimeList.reduce((acc, curr) => acc + (curr.seconds || 0), 0);
+    const dailyAvgSec = Math.round(allTimeSec / historyDays);
 
     let rawItems = [];
     let activeTemporalSum = 0;
 
     if (temporalSubtab === 'today') {
-      rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
+      rawItems = rawTodayList;
       activeTemporalSum = todaySec;
     } else if (temporalSubtab === 'daily') {
-      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
-        ? dataHubAnalytics.all_time_domain_distribution
-        : (dataHubAnalytics.domain_distribution || []);
+      rawItems = rawAllTimeList;
       activeTemporalSum = dailyAvgSec;
     } else { // 'total'
-      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
-        ? dataHubAnalytics.all_time_domain_distribution
-        : (dataHubAnalytics.domain_distribution || []);
+      rawItems = rawAllTimeList;
       activeTemporalSum = allTimeSec;
     }
 
