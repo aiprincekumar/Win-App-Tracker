@@ -19,6 +19,182 @@ const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.brows
   ? globalThis.browser 
   : globalThis.chrome;
 
+// =============================================================================
+// Manifest V3 IPC Connection Guard & Unhandled Promise Rejection Sentinel
+// =============================================================================
+
+/**
+ * Global fail-safe: Suppress benign Chrome/Edge extension IPC unhandled promise rejections.
+ * Prevents "Error: Could not establish connection. Receiving end does not exist" from creating
+ * an unhandled promise rejection error badge on chrome://extensions.
+ */
+if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', (event) => {
+    const reason = event && event.reason;
+    const msg = (reason && (reason.message || String(reason))) || '';
+    if (
+      msg.includes('Could not establish connection') ||
+      msg.includes('Receiving end does not exist') ||
+      msg.includes('message port closed') ||
+      msg.includes('Extension context invalidated')
+    ) {
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+    }
+  });
+}
+
+/**
+ * Checks if a tab URL is a restricted internal scheme where content scripts cannot run.
+ * (e.g. chrome://, edge://, about:, devtools://, chrome-extension://, view-source:, etc.)
+ * 
+ * @param {string} url Target tab URL
+ * @returns {boolean}
+ */
+function isRestrictedTabUrl(url) {
+  if (!url || typeof url !== 'string') return true;
+  const u = url.trim().toLowerCase();
+  return (
+    u.startsWith('chrome://') ||
+    u.startsWith('edge://') ||
+    u.startsWith('about:') ||
+    u.startsWith('devtools://') ||
+    u.startsWith('chrome-extension://') ||
+    u.startsWith('edge-extension://') ||
+    u.startsWith('moz-extension://') ||
+    u.startsWith('view-source:') ||
+    u.startsWith('data:') ||
+    u.startsWith('javascript:') ||
+    u.includes('chrome.google.com/webstore') ||
+    u.includes('chromewebstore.google.com') ||
+    u.includes('microsoftedge.microsoft.com/addons')
+  );
+}
+
+/**
+ * Safely sends a runtime IPC broadcast to extension views (popup, dashboard)
+ * with unhandled promise rejection prevention when no views are open.
+ * 
+ * @param {object} message Payload to broadcast
+ * @param {function} [callback] Optional response callback (response, error)
+ * @returns {Promise<any>}
+ */
+function safeSendRuntimeMessage(message, callback) {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const handleResult = (res, err) => {
+      if (resolved) return;
+      resolved = true;
+      if (callback && typeof callback === 'function') {
+        try {
+          callback(res, err);
+        } catch (_) {}
+      }
+      resolve(res || null);
+    };
+
+    try {
+      if (!browserAPI.runtime || typeof browserAPI.runtime.sendMessage !== 'function') {
+        return handleResult(null, new Error('browserAPI.runtime.sendMessage not available'));
+      }
+
+      const maybePromise = browserAPI.runtime.sendMessage(message, (response) => {
+        const lastErr = browserAPI.runtime.lastError;
+        handleResult(response, lastErr || null);
+      });
+
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise
+          .then((res) => {
+            handleResult(res, null);
+          })
+          .catch((err) => {
+            // Benign rejection: popup or dashboard is closed ("Receiving end does not exist")
+            handleResult(null, err);
+          });
+      }
+    } catch (syncErr) {
+      handleResult(null, syncErr);
+    }
+  });
+}
+
+/**
+ * Safely sends an IPC message to a browser tab with URL restriction guards
+ * and unhandled promise rejection prevention.
+ * 
+ * @param {number} tabId Target tab ID
+ * @param {object} message Payload to send
+ * @param {function} [callback] Optional response callback (response, error)
+ * @returns {Promise<any>}
+ */
+async function safeSendTabMessage(tabId, message, callback) {
+  if (!tabId || typeof tabId !== 'number') {
+    if (callback && typeof callback === 'function') {
+      try { callback(null, new Error('Invalid tab ID')); } catch (_) {}
+    }
+    return null;
+  }
+
+  // Pre-check tab URL to skip restricted schemes
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
+      const tab = await browserAPI.tabs.get(tabId).catch(() => null);
+      if (tab && tab.url && isRestrictedTabUrl(tab.url)) {
+        if (callback && typeof callback === 'function') {
+          try { callback(null, new Error('Restricted tab URL scheme')); } catch (_) {}
+        }
+        return null;
+      }
+    }
+  } catch (_) {}
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    const handleResult = (res, err) => {
+      if (resolved) return;
+      resolved = true;
+      if (callback && typeof callback === 'function') {
+        try {
+          callback(res, err);
+        } catch (_) {}
+      }
+      resolve(res || null);
+    };
+
+    try {
+      if (!browserAPI.tabs || typeof browserAPI.tabs.sendMessage !== 'function') {
+        return handleResult(null, new Error('browserAPI.tabs.sendMessage not available'));
+      }
+
+      const maybePromise = browserAPI.tabs.sendMessage(tabId, message, (response) => {
+        const lastErr = browserAPI.runtime.lastError;
+        handleResult(response, lastErr || null);
+      });
+
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise
+          .then((res) => {
+            handleResult(res, null);
+          })
+          .catch((err) => {
+            // Benign rejection: Content script not ready or receiving end does not exist
+            handleResult(null, err);
+          });
+      }
+    } catch (syncErr) {
+      handleResult(null, syncErr);
+    }
+  });
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.safeSendRuntimeMessage = safeSendRuntimeMessage;
+  globalThis.safeSendTabMessage = safeSendTabMessage;
+  globalThis.isRestrictedTabUrl = isRestrictedTabUrl;
+}
+
 // Configuration
 const CONFIG = {
   WS_URL: 'ws://127.0.0.1:65432', // Video Detector HUD port (idle sentinel & overlays)
@@ -216,10 +392,8 @@ function connectDataHub() {
       };
       sendDataHubMessage(regMsg);
 
-      // Notify active views immediately
-      try {
-        browserAPI.runtime.sendMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: true });
-      } catch (_) {}
+      // Notify active views immediately (safe against unhandled promise rejection)
+      safeSendRuntimeMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: true });
 
       // 2. Start heartbeat timer every 10s (resilient against background throttling)
       if (dataHubHeartbeatInterval) clearInterval(dataHubHeartbeatInterval);
@@ -255,9 +429,7 @@ function connectDataHub() {
         clearInterval(dataHubHeartbeatInterval);
         dataHubHeartbeatInterval = null;
       }
-      try {
-        browserAPI.runtime.sendMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: false });
-      } catch (_) {}
+      safeSendRuntimeMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: false });
       scheduleDataHubReconnect();
     };
   } catch (err) {
@@ -1341,7 +1513,7 @@ function connectWebSocket() {
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.1';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.2';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
@@ -1606,15 +1778,11 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Track session and persist to mediaHistory
       trackMediaSession(tabId, payload);
 
-      // Broadcast live media update immediately to open popup / dashboard
-      try {
-        browserAPI.runtime.sendMessage({
-          type: 'LIVE_MEDIA_UPDATE',
-          payload: synthesizeGlobalMediaState()
-        }, () => {
-          if (browserAPI.runtime.lastError) {}
-        });
-      } catch (_) {}
+      // Broadcast live media update immediately to open popup / dashboard (safe IPC broadcast)
+      safeSendRuntimeMessage({
+        type: 'LIVE_MEDIA_UPDATE',
+        payload: synthesizeGlobalMediaState()
+      });
     }
     sendResponse({ received: true });
     return true;
@@ -1655,9 +1823,23 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       };
 
       if (message.forceRefresh && activeTabId) {
-        try {
-          browserAPI.tabs.sendMessage(activeTabId, { type: 'QUERY_PAGE_MEDIA' }, (res) => {
-            if (!browserAPI.runtime.lastError && res && res.hasMedia) {
+        safeSendTabMessage(activeTabId, { type: 'QUERY_PAGE_MEDIA' }, (res) => {
+          if (res && res.hasMedia) {
+            res.tabId = activeTabId;
+            res.windowId = activeWindowId || 0;
+            if (res.primaryMedia) {
+              res.primaryMedia.tabId = activeTabId;
+              res.primaryMedia.windowId = activeWindowId || 0;
+            }
+            tabMediaMap.set(activeTabId, res);
+            sendMediaTelemetryToHUD();
+          }
+          respondWithFreshData();
+        });
+      } else {
+        if (activeTabId) {
+          safeSendTabMessage(activeTabId, { type: 'QUERY_PAGE_MEDIA' }, (res) => {
+            if (res && res.hasMedia) {
               res.tabId = activeTabId;
               res.windowId = activeWindowId || 0;
               if (res.primaryMedia) {
@@ -1667,27 +1849,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
               tabMediaMap.set(activeTabId, res);
               sendMediaTelemetryToHUD();
             }
-            respondWithFreshData();
           });
-        } catch (e) {
-          respondWithFreshData();
-        }
-      } else {
-        if (activeTabId) {
-          try {
-            browserAPI.tabs.sendMessage(activeTabId, { type: 'QUERY_PAGE_MEDIA' }, (res) => {
-              if (!browserAPI.runtime.lastError && res && res.hasMedia) {
-                res.tabId = activeTabId;
-                res.windowId = activeWindowId || 0;
-                if (res.primaryMedia) {
-                  res.primaryMedia.tabId = activeTabId;
-                  res.primaryMedia.windowId = activeWindowId || 0;
-                }
-                tabMediaMap.set(activeTabId, res);
-                sendMediaTelemetryToHUD();
-              }
-            });
-          } catch (e) {}
         }
         respondWithFreshData();
       }
@@ -1804,12 +1966,11 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
         updateMediaHistoryEntry(session, true);
       }
 
-      browserAPI.tabs.sendMessage(targetTabId, {
+      safeSendTabMessage(targetTabId, {
         type: 'MEDIA_CONTROL',
         action: message.action,
         data: message.data || {}
-      }, (res) => {
-        const err = browserAPI.runtime.lastError;
+      }, (res, err) => {
         setTimeout(() => {
           sendMediaTelemetryToHUD();
         }, 150);
@@ -1953,12 +2114,11 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (targetTabId) {
-      browserAPI.tabs.sendMessage(targetTabId, {
+      safeSendTabMessage(targetTabId, {
         type: 'MEDIA_CONTROL',
         action: 'set_volume',
         data: message.data || { volume: message.volume, percent: message.percent }
-      }, (res) => {
-        const err = browserAPI.runtime.lastError;
+      }, (res, err) => {
         setTimeout(() => {
           sendMediaTelemetryToHUD();
         }, 150);

@@ -20,6 +20,21 @@ const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.brows
   ? globalThis.browser 
   : globalThis.chrome;
 
+// Suppress benign connection errors when service worker wakes/sleeps
+if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', (event) => {
+    const msg = (event && event.reason && (event.reason.message || String(event.reason))) || '';
+    if (
+      msg.includes('Could not establish connection') ||
+      msg.includes('Receiving end does not exist') ||
+      msg.includes('message port closed') ||
+      msg.includes('Extension context invalidated')
+    ) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+    }
+  });
+}
+
 // Color palette for donut slices and domain bars
 const PALETTE = [
   '#10b981', // Emerald
@@ -584,16 +599,23 @@ function switchTopTab(tabName, isManual = false) {
  */
 async function fetchDashboardData(forceRefresh = false) {
   return new Promise((resolve) => {
-    browserAPI.runtime.sendMessage({
-      type: 'GET_DASHBOARD_DATA',
-      forceRefresh: Boolean(forceRefresh)
-    }, (response) => {
-      if (browserAPI.runtime.lastError || !response) {
-        resolve(null);
-      } else {
-        resolve(response);
+    try {
+      const p = browserAPI.runtime.sendMessage({
+        type: 'GET_DASHBOARD_DATA',
+        forceRefresh: Boolean(forceRefresh)
+      }, (response) => {
+        if (browserAPI.runtime.lastError || !response) {
+          resolve(null);
+        } else {
+          resolve(response);
+        }
+      });
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => resolve(null));
       }
-    });
+    } catch (_) {
+      resolve(null);
+    }
   });
 }
 
@@ -616,13 +638,18 @@ function sendMediaControl(action, data = {}) {
   lastControlActionKey = actionKey;
   lastControlActionTime = now;
 
-  browserAPI.runtime.sendMessage({
-    type: 'CONTROL_MEDIA',
-    action,
-    data
-  }, () => {
-    setTimeout(refreshDashboard, 120);
-  });
+  try {
+    const p = browserAPI.runtime.sendMessage({
+      type: 'CONTROL_MEDIA',
+      action,
+      data
+    }, () => {
+      setTimeout(refreshDashboard, 120);
+    });
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {});
+    }
+  } catch (_) {}
 }
 
 /**
@@ -1307,19 +1334,24 @@ async function refreshDashboard(forceRefresh = false) {
   if (dataHubConnected) {
     try {
       const hubRes = await new Promise((res) => {
-        browserAPI.runtime.sendMessage({
-          type: 'QUERY_DATA_HUB',
-          query: 'ANALYTICS',
-          browser: selectedBrowser || 'all',
-          tracking_mode: selectedTrackingMode || 'all',
-          date: dashboardData.todayStr || new Date().toISOString().split('T')[0]
-        }, (hr) => {
-          if (browserAPI.runtime.lastError || !hr || !hr.success) {
-            res(null);
-          } else {
-            res(hr.data || null);
-          }
-        });
+        try {
+          const p = browserAPI.runtime.sendMessage({
+            type: 'QUERY_DATA_HUB',
+            query: 'ANALYTICS',
+            browser: selectedBrowser || 'all',
+            tracking_mode: selectedTrackingMode || 'all',
+            date: dashboardData.todayStr || new Date().toISOString().split('T')[0]
+          }, (hr) => {
+            if (browserAPI.runtime.lastError || !hr || !hr.success) {
+              res(null);
+            } else {
+              res(hr.data || null);
+            }
+          });
+          if (p && typeof p.catch === 'function') p.catch(() => res(null));
+        } catch (_) {
+          res(null);
+        }
       });
 
       if (hubRes) {
@@ -1520,22 +1552,28 @@ function setupEventListeners() {
     showPopupToast(t('toast_hud_launching'), 'starting');
 
     // 1. Dispatch Native Messaging Host request
-    browserAPI.runtime.sendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
-      if (res && res.fallbackRequired) {
-        try {
-          let iframe = document.getElementById('__hud_launcher_frame__');
-          if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.id = '__hud_launcher_frame__';
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-          }
-          iframe.src = 'videohud://launch';
-        } catch (_) {}
-      }
-    });
+    try {
+      const p1 = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
+        if (res && res.fallbackRequired) {
+          try {
+            let iframe = document.getElementById('__hud_launcher_frame__');
+            if (!iframe) {
+              iframe = document.createElement('iframe');
+              iframe.id = '__hud_launcher_frame__';
+              iframe.style.display = 'none';
+              document.body.appendChild(iframe);
+            }
+            iframe.src = 'videohud://launch';
+          } catch (_) {}
+        }
+      });
+      if (p1 && typeof p1.catch === 'function') p1.catch(() => {});
+    } catch (_) {}
 
-    browserAPI.runtime.sendMessage({ type: 'TRIGGER_WS_RECONNECT' });
+    try {
+      const p2 = browserAPI.runtime.sendMessage({ type: 'TRIGGER_WS_RECONNECT' });
+      if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
+    } catch (_) {}
 
     let attempts = 0;
     const pollInterval = setInterval(async () => {
@@ -1575,7 +1613,10 @@ function setupEventListeners() {
       if (hubText) hubText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
       hubBadge.className = 'ws-badge starting';
 
-      browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
+      try {
+        const p = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
       showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...', 'info');
 
       let attempts = 0;
@@ -1614,17 +1655,20 @@ function setupEventListeners() {
         : (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia);
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       const targetWindowId = (pm && pm.windowId) ? pm.windowId : undefined;
-      browserAPI.runtime.sendMessage({
-        type: 'JUMP_TO_MEDIA_TAB',
-        tabId: targetTabId,
-        windowId: targetWindowId
-      }, (res) => {
-        if (res && res.success) {
-          showPopupToast(t('toast_switched_tab'), 'success');
-        } else {
-          showPopupToast(t('toast_no_media_tab'), 'danger');
-        }
-      });
+      try {
+        const p = browserAPI.runtime.sendMessage({
+          type: 'JUMP_TO_MEDIA_TAB',
+          tabId: targetTabId,
+          windowId: targetWindowId
+        }, (res) => {
+          if (res && res.success) {
+            showPopupToast(t('toast_switched_tab'), 'success');
+          } else {
+            showPopupToast(t('toast_no_media_tab'), 'danger');
+          }
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
     });
   }
 

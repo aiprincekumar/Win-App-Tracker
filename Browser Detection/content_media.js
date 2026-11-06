@@ -37,12 +37,15 @@
   function safeSendMessage(message, callback) {
     try {
       if (browserAPI.runtime && browserAPI.runtime.id) {
-        browserAPI.runtime.sendMessage(message, (response) => {
+        const maybePromise = browserAPI.runtime.sendMessage(message, (response) => {
           const err = browserAPI.runtime.lastError;
           if (callback && typeof callback === 'function') {
-            callback(response, err);
+            try { callback(response, err); } catch (_) {}
           }
         });
+        if (maybePromise && typeof maybePromise.catch === 'function') {
+          maybePromise.catch(() => {});
+        }
       }
     } catch (e) {
       // Extension context invalidated (e.g. extension updated/reloaded during dev)

@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.1 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.1 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.1 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.1', 'version must be bumped to 2.4.1');
+  assert.strictEqual(manifest.version, '2.4.2', 'version must be bumped to 2.4.2');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.1 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.1 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.2 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,187 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.1 Production Edition'), 'dashboard.html must display v2.4.1 Production Edition');
+  assert(dashHtml.includes('v2.4.2 Production Edition'), 'dashboard.html must display v2.4.2 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.1 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.2 label');
 }
 
-console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
+// ---------------------------------------------------------------------------
+// Test 6: Safe Tab & Runtime Messaging Rejection Handling Test Suite
+// ---------------------------------------------------------------------------
+console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suite');
+(async () => {
+  // Load background.js environment in vm
+  const bgPath = path.join(baseDir, 'background.js');
+  const bgCode = fs.readFileSync(bgPath, 'utf8');
+
+  // Mock minimal chrome environment for background.js execution
+  let sentTabMessages = [];
+  let sentRuntimeMessages = [];
+  let unhandledListeners = [];
+
+  const mockChrome = {
+    runtime: {
+      id: 'test-ext-id',
+      lastError: null,
+      sendMessage: (msg, cb) => {
+        sentRuntimeMessages.push(msg);
+        // Simulate no receiving end Promise rejection
+        const p = Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'));
+        if (typeof cb === 'function') {
+          mockChrome.runtime.lastError = { message: 'Could not establish connection. Receiving end does not exist.' };
+          cb(null);
+        }
+        return p;
+      },
+      onMessage: { addListener: () => {} },
+      onSuspend: { addListener: () => {} },
+      getManifest: () => ({ version: '2.4.2' })
+    },
+    tabs: {
+      get: async (tabId) => {
+        if (tabId === 101) return { id: 101, url: 'chrome://extensions' };
+        if (tabId === 102) return { id: 102, url: 'edge://settings' };
+        if (tabId === 103) return { id: 103, url: 'about:blank' };
+        if (tabId === 104) return { id: 104, url: 'devtools://devtools/bundled/inspector.html' };
+        if (tabId === 105) return { id: 105, url: 'chrome-extension://opiinjipkdkeolidiofmhncoegmaijmm/dashboard/dashboard.html' };
+        if (tabId === 201) return { id: 201, url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' };
+        if (tabId === 202) return { id: 202, url: 'https://github.com' };
+        return null;
+      },
+      sendMessage: (tabId, msg, cb) => {
+        sentTabMessages.push({ tabId, msg });
+        // Simulate no receiving end Promise rejection
+        const p = Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'));
+        if (typeof cb === 'function') {
+          mockChrome.runtime.lastError = { message: 'Could not establish connection. Receiving end does not exist.' };
+          cb(null);
+        }
+        return p;
+      },
+      query: async () => [],
+      onActivated: { addListener: () => {} },
+      onUpdated: { addListener: () => {} },
+      onRemoved: { addListener: () => {} }
+    },
+    windows: {
+      onFocusChanged: { addListener: () => {} }
+    },
+    storage: {
+      local: {
+        get: async () => ({}),
+        set: async () => ({})
+      },
+      onChanged: { addListener: () => {} }
+    },
+    idle: {
+      onStateChanged: { addListener: () => {} },
+      setDetectionInterval: () => {}
+    },
+    alarms: {
+      create: () => {},
+      onAlarm: { addListener: () => {} }
+    },
+    scripting: {
+      executeScript: async () => []
+    }
+  };
+
+  const sandbox = {
+    console,
+    Date,
+    Math,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Object,
+    Set,
+    Map,
+    Promise,
+    Error,
+    JSON,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+    WebSocket: class {
+      constructor() {}
+      send() {}
+      close() {}
+    },
+    chrome: mockChrome,
+    browser: mockChrome,
+    navigator: { userAgent: 'Chrome/120.0.0.0' },
+    addEventListener: (type, fn) => {
+      if (type === 'unhandledrejection') unhandledListeners.push(fn);
+    }
+  };
+  sandbox.globalThis = sandbox;
+
+  vm.createContext(sandbox);
+  vm.runInContext(bgCode, sandbox);
+
+  // 6A. Verify isRestrictedTabUrl
+  const isRestricted = sandbox.isRestrictedTabUrl;
+  assert(typeof isRestricted === 'function', 'isRestrictedTabUrl must be defined');
+  assert.strictEqual(isRestricted('chrome://extensions'), true, 'chrome:// must be restricted');
+  assert.strictEqual(isRestricted('edge://settings'), true, 'edge:// must be restricted');
+  assert.strictEqual(isRestricted('about:blank'), true, 'about: must be restricted');
+  assert.strictEqual(isRestricted('devtools://inspector'), true, 'devtools:// must be restricted');
+  assert.strictEqual(isRestricted('chrome-extension://abc/popup.html'), true, 'chrome-extension:// must be restricted');
+  assert.strictEqual(isRestricted('https://chromewebstore.google.com/detail/123'), true, 'Chrome Web Store must be restricted');
+  assert.strictEqual(isRestricted('https://www.youtube.com/watch?v=123'), false, 'YouTube must not be restricted');
+  assert.strictEqual(isRestricted('https://github.com/aiprincekumar'), false, 'GitHub must not be restricted');
+  console.log('  ✅ isRestrictedTabUrl accurately filters restricted schemes and web stores');
+
+  // 6B. Verify safeSendTabMessage skips restricted tabs
+  sentTabMessages = [];
+  const restrictedResult = await sandbox.safeSendTabMessage(101, { type: 'QUERY_PAGE_MEDIA' });
+  assert.strictEqual(restrictedResult, null, 'Restricted tab message must return null');
+  assert.strictEqual(sentTabMessages.length, 0, 'tabs.sendMessage must NOT be called for restricted schemes');
+  console.log('  ✅ safeSendTabMessage safely skips restricted tab schemes (0 IPC calls made)');
+
+  // 6C. Verify safeSendTabMessage catches rejected promise on normal tabs without throwing
+  let callbackInvoked = false;
+  let receivedErr = null;
+  const normalResult = await sandbox.safeSendTabMessage(201, { type: 'QUERY_PAGE_MEDIA' }, (res, err) => {
+    callbackInvoked = true;
+    receivedErr = err;
+  });
+  assert.strictEqual(callbackInvoked, true, 'safeSendTabMessage callback must be invoked');
+  assert(receivedErr, 'Error must be delivered to callback without crashing');
+  assert(receivedErr.message.includes('Could not establish connection') || receivedErr.message.includes('Receiving end does not exist'));
+  assert.strictEqual(normalResult, null, 'Handled rejection resolves cleanly to null');
+  console.log('  ✅ safeSendTabMessage catches "Receiving end does not exist" promise rejection cleanly');
+
+  // 6D. Verify safeSendRuntimeMessage catches rejected promise when no views are open
+  const runtimeResult = await sandbox.safeSendRuntimeMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: true });
+  assert.strictEqual(runtimeResult, null, 'safeSendRuntimeMessage returns null on closed views without throwing');
+  console.log('  ✅ safeSendRuntimeMessage suppresses closed view promise rejection without unhandled error');
+
+  // 6E. Verify global unhandledrejection listener suppresses benign errors
+  assert(unhandledListeners.length > 0, 'unhandledrejection listener must be registered');
+  let defaultPrevented = false;
+  const mockEvent = {
+    reason: new Error('Could not establish connection. Receiving end does not exist.'),
+    preventDefault: () => { defaultPrevented = true; }
+  };
+  unhandledListeners[0](mockEvent);
+  assert.strictEqual(defaultPrevented, true, 'unhandledrejection listener must call preventDefault() on connection errors');
+
+  // Unrelated errors should NOT be suppressed
+  let fatalPrevented = false;
+  const fatalEvent = {
+    reason: new Error('ReferenceError: somethingElse is not defined'),
+    preventDefault: () => { fatalPrevented = true; }
+  };
+  unhandledListeners[0](fatalEvent);
+  assert.strictEqual(fatalPrevented, false, 'Fatal errors must not be suppressed');
+  console.log('  ✅ Global unhandledrejection sentinel suppresses benign IPC connection errors only');
+
+  console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
+  process.exit(0);
+})();

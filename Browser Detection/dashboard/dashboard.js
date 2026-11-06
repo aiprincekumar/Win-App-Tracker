@@ -10,6 +10,39 @@ const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.brows
   ? globalThis.browser 
   : globalThis.chrome;
 
+// Suppress benign connection errors when service worker wakes/sleeps
+if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', (event) => {
+    const msg = (event && event.reason && (event.reason.message || String(event.reason))) || '';
+    if (
+      msg.includes('Could not establish connection') ||
+      msg.includes('Receiving end does not exist') ||
+      msg.includes('message port closed') ||
+      msg.includes('Extension context invalidated')
+    ) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+    }
+  });
+}
+
+function safeRuntimeSendMessage(message, callback) {
+  try {
+    if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+      const p = browserAPI.runtime.sendMessage(message, (res) => {
+        const err = browserAPI.runtime.lastError;
+        if (callback && typeof callback === 'function') {
+          try { callback(res, err); } catch (_) {}
+        }
+      });
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {});
+      }
+      return p;
+    }
+  } catch (_) {}
+  return null;
+}
+
 // Color Palette for SVG Donut slices and progress bars
 const PALETTE = [
   '#10b981', // Emerald
@@ -1751,7 +1784,7 @@ function saveDashboardSettings() {
 
   browserAPI.storage.local.set({ language: selectedLang });
 
-  browserAPI.runtime.sendMessage({
+  safeRuntimeSendMessage({
     type: 'UPDATE_SETTINGS',
     settings: newSettings
   }, (res) => {
@@ -1886,18 +1919,18 @@ function executeDangerAction() {
   closeConfirmationModal();
 
   if (action === 'CLEAR_MEDIA_HISTORY') {
-    browserAPI.runtime.sendMessage({ type: 'CLEAR_MEDIA_HISTORY' }, () => {
+    safeRuntimeSendMessage({ type: 'CLEAR_MEDIA_HISTORY' }, () => {
       mediaHistoryData = [];
       showToast(t('toast_media_cleared'), true);
       refreshDashboard();
     });
   } else if (action === 'CLEAR_TIME_DATA') {
-    browserAPI.runtime.sendMessage({ type: 'CLEAR_TIME_DATA' }, () => {
+    safeRuntimeSendMessage({ type: 'CLEAR_TIME_DATA' }, () => {
       showToast(t('toast_time_cleared'), true);
       refreshDashboard();
     });
   } else if (action === 'CLEAR_ALL_DATA') {
-    browserAPI.runtime.sendMessage({ type: 'CLEAR_ALL_DATA' }, () => {
+    safeRuntimeSendMessage({ type: 'CLEAR_ALL_DATA' }, () => {
       mediaHistoryData = [];
       showToast(t('toast_all_wiped'), true);
       refreshDashboard();
@@ -1925,7 +1958,7 @@ function sendMediaControl(action, data = {}) {
   lastDashboardControlKey = actionKey;
   lastDashboardControlTime = now;
 
-  browserAPI.runtime.sendMessage({
+  safeRuntimeSendMessage({
     type: 'CONTROL_MEDIA',
     action,
     data
@@ -1936,7 +1969,7 @@ function sendMediaControl(action, data = {}) {
 
 function sendSetVolume(percent) {
   const vol = Math.max(0, Math.min(100, percent));
-  browserAPI.runtime.sendMessage({
+  safeRuntimeSendMessage({
     type: 'SET_VOLUME',
     percent: vol,
     volume: vol / 100
@@ -1960,11 +1993,11 @@ function updateHeroVolumeFromEvent(e) {
 
 function refreshDashboard(forceRefresh = false) {
   return new Promise((resolve) => {
-    browserAPI.runtime.sendMessage({
+    safeRuntimeSendMessage({
       type: 'GET_DASHBOARD_DATA',
       forceRefresh: Boolean(forceRefresh)
     }, async (response) => {
-      if (browserAPI.runtime.lastError || !response) {
+      if (!response) {
         resolve(null);
         return;
       }
@@ -1985,14 +2018,14 @@ function refreshDashboard(forceRefresh = false) {
       if (dataHubConnected) {
         try {
           const hubRes = await new Promise((res) => {
-            browserAPI.runtime.sendMessage({
+            safeRuntimeSendMessage({
               type: 'QUERY_DATA_HUB',
               query: 'ANALYTICS',
               browser: selectedBrowser,
               tracking_mode: selectedTrackingMode,
               date: response.todayStr || new Date().toISOString().split('T')[0]
             }, (hr) => {
-              if (browserAPI.runtime.lastError || !hr || !hr.success) {
+              if (!hr || !hr.success) {
                 res(null);
               } else {
                 res(hr.data || null);
@@ -2119,7 +2152,7 @@ function setupEventListeners() {
     }
 
     showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...');
-    browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
+    safeRuntimeSendMessage({ type: 'LAUNCH_DATA_HUB' });
 
     let attempts = 0;
     const pollInterval = setInterval(async () => {
@@ -2225,7 +2258,7 @@ function setupEventListeners() {
     updateHUDStatus('starting');
     showToast(t('toast_hud_launching'));
 
-    browserAPI.runtime.sendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
+    safeRuntimeSendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
       if (res && res.fallbackRequired) {
         try {
           let iframe = document.getElementById('__hud_launcher_frame__');
@@ -2240,7 +2273,7 @@ function setupEventListeners() {
       }
     });
 
-    browserAPI.runtime.sendMessage({ type: 'TRIGGER_WS_RECONNECT' });
+    safeRuntimeSendMessage({ type: 'TRIGGER_WS_RECONNECT' });
 
     let attempts = 0;
     const pollInterval = setInterval(async () => {
@@ -2393,7 +2426,7 @@ function setupEventListeners() {
       const pm = (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia) || null;
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       const targetWindowId = (pm && pm.windowId) ? pm.windowId : undefined;
-      browserAPI.runtime.sendMessage({
+      safeRuntimeSendMessage({
         type: 'JUMP_TO_MEDIA_TAB',
         tabId: targetTabId,
         windowId: targetWindowId
