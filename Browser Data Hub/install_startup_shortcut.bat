@@ -25,7 +25,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ws = New-Object -ComObject WScript.Shell; " ^
     "$sc = $ws.CreateShortcut('%SHORTCUT_PATH%'); " ^
     "$sc.TargetPath = 'wscript.exe'; " ^
-    "$sc.Arguments = '`\"%VBS_LAUNCHER%`\"'; " ^
+    "$sc.Arguments = [char]34 + '%VBS_LAUNCHER%' + [char]34; " ^
     "$sc.WorkingDirectory = '%SCRIPT_DIR%'; " ^
     "$sc.Description = 'Browser Data Hub - Multi-Browser SQLite Sentinel Service (Port 65433)'; " ^
     "$sc.WindowStyle = 7; " ^
