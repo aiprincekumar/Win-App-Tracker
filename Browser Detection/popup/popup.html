@@ -212,28 +212,34 @@
 
       <!-- Domain Usage Breakdown Section -->
       <section class="breakdown-section">
+        <!-- Row 1: Section Title and Search Box -->
         <div class="section-header">
-          <h2 id="sectionDomainTitle" class="section-title">Domain Breakdown</h2>
-          <div class="filter-controls-group">
-            <select id="browserFilterSelect" class="browser-filter-select-popup" aria-label="Filter Analytics by Browser" title="Filter by Browser">
-              <option value="all">🌐 All</option>
-              <option value="chrome">Chrome</option>
-              <option value="edge">Edge</option>
-              <option value="brave">Brave</option>
-              <option value="opera">Opera</option>
-            </select>
-            <select id="trackingModeSelect" class="browser-filter-select-popup" aria-label="Tracking Method" title="Tracking Method">
-              <option value="all" selected>🌐 Combined</option>
-              <option value="foreground">🖥️ Active Only</option>
-              <option value="background_media">🎵 BG Media</option>
-            </select>
-            <select id="domainCategorySelect" class="browser-filter-select-popup" aria-label="Filter Schemes" title="Page Category">
-              <option value="all" selected>🌐 All Pages</option>
-              <option value="web">🌍 Websites</option>
-              <option value="internal">⚙️ Internal</option>
-            </select>
+          <h2 id="sectionDomainTitle" class="section-title">📊 Domain Breakdown</h2>
+          <div class="search-box-container">
+            <span class="search-box-icon" aria-hidden="true">🔍</span>
             <input type="text" id="domainSearchInput" class="search-input" placeholder="Search domain...">
           </div>
+        </div>
+
+        <!-- Row 2: Dedicated Full-Width Filter Toolbar -->
+        <div class="filter-controls-group">
+          <select id="browserFilterSelect" class="browser-filter-select-popup" aria-label="Filter Analytics by Browser" title="Filter by Browser">
+            <option value="all">🌐 All</option>
+            <option value="chrome">Chrome</option>
+            <option value="edge">Edge</option>
+            <option value="brave">Brave</option>
+            <option value="opera">Opera</option>
+          </select>
+          <select id="trackingModeSelect" class="browser-filter-select-popup" aria-label="Tracking Method" title="Tracking Method">
+            <option value="all" selected>🌐 Combined</option>
+            <option value="foreground">🖥️ Active Only</option>
+            <option value="background_media">🎵 BG Media</option>
+          </select>
+          <select id="domainCategorySelect" class="browser-filter-select-popup" aria-label="Filter Schemes" title="Page Category">
+            <option value="all" selected>🌐 All Pages</option>
+            <option value="web">🌍 Websites</option>
+            <option value="internal">⚙️ Internal</option>
+          </select>
         </div>
 
         <div id="domainsListContainer" class="domains-list">
