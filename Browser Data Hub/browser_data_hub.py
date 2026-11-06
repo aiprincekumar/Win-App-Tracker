@@ -27,6 +27,7 @@ import socket
 import hashlib
 import sqlite3
 import threading
+import html
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any, Set, Tuple
 
@@ -753,6 +754,408 @@ class BrowserDataHubServer:
         sha = hashlib.sha1(concat.encode("utf-8")).digest()
         return base64.b64encode(sha).decode("ascii")
 
+    def _handle_http_request(self, sock: socket.socket, lines: List[str], headers: Dict[str, str]) -> None:
+        """
+        Serves high-performance HTTP dashboard, health, and analytics JSON endpoints.
+        Enables seamless browser inspection via http://127.0.0.1:65433/dashboard.
+        """
+        try:
+            if not lines:
+                return
+            req_line = lines[0].strip()
+            parts = req_line.split()
+            method = parts[0].upper() if len(parts) > 0 else "GET"
+            full_path = parts[1] if len(parts) > 1 else "/"
+            path = full_path.split("?")[0]
+
+            if method == "OPTIONS":
+                cors_headers = (
+                    "HTTP/1.1 204 No Content\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                    "Access-Control-Allow-Headers: Content-Type\r\n"
+                    "Content-Length: 0\r\n"
+                    "Connection: close\r\n\r\n"
+                )
+                sock.sendall(cors_headers.encode("ascii"))
+                return
+
+            if path in ("/health", "/status", "/api/status"):
+                with self._clients_lock:
+                    clients_count = len(self._clients)
+                live_info = self.live_state.get_live_state()
+                payload = {
+                    "status": "healthy",
+                    "service": "Browser Data Hub",
+                    "port": self.port,
+                    "host": self.host,
+                    "db_wal": True,
+                    "connected_clients": clients_count,
+                    "active_media_streams": len(live_info.get("active_media", [])),
+                    "server_time": time.time()
+                }
+                body = json.dumps(payload, indent=2).encode("utf-8")
+                resp = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("ascii") + body
+                sock.sendall(resp)
+                return
+
+            if path == "/api/live":
+                live_info = self.live_state.get_live_state()
+                body = json.dumps(live_info, indent=2).encode("utf-8")
+                resp = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("ascii") + body
+                sock.sendall(resp)
+                return
+
+            if path == "/api/analytics":
+                analytics = self.db.query_analytics("all")
+                body = json.dumps(analytics, indent=2).encode("utf-8")
+                resp = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("ascii") + body
+                sock.sendall(resp)
+                return
+
+            if path in ("/", "/dashboard", "/index.html"):
+                html_content = self._render_http_dashboard_html()
+                body = html_content.encode("utf-8")
+                resp = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/html; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(body)}\r\n"
+                    "Connection: close\r\n\r\n"
+                ).encode("ascii") + body
+                sock.sendall(resp)
+                return
+
+            not_found = b"404 Not Found"
+            resp = (
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Type: text/plain; charset=utf-8\r\n"
+                f"Content-Length: {len(not_found)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("ascii") + not_found
+            sock.sendall(resp)
+        except Exception:
+            pass
+
+    def _render_http_dashboard_html(self) -> str:
+        """Renders live HTML dashboard for Browser Data Hub with modern glassmorphism styling."""
+        try:
+            today_str = date.today().isoformat()
+            analytics = self.db.query_analytics("all", today_str)
+            live_info = self.live_state.get_live_state()
+
+            today_sec = analytics.get("today_seconds", 0)
+            all_time_sec = analytics.get("all_time_seconds", 0)
+            tracked_days = analytics.get("total_tracked_days", 1)
+            reg_browsers = analytics.get("registered_browsers", [])
+            domain_dist = analytics.get("domain_distribution", [])
+            live_media = live_info.get("active_media", [])
+
+            def fmt_time(sec):
+                sec = int(sec)
+                h = sec // 3600
+                m = (sec % 3600) // 60
+                s = sec % 60
+                if h > 0:
+                    return f"{h}h {m:02d}m {s:02d}s"
+                elif m > 0:
+                    return f"{m}m {s:02d}s"
+                return f"{s}s"
+
+            today_str_fmt = fmt_time(today_sec)
+            all_time_str_fmt = fmt_time(all_time_sec)
+            daily_avg_sec = round(all_time_sec / max(1, tracked_days))
+            daily_avg_fmt = fmt_time(daily_avg_sec)
+
+            browsers_html = " ".join(f'<span class="badge badge-browser">{html.escape(b.title())}</span>' for b in reg_browsers) or '<span class="text-muted">None</span>'
+
+            # Domain rows
+            domain_rows = ""
+            for idx, d in enumerate(domain_dist[:15]):
+                dom_sec = d.get("seconds", 0)
+                dom_pct = round((dom_sec / today_sec * 100), 1) if today_sec > 0 else 0
+                dom_name = html.escape(str(d.get("domain", "")))
+                dom_btype = html.escape(str(d.get("browser_type", "all")).title())
+                dom_sess = d.get("session_count", 1)
+                domain_rows += f"""
+                <tr>
+                    <td style="color:#64748b; font-weight:600;">#{idx+1}</td>
+                    <td><strong>{dom_name}</strong></td>
+                    <td><span class="badge">{dom_btype}</span></td>
+                    <td><span class="pill-time">{fmt_time(dom_sec)}</span></td>
+                    <td>{dom_pct}%</td>
+                    <td>{dom_sess}</td>
+                </tr>"""
+
+            if not domain_rows:
+                domain_rows = '<tr><td colspan="6" style="text-align:center; padding:32px; color:#94a3b8;">No browsing activity recorded today yet. Open any tab in Chrome or Edge to start tracking!</td></tr>'
+
+            # Live media rows
+            media_rows = ""
+            for m in live_media:
+                m_title = html.escape(str(m.get("title") or "Web Stream"))
+                m_dom = html.escape(str(m.get("domain") or "web"))
+                m_res = html.escape(str(m.get("resolution") or "Standard"))
+                m_dur = fmt_time(int(m.get("duration", 0)))
+                m_state = "▶ Playing" if m.get("is_playing") else "⏸ Paused"
+                media_rows += f"""
+                <tr>
+                    <td><strong>{m_dom}</strong></td>
+                    <td>{m_title}</td>
+                    <td><span class="badge badge-media">{m_res}</span></td>
+                    <td>{m_dur}</td>
+                    <td><span class="badge badge-status">{m_state}</span></td>
+                </tr>"""
+
+            if not media_rows:
+                media_rows = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">No active video/audio streams playing right now.</td></tr>'
+
+            return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser Data Hub • Standalone Dashboard</title>
+<style>
+:root {{
+  --bg: #0b0f19;
+  --surface: #131c2e;
+  --border: #1e293b;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --primary: #38bdf8;
+  --success: #10b981;
+  --accent: #818cf8;
+  --card-bg: rgba(19, 28, 46, 0.7);
+}}
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: radial-gradient(circle at top left, #1e1b4b 0%, #0b0f19 50%, #030712 100%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 32px 24px;
+}}
+.container {{ max-width: 1100px; margin: 0 auto; }}
+.header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}}
+.title-group h1 {{
+  font-size: 26px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}}
+.title-group p {{ color: var(--text-muted); font-size: 14px; margin-top: 4px; }}
+.badges {{ display: flex; gap: 8px; align-items: center; }}
+.badge {{
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}}
+.badge-status {{
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.3);
+}}
+.badge-browser {{
+  background: rgba(129, 140, 248, 0.15);
+  color: var(--accent);
+  border-color: rgba(129, 140, 248, 0.3);
+}}
+.badge-media {{
+  background: rgba(244, 114, 182, 0.15);
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.3);
+}}
+.grid-cards {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}}
+.card {{
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}}
+.card-label {{ font-size: 13px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }}
+.card-value {{ font-size: 28px; font-weight: 700; color: #fff; margin-top: 8px; }}
+.card-sub {{ font-size: 12px; color: var(--text-muted); margin-top: 6px; }}
+.section-title {{ font-size: 18px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }}
+.table-card {{
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}}
+table {{ width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }}
+th {{
+  background: rgba(15, 23, 42, 0.8);
+  padding: 12px 16px;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}}
+td {{ padding: 14px 16px; border-bottom: 1px solid rgba(30, 41, 59, 0.6); }}
+tr:last-child td {{ border-bottom: none; }}
+.pill-time {{
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}}
+.footer-info {{
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 32px;
+}}
+.btn {{
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}}
+.btn:hover {{ opacity: 0.9; }}
+</style>
+<script>
+setTimeout(() => {{ window.location.reload(); }}, 5000);
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="title-group">
+      <h1>Browser Data Hub Dashboard</h1>
+      <p>Standalone Multi-Browser Telemetry & SQLite WAL Service</p>
+    </div>
+    <div class="badges">
+      <span class="badge badge-status">● PORT {self.port} ACTIVE</span>
+      <span class="badge">SQLite WAL Mode</span>
+      <button class="btn" onclick="window.location.reload()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="grid-cards">
+    <div class="card">
+      <div class="card-label">Today's Total Time</div>
+      <div class="card-value">{today_str_fmt}</div>
+      <div class="card-sub">{len(domain_dist)} active domain(s) today</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Daily Average Time</div>
+      <div class="card-value">{daily_avg_fmt}</div>
+      <div class="card-sub">Across {tracked_days} tracked day(s)</div>
+    </div>
+    <div class="card">
+      <div class="card-label">All-Time Tracked</div>
+      <div class="card-value">{all_time_str_fmt}</div>
+      <div class="card-sub">Since {analytics.get("first_tracked_date", today_str)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Active Browsers</div>
+      <div class="card-value" style="font-size: 20px; margin-top: 12px;">{browsers_html}</div>
+      <div class="card-sub">{len(reg_browsers)} registered client(s)</div>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span>🌐 Today's Top Domains</span>
+    <span style="font-size: 13px; color: var(--text-muted);">Auto-updating every 5s</span>
+  </div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Domain</th>
+          <th>Browser</th>
+          <th>Time Tracked</th>
+          <th>Ratio</th>
+          <th>Sessions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {domain_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title">
+    <span>🎬 Live In-Flight Media Streams</span>
+    <span style="font-size: 13px; color: var(--text-muted);">{len(live_media)} active</span>
+  </div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Platform / Domain</th>
+          <th>Title</th>
+          <th>Resolution</th>
+          <th>Playback Time</th>
+          <th>State</th>
+        </tr>
+      </thead>
+      <tbody>
+        {media_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer-info">
+    <p>⚡ Connected via <code>ws://{self.host}:{self.port}</code> and <code>http://{self.host}:{self.port}/dashboard</code></p>
+    <p style="margin-top: 6px;">Developed by <strong>Atul Verma</strong> (aiprincekumar)</p>
+  </div>
+</div>
+</body>
+</html>"""
+        except Exception as e:
+            return f"<html><body><h1>Browser Data Hub Active</h1><p>Error rendering full template: {html.escape(str(e))}</p></body></html>"
+
+
     def _do_handshake(self, sock: socket.socket) -> bool:
         try:
             req_data = bytearray()
@@ -774,6 +1177,7 @@ class BrowserDataHubServer:
 
             ws_key = headers.get("sec-websocket-key")
             if not ws_key:
+                self._handle_http_request(sock, lines, headers)
                 return False
 
             accept_token = self._compute_accept_header(ws_key)

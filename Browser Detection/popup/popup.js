@@ -801,7 +801,6 @@ function processDomainStats(data, tabType) {
   items.sort((a, b) => b.seconds - a.seconds);
   return { items, totalSeconds: totalSec };
 }
-}
 
 /**
  * Renders the pure SVG Donut chart slices

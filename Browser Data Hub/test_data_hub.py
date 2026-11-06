@@ -26,6 +26,7 @@ import hashlib
 import tempfile
 import unittest
 import threading
+import urllib.request
 from typing import Dict, Any, Optional, Tuple
 
 from browser_data_hub import (
@@ -451,6 +452,41 @@ class TestBrowserDataHub(unittest.TestCase):
             self.assertEqual(dist_bg["wikipedia.org"]["seconds"], 0)
         finally:
             db.close()
+
+    def test_08_http_dashboard_and_health_endpoints(self) -> None:
+        """Verifies HTTP GET /dashboard, /health, /status, and /api/analytics endpoints."""
+        test_port = 65438
+        server = BrowserDataHubServer(host="127.0.0.1", port=test_port, db_path=self.db_path)
+        self.assertTrue(server.start(), "Server must start on test port")
+
+        try:
+            time.sleep(0.1)
+
+            # 1. Test /health
+            req = urllib.request.Request(f"http://127.0.0.1:{test_port}/health")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                self.assertEqual(resp.status, 200)
+                data = json.loads(resp.read().decode("utf-8"))
+                self.assertEqual(data.get("status"), "healthy")
+                self.assertEqual(data.get("service"), "Browser Data Hub")
+
+            # 2. Test /dashboard
+            req = urllib.request.Request(f"http://127.0.0.1:{test_port}/dashboard")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                self.assertEqual(resp.status, 200)
+                html_body = resp.read().decode("utf-8")
+                self.assertIn("Browser Data Hub Dashboard", html_body)
+                self.assertIn("SQLite WAL Mode", html_body)
+
+            # 3. Test /api/analytics
+            req = urllib.request.Request(f"http://127.0.0.1:{test_port}/api/analytics")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                self.assertEqual(resp.status, 200)
+                data = json.loads(resp.read().decode("utf-8"))
+                self.assertIn("browser_breakdown", data)
+                self.assertIn("today_seconds", data)
+        finally:
+            server.stop()
 
 
 def run_all_tests() -> bool:
