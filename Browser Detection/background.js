@@ -1341,10 +1341,11 @@ function connectWebSocket() {
       }
 
       // Initial registration message
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.1';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
-        version: '1.0.0',
+        version: extensionVersion,
         browser: navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome',
         timestamp: Date.now()
       };
