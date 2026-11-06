@@ -193,6 +193,20 @@ if (typeof globalThis !== 'undefined') {
   globalThis.safeSendRuntimeMessage = safeSendRuntimeMessage;
   globalThis.safeSendTabMessage = safeSendTabMessage;
   globalThis.isRestrictedTabUrl = isRestrictedTabUrl;
+  globalThis.connectWebSocket = connectWebSocket;
+  globalThis.connectDataHub = connectDataHub;
+  globalThis.getWsState = () => ({
+    wsConnected,
+    wsReconnectPaused,
+    wsFailureCount,
+    wsReconnectIndex
+  });
+  globalThis.getDataHubState = () => ({
+    dataHubConnected,
+    dataHubReconnectPaused,
+    dataHubFailureCount,
+    dataHubReconnectIndex
+  });
 }
 
 // Configuration
@@ -206,12 +220,18 @@ const CONFIG = {
   CLIENT_ID_STORAGE_KEY: 'media_sentinel_client_id',
   IDLE_THRESHOLD_SECONDS: 60,
   FLUSH_INTERVAL_MINUTES: 1,
-  RECONNECT_INITIAL_MS: 2000,
-  RECONNECT_MAX_MS: 15000,
-  HUB_RECONNECT_LADDER_MS: [3000, 5000, 10000, 15000],
+  RECONNECT_INITIAL_MS: 5000,
+  RECONNECT_MAX_MS: 120000,
+  WS_RECONNECT_LADDER_MS: [5000, 15000, 30000, 60000, 120000],
+  HUB_RECONNECT_LADDER_MS: [5000, 15000, 30000, 60000, 120000],
+  MAX_CONSECUTIVE_FAILURES: 3,
   MAX_MEDIA_HISTORY: 500,
   DELTA_BATCH_INTERVAL_MS: 5000
 };
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.CONFIG = CONFIG;
+}
 
 // Deterministic 0.25x speed stepping ladder (strict 0.25x min, 2.0x max)
 const SPEED_LADDER = [0.25, 0.50, 0.75, 1.0, 1.25, 1.50, 1.75, 2.0];
@@ -272,11 +292,15 @@ let isUserActive = true;
 // Media Map: tabId -> Media State Payload
 const tabMediaMap = new Map();
 
-// WebSocket Connection State
+// WebSocket Connection State (Video Detector HUD on port 65432)
 let ws = null;
 let wsConnected = false;
 let wsReconnectTimer = null;
 let wsReconnectDelay = CONFIG.RECONNECT_INITIAL_MS;
+let wsReconnectIndex = 0;
+let wsFailureCount = 0;
+let wsReconnectPaused = false;
+let lastWsAttemptTime = 0;
 
 // Standalone SQLite Data Hub State (port 65433)
 let detectedBrowser = 'chrome';
@@ -286,6 +310,9 @@ let dataHubConnected = false;
 let dataHubRegistered = false;
 let dataHubReconnectTimer = null;
 let dataHubReconnectIndex = 0;
+let dataHubFailureCount = 0;
+let dataHubReconnectPaused = false;
+let lastDataHubAttemptTime = 0;
 let dataHubHeartbeatInterval = null;
 let offlineSyncQueue = [];
 const pendingQueryCallbacks = new Map();
@@ -354,6 +381,8 @@ function connectDataHub() {
       dataHubReconnectTimer = null;
     }
     dataHubReconnectIndex = 0;
+    dataHubFailureCount = 0;
+    dataHubReconnectPaused = false;
     if (dataHubWs && dataHubWs.readyState !== WebSocket.OPEN) {
       try {
         dataHubWs.onopen = null;
@@ -366,16 +395,25 @@ function connectDataHub() {
     }
   }
 
+  // If paused due to consecutive failures and not explicitly forced, do not reconnect
+  if (dataHubReconnectPaused && !force) {
+    return;
+  }
+
   if (dataHubWs && (dataHubWs.readyState === WebSocket.OPEN || dataHubWs.readyState === WebSocket.CONNECTING)) {
     return;
   }
+
+  lastDataHubAttemptTime = Date.now();
 
   try {
     dataHubWs = new WebSocket(CONFIG.DATA_HUB_URL);
 
     dataHubWs.onopen = () => {
       dataHubConnected = true;
+      dataHubFailureCount = 0;
       dataHubReconnectIndex = 0;
+      dataHubReconnectPaused = false;
       if (dataHubReconnectTimer) {
         clearTimeout(dataHubReconnectTimer);
         dataHubReconnectTimer = null;
@@ -420,6 +458,7 @@ function connectDataHub() {
     dataHubWs.onerror = () => {
       dataHubConnected = false;
       dataHubRegistered = false;
+      // Absorbs error quietly to eliminate ERR_CONNECTION_REFUSED console noise
     };
 
     dataHubWs.onclose = () => {
@@ -430,18 +469,36 @@ function connectDataHub() {
         dataHubHeartbeatInterval = null;
       }
       safeSendRuntimeMessage({ type: 'DATA_HUB_STATUS_CHANGED', connected: false });
-      scheduleDataHubReconnect();
+      handleDataHubFailure();
     };
   } catch (err) {
     dataHubConnected = false;
     dataHubRegistered = false;
-    scheduleDataHubReconnect();
+    handleDataHubFailure();
   }
 }
 
+function handleDataHubFailure() {
+  dataHubConnected = false;
+  dataHubRegistered = false;
+  dataHubFailureCount++;
+
+  if (dataHubFailureCount >= (CONFIG.MAX_CONSECUTIVE_FAILURES || 3)) {
+    dataHubReconnectPaused = true;
+    if (dataHubReconnectTimer) {
+      clearTimeout(dataHubReconnectTimer);
+      dataHubReconnectTimer = null;
+    }
+    console.info(`[MediaSentinel] Data Hub bridge is offline (${CONFIG.DATA_HUB_URL}). Polling paused. Will reconnect on demand.`);
+    return;
+  }
+
+  scheduleDataHubReconnect();
+}
+
 function scheduleDataHubReconnect() {
-  if (dataHubReconnectTimer) return;
-  const ladder = CONFIG.HUB_RECONNECT_LADDER_MS;
+  if (dataHubReconnectTimer || dataHubReconnectPaused) return;
+  const ladder = CONFIG.HUB_RECONNECT_LADDER_MS || [5000, 15000, 30000, 60000, 120000];
   const delay = ladder[Math.min(dataHubReconnectIndex, ladder.length - 1)];
   dataHubReconnectIndex++;
   dataHubReconnectTimer = setTimeout(() => {
@@ -1497,23 +1554,53 @@ function sendActivityUpdateToHUD() {
  * Establishes and maintains resilient WebSocket connection to ws://127.0.0.1:65432
  */
 function connectWebSocket() {
+  const force = arguments[0] === true;
+  if (force) {
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    wsReconnectIndex = 0;
+    wsFailureCount = 0;
+    wsReconnectPaused = false;
+    if (ws && ws.readyState !== WebSocket.OPEN) {
+      try {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        ws.close();
+      } catch (_) {}
+      ws = null;
+    }
+  }
+
+  // If paused due to consecutive failures and not explicitly forced, do not reconnect
+  if (wsReconnectPaused && !force) {
+    return;
+  }
+
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
+
+  lastWsAttemptTime = Date.now();
 
   try {
     ws = new WebSocket(CONFIG.WS_URL);
 
     ws.onopen = () => {
       wsConnected = true;
-      wsReconnectDelay = CONFIG.RECONNECT_INITIAL_MS;
+      wsFailureCount = 0;
+      wsReconnectIndex = 0;
+      wsReconnectPaused = false;
       if (wsReconnectTimer) {
         clearTimeout(wsReconnectTimer);
         wsReconnectTimer = null;
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.2';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.3';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
@@ -1521,7 +1608,9 @@ function connectWebSocket() {
         browser: navigator.userAgent.includes('Edg') ? 'Edge' : 'Chrome',
         timestamp: Date.now()
       };
-      ws.send(JSON.stringify(reg));
+      try {
+        ws.send(JSON.stringify(reg));
+      } catch (_) {}
 
       // Immediately send current states
       sendMediaTelemetryToHUD();
@@ -1542,25 +1631,45 @@ function connectWebSocket() {
 
     ws.onerror = () => {
       wsConnected = false;
+      // Absorbs error quietly to eliminate ERR_CONNECTION_REFUSED console noise
     };
 
     ws.onclose = () => {
       wsConnected = false;
-      scheduleWebSocketReconnect();
+      handleWebSocketFailure();
     };
   } catch (e) {
     wsConnected = false;
-    scheduleWebSocketReconnect();
+    handleWebSocketFailure();
   }
 }
 
+function handleWebSocketFailure() {
+  wsConnected = false;
+  wsFailureCount++;
+
+  if (wsFailureCount >= (CONFIG.MAX_CONSECUTIVE_FAILURES || 3)) {
+    wsReconnectPaused = true;
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    console.info(`[MediaSentinel] HUD bridge is offline (${CONFIG.WS_URL}). Polling paused. Will reconnect on demand.`);
+    return;
+  }
+
+  scheduleWebSocketReconnect();
+}
+
 function scheduleWebSocketReconnect() {
-  if (wsReconnectTimer) return;
+  if (wsReconnectTimer || wsReconnectPaused) return;
+  const ladder = CONFIG.WS_RECONNECT_LADDER_MS || [5000, 15000, 30000, 60000, 120000];
+  const delay = ladder[Math.min(wsReconnectIndex, ladder.length - 1)];
+  wsReconnectIndex++;
   wsReconnectTimer = setTimeout(() => {
     wsReconnectTimer = null;
-    wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, CONFIG.RECONNECT_MAX_MS);
     connectWebSocket();
-  }, wsReconnectDelay);
+  }, delay);
 }
 
 /**
@@ -1603,6 +1712,19 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
     }
   } catch (e) {
     switchActiveDomain(null, false);
+  }
+
+  // Gentle wake-up if paused and cooled down (e.g. 2 minutes since last attempt)
+  const tabSwitchNow = Date.now();
+  if (!wsConnected && wsReconnectPaused && (tabSwitchNow - lastWsAttemptTime > 120000)) {
+    wsFailureCount = 0;
+    wsReconnectPaused = false;
+    connectWebSocket();
+  }
+  if (!dataHubConnected && dataHubReconnectPaused && (tabSwitchNow - lastDataHubAttemptTime > 120000)) {
+    dataHubFailureCount = 0;
+    dataHubReconnectPaused = false;
+    connectDataHub();
   }
 });
 
@@ -1724,14 +1846,28 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
     saveMediaHistory();
 
     if (!wsConnected) {
-      connectWebSocket();
+      if (!wsReconnectPaused) {
+        connectWebSocket();
+      } else if (now - lastWsAttemptTime >= 600000) {
+        // Gentle 10-minute retry check while paused
+        wsFailureCount = 0;
+        wsReconnectPaused = false;
+        connectWebSocket();
+      }
     } else {
       sendMediaTelemetryToHUD();
       sendActivityUpdateToHUD();
     }
 
     if (!dataHubConnected) {
-      connectDataHub(true);
+      if (!dataHubReconnectPaused) {
+        connectDataHub();
+      } else if (now - lastDataHubAttemptTime >= 600000) {
+        // Gentle 10-minute retry check while paused
+        dataHubFailureCount = 0;
+        dataHubReconnectPaused = false;
+        connectDataHub();
+      }
     }
   }
 });
@@ -1803,6 +1939,15 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       cleanStaleTabMedia();
       scheduleStorageSave(false);
 
+      if (message.forceRefresh) {
+        if (!wsConnected && wsReconnectPaused) {
+          connectWebSocket(true);
+        }
+        if (!dataHubConnected && dataHubReconnectPaused) {
+          connectDataHub(true);
+        }
+      }
+
       const respondWithFreshData = () => {
         const globalMedia = synthesizeGlobalMediaState();
         sendResponse({
@@ -1810,7 +1955,9 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           mediaHistory,
           globalMediaState: globalMedia,
           wsConnected,
+          wsReconnectPaused,
           dataHubConnected,
+          dataHubReconnectPaused,
           dataHubRegistered,
           detectedBrowser,
           clientId,
@@ -1858,8 +2005,13 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Handle desktop HUD auto-launch (Zero-Prompt Native Messaging Standard + WebSocket Reconnection)
-  if (message.type === 'LAUNCH_DESKTOP_HUD' || message.type === 'LAUNCH_HUD_APP') {
+  if (message.type === 'LAUNCH_DESKTOP_HUD' || message.type === 'LAUNCH_HUD_APP' || message.type === 'LAUNCH_HUD') {
     let nativeDispatched = false;
+
+    // Reset failure counter and pause state on explicit user HUD launch
+    wsFailureCount = 0;
+    wsReconnectPaused = false;
+    wsReconnectIndex = 0;
 
     // 1. Attempt Zero-Prompt Native Messaging Host execution (com.antigravity.videohud)
     if (typeof browserAPI.runtime.sendNativeMessage === 'function') {
@@ -1889,11 +2041,12 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     }
 
-    // 2. Schedule aggressive WebSocket reconnection passes to connect as soon as HUD socket binds
-    [600, 1200, 2000, 3500, 5000].forEach((delay) => {
+    // 2. Schedule WebSocket reconnection passes to connect as soon as HUD socket binds
+    connectWebSocket(true);
+    [600, 1500, 3000, 5000].forEach((delay) => {
       setTimeout(() => {
         if (!wsConnected) {
-          initWebSocket();
+          connectWebSocket(true);
         }
       }, delay);
     });
@@ -2186,9 +2339,28 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Manually trigger HUD WebSocket reconnection
-  if (message.type === 'TRIGGER_WS_RECONNECT') {
-    connectWebSocket();
-    sendResponse({ initiated: true });
+  if (message.type === 'TRIGGER_WS_RECONNECT' || message.type === 'RECONNECT_WS') {
+    connectWebSocket(true);
+    sendResponse({ initiated: true, wsConnected });
+    return true;
+  }
+
+  // Query live connection & bridge status with on-demand reactivation
+  if (message.type === 'QUERY_STATE') {
+    if (!wsConnected && wsReconnectPaused) {
+      connectWebSocket(true);
+    }
+    if (!dataHubConnected && dataHubReconnectPaused) {
+      connectDataHub(true);
+    }
+    sendResponse({
+      wsConnected,
+      wsReconnectPaused,
+      dataHubConnected,
+      dataHubReconnectPaused,
+      detectedBrowser,
+      clientId
+    });
     return true;
   }
 
@@ -2253,7 +2425,10 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Manually trigger Data Hub WebSocket reconnection and silent auto-launch
-  if (message.type === 'TRIGGER_DATA_HUB_RECONNECT' || message.type === 'LAUNCH_DATA_HUB') {
+  if (message.type === 'TRIGGER_DATA_HUB_RECONNECT' || message.type === 'LAUNCH_DATA_HUB' || message.type === 'RECONNECT_DATA_HUB') {
+    dataHubFailureCount = 0;
+    dataHubReconnectPaused = false;
+    dataHubReconnectIndex = 0;
     let nativeDispatched = false;
     if (!dataHubConnected && typeof browserAPI.runtime.sendNativeMessage === 'function') {
       try {

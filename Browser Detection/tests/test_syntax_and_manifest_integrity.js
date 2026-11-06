@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.2', 'version must be bumped to 2.4.2');
+  assert.strictEqual(manifest.version, '2.4.3', 'version must be bumped to 2.4.3');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.2 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.2 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.3 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.2 Production Edition'), 'dashboard.html must display v2.4.2 Production Edition');
+  assert(dashHtml.includes('v2.4.3 Production Edition'), 'dashboard.html must display v2.4.3 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.2 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.3 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +210,27 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
   let sentTabMessages = [];
   let sentRuntimeMessages = [];
   let unhandledListeners = [];
+  let messageListeners = [];
+  let capturedInfoLogs = [];
+  let scheduledTimers = [];
+
+  class MockWebSocket {
+    constructor(url) {
+      this.url = url;
+      this.readyState = 0; // CONNECTING
+      this.onopen = null;
+      this.onmessage = null;
+      this.onerror = null;
+      this.onclose = null;
+      MockWebSocket.instances.push(this);
+    }
+    send() {}
+    close() {
+      this.readyState = 3;
+      if (typeof this.onclose === 'function') this.onclose();
+    }
+  }
+  MockWebSocket.instances = [];
 
   const mockChrome = {
     runtime: {
@@ -225,9 +246,13 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
         }
         return p;
       },
-      onMessage: { addListener: () => {} },
+      onMessage: {
+        addListener: (fn) => {
+          messageListeners.push(fn);
+        }
+      },
       onSuspend: { addListener: () => {} },
-      getManifest: () => ({ version: '2.4.2' })
+      getManifest: () => ({ version: '2.4.3' })
     },
     tabs: {
       get: async (tabId) => {
@@ -278,8 +303,15 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     }
   };
 
+  const sandboxConsole = {
+    ...console,
+    info: (...args) => {
+      capturedInfoLogs.push(args.join(' '));
+    }
+  };
+
   const sandbox = {
-    console,
+    console: sandboxConsole,
     Date,
     Math,
     String,
@@ -292,15 +324,15 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     Promise,
     Error,
     JSON,
-    setTimeout,
+    setTimeout: (fn, delay) => {
+      const handle = setTimeout(fn, delay);
+      scheduledTimers.push({ fn, delay, handle });
+      return handle;
+    },
     clearTimeout,
     setInterval,
     clearInterval,
-    WebSocket: class {
-      constructor() {}
-      send() {}
-      close() {}
-    },
+    WebSocket: MockWebSocket,
     chrome: mockChrome,
     browser: mockChrome,
     navigator: { userAgent: 'Chrome/120.0.0.0' },
@@ -370,6 +402,104 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
   unhandledListeners[0](fatalEvent);
   assert.strictEqual(fatalPrevented, false, 'Fatal errors must not be suppressed');
   console.log('  ✅ Global unhandledrejection sentinel suppresses benign IPC connection errors only');
+
+  // ---------------------------------------------------------------------------
+  // Test 7: Throttled Exponential Backoff & Consecutive Failure Pause Logic
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 7: Throttled Exponential Backoff & Consecutive Failure Pause Logic');
+
+  // 7A. Verify configuration ladder values
+  const cfg = sandbox.CONFIG;
+  assert.deepStrictEqual(Array.from(cfg.WS_RECONNECT_LADDER_MS), [5000, 15000, 30000, 60000, 120000], 'WS ladder must be 5s, 15s, 30s, 60s, 120s');
+  assert.deepStrictEqual(Array.from(cfg.HUB_RECONNECT_LADDER_MS), [5000, 15000, 30000, 60000, 120000], 'HUB ladder must be 5s, 15s, 30s, 60s, 120s');
+  assert.strictEqual(cfg.MAX_CONSECUTIVE_FAILURES, 3, 'MAX_CONSECUTIVE_FAILURES must be 3');
+  console.log('  ✅ Configuration defines gentle retry ladder [5000, 15000, 30000, 60000, 120000] and max 3 failures');
+
+  // 7B. Simulate 3 consecutive connection failures on HUD WebSocket
+  // Reset clean state
+  sandbox.connectWebSocket(true);
+  let wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsFailureCount, 0, 'wsFailureCount should reset to 0 on force connect');
+  assert.strictEqual(wsState.wsReconnectPaused, false, 'wsReconnectPaused should be false initially');
+
+  // Failure 1
+  let currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  assert(currentWs, 'WebSocket instance must have been created');
+  if (currentWs.onerror) currentWs.onerror(new Error('ECONNREFUSED'));
+  if (currentWs.onclose) currentWs.onclose();
+  wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsFailureCount, 1, 'Failure 1: wsFailureCount should be 1');
+  assert.strictEqual(wsState.wsReconnectPaused, false, 'Failure 1: should not pause yet');
+
+  // Failure 2
+  sandbox.connectWebSocket();
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  if (currentWs.onerror) currentWs.onerror(new Error('ECONNREFUSED'));
+  if (currentWs.onclose) currentWs.onclose();
+  wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsFailureCount, 2, 'Failure 2: wsFailureCount should be 2');
+  assert.strictEqual(wsState.wsReconnectPaused, false, 'Failure 2: should not pause yet');
+
+  // Failure 3 (Threshold hit)
+  sandbox.connectWebSocket();
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  if (currentWs.onerror) currentWs.onerror(new Error('ECONNREFUSED'));
+  if (currentWs.onclose) currentWs.onclose();
+  wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsFailureCount, 3, 'Failure 3: wsFailureCount should be 3');
+  assert.strictEqual(wsState.wsReconnectPaused, true, 'Failure 3: wsReconnectPaused must become true');
+
+  // Verify quiet debug log
+  const foundLog = capturedInfoLogs.some((l) => l.includes('HUD bridge is offline') && l.includes('Polling paused'));
+  assert(foundLog, 'Quiet debug message informing user that polling is paused must be logged');
+  console.log('  ✅ 3 consecutive connection failures trigger paused state (wsReconnectPaused = true) and quiet info log');
+
+  // 7C. Verify that calling connectWebSocket() while paused does NOT create new socket instances
+  const countBefore = MockWebSocket.instances.length;
+  sandbox.connectWebSocket();
+  const countAfter = MockWebSocket.instances.length;
+  assert.strictEqual(countAfter, countBefore, 'Passive connectWebSocket() while paused must be a no-op (0 new connections)');
+  console.log('  ✅ Passive connection attempts while paused are completely suppressed (zero ERR_CONNECTION_REFUSED spam)');
+
+  // 7D. Verify On-Demand Reactivation via force reconnect (e.g. Popup open / Button click)
+  sandbox.connectWebSocket(true);
+  wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsFailureCount, 0, 'wsFailureCount must reset to 0 on force reconnect');
+  assert.strictEqual(wsState.wsReconnectPaused, false, 'wsReconnectPaused must reset to false on force reconnect');
+  assert.strictEqual(MockWebSocket.instances.length, countBefore + 1, 'New WebSocket created on force reconnect');
+
+  // Simulate successful connection on-demand
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  if (currentWs.onopen) currentWs.onopen();
+  wsState = sandbox.getWsState();
+  assert.strictEqual(wsState.wsConnected, true, 'wsConnected must be true after onopen');
+  console.log('  ✅ On-demand force reconnect resets counters and re-establishes connection immediately');
+
+  // 7E. Verify message listener on-demand reactivation for QUERY_STATE / RECONNECT_WS
+  assert(messageListeners.length > 0, 'runtime.onMessage listener must be registered');
+  // Put ws into paused state
+  sandbox.connectWebSocket(true);
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  currentWs.onerror(); currentWs.onclose();
+  sandbox.connectWebSocket();
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  currentWs.onerror(); currentWs.onclose();
+  sandbox.connectWebSocket();
+  currentWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  currentWs.onerror(); currentWs.onclose();
+  assert.strictEqual(sandbox.getWsState().wsReconnectPaused, true, 'Should be paused again');
+
+  // Dispatch QUERY_STATE IPC message
+  let queryResponse = null;
+  const onMessageDispatcher = messageListeners[0];
+  onMessageDispatcher({ type: 'QUERY_STATE' }, {}, (res) => { queryResponse = res; });
+  assert.strictEqual(sandbox.getWsState().wsReconnectPaused, false, 'QUERY_STATE must reactivate paused state');
+
+  // Dispatch RECONNECT_WS IPC message
+  let reconnectResponse = null;
+  onMessageDispatcher({ type: 'RECONNECT_WS' }, {}, (res) => { reconnectResponse = res; });
+  assert.strictEqual(reconnectResponse && reconnectResponse.initiated, true, 'RECONNECT_WS must initiate reconnection');
+  console.log('  ✅ Runtime IPC messages (QUERY_STATE, RECONNECT_WS) reactivate connection on demand');
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
   process.exit(0);

@@ -28,7 +28,11 @@ console.log('Test 1: Background Script Static Architecture Inspection');
   const bgCode = fs.readFileSync(path.join(__dirname, '../background.js'), 'utf8');
 
   assert(bgCode.includes("DATA_HUB_URL: 'ws://127.0.0.1:65433'"), 'DATA_HUB_URL must point to ws://127.0.0.1:65433');
-  assert(bgCode.includes("HUB_RECONNECT_LADDER_MS: [3000, 5000, 10000, 15000]"), 'Reconnection ladder must support 3s, 5s, 10s steps');
+  assert(
+    bgCode.includes("HUB_RECONNECT_LADDER_MS: [5000, 15000, 30000, 60000, 120000]") ||
+    bgCode.includes("HUB_RECONNECT_LADDER_MS: [3000, 5000, 10000, 15000]"),
+    'Reconnection ladder must support configured backoff steps'
+  );
   assert(bgCode.includes('function detectBrowserType()'), 'Must define detectBrowserType()');
   assert(bgCode.includes('function connectDataHub()'), 'Must define connectDataHub()');
   assert(bgCode.includes('function flushOfflineSyncQueue()'), 'Must define flushOfflineSyncQueue()');
