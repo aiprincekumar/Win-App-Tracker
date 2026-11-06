@@ -612,75 +612,96 @@ function sendMediaControl(action, data = {}) {
 }
 
 /**
+ * Safely extracts mode-specific seconds for a domain item.
+ * Supports both SQLite Data Hub schema and local chrome.storage schema.
+ * - all: d.combined_seconds || d.combinedSeconds || d.totalSeconds || d.seconds || 0
+ * - foreground: d.foreground_seconds != null ? d.foreground_seconds : (d.foregroundSeconds != null ? d.foregroundSeconds : (d.seconds || 0))
+ * - background_media: d.background_media_seconds != null ? d.background_media_seconds : (d.backgroundMediaSeconds != null ? d.backgroundMediaSeconds : 0)
+ */
+function getDomainSecondsForMode(d, mode = selectedTrackingMode) {
+  if (!d) return 0;
+  if (mode === 'foreground') {
+    if (typeof d.foreground_seconds === 'number') return d.foreground_seconds;
+    if (typeof d.foregroundSeconds === 'number') return d.foregroundSeconds;
+    return d.seconds || d.totalSeconds || 0;
+  }
+  if (mode === 'background_media') {
+    if (typeof d.background_media_seconds === 'number') return d.background_media_seconds;
+    if (typeof d.backgroundMediaSeconds === 'number') return d.backgroundMediaSeconds;
+    return 0;
+  }
+  // 'all' / Combined Total
+  if (typeof d.combined_seconds === 'number') return d.combined_seconds;
+  if (typeof d.combinedSeconds === 'number') return d.combinedSeconds;
+  if (typeof d.totalSeconds === 'number') return d.totalSeconds;
+  return d.seconds || 0;
+}
+
+/**
  * Extracts list of domains with duration and session stats based on active temporal tab
  */
 function processDomainStats(data, tabType) {
   // 1. Standalone SQLite Data Hub Mode (Source of Truth when Connected)
   if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
-    const todaySec = dataHubAnalytics.today_seconds || 0;
-    const dailyAvgSec = dataHubAnalytics.daily_average_seconds || 0;
-    const allTimeSec = (typeof dataHubAnalytics.all_time_seconds === 'number')
-      ? dataHubAnalytics.all_time_seconds
-      : (dataHubAnalytics.total_seconds || todaySec);
     const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
 
-    let rawItems = [];
-
-    if (tabType === 'today') {
-      rawItems = Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : [];
-    } else if (tabType === 'daily') {
-      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
-        ? dataHubAnalytics.all_time_domain_distribution
-        : (dataHubAnalytics.domain_distribution || []);
-    } else { // 'total'
-      rawItems = Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
-        ? dataHubAnalytics.all_time_domain_distribution
-        : (dataHubAnalytics.domain_distribution || []);
-    }
-
-    // Filter rawItems by selectedDomainCategory before computing totals & percentages
-    const filteredRaw = rawItems.filter(d => {
+    const todayRawList = (Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : []).filter(d => {
       const isInternal = isInternalDomain(d.domain);
       if (selectedDomainCategory === 'web' && isInternal) return false;
       if (selectedDomainCategory === 'internal' && !isInternal) return false;
       return true;
     });
 
+    const allTimeRawList = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0
+      ? dataHubAnalytics.all_time_domain_distribution
+      : (dataHubAnalytics.domain_distribution || [])).filter(d => {
+      const isInternal = isInternalDomain(d.domain);
+      if (selectedDomainCategory === 'web' && isInternal) return false;
+      if (selectedDomainCategory === 'internal' && !isInternal) return false;
+      return true;
+    });
+
+    const modeTodaySec = todayRawList.reduce((acc, curr) => acc + getDomainSecondsForMode(curr, selectedTrackingMode), 0);
+    const modeAllTimeSec = allTimeRawList.reduce((acc, curr) => acc + getDomainSecondsForMode(curr, selectedTrackingMode), 0);
+    const modeDailyAvgSec = Math.round(modeAllTimeSec / historyDays);
+
+    const rawItems = (tabType === 'today') ? todayRawList : allTimeRawList;
+
     let targetTotal = 0;
-    const items = filteredRaw.map(d => {
-      let domainSec = d.seconds;
+    const items = [];
+
+    for (const d of rawItems) {
+      const modeSec = getDomainSecondsForMode(d, selectedTrackingMode);
+      let domainSec = modeSec;
+
       if (tabType === 'daily') {
-        domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
-          ? ((dailyAvgSec > 0 && allTimeSec > 0)
-              ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
-              : Math.round(d.seconds / historyDays))
-          : ((dailyAvgSec > 0 && todaySec > 0)
-              ? Math.round(dailyAvgSec * ((d.percent || 0) / 100.0))
-              : Math.round(d.seconds / historyDays));
+        domainSec = (modeDailyAvgSec > 0 && modeAllTimeSec > 0)
+          ? Math.round(modeDailyAvgSec * (modeSec / modeAllTimeSec))
+          : Math.round(modeSec / historyDays);
       } else if (tabType === 'total') {
-        domainSec = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
-          ? d.seconds
-          : ((allTimeSec > 0 && allTimeSec !== todaySec && todaySec > 0)
-              ? Math.round(allTimeSec * ((d.percent || 0) / 100.0))
-              : d.seconds);
+        domainSec = modeSec;
       } else { // 'today'
-        domainSec = d.seconds;
+        domainSec = modeSec;
       }
 
-      targetTotal += domainSec;
-
-      return {
-        domain: d.domain,
-        seconds: domainSec,
-        foreground_seconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : d.seconds),
-        background_media_seconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : 0),
-        combined_seconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : d.seconds),
-        sessions: d.session_count || 1,
-        favicon: d.favicon_url || getFaviconUrl(d.domain),
-        lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now(),
-        isInternal: isInternalDomain(d.domain)
-      };
-    });
+      if (selectedTrackingMode === 'background_media' && domainSec <= 0) {
+        continue;
+      }
+      if (domainSec > 0 || (tabType === 'total' && (d.combined_seconds || d.seconds) > 0)) {
+        targetTotal += domainSec;
+        items.push({
+          domain: d.domain,
+          seconds: domainSec,
+          foreground_seconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : (d.foregroundSeconds || d.seconds || 0)),
+          background_media_seconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : (d.backgroundMediaSeconds || 0)),
+          combined_seconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : (d.combinedSeconds || d.totalSeconds || d.seconds || 0)),
+          sessions: d.session_count || d.sessionCount || 1,
+          favicon: d.favicon_url || getFaviconUrl(d.domain),
+          lastActive: d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : (d.lastActive || Date.now()),
+          isInternal: isInternalDomain(d.domain)
+        });
+      }
+    }
 
     items.forEach(it => {
       const ratio = targetTotal > 0 ? (it.seconds / targetTotal) : 0;
@@ -739,7 +760,11 @@ function processDomainStats(data, tabType) {
       domainSec = targetTotalSec;
     }
 
-    if (domainSec > 0 || (tabType === 'total' && combinedTotal > 0)) {
+    if (selectedTrackingMode === 'background_media' && domainSec <= 0) {
+      continue;
+    }
+
+    if (domainSec > 0 || (selectedTrackingMode !== 'background_media' && tabType === 'total' && combinedTotal > 0)) {
       items.push({
         domain,
         seconds: domainSec,

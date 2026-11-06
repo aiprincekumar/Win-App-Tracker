@@ -890,6 +890,32 @@ function switchTab(tabKey) {
 // TAB A: Time Tracking Processing & Rendering
 // =============================================================================
 
+/**
+ * Safely extracts mode-specific seconds for a domain item.
+ * Supports both SQLite Data Hub schema and local chrome.storage schema.
+ * - all: d.combined_seconds || d.combinedSeconds || d.totalSeconds || d.seconds || 0
+ * - foreground: d.foreground_seconds != null ? d.foreground_seconds : (d.foregroundSeconds != null ? d.foregroundSeconds : (d.seconds || 0))
+ * - background_media: d.background_media_seconds != null ? d.background_media_seconds : (d.backgroundMediaSeconds != null ? d.backgroundMediaSeconds : 0)
+ */
+function getDomainSecondsForMode(d, mode = selectedTrackingMode) {
+  if (!d) return 0;
+  if (mode === 'foreground') {
+    if (typeof d.foreground_seconds === 'number') return d.foreground_seconds;
+    if (typeof d.foregroundSeconds === 'number') return d.foregroundSeconds;
+    return d.seconds || d.totalSeconds || 0;
+  }
+  if (mode === 'background_media') {
+    if (typeof d.background_media_seconds === 'number') return d.background_media_seconds;
+    if (typeof d.backgroundMediaSeconds === 'number') return d.backgroundMediaSeconds;
+    return 0;
+  }
+  // 'all' / Combined Total
+  if (typeof d.combined_seconds === 'number') return d.combined_seconds;
+  if (typeof d.combinedSeconds === 'number') return d.combinedSeconds;
+  if (typeof d.totalSeconds === 'number') return d.totalSeconds;
+  return d.seconds || 0;
+}
+
 function processTimeTrackingData(actData, temporalMode, todayStr) {
   if (!actData || !actData.domains) {
     return { items: [], totalSec: 0, todaySec: 0, dailyAvgSec: 0, topDomain: null };
@@ -937,7 +963,7 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
       computedSec = targetTotalSec;
     }
 
-    if (computedSec > 0 || temporalMode === 'total') {
+    if (computedSec > 0 || (selectedTrackingMode !== 'background_media' && temporalMode === 'total' && combinedTotalSec > 0)) {
       processedList.push({
         domain: domainName,
         favicon: domainObj.favicon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domainName)}&sz=32`,
@@ -967,7 +993,7 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
 
   processedList.sort((a, b) => b.computedSeconds - a.computedSeconds);
 
-  const topDomain = processedList.length > 0 ? processedList[0] : null;
+  const topDomain = (processedList.length > 0 && processedList[0].computedSeconds > 0) ? processedList[0] : null;
 
   return {
     items: processedList,
@@ -1010,9 +1036,9 @@ function renderTimeTrackingTab(data) {
       return true;
     });
 
-    // Recompute category-filtered totals for metric cards
-    const todaySec = rawTodayList.reduce((acc, curr) => acc + (curr.seconds || 0), 0);
-    const allTimeSec = rawAllTimeList.reduce((acc, curr) => acc + (curr.seconds || 0), 0);
+    // Recompute category-filtered totals for metric cards strictly summing mode-specific seconds
+    const todaySec = rawTodayList.reduce((acc, curr) => acc + getDomainSecondsForMode(curr, selectedTrackingMode), 0);
+    const allTimeSec = rawAllTimeList.reduce((acc, curr) => acc + getDomainSecondsForMode(curr, selectedTrackingMode), 0);
     const dailyAvgSec = Math.round(allTimeSec / historyDays);
 
     let rawItems = [];
@@ -1030,15 +1056,16 @@ function renderTimeTrackingTab(data) {
     }
 
     const items = rawItems.map(d => {
-      let computedSec = d.seconds;
+      const modeSec = getDomainSecondsForMode(d, selectedTrackingMode);
+      let computedSec = modeSec;
       if (temporalSubtab === 'daily') {
         computedSec = (dailyAvgSec > 0 && allTimeSec > 0)
-          ? Math.round(dailyAvgSec * (d.seconds / allTimeSec))
-          : Math.round(d.seconds / historyDays);
+          ? Math.round(dailyAvgSec * (modeSec / allTimeSec))
+          : Math.round(modeSec / historyDays);
       } else if (temporalSubtab === 'total') {
-        computedSec = d.seconds;
+        computedSec = modeSec;
       } else { // 'today'
-        computedSec = d.seconds;
+        computedSec = modeSec;
       }
 
       const ratio = activeTemporalSum > 0 ? (computedSec / activeTemporalSum) : 0;
@@ -1048,22 +1075,27 @@ function renderTimeTrackingTab(data) {
         domain: d.domain,
         favicon: d.favicon_url || getFaviconUrl(d.domain),
         computedSeconds: computedSec,
-        totalSeconds: d.seconds,
-        foregroundSeconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : d.seconds),
-        backgroundMediaSeconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : 0),
-        combinedSeconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : d.seconds),
-        todaySeconds: (temporalSubtab === 'today' ? d.seconds : 0),
-        dailyAvgSeconds: Math.round(d.seconds / historyDays),
-        sessions: d.session_count || 1,
-        lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : Date.now()),
+        totalSeconds: modeSec,
+        foregroundSeconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : (d.foregroundSeconds || d.seconds || 0)),
+        backgroundMediaSeconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : (d.backgroundMediaSeconds || 0)),
+        combinedSeconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : (d.combinedSeconds || d.totalSeconds || d.seconds || 0)),
+        todaySeconds: (temporalSubtab === 'today' ? modeSec : 0),
+        dailyAvgSeconds: Math.round(modeSec / historyDays),
+        sessions: d.session_count || d.sessionCount || 1,
+        lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : (d.lastActive || Date.now())),
         ratio,
         ratioPercent,
         isInternal: isInternalDomain(d.domain)
       };
+    }).filter(item => {
+      if (selectedTrackingMode === 'background_media') {
+        return item.computedSeconds > 0;
+      }
+      return item.computedSeconds > 0 || (temporalSubtab === 'total' && item.combinedSeconds > 0);
     });
 
     items.sort((a, b) => b.computedSeconds - a.computedSeconds);
-    const topDomain = items.length > 0 ? items[0] : null;
+    const topDomain = (items.length > 0 && items[0].computedSeconds > 0) ? items[0] : null;
 
     stats = {
       items,

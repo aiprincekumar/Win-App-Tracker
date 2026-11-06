@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Browser Data Hub/browser_data_hub.py: Standalone Multi-Browser SQLite Data Hub Service.
 Department 06: Backend & API Engineering & Department 03: Data Architecture & DBA.
@@ -1063,8 +1063,8 @@ class BrowserDataHubServer:
 
         elif msg_type == "QUERY_ANALYTICS":
             browser_filter = str(msg.get("browser") or msg.get("browser_type") or "all")
-            target_date = msg.get("date_str")
-            tracking_mode = str(msg.get("tracking_mode") or "all")
+            target_date = msg.get("date_str") or msg.get("date")
+            tracking_mode = str(msg.get("tracking_mode") or msg.get("trackingMode") or "all")
             analytics_data = self.db.query_analytics(browser_filter, target_date, tracking_mode=tracking_mode)
             resp = {
                 "type": "ANALYTICS_RESPONSE",

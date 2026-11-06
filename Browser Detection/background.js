@@ -775,16 +775,17 @@ function trackMediaSession(tabId, payload) {
     const resolution = pm.resolutionLabel || (pm.videoWidth && pm.videoHeight ? `${pm.videoWidth}x${pm.videoHeight}` : 'Audio / Standard');
 
     if (session) {
-      // Calculate elapsed playback duration
-      const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
+      // Calculate elapsed playback duration with remainder preservation (avoids sub-second loss)
+      const elapsedMs = now - session.lastHeartbeat;
+      const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
       if (elapsedSec > 0) {
         session.watchDuration += elapsedSec;
+        session.lastHeartbeat += (elapsedSec * 1000);
         const isForeground = (tabId === activeTabId && isBrowserFocused);
         if (!isForeground) {
           commitBackgroundMediaDelta(session.domain, elapsedSec);
         }
       }
-      session.lastHeartbeat = now;
       session.lastUpdated = now;
       if (vol >= 0 && vol <= 100) {
         session.volumeSamples.push(vol);
@@ -830,9 +831,11 @@ function trackMediaSession(tabId, payload) {
   } else {
     // Media paused or stopped
     if (session) {
-      const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
+      const elapsedMs = now - session.lastHeartbeat;
+      const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
       if (elapsedSec > 0 && session.isPlaying) {
         session.watchDuration += elapsedSec;
+        session.lastHeartbeat += (elapsedSec * 1000);
         const isForeground = (tabId === activeTabId && isBrowserFocused);
         if (!isForeground) {
           commitBackgroundMediaDelta(session.domain, elapsedSec);
@@ -868,6 +871,67 @@ function finalizeMediaSession(tabId) {
 
   activeMediaSessions.delete(tabId);
   saveMediaHistory();
+}
+
+/**
+ * Detects native Chrome tab.audible state changes to capture background media/audio playback
+ */
+function handleTabAudibleStateChange(tabId, isAudible, tab) {
+  if (!settings.mediaTrackingEnabled) return;
+  const now = Date.now();
+  if (isAudible) {
+    let session = activeMediaSessions.get(tabId);
+    const domain = (tab && tab.url) ? extractDomain(tab.url) : 'web';
+    const title = (tab && tab.title) ? tab.title : 'Audio Playback';
+
+    if (!session) {
+      session = {
+        id: `audible_${now}_${Math.random().toString(36).substring(2, 8)}`,
+        tabId,
+        title,
+        platform: domain,
+        domain,
+        url: (tab && tab.url) || '',
+        mediaType: 'audio',
+        resolution: 'Audio Stream',
+        videoDuration: 0,
+        watchDuration: 0,
+        volumeSamples: [100],
+        peakVolume: 100,
+        lowVolume: 100,
+        averageVolume: 100,
+        playbackRate: 1.0,
+        timestamp: now,
+        lastHeartbeat: now,
+        lastUpdated: now,
+        isPlaying: true,
+        isAudible: true
+      };
+      activeMediaSessions.set(tabId, session);
+      streamMediaSessionUpdate(session, 'start');
+    } else {
+      session.isPlaying = true;
+      session.isAudible = true;
+      session.lastUpdated = now;
+      if (domain && domain !== 'web' && (!session.domain || session.domain === 'web')) {
+        session.domain = domain;
+      }
+      if (title && (!session.title || session.title === 'Audio Playback')) {
+        session.title = title;
+      }
+    }
+  } else {
+    const session = activeMediaSessions.get(tabId);
+    if (session && session.isAudible) {
+      session.isAudible = false;
+      const tabMedia = tabMediaMap.get(tabId);
+      if (!tabMedia || !tabMedia.anyPlaying) {
+        session.isPlaying = false;
+        session.lastUpdated = now;
+        finalizeMediaSession(tabId);
+      }
+    }
+  }
 }
 
 /**
@@ -1350,12 +1414,16 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
-// Tab Updated (URL changed or page navigated)
+// Tab Updated (URL changed, page navigated, or audible audio state changed)
 browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   await ensureStorageLoaded();
   if (tabId === activeTabId && changeInfo.url) {
     const domain = extractDomain(changeInfo.url);
     switchActiveDomain(domain, false);
+  }
+  // Audio state change (tab.audible becomes true / false)
+  if (changeInfo.audible !== undefined) {
+    handleTabAudibleStateChange(tabId, changeInfo.audible, tab);
   }
   // Clear stale media state if tab reloads or navigates to a new page
   if (changeInfo.status === 'loading' && changeInfo.url) {
@@ -1444,14 +1512,15 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
     commitActiveInterval();
     saveStorageData();
 
-    // Check & flush active media sessions
+    // Check & flush active media sessions with remainder preservation
     const now = Date.now();
     for (const [tabId, session] of activeMediaSessions.entries()) {
       if (session.isPlaying) {
-        const elapsedSec = Math.max(0, Math.min(60, Math.floor((now - session.lastHeartbeat) / 1000)));
+        const elapsedMs = now - session.lastHeartbeat;
+        const elapsedSec = Math.max(0, Math.min(60, Math.floor(elapsedMs / 1000)));
         if (elapsedSec > 0) {
           session.watchDuration += elapsedSec;
-          session.lastHeartbeat = now;
+          session.lastHeartbeat += (elapsedSec * 1000);
           const isForeground = (tabId === activeTabId && isBrowserFocused);
           if (!isForeground) {
             commitBackgroundMediaDelta(session.domain, elapsedSec);
@@ -2073,25 +2142,44 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
 
   // Setup periodic 5-second streaming ticker for active domain delta commits and background media playback
   if (deltaCommitTicker) clearInterval(deltaCommitTicker);
-  deltaCommitTicker = setInterval(() => {
+  deltaCommitTicker = setInterval(async () => {
     // 1. Commit active foreground domain interval
     if (isBrowserFocused && isUserActive && activeDomain) {
       commitActiveInterval();
     }
-    // 2. Commit background media sessions
+
+    // 2. Periodic audible tab sweep: capture any background tabs playing audio
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+        const audibleTabs = await browserAPI.tabs.query({ audible: true });
+        if (audibleTabs && audibleTabs.length > 0) {
+          for (const aTab of audibleTabs) {
+            if (!activeMediaSessions.has(aTab.id)) {
+              handleTabAudibleStateChange(aTab.id, true, aTab);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 3. Commit background media sessions with remainder preservation
     const now = Date.now();
     for (const [tabId, session] of activeMediaSessions.entries()) {
       if (session && session.isPlaying) {
         const isForeground = (tabId === activeTabId && isBrowserFocused);
         if (!isForeground) {
-          const elapsedSec = Math.max(0, Math.min(30, Math.floor((now - session.lastHeartbeat) / 1000)));
+          const elapsedMs = now - session.lastHeartbeat;
+          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
           if (elapsedSec > 0) {
             session.watchDuration += elapsedSec;
-            session.lastHeartbeat = now;
+            session.lastHeartbeat += (elapsedSec * 1000);
             session.lastUpdated = now;
             commitBackgroundMediaDelta(session.domain, elapsedSec);
             updateMediaHistoryEntry(session, false);
           }
+        } else {
+          // Tab is in foreground; keep lastHeartbeat synced with now
+          session.lastHeartbeat = now;
         }
       }
     }
