@@ -195,6 +195,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.isRestrictedTabUrl = isRestrictedTabUrl;
   globalThis.connectWebSocket = connectWebSocket;
   globalThis.connectDataHub = connectDataHub;
+  globalThis.probePortLive = probePortLive;
+  globalThis.probeAndConnectServices = probeAndConnectServices;
   globalThis.getWsState = () => ({
     wsConnected,
     wsReconnectPaused,
@@ -373,7 +375,7 @@ async function initClientIdAndBrowser() {
 /**
  * Connects to Standalone Multi-Browser SQLite Data Hub on ws://127.0.0.1:65433
  */
-function connectDataHub() {
+async function connectDataHub() {
   const force = arguments[0] === true;
   if (force) {
     if (dataHubReconnectTimer) {
@@ -405,6 +407,19 @@ function connectDataHub() {
   }
 
   lastDataHubAttemptTime = Date.now();
+
+  // In browser runtime where fetch is available, silently probe port before raw WebSocket creation
+  // to eliminate Chromium C++ net::ERR_CONNECTION_REFUSED badges on chrome://extensions
+  if (typeof fetch === 'function') {
+    const isLive = await probePortLive(CONFIG.DATA_HUB_URL);
+    if (dataHubWs && (dataHubWs.readyState === WebSocket.OPEN || dataHubWs.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    if (!isLive) {
+      handleDataHubFailure();
+      return;
+    }
+  }
 
   try {
     dataHubWs = new WebSocket(CONFIG.DATA_HUB_URL);
@@ -1551,9 +1566,49 @@ function sendActivityUpdateToHUD() {
 }
 
 /**
+ * Silently probes whether local Python host services (HUD on 65432, Data Hub on 65433)
+ * are currently active using zero-console HTTP fetch probe before creating raw WebSockets.
+ * Prevents Chromium C++ net::ERR_CONNECTION_REFUSED error logging in chrome://extensions.
+ */
+async function probePortLive(url, timeoutMs = 800) {
+  if (typeof fetch !== 'function') {
+    // If fetch is unavailable (e.g. Node.js unit tests without global fetch),
+    // return true so mock WebSocket tests proceed cleanly.
+    return true;
+  }
+  try {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    const httpUrl = url.replace(/^ws:/i, 'http:').replace(/^wss:/i, 'https:');
+    const options = {
+      method: 'GET',
+      mode: 'no-cors',
+      cache: 'no-store'
+    };
+    if (controller) {
+      options.signal = controller.signal;
+    }
+    const res = await fetch(httpUrl, options).catch(() => null);
+    if (timer) clearTimeout(timer);
+    return res !== null;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Safely probes and connects to available Python services without triggering
+ * Chromium net::ERR_CONNECTION_REFUSED console badges.
+ */
+function probeAndConnectServices(force = false) {
+  connectWebSocket(force);
+  connectDataHub(force);
+}
+
+/**
  * Establishes and maintains resilient WebSocket connection to ws://127.0.0.1:65432
  */
-function connectWebSocket() {
+async function connectWebSocket() {
   const force = arguments[0] === true;
   if (force) {
     if (wsReconnectTimer) {
@@ -1586,6 +1641,19 @@ function connectWebSocket() {
 
   lastWsAttemptTime = Date.now();
 
+  // In browser runtime where fetch is available, silently probe port before raw WebSocket creation
+  // to eliminate Chromium C++ net::ERR_CONNECTION_REFUSED badges on chrome://extensions
+  if (typeof fetch === 'function') {
+    const isLive = await probePortLive(CONFIG.WS_URL);
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    if (!isLive) {
+      handleWebSocketFailure();
+      return;
+    }
+  }
+
   try {
     ws = new WebSocket(CONFIG.WS_URL);
 
@@ -1600,7 +1668,7 @@ function connectWebSocket() {
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.3';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.4';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
@@ -1716,15 +1784,9 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
 
   // Gentle wake-up if paused and cooled down (e.g. 2 minutes since last attempt)
   const tabSwitchNow = Date.now();
-  if (!wsConnected && wsReconnectPaused && (tabSwitchNow - lastWsAttemptTime > 120000)) {
-    wsFailureCount = 0;
-    wsReconnectPaused = false;
-    connectWebSocket();
-  }
-  if (!dataHubConnected && dataHubReconnectPaused && (tabSwitchNow - lastDataHubAttemptTime > 120000)) {
-    dataHubFailureCount = 0;
-    dataHubReconnectPaused = false;
-    connectDataHub();
+  if ((!wsConnected && wsReconnectPaused && (tabSwitchNow - lastWsAttemptTime > 120000)) ||
+      (!dataHubConnected && dataHubReconnectPaused && (tabSwitchNow - lastDataHubAttemptTime > 120000))) {
+    probeAndConnectServices();
   }
 });
 
@@ -1849,10 +1911,8 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
       if (!wsReconnectPaused) {
         connectWebSocket();
       } else if (now - lastWsAttemptTime >= 600000) {
-        // Gentle 10-minute retry check while paused
-        wsFailureCount = 0;
-        wsReconnectPaused = false;
-        connectWebSocket();
+        // Gentle 10-minute retry check via zero-console pre-flight probe
+        probeAndConnectServices();
       }
     } else {
       sendMediaTelemetryToHUD();
@@ -1863,10 +1923,8 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
       if (!dataHubReconnectPaused) {
         connectDataHub();
       } else if (now - lastDataHubAttemptTime >= 600000) {
-        // Gentle 10-minute retry check while paused
-        dataHubFailureCount = 0;
-        dataHubReconnectPaused = false;
-        connectDataHub();
+        // Gentle 10-minute retry check via zero-console pre-flight probe
+        probeAndConnectServices();
       }
     }
   }
@@ -1941,10 +1999,22 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (message.forceRefresh) {
         if (!wsConnected && wsReconnectPaused) {
-          connectWebSocket(true);
+          if (typeof fetch === 'function') {
+            probePortLive(CONFIG.WS_URL).then((live) => {
+              if (live) connectWebSocket(true);
+            });
+          } else {
+            connectWebSocket(true);
+          }
         }
         if (!dataHubConnected && dataHubReconnectPaused) {
-          connectDataHub(true);
+          if (typeof fetch === 'function') {
+            probePortLive(CONFIG.DATA_HUB_URL).then((live) => {
+              if (live) connectDataHub(true);
+            });
+          } else {
+            connectDataHub(true);
+          }
         }
       }
 
@@ -2345,13 +2415,25 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Query live connection & bridge status with on-demand reactivation
+  // Query live connection & bridge status with safe probe check
   if (message.type === 'QUERY_STATE') {
     if (!wsConnected && wsReconnectPaused) {
-      connectWebSocket(true);
+      if (typeof fetch === 'function') {
+        probePortLive(CONFIG.WS_URL).then((live) => {
+          if (live) connectWebSocket(true);
+        });
+      } else {
+        connectWebSocket(true);
+      }
     }
     if (!dataHubConnected && dataHubReconnectPaused) {
-      connectDataHub(true);
+      if (typeof fetch === 'function') {
+        probePortLive(CONFIG.DATA_HUB_URL).then((live) => {
+          if (live) connectDataHub(true);
+        });
+      } else {
+        connectDataHub(true);
+      }
     }
     sendResponse({
       wsConnected,
@@ -2503,9 +2585,8 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     }
   } catch (_) {}
 
-  // Connect to HUD (port 65432) and Standalone Data Hub (port 65433)
-  connectWebSocket();
-  connectDataHub();
+  // Pre-flight probe host services and connect safely without console errors
+  probeAndConnectServices();
 
   // Setup periodic 5-second streaming ticker for active domain delta commits and background media playback
   if (deltaCommitTicker) clearInterval(deltaCommitTicker);

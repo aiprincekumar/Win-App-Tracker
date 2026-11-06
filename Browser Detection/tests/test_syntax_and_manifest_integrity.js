@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.3', 'version must be bumped to 2.4.3');
+  assert.strictEqual(manifest.version, '2.4.4', 'version must be bumped to 2.4.4');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.3 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.3 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.4 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.3 Production Edition'), 'dashboard.html must display v2.4.3 Production Edition');
+  assert(dashHtml.includes('v2.4.4 Production Edition'), 'dashboard.html must display v2.4.4 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.3 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.4 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
         }
       },
       onSuspend: { addListener: () => {} },
-      getManifest: () => ({ version: '2.4.3' })
+      getManifest: () => ({ version: '2.4.4' })
     },
     tabs: {
       get: async (tabId) => {
@@ -500,6 +500,53 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
   onMessageDispatcher({ type: 'RECONNECT_WS' }, {}, (res) => { reconnectResponse = res; });
   assert.strictEqual(reconnectResponse && reconnectResponse.initiated, true, 'RECONNECT_WS must initiate reconnection');
   console.log('  ✅ Runtime IPC messages (QUERY_STATE, RECONNECT_WS) reactivate connection on demand');
+
+  // ---------------------------------------------------------------------------
+  // Test 8: Pre-Flight Silent HTTP Probe & Zero-Error Prevention
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 8: Pre-Flight Silent HTTP Probe & Zero-Error Prevention');
+
+  // 8A. Verify probePortLive fallback in test sandbox without fetch
+  assert(typeof sandbox.probePortLive === 'function', 'probePortLive must be exposed on sandbox');
+  const fallbackProbe = await sandbox.probePortLive('ws://127.0.0.1:65432');
+  assert.strictEqual(fallbackProbe, true, 'probePortLive fallback must return true when fetch is unavailable in runtime');
+
+  // 8B. Inject mock fetch into sandbox to simulate offline port 65432 / 65433
+  let probedUrls = [];
+  sandbox.AbortController = AbortController;
+  sandbox.fetch = async (url) => {
+    probedUrls.push(url);
+    throw new TypeError('Failed to fetch (net::ERR_CONNECTION_REFUSED absorbed)');
+  };
+
+  const offlineProbe = await sandbox.probePortLive('ws://127.0.0.1:65432');
+  assert.strictEqual(offlineProbe, false, 'probePortLive must return false when HTTP probe rejects');
+  assert.strictEqual(probedUrls[0], 'http://127.0.0.1:65432', 'probePortLive must convert ws: to http:');
+  console.log('  ✅ probePortLive catches connection rejection silently and returns false');
+
+  // 8C. Verify connectWebSocket suppresses raw WebSocket creation when probe reports offline
+  const countBeforeOffline = MockWebSocket.instances.length;
+  await sandbox.connectWebSocket(true);
+  const countAfterOffline = MockWebSocket.instances.length;
+  assert.strictEqual(countAfterOffline, countBeforeOffline, 'Must NOT instantiate WebSocket when HUD is offline (0 net::ERR_CONNECTION_REFUSED)');
+  assert.strictEqual(sandbox.getWsState().wsConnected, false, 'wsConnected must be false when HUD is offline');
+  console.log('  ✅ Silent HTTP probe detects offline HUD and suppresses raw WebSocket creation completely');
+
+  // 8D. Inject mock fetch to simulate online/open port 65432
+  sandbox.fetch = async (url) => {
+    probedUrls.push(url);
+    return { ok: true, status: 200 };
+  };
+
+  const onlineProbe = await sandbox.probePortLive('ws://127.0.0.1:65432');
+  assert.strictEqual(onlineProbe, true, 'probePortLive must return true when HTTP probe succeeds');
+
+  await sandbox.connectWebSocket(true);
+  assert.strictEqual(MockWebSocket.instances.length, countAfterOffline + 1, 'Must instantiate WebSocket when HUD is confirmed listening');
+  const runningWs = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+  if (runningWs.onopen) runningWs.onopen();
+  assert.strictEqual(sandbox.getWsState().wsConnected, true, 'wsConnected must be true when socket connects');
+  console.log('  ✅ Silent HTTP probe connects cleanly when HUD is confirmed listening on port 65432');
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
   process.exit(0);
