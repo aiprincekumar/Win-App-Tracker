@@ -562,15 +562,12 @@
       case 'toggle_fullscreen': {
         if (document.fullscreenElement) {
           if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-          showOSD('Exit Fullscreen', '⛶');
         } else {
           const fsBtn = document.querySelector('.ytp-fullscreen-button');
           if (fsBtn) {
             fsBtn.click();
-            showOSD('Fullscreen', '⛶');
           } else if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
             try { moviePlayer.toggleFullscreen(); } catch (_) {}
-            showOSD('Fullscreen', '⛶');
           } else {
             const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
             window.dispatchEvent(ev);
@@ -580,7 +577,6 @@
             if (el.requestFullscreen) {
               el.requestFullscreen().catch(() => {});
             }
-            showOSD('Fullscreen', '⛶');
           }
         }
         break;
@@ -606,24 +602,9 @@
       case 'toggle_pip': {
         if (document.pictureInPictureElement) {
           if (document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
-          showOSD('Exit PiP', '🪟');
         } else {
           if (video && video.requestPictureInPicture) {
-            video.requestPictureInPicture().then(() => {
-              showOSD('Picture-in-Picture', '🪟');
-            }).catch(() => {
-              const miniBtn = document.querySelector('.ytp-miniplayer-button');
-              if (miniBtn) miniBtn.click();
-              else {
-                const ev = new KeyboardEvent('keydown', { key: 'i', code: 'KeyI', keyCode: 73, which: 73, bubbles: true });
-                window.dispatchEvent(ev);
-              }
-              showOSD('Miniplayer', '🪟');
-            });
-          } else {
-            const miniBtn = document.querySelector('.ytp-miniplayer-button');
-            if (miniBtn) miniBtn.click();
-            showOSD('Miniplayer', '🪟');
+            video.requestPictureInPicture().catch(() => {});
           }
         }
         break;
@@ -868,6 +849,23 @@
   document.addEventListener('__MEDIA_SENTINEL_ACTION__', (e) => {
     handleIncomingAction(e.detail);
   }, { passive: true });
+
+  // Native window & player mode state change listeners for deterministic OSD feedback
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = Boolean(document.fullscreenElement);
+    showOSD(isFs ? 'Fullscreen' : 'Exit Fullscreen', '⛶');
+    syncStateToBridge();
+  }, { passive: true });
+
+  window.addEventListener('enterpictureinpicture', () => {
+    showOSD('Picture-in-Picture', '🪟');
+    syncStateToBridge();
+  }, { capture: true, passive: true });
+
+  window.addEventListener('leavepictureinpicture', () => {
+    showOSD('Exit PiP', '🪟');
+    syncStateToBridge();
+  }, { capture: true, passive: true });
 
   // ---------------------------------------------------------------------------
   // Initialization & Continuous Player Attachment

@@ -1795,6 +1795,26 @@ function setupEventListeners() {
   const btnFullscreen = document.getElementById('btnCtrlFullscreen');
   if (btnFullscreen) {
     btnFullscreen.addEventListener('click', () => {
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            if (document.fullscreenElement) {
+              if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            } else {
+              const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+              const video = document.querySelector('video');
+              const target = player || video || document.documentElement;
+              if (target && target.requestFullscreen) {
+                target.requestFullscreen().catch(() => {});
+              }
+            }
+          }
+        }).catch(() => {});
+      }
       sendMediaControl('toggle_fullscreen');
     });
   }
@@ -1802,6 +1822,23 @@ function setupEventListeners() {
   const btnPip = document.getElementById('btnCtrlPip');
   if (btnPip) {
     btnPip.addEventListener('click', () => {
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (!video) return;
+            if (document.pictureInPictureElement) {
+              if (document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
+            } else if (video.requestPictureInPicture) {
+              video.requestPictureInPicture().catch(() => {});
+            }
+          }
+        }).catch(() => {});
+      }
       sendMediaControl('toggle_pip');
     });
   }
