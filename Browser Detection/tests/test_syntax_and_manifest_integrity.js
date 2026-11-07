@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.5 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.5 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.4', 'version must be bumped to 2.4.4');
+  assert.strictEqual(manifest.version, '2.4.5', 'version must be bumped to 2.4.5');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.4 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.4 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.5 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.4 Production Edition'), 'dashboard.html must display v2.4.4 Production Edition');
+  assert(dashHtml.includes('v2.4.5 Production Edition'), 'dashboard.html must display v2.4.5 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.4 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.5 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
         }
       },
       onSuspend: { addListener: () => {} },
-      getManifest: () => ({ version: '2.4.4' })
+      getManifest: () => ({ version: '2.4.5' })
     },
     tabs: {
       get: async (tabId) => {
@@ -547,6 +547,35 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
   if (runningWs.onopen) runningWs.onopen();
   assert.strictEqual(sandbox.getWsState().wsConnected, true, 'wsConnected must be true when socket connects');
   console.log('  ✅ Silent HTTP probe connects cleanly when HUD is confirmed listening on port 65432');
+
+  // ---------------------------------------------------------------------------
+  // Test 9: W3C Trusted Types & showOSD Zero innerHTML CSP Compliance
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 9: W3C Trusted Types & showOSD Zero innerHTML CSP Compliance');
+  {
+    const injectPath = path.join(baseDir, 'inject_main_world.js');
+    const injectCode = fs.readFileSync(injectPath, 'utf8');
+
+    // Strict regex check for any innerHTML assignment in inject_main_world.js
+    const innerHtmlMatches = injectCode.match(/\.innerHTML\s*=/g);
+    assert.strictEqual(innerHtmlMatches, null, 'inject_main_world.js must have ZERO assignments to .innerHTML');
+
+    // Verify showOSD uses safe DOM methods
+    assert(injectCode.includes("document.createElement('span')"), 'showOSD must create DOM elements via document.createElement');
+    assert(injectCode.includes('iconSpan.textContent = icon'), 'showOSD must set textContent for icon span');
+    assert(injectCode.includes('textSpan.textContent = text'), 'showOSD must set textContent for text span');
+    assert(injectCode.includes('osd.appendChild(iconSpan)'), 'showOSD must append icon span node');
+    assert(injectCode.includes('osd.appendChild(textSpan)'), 'showOSD must append text span node');
+
+    const contentMediaPath = path.join(baseDir, 'content_media.js');
+    const contentMediaCode = fs.readFileSync(contentMediaPath, 'utf8');
+    const contentInnerHtml = contentMediaCode.match(/\.innerHTML\s*=/g);
+    assert.strictEqual(contentInnerHtml, null, 'content_media.js must have ZERO assignments to .innerHTML');
+
+    console.log('  ✅ inject_main_world.js has 0 assignments to .innerHTML (100% Trusted Types safe on YouTube)');
+    console.log('  ✅ showOSD verified using safe DOM creation (createElement, textContent, appendChild)');
+    console.log('  ✅ content_media.js has 0 assignments to .innerHTML');
+  }
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
   process.exit(0);

@@ -142,7 +142,17 @@
         container.appendChild(osd);
       }
 
-      osd.innerHTML = `<span style="font-size: 20px;">${icon}</span><span>${text}</span>`;
+      // W3C Trusted Types compliant DOM creation (zero innerHTML assignment to satisfy strict CSP e.g. on YouTube)
+      while (osd.firstChild) {
+        osd.removeChild(osd.firstChild);
+      }
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '20px';
+      iconSpan.textContent = icon || '';
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text || '';
+      osd.appendChild(iconSpan);
+      osd.appendChild(textSpan);
       osd.style.opacity = '1';
       osd.style.transform = 'translate(-50%, -50%) scale(1)';
 
