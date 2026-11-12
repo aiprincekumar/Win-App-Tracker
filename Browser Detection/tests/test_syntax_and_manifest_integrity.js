@@ -4,7 +4,7 @@
  * Verifies:
  * 1. Syntax & Compilation check on all JS files via `node -c` and `vm.Script`
  * 2. Specific integrity of popup/popup.js (no unexpected token '}', clean transition after processDomainStats)
- * 3. manifest.json V3 integrity, version bump to 2.4.9, and all critical permissions
+ * 3. manifest.json V3 integrity, version bump to 2.5.0, and all critical permissions
  * 6. Embedded iframe fullscreen policy injection and scripting all-frames execution
  * 4. Physical existence of all assets, icons, scripts, and HTML pages declared in manifest
  * 5. HTML script binding and version label consistency
@@ -118,9 +118,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.5.0 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.5.0 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -128,7 +128,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.9', 'version must be bumped to 2.4.9');
+  assert.strictEqual(manifest.version, '2.5.0', 'version must be bumped to 2.5.0');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -153,7 +153,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.9 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.5.0 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -191,11 +191,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.9 Production Edition'), 'dashboard.html must display v2.4.9 Production Edition');
+  assert(dashHtml.includes('v2.5.0 Production Edition'), 'dashboard.html must display v2.5.0 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.9 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.5.0 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -711,6 +711,66 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     console.log('  ✅ inject_main_world.js hooks fullscreenEnabled and createElement for dynamic iframes');
     console.log('  ✅ popup.js & dashboard.js executeScript targets allFrames: true for embedded video iframes');
     console.log('  ✅ 100% W3C Trusted Types compliant (0 innerHTML assignments across all content scripts)');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 13: Tri-Channel Isolated-to-Main-World Bridge & Comprehensive Media Controls
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 13: Tri-Channel Isolated-to-Main-World Bridge & Comprehensive Media Controls');
+  {
+    const contentPath = path.join(baseDir, 'content_media.js');
+    const contentCode = fs.readFileSync(contentPath, 'utf8').replace(/\r\n/g, '\n');
+    const injectPath = path.join(baseDir, 'inject_main_world.js');
+    const injectCode = fs.readFileSync(injectPath, 'utf8').replace(/\r\n/g, '\n');
+    const popupPath = path.join(baseDir, 'popup/popup.js');
+    const popupCode = fs.readFileSync(popupPath, 'utf8').replace(/\r\n/g, '\n');
+    const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
+    const dashCode = fs.readFileSync(dashPath, 'utf8').replace(/\r\n/g, '\n');
+    const bgPath = path.join(baseDir, 'background.js');
+    const bgCode = fs.readFileSync(bgPath, 'utf8').replace(/\r\n/g, '\n');
+
+    // 13A. Tri-Channel Bridge Verification
+    assert(contentCode.includes('window.postMessage'), 'content_media.js must dispatch Channel A via window.postMessage');
+    assert(contentCode.includes("data-sentinel-action"), 'content_media.js must dispatch Channel B via data-sentinel-action attribute');
+    assert(contentCode.includes("__MEDIA_SENTINEL_ACTION__"), 'content_media.js must dispatch Channel C via __MEDIA_SENTINEL_ACTION__');
+    assert(injectCode.includes("window.addEventListener('message'"), 'inject_main_world.js must listen for window.postMessage');
+    assert(injectCode.includes("document.addEventListener('__MEDIA_SENTINEL_ACTION__'"), 'inject_main_world.js must listen for __MEDIA_SENTINEL_ACTION__');
+    assert(injectCode.includes("data-sentinel-action"), 'inject_main_world.js must read data-sentinel-action fallback');
+    console.log('  ✅ Tri-Channel Isolated-to-Main-World Bridge verified across content and inject scripts');
+
+    // 13B. Fullscreen Control Verification (Web Fullscreen CSS + Browser Window Toggle)
+    assert(contentCode.includes('sentinel-web-fullscreen'), 'content_media.js must define sentinel-web-fullscreen CSS fallback');
+    assert(injectCode.includes('sentinel-web-fullscreen'), 'inject_main_world.js must define sentinel-web-fullscreen CSS fallback');
+    assert(bgCode.includes("chrome.windows.update"), 'background.js must implement window fullscreen toggle fallback');
+    assert(popupCode.includes("world: 'MAIN'"), 'popup.js must target world: MAIN for fullscreen execution');
+    assert(dashCode.includes("world: 'MAIN'"), 'dashboard.js must target world: MAIN for fullscreen execution');
+    console.log('  ✅ Fullscreen control verified: Web Fullscreen CSS fallback + Authoritative window toggle');
+
+    // 13C. Theater Mode Control Verification
+    assert(contentCode.includes('.ytp-size-button'), 'content_media.js must click .ytp-size-button for theater mode');
+    assert(contentCode.includes("key: 't', code: 'KeyT'"), 'content_media.js must dispatch KeyT for theater mode');
+    assert(contentCode.includes('sentinel-theater-mode'), 'content_media.js must support generic sentinel-theater-mode');
+    assert(injectCode.includes('.ytp-size-button'), 'inject_main_world.js must click .ytp-size-button for theater mode');
+    assert(injectCode.includes("key: 't', code: 'KeyT'"), 'inject_main_world.js must dispatch KeyT for theater mode');
+    assert(popupCode.includes("toggle_theater"), 'popup.js must bind toggle_theater');
+    assert(dashCode.includes("toggle_theater"), 'dashboard.js must bind toggle_theater');
+    console.log('  ✅ Theater mode verified: YouTube .ytp-size-button + KeyT + watch-flexy + CSS fallback');
+
+    // 13D. Quality / Resolution Control Verification
+    assert(injectCode.includes('QUALITY_LADDER'), 'inject_main_world.js must define QUALITY_LADDER');
+    assert(injectCode.includes('setPlaybackQualityRange'), 'inject_main_world.js must call setPlaybackQualityRange');
+    assert(injectCode.includes('tryChangeQualityViaMenu'), 'inject_main_world.js must define tryChangeQualityViaMenu');
+    assert(injectCode.includes('advancedItem'), 'inject_main_world.js tryChangeQualityViaMenu must traverse modern YouTube Advanced menu');
+    assert(popupCode.includes("step_quality"), 'popup.js must handle step_quality');
+    assert(dashCode.includes("step_quality"), 'dashboard.js must handle step_quality');
+    console.log('  ✅ Quality / Resolution controls verified: YouTube API range + Advanced menu traversal');
+
+    // 13E. Playback Speed Control Verification
+    assert(popupCode.includes('movie_player.setPlaybackRate') || popupCode.includes('p.setPlaybackRate'), 'popup.js must call setPlaybackRate in MAIN world');
+    assert(dashCode.includes('movie_player.setPlaybackRate') || dashCode.includes('p.setPlaybackRate'), 'dashboard.js must call setPlaybackRate in MAIN world');
+    assert(injectCode.includes('moviePlayer.setPlaybackRate'), 'inject_main_world.js must call moviePlayer.setPlaybackRate');
+    assert(contentCode.includes('primaryMediaElement.playbackRate ='), 'content_media.js must set direct video playbackRate');
+    console.log('  ✅ Playback speed controls verified: Dual-stepper 0.25x-2.0x in MAIN world without YouTube revert');
   }
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');

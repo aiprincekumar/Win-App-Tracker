@@ -893,7 +893,10 @@
 
   /**
    * Forwards control action to Main World execution engine for YouTube player API execution.
-   * Dispatches via ONE single deterministic CustomEvent on document without bubbling or postMessage spam.
+   * Dispatches via a bulletproof tri-channel bridge:
+   * 1. window.postMessage({ type: '__MEDIA_SENTINEL_ACTION__', detail: payload }, '*')
+   * 2. documentElement.setAttribute('data-sentinel-action', payload) + Event dispatch
+   * 3. document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', { detail: payload, bubbles: true, composed: true }))
    */
   function forwardActionToMainWorld(action, data = {}) {
     try {
@@ -904,13 +907,32 @@
         actionId,
         timestamp: Date.now()
       });
-      // Single deterministic channel: document CustomEvent
-      // bubbles: true & composed: true ensures event propagates across shadow DOM and browser boundary
-      document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
-        detail: payload,
-        bubbles: true,
-        composed: true
-      }));
+
+      // Channel A: window.postMessage (fast, reliable, crosses world boundary cleanly in Chromium)
+      try {
+        window.postMessage({
+          type: '__MEDIA_SENTINEL_ACTION__',
+          detail: payload
+        }, '*');
+      } catch (_) {}
+
+      // Channel B: DOM attribute bridge (reliable even if message listeners attached late)
+      try {
+        const root = document.documentElement || document.body;
+        if (root) {
+          root.setAttribute('data-sentinel-action', payload);
+          document.dispatchEvent(new Event('__MEDIA_SENTINEL_ACTION__', { bubbles: true, composed: true }));
+        }
+      } catch (_) {}
+
+      // Channel C: CustomEvent bridge (standard for Gecko / Firefox and Chromium)
+      try {
+        document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
+          detail: payload,
+          bubbles: true,
+          composed: true
+        }));
+      } catch (_) {}
     } catch (_) {}
   }
 
@@ -933,6 +955,124 @@
       (document.head || document.documentElement || document.body).appendChild(s);
     } catch (_) {}
   }
+
+  /**
+   * Ensures CSS Web Fullscreen styles are injected for fallback fullscreen support
+   */
+  function ensureWebFullscreenStyles() {
+    if (document.getElementById('__media_sentinel_web_fs_styles__')) return;
+    try {
+      const style = document.createElement('style');
+      style.id = '__media_sentinel_web_fs_styles__';
+      style.textContent = `
+        .sentinel-web-fullscreen {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          z-index: 2147483647 !important;
+          background: #000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .sentinel-web-fullscreen video {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          object-fit: contain !important;
+        }
+        body.sentinel-has-web-fullscreen {
+          overflow: hidden !important;
+        }
+      `;
+      (document.head || document.documentElement || document.body).appendChild(style);
+    } catch (_) {}
+  }
+
+  /**
+   * Toggles CSS Web Fullscreen on target video/player element
+   */
+  function toggleWebFullscreen(targetElement) {
+    try {
+      ensureWebFullscreenStyles();
+      const el = targetElement || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
+      if (!el) return false;
+
+      const isWebFs = el.classList.contains('sentinel-web-fullscreen');
+      if (isWebFs) {
+        el.classList.remove('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+        return false;
+      } else {
+        el.classList.add('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.add('sentinel-has-web-fullscreen');
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Ensures CSS Theater Mode styles are injected for non-YouTube / generic HTML5 video
+   */
+  function ensureTheaterStyles() {
+    if (document.getElementById('__media_sentinel_theater_styles__')) return;
+    try {
+      const style = document.createElement('style');
+      style.id = '__media_sentinel_theater_styles__';
+      style.textContent = `
+        .sentinel-theater-mode {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: 75vh !important;
+          max-height: 75vh !important;
+          background: #000 !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          margin: 0 auto !important;
+        }
+        .sentinel-theater-mode video {
+          width: 100% !important;
+          height: 100% !important;
+          max-height: 75vh !important;
+          object-fit: contain !important;
+        }
+      `;
+      (document.head || document.documentElement || document.body).appendChild(style);
+    } catch (_) {}
+  }
+
+  /**
+   * Toggles CSS Theater Mode on target element container
+   */
+  function toggleTheaterMode(targetElement) {
+    try {
+      ensureTheaterStyles();
+      const el = targetElement || document.querySelector('video') || document.querySelector('.html5-video-player');
+      if (!el) return;
+      const container = el.parentElement || el;
+      container.classList.toggle('sentinel-theater-mode');
+    } catch (_) {}
+  }
+
+  // Remove web fullscreen when Escape is pressed
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      const fsEl = document.querySelector('.sentinel-web-fullscreen');
+      if (fsEl) {
+        fsEl.classList.remove('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+      }
+    }
+  }, { passive: true });
 
   /**
    * Executes interactive media control actions (play, pause, toggle, mute, seek, speed, quality, window modes)
@@ -1026,8 +1166,16 @@
             break;
           }
           case 'toggle_fullscreen': {
-            if (document.fullscreenElement) {
-              if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
+            if (document.fullscreenElement || hasWebFs) {
+              if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+              }
+              const webFsEl = document.querySelector('.sentinel-web-fullscreen');
+              if (webFsEl) {
+                webFsEl.classList.remove('sentinel-web-fullscreen');
+                if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+              }
             } else {
               const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
               try {
@@ -1039,30 +1187,38 @@
                 el.requestFullscreen().catch(() => {
                   if (primaryMediaElement && primaryMediaElement.requestFullscreen) {
                     primaryMediaElement.requestFullscreen().catch(() => {
+                      toggleWebFullscreen(el || primaryMediaElement);
                       if (!isTopFrame) {
                         try {
                           window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
                         } catch (_) {}
                       }
                     });
-                  } else if (!isTopFrame) {
-                    try {
-                      window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                    } catch (_) {}
+                  } else {
+                    toggleWebFullscreen(el || primaryMediaElement);
+                    if (!isTopFrame) {
+                      try {
+                        window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                      } catch (_) {}
+                    }
                   }
                 });
               } else if (primaryMediaElement && primaryMediaElement.requestFullscreen) {
                 primaryMediaElement.requestFullscreen().catch(() => {
+                  toggleWebFullscreen(primaryMediaElement);
                   if (!isTopFrame) {
                     try {
                       window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
                     } catch (_) {}
                   }
                 });
-              } else if (!isTopFrame) {
-                try {
-                  window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                } catch (_) {}
+              } else {
+                toggleWebFullscreen(el || primaryMediaElement);
+                if (!isTopFrame) {
+                  try {
+                    window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                  } catch (_) {}
+                }
               }
             }
             break;
@@ -1075,10 +1231,32 @@
             }
             break;
           }
-          case 'toggle_theater':
+          case 'toggle_theater': {
+            const sizeBtn = document.querySelector('.ytp-size-button');
+            if (sizeBtn) {
+              sizeBtn.click();
+            } else {
+              try {
+                const ev = new KeyboardEvent('keydown', { key: 't', code: 'KeyT', keyCode: 84, which: 84, bubbles: true });
+                const target = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document;
+                target.dispatchEvent(ev);
+              } catch (_) {}
+              const watchFlexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+              if (watchFlexy) {
+                if (watchFlexy.hasAttribute('theater')) {
+                  watchFlexy.removeAttribute('theater');
+                } else {
+                  watchFlexy.setAttribute('theater', '');
+                }
+              } else {
+                toggleTheaterMode(primaryMediaElement);
+              }
+            }
+            break;
+          }
           case 'step_quality':
           case 'set_quality':
-            // Delegated to Main World execution engine for YouTube player API
+            // Forwarded to Main World execution engine via forwardActionToMainWorld
             break;
         }
       } catch (_) {}

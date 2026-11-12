@@ -2020,7 +2020,7 @@ async function connectWebSocket() {
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.9';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.5.0';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
@@ -2576,6 +2576,21 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         if (message.action === 'toggle_fullscreen') {
           session.lastWindowMode = 'fullscreen';
+          // Authoritative window fullscreen toggle fallback
+          if (targetTabId && typeof chrome !== 'undefined' && chrome.tabs && chrome.windows) {
+            try {
+              chrome.tabs.get(targetTabId, (tab) => {
+                if (chrome.runtime && chrome.runtime.lastError) return;
+                if (!tab || !tab.windowId) return;
+                chrome.windows.get(tab.windowId, (win) => {
+                  if (chrome.runtime && chrome.runtime.lastError) return;
+                  if (!win) return;
+                  const nextState = win.state === 'fullscreen' ? 'normal' : 'fullscreen';
+                  chrome.windows.update(tab.windowId, { state: nextState }).catch(() => {});
+                });
+              });
+            } catch (_) {}
+          }
         } else if (message.action === 'toggle_pip') {
           session.lastWindowMode = 'pip';
         } else if (message.action === 'toggle_theater') {

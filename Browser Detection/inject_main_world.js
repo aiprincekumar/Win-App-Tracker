@@ -335,6 +335,7 @@
 
   /**
    * Background menu selector to ensure YouTube switches stream when requested.
+   * Traverses through modern YouTube "Quality" -> "Advanced" sub-menu hierarchy.
    * Locked with isQualityMenuBusy to prevent race conditions or flickering.
    */
   function tryChangeQualityViaMenu(targetLabel) {
@@ -354,10 +355,10 @@
 
       setTimeout(() => {
         try {
-          const menuItems = Array.from(document.querySelectorAll('.ytp-menuitem'));
+          const menuItems = Array.from(document.querySelectorAll('.ytp-menuitem, .ytp-popup .ytp-menuitem'));
           const qualityItem = menuItems.find(el => {
-            const t = el.textContent || '';
-            return t.includes('Quality') || t.includes('गुणवत्ता') || t.includes('Calidad') || t.includes('Qualität');
+            const t = (el.textContent || '').toLowerCase();
+            return t.includes('quality') || t.includes('गुणवत्ता') || t.includes('calidad') || t.includes('qualität') || t.includes('qualité');
           });
 
           if (!qualityItem) {
@@ -372,27 +373,41 @@
 
           setTimeout(() => {
             try {
-              const qualityOptions = Array.from(document.querySelectorAll('.ytp-quality-menu .ytp-menuitem, .ytp-popup .ytp-menuitem'));
-              const match = qualityOptions.find(opt => {
-                const t = opt.textContent || '';
-                return t.includes(targetLabel);
+              // Modern YouTube quality menu has an "Advanced" / "उन्नत" item that reveals actual resolutions
+              const subItems = Array.from(document.querySelectorAll('.ytp-popup .ytp-menuitem, .ytp-quality-menu .ytp-menuitem'));
+              const advancedItem = subItems.find(el => {
+                const t = (el.textContent || '').toLowerCase();
+                return t.includes('advanced') || t.includes('उन्नत') || t.includes('avanzada') || t.includes('erweitert') || t.includes('avancé');
               });
 
-              if (match) {
-                match.click();
-              } else {
+              if (advancedItem) {
+                advancedItem.click();
+              }
+
+              setTimeout(() => {
+                try {
+                  const qualityOptions = Array.from(document.querySelectorAll('.ytp-quality-menu .ytp-menuitem, .ytp-popup .ytp-menuitem'));
+                  const match = qualityOptions.find(opt => {
+                    const t = (opt.textContent || '').toLowerCase();
+                    return t.includes(targetLabel.toLowerCase());
+                  });
+
+                  if (match) {
+                    match.click();
+                  }
+                } catch (_) {}
+
                 if (!isMenuOpen) {
                   try { settingsBtn.click(); } catch (_) {}
                 }
-              }
+                isQualityMenuBusy = false;
+              }, advancedItem ? 80 : 20);
+
             } catch (_) {
               if (!isMenuOpen) {
                 try { settingsBtn.click(); } catch (_) {}
               }
-            } finally {
-              setTimeout(() => {
-                isQualityMenuBusy = false;
-              }, 120);
+              isQualityMenuBusy = false;
             }
           }, 80);
         } catch (_) {
@@ -406,6 +421,81 @@
       isQualityMenuBusy = false;
     }
   }
+
+  /**
+   * Injects CSS Web Fullscreen styles into page for fallback fullscreen support
+   */
+  function ensureWebFullscreenStyles() {
+    if (document.getElementById('__media_sentinel_web_fs_styles_main__')) return;
+    try {
+      const style = document.createElement('style');
+      style.id = '__media_sentinel_web_fs_styles_main__';
+      style.textContent = `
+        .sentinel-web-fullscreen {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          z-index: 2147483647 !important;
+          background: #000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .sentinel-web-fullscreen video {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          object-fit: contain !important;
+        }
+        body.sentinel-has-web-fullscreen {
+          overflow: hidden !important;
+        }
+      `;
+      (document.head || document.documentElement || document.body).appendChild(style);
+    } catch (_) {}
+  }
+
+  /**
+   * Toggles CSS Web Fullscreen on target element
+   */
+  function toggleWebFullscreen(targetEl) {
+    try {
+      ensureWebFullscreenStyles();
+      const el = targetEl || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
+      if (!el) return false;
+      const isWebFs = el.classList.contains('sentinel-web-fullscreen');
+      if (isWebFs) {
+        el.classList.remove('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+        showOSD('Exit Fullscreen', '⛶');
+        return false;
+      } else {
+        el.classList.add('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.add('sentinel-has-web-fullscreen');
+        showOSD('Web Fullscreen', '⛶');
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      const fsEl = document.querySelector('.sentinel-web-fullscreen');
+      if (fsEl) {
+        fsEl.classList.remove('sentinel-web-fullscreen');
+        if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+        showOSD('Exit Fullscreen', '⛶');
+      }
+    }
+  }, { passive: true });
 
   /**
    * Executes control actions directly with YouTube and HTML5 APIs
@@ -610,8 +700,17 @@
       // 4. ADVANCED WINDOW MODES (Fullscreen, Theater Mode, Picture-in-Picture)
       // -----------------------------------------------------------------------
       case 'toggle_fullscreen': {
-        if (document.fullscreenElement) {
-          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
+        if (document.fullscreenElement || hasWebFs) {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+          const webFsEl = document.querySelector('.sentinel-web-fullscreen');
+          if (webFsEl) {
+            webFsEl.classList.remove('sentinel-web-fullscreen');
+            if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+            showOSD('Exit Fullscreen', '⛶');
+          }
         } else {
           let handled = false;
           if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
@@ -628,11 +727,13 @@
               handled = true;
             } catch (_) {}
           }
-          if (!handled) {
-            const el = (video && video.parentElement) || video || document.documentElement;
-            if (el && el.requestFullscreen) {
-              el.requestFullscreen().catch(() => {});
-            }
+          const el = (video && video.parentElement) || video || moviePlayer || document.documentElement;
+          if (el && el.requestFullscreen) {
+            el.requestFullscreen().catch(() => {
+              toggleWebFullscreen(el);
+            });
+          } else {
+            toggleWebFullscreen(el);
           }
         }
         break;
@@ -649,7 +750,18 @@
           sizeBtn.click();
         } else {
           const ev = new KeyboardEvent('keydown', { key: 't', code: 'KeyT', keyCode: 84, which: 84, bubbles: true });
-          document.dispatchEvent(ev);
+          const target = moviePlayer || document;
+          target.dispatchEvent(ev);
+          const watchFlexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+          if (watchFlexy) {
+            if (watchFlexy.hasAttribute('theater')) {
+              watchFlexy.removeAttribute('theater');
+              willEnterTheater = false;
+            } else {
+              watchFlexy.setAttribute('theater', '');
+              willEnterTheater = true;
+            }
+          }
         }
         showOSD(willEnterTheater ? 'Theater Mode' : 'Default View', '🎬');
         break;
@@ -901,9 +1013,18 @@
     executeAction(action, parsed.data || {});
   }
 
-  // Single Deterministic Listener: Listen ONLY on document (crosses isolated-world boundary cleanly without double-bubbling)
+  // Bulletproof Tri-Channel Listeners:
+  // Channel A: window.addEventListener('message', ...)
+  window.addEventListener('message', (e) => {
+    if (e.source === window && e.data && e.data.type === '__MEDIA_SENTINEL_ACTION__') {
+      handleIncomingAction(e.data.detail);
+    }
+  }, { passive: true });
+
+  // Channel B & C: document.addEventListener('__MEDIA_SENTINEL_ACTION__', ...)
   document.addEventListener('__MEDIA_SENTINEL_ACTION__', (e) => {
-    handleIncomingAction(e.detail);
+    const raw = e.detail || (document.documentElement && document.documentElement.getAttribute('data-sentinel-action'));
+    handleIncomingAction(raw);
   }, { passive: true });
 
   // Native window & player mode state change listeners for deterministic OSD feedback
