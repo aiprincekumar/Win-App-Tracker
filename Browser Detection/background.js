@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser Detection / background.js
  * Manifest V3 Service Worker: Activity Time Tracker, Media Sentinel Aggregator & WebSocket Bridge
  * 
@@ -2019,7 +2019,7 @@ async function connectWebSocket() {
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.7';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.8';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',

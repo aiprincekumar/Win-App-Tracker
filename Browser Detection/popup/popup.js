@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser Detection / popup/popup.js
  * Multi-Tab Interactive Glassmorphic Dashboard, Dynamic Status Sentinel & Live Media Controller
  * Features:
@@ -1681,11 +1681,170 @@ function setupEventListeners() {
     });
   }
 
+  // 5. Global Media Toggle Across Tabs
+  const btnGlobalMediaToggle = document.getElementById('btnGlobalMediaToggle');
+  if (btnGlobalMediaToggle) {
+    btnGlobalMediaToggle.addEventListener('click', () => {
+      try {
+        const p = browserAPI.runtime.sendMessage({ type: 'TOGGLE_GLOBAL_MEDIA' }, (res) => {
+          if (res && res.action) {
+            showPopupToast(res.action === 'PAUSE_ALL' ? 'Paused all media' : 'Resumed media', 'info');
+          }
+          refreshDashboard(true);
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
+    });
+  }
+
+  // 6. Sleep Timer Launcher & Popover Management
+  const btnSleepTrigger = document.getElementById('btnSleepTimerTrigger');
+  const sleepPopover = document.getElementById('sleepTimerPopover');
+  const btnCloseSleepPopover = document.getElementById('btnCloseSleepPopover');
+
+  const toggleSleepPopover = (forceOpen) => {
+    if (!sleepPopover) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : sleepPopover.classList.contains('hidden');
+    if (shouldOpen) {
+      sleepPopover.classList.remove('hidden');
+      if (btnSleepTrigger) btnSleepTrigger.setAttribute('aria-expanded', 'true');
+      syncSleepTimerState();
+    } else {
+      sleepPopover.classList.add('hidden');
+      if (btnSleepTrigger) btnSleepTrigger.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  if (btnSleepTrigger) {
+    btnSleepTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSleepPopover();
+    });
+  }
+
+  if (btnCloseSleepPopover) {
+    btnCloseSleepPopover.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSleepPopover(false);
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (sleepPopover && !sleepPopover.classList.contains('hidden')) {
+      if (!sleepPopover.contains(e.target) && (!btnSleepTrigger || !btnSleepTrigger.contains(e.target))) {
+        toggleSleepPopover(false);
+      }
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sleepPopover && !sleepPopover.classList.contains('hidden')) {
+      toggleSleepPopover(false);
+    }
+  });
+
+  // Preset Buttons (15m, 30m, 45m, 60m)
+  const presetBtns = document.querySelectorAll('.preset-pill-btn');
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(btn.getAttribute('data-minutes'), 10) || 15;
+      const fadeToggle = document.getElementById('toggleSleepFade');
+      const enableFade = fadeToggle ? fadeToggle.checked : true;
+
+      try {
+        const p = browserAPI.runtime.sendMessage({
+          type: 'SET_SLEEP_TIMER',
+          durationMinutes: minutes,
+          enableFade: enableFade
+        }, (res) => {
+          if (res && res.success && res.state) {
+            renderSleepTimerUI(res.state);
+            showPopupToast(`Sleep timer set for ${minutes}m`, 'success');
+          }
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
+    });
+  });
+
+  // Custom Timer
+  const btnSetCustom = document.getElementById('btnSetCustomTimer');
+  const customInput = document.getElementById('customTimerInput');
+  const handleSetCustomTimer = () => {
+    if (!customInput) return;
+    const mins = parseInt(customInput.value, 10);
+    if (isNaN(mins) || mins < 1 || mins > 1440) {
+      showPopupToast('Enter valid minutes (1-1440)', 'danger');
+      return;
+    }
+    const fadeToggle = document.getElementById('toggleSleepFade');
+    const enableFade = fadeToggle ? fadeToggle.checked : true;
+
+    try {
+      const p = browserAPI.runtime.sendMessage({
+        type: 'SET_SLEEP_TIMER',
+        durationMinutes: mins,
+        enableFade: enableFade
+      }, (res) => {
+        if (res && res.success && res.state) {
+          renderSleepTimerUI(res.state);
+          showPopupToast(`Sleep timer set for ${mins}m`, 'success');
+          customInput.value = '';
+        }
+      });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_) {}
+  };
+
+  if (btnSetCustom) {
+    btnSetCustom.addEventListener('click', handleSetCustomTimer);
+  }
+  if (customInput) {
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSetCustomTimer();
+    });
+  }
+
+  // Cancel Timer
+  const btnCancelActive = document.getElementById('btnCancelActiveTimer');
+  if (btnCancelActive) {
+    btnCancelActive.addEventListener('click', () => {
+      try {
+        const p = browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER' }, (res) => {
+          if (res && res.success) {
+            renderSleepTimerUI({ state: 'IDLE' });
+            showPopupToast('Sleep timer cancelled', 'info');
+          }
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
+    });
+  }
+
   // Media Controls
   const handleTogglePlay = () => {
     if (activeMediaCached) {
       activeMediaCached.isPlaying = !activeMediaCached.isPlaying;
       renderMediaCard({ primaryMedia: activeMediaCached });
+    }
+    const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+      (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+    if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+      browserAPI.scripting.executeScript({
+        target: { tabId: targetTabId },
+        func: () => {
+          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+          if (video) {
+            if (video.paused) {
+              const p = video.play();
+              if (p && typeof p.catch === 'function') p.catch(() => {});
+            } else {
+              video.pause();
+            }
+          }
+        }
+      }).catch(() => {});
     }
     sendMediaControl('toggle_play');
   };
@@ -1703,6 +1862,20 @@ function setupEventListeners() {
         activeMediaCached.currentTime = Math.max(0, activeMediaCached.currentTime - 10);
         renderMediaCard({ primaryMedia: activeMediaCached });
       }
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) {
+              video.currentTime = Math.max(0, video.currentTime - 10);
+            }
+          }
+        }).catch(() => {});
+      }
       sendMediaControl('seek_relative', { offsetSeconds: -10 });
     });
   }
@@ -1714,30 +1887,55 @@ function setupEventListeners() {
         activeMediaCached.currentTime = activeMediaCached.currentTime + 10;
         renderMediaCard({ primaryMedia: activeMediaCached });
       }
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) {
+              const maxDur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 999999;
+              video.currentTime = Math.min(maxDur, video.currentTime + 10);
+            }
+          }
+        }).catch(() => {});
+      }
       sendMediaControl('seek_relative', { offsetSeconds: 10 });
     });
   }
 
+  const handleToggleMute = () => {
+    if (activeMediaCached) {
+      activeMediaCached.isMuted = !activeMediaCached.isMuted;
+      renderMediaCard({ primaryMedia: activeMediaCached });
+    }
+    const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+      (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+    if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+      browserAPI.scripting.executeScript({
+        target: { tabId: targetTabId },
+        func: () => {
+          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+          if (video) {
+            video.muted = !video.muted;
+          }
+        }
+      }).catch(() => {});
+    }
+    sendMediaControl('toggle_mute');
+  };
+
   const btnCtrlToggleMute = document.getElementById('btnCtrlToggleMute');
   if (btnCtrlToggleMute) {
-    btnCtrlToggleMute.addEventListener('click', () => {
-      if (activeMediaCached) {
-        activeMediaCached.isMuted = !activeMediaCached.isMuted;
-        renderMediaCard({ primaryMedia: activeMediaCached });
-      }
-      sendMediaControl('toggle_mute');
-    });
+    btnCtrlToggleMute.addEventListener('click', handleToggleMute);
   }
 
   const btnQuickMute = document.getElementById('btnQuickMute');
   if (btnQuickMute) {
-    btnQuickMute.addEventListener('click', () => {
-      if (activeMediaCached) {
-        activeMediaCached.isMuted = !activeMediaCached.isMuted;
-        renderMediaCard({ primaryMedia: activeMediaCached });
-      }
-      sendMediaControl('toggle_mute');
-    });
+    btnQuickMute.addEventListener('click', handleToggleMute);
   }
 
   const btnSpeedDown = document.getElementById('btnCtrlSpeedDown');
@@ -1760,6 +1958,20 @@ function setupEventListeners() {
       const speedBadge = document.getElementById('mediaSpeedBadge');
       if (speedBadge) {
         speedBadge.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
+      }
+
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: (spd) => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) video.playbackRate = spd;
+          },
+          args: [targetSpeed]
+        }).catch(() => {});
       }
 
       sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 });
@@ -1788,6 +2000,20 @@ function setupEventListeners() {
         speedBadge.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
       }
 
+      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: (spd) => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) video.playbackRate = spd;
+          },
+          args: [targetSpeed]
+        }).catch(() => {});
+      }
+
       sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 });
     });
   }
@@ -1813,9 +2039,16 @@ function setupEventListeners() {
               if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
             } else {
               const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-              const video = document.querySelector('video');
+              const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+              if (player && typeof player.toggleFullscreen === 'function') {
+                try { player.toggleFullscreen(); } catch (_) {}
+              }
+              try {
+                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                (player || document).dispatchEvent(ev);
+              } catch (_) {}
               const target = player || video || document.documentElement;
-              if (target && target.requestFullscreen) {
+              if (target && target.requestFullscreen && !document.fullscreenElement) {
                 target.requestFullscreen().catch(() => {});
               }
             }
@@ -1968,6 +2201,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
       renderDataHubBadge(Boolean(message.connected));
       refreshDashboard(true);
+    } else if (message && (message.type === 'SLEEP_TIMER_EXPIRED' || message.action === 'SLEEP_TIMER_EXPIRED')) {
+      renderSleepTimerUI({ state: 'TRIGGERED' });
+      showPopupToast('Sleep timer expired - all media paused', 'info');
     }
   });
 

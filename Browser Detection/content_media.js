@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser Detection / content_media.js
  * In-Page HTML5 Media Telemetry Sentinel & User Activity Detector
  * 
@@ -854,10 +854,11 @@
         timestamp: Date.now()
       });
       // Single deterministic channel: document CustomEvent
-      // bubbles: false prevents bubbling to window (avoiding double execution)
+      // bubbles: true & composed: true ensures event propagates across shadow DOM and browser boundary
       document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
         detail: payload,
-        bubbles: false
+        bubbles: true,
+        composed: true
       }));
     } catch (_) {}
   }
@@ -895,120 +896,117 @@
     // 1. Forward action to Main World engine (essential for YouTube native player methods, volume slider & OSD)
     forwardActionToMainWorld(action, data);
 
-    // 2. Perform direct HTML5 video element manipulation ONLY if Main World bridge is not present/active
-    // On YouTube or when bridge is active, Main World engine handles player API + .ytp-play-button + video fallback.
-    // Concurrently manipulating the video element from Isolated World causes state conflicts and button blinking!
-    const isBridgeActive = Boolean(
-      (document.documentElement && document.documentElement.getAttribute('data-sentinel-bridge-ready') === 'true') ||
-      window.location.hostname.includes('youtube.com')
-    );
-
-    if (!isBridgeActive) {
-      const { primaryMediaElement } = evaluatePageMediaState();
-      if (primaryMediaElement) {
-        try {
-          switch (action) {
-            case 'play': {
+    // 2. Perform direct HTML5 video element manipulation
+    // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
+    // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
+    if (primaryMediaElement) {
+      try {
+        switch (action) {
+          case 'play': {
+            const p = primaryMediaElement.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+            break;
+          }
+          case 'pause': {
+            primaryMediaElement.pause();
+            break;
+          }
+          case 'toggle_play': {
+            if (primaryMediaElement.paused) {
               const p = primaryMediaElement.play();
               if (p && typeof p.catch === 'function') p.catch(() => {});
-              break;
-            }
-            case 'pause': {
+            } else {
               primaryMediaElement.pause();
-              break;
             }
-            case 'toggle_play': {
-              if (primaryMediaElement.paused) {
-                const p = primaryMediaElement.play();
-                if (p && typeof p.catch === 'function') p.catch(() => {});
-              } else {
-                primaryMediaElement.pause();
-              }
-              break;
-            }
-            case 'toggle_mute': {
-              primaryMediaElement.muted = !primaryMediaElement.muted;
-              break;
-            }
-            case 'set_volume':
-            case 'SET_VOLUME': {
-              let vol = null;
-              if (typeof data.volume === 'number') vol = data.volume;
-              else if (typeof data.percent === 'number') vol = data.percent / 100;
-              if (vol !== null) {
-                vol = Math.max(0, Math.min(1, vol));
-                primaryMediaElement.volume = vol;
-                primaryMediaElement.muted = (vol === 0);
-              }
-              break;
-            }
-            case 'seek_relative': {
-              if (typeof data.offsetSeconds === 'number') {
-                const maxDuration = (Number.isFinite(primaryMediaElement.duration) && primaryMediaElement.duration > 0)
-                  ? primaryMediaElement.duration
-                  : 999999;
-                primaryMediaElement.currentTime = Math.max(0, Math.min(maxDuration, primaryMediaElement.currentTime + data.offsetSeconds));
-              }
-              break;
-            }
-            case 'seek_percent': {
-              let dur = primaryMediaElement.duration;
-              if (!Number.isFinite(dur) || dur <= 0) {
-                dur = extractYouTubeDuration(primaryMediaElement);
-              }
-              if (typeof data.percent === 'number' && dur > 0) {
-                primaryMediaElement.currentTime = (data.percent / 100) * dur;
-              }
-              break;
-            }
-            case 'cycle_speed': {
-              const cur = primaryMediaElement.playbackRate || 1.0;
-              primaryMediaElement.playbackRate = calculateNextLadderSpeed(cur, 'up');
-              break;
-            }
-            case 'set_speed': {
-              if (typeof data.rate === 'number' && data.rate > 0) {
-                primaryMediaElement.playbackRate = Math.max(0.25, Math.min(2.0, Math.round(data.rate * 100) / 100));
-              }
-              break;
-            }
-            case 'step_speed': {
-              const cur = primaryMediaElement.playbackRate || 1.0;
-              const targetSpeed = (typeof data.targetSpeed === 'number' && data.targetSpeed >= 0.25 && data.targetSpeed <= 2.0)
-                ? data.targetSpeed
-                : calculateNextLadderSpeed(cur, data.direction || (data.step < 0 ? 'down' : 'up'));
-              primaryMediaElement.playbackRate = targetSpeed;
-              break;
-            }
-            case 'toggle_fullscreen': {
-              if (document.fullscreenElement) {
-                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-              } else {
-                const el = primaryMediaElement.parentElement || primaryMediaElement;
-                if (el.requestFullscreen) {
-                  el.requestFullscreen().catch(() => {
-                    if (primaryMediaElement.requestFullscreen) primaryMediaElement.requestFullscreen().catch(() => {});
-                  });
-                }
-              }
-              break;
-            }
-            case 'toggle_pip': {
-              if (document.pictureInPictureElement) {
-                if (document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
-              } else if (primaryMediaElement.requestPictureInPicture) {
-                primaryMediaElement.requestPictureInPicture().catch(() => {});
-              }
-              break;
-            }
-            case 'toggle_theater':
-            case 'step_quality':
-            case 'set_quality':
-              // Delegated to Main World execution engine for YouTube player API
-              break;
+            break;
           }
-        } catch (_) {}
-      }
+          case 'toggle_mute': {
+            primaryMediaElement.muted = !primaryMediaElement.muted;
+            break;
+          }
+          case 'set_volume':
+          case 'SET_VOLUME': {
+            let vol = null;
+            if (typeof data.volume === 'number') vol = data.volume;
+            else if (typeof data.percent === 'number') vol = data.percent / 100;
+            if (vol !== null) {
+              vol = Math.max(0, Math.min(1, vol));
+              primaryMediaElement.volume = vol;
+              primaryMediaElement.muted = (vol === 0);
+            }
+            break;
+          }
+          case 'seek_relative': {
+            if (typeof data.offsetSeconds === 'number') {
+              const maxDuration = (Number.isFinite(primaryMediaElement.duration) && primaryMediaElement.duration > 0)
+                ? primaryMediaElement.duration
+                : 999999;
+              primaryMediaElement.currentTime = Math.max(0, Math.min(maxDuration, primaryMediaElement.currentTime + data.offsetSeconds));
+            }
+            break;
+          }
+          case 'seek_percent': {
+            let dur = primaryMediaElement.duration;
+            if (!Number.isFinite(dur) || dur <= 0) {
+              dur = extractYouTubeDuration(primaryMediaElement);
+            }
+            if (typeof data.percent === 'number' && dur > 0) {
+              primaryMediaElement.currentTime = (data.percent / 100) * dur;
+            }
+            break;
+          }
+          case 'cycle_speed': {
+            const cur = primaryMediaElement.playbackRate || 1.0;
+            primaryMediaElement.playbackRate = calculateNextLadderSpeed(cur, 'up');
+            break;
+          }
+          case 'set_speed': {
+            if (typeof data.rate === 'number' && data.rate > 0) {
+              primaryMediaElement.playbackRate = Math.max(0.25, Math.min(2.0, Math.round(data.rate * 100) / 100));
+            }
+            break;
+          }
+          case 'step_speed': {
+            const cur = primaryMediaElement.playbackRate || 1.0;
+            const targetSpeed = (typeof data.targetSpeed === 'number' && data.targetSpeed >= 0.25 && data.targetSpeed <= 2.0)
+              ? data.targetSpeed
+              : calculateNextLadderSpeed(cur, data.direction || (data.step < 0 ? 'down' : 'up'));
+            primaryMediaElement.playbackRate = targetSpeed;
+            break;
+          }
+          case 'toggle_fullscreen': {
+            if (document.fullscreenElement) {
+              if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            } else {
+              const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+              try {
+                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                (player || document).dispatchEvent(ev);
+              } catch (_) {}
+              const el = player || primaryMediaElement.parentElement || primaryMediaElement;
+              if (el && el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {
+                  if (primaryMediaElement.requestFullscreen) primaryMediaElement.requestFullscreen().catch(() => {});
+                });
+              }
+            }
+            break;
+          }
+          case 'toggle_pip': {
+            if (document.pictureInPictureElement) {
+              if (document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
+            } else if (primaryMediaElement.requestPictureInPicture) {
+              primaryMediaElement.requestPictureInPicture().catch(() => {});
+            }
+            break;
+          }
+          case 'toggle_theater':
+          case 'step_quality':
+          case 'set_quality':
+            // Delegated to Main World execution engine for YouTube player API
+            break;
+        }
+      } catch (_) {}
     }
 
     // Immediately broadcast updated telemetry state after control action

@@ -563,9 +563,16 @@
         if (document.fullscreenElement) {
           if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
         } else {
+          let handled = false;
           if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
-            try { moviePlayer.toggleFullscreen(); } catch (_) {}
-          } else {
+            try { moviePlayer.toggleFullscreen(); handled = true; } catch (_) {}
+          }
+          try {
+            const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+            (moviePlayer || document).dispatchEvent(ev);
+            handled = true;
+          } catch (_) {}
+          if (!handled) {
             const el = (video && video.parentElement) || video || document.documentElement;
             if (el && el.requestFullscreen) {
               el.requestFullscreen().catch(() => {});

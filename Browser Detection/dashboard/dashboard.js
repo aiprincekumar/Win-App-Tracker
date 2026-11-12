@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Full-Page Dashboard Script
  * Enterprise Multi-Tab Analytics, Reactive Storage Sync, Switch to Media Tab, and Centralized Language System (EN / HI)
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
@@ -2350,6 +2350,23 @@ function setupEventListeners() {
       pm.isPlaying = !pm.isPlaying;
       renderHeroMediaPlayer(pm);
     }
+    const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+    if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+      browserAPI.scripting.executeScript({
+        target: { tabId: targetTabId },
+        func: () => {
+          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+          if (video) {
+            if (video.paused) {
+              const p = video.play();
+              if (p && typeof p.catch === 'function') p.catch(() => {});
+            } else {
+              video.pause();
+            }
+          }
+        }
+      }).catch(() => {});
+    }
     sendMediaControl('toggle_play');
   };
 
@@ -2357,13 +2374,65 @@ function setupEventListeners() {
   if (btnHeroPlayPause) btnHeroPlayPause.addEventListener('click', handleTogglePlayHero);
 
   const btnHeroRewind = document.getElementById('btnHeroRewind');
-  if (btnHeroRewind) btnHeroRewind.addEventListener('click', () => sendMediaControl('seek_relative', { offsetSeconds: -10 }));
+  if (btnHeroRewind) {
+    btnHeroRewind.addEventListener('click', () => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) {
+              video.currentTime = Math.max(0, video.currentTime - 10);
+            }
+          }
+        }).catch(() => {});
+      }
+      sendMediaControl('seek_relative', { offsetSeconds: -10 });
+    });
+  }
 
   const btnHeroForward = document.getElementById('btnHeroForward');
-  if (btnHeroForward) btnHeroForward.addEventListener('click', () => sendMediaControl('seek_relative', { offsetSeconds: 10 }));
+  if (btnHeroForward) {
+    btnHeroForward.addEventListener('click', () => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) {
+              const maxDur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 999999;
+              video.currentTime = Math.min(maxDur, video.currentTime + 10);
+            }
+          }
+        }).catch(() => {});
+      }
+      sendMediaControl('seek_relative', { offsetSeconds: 10 });
+    });
+  }
 
   const btnHeroMute = document.getElementById('btnHeroMute');
-  if (btnHeroMute) btnHeroMute.addEventListener('click', () => sendMediaControl('toggle_mute'));
+  if (btnHeroMute) {
+    btnHeroMute.addEventListener('click', () => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: () => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) {
+              video.muted = !video.muted;
+            }
+          }
+        }).catch(() => {});
+      }
+      sendMediaControl('toggle_mute');
+    });
+  }
 
   const btnHeroSpeedDown = document.getElementById('btnHeroSpeedDown');
   if (btnHeroSpeedDown) {
@@ -2376,6 +2445,17 @@ function setupEventListeners() {
       const speedDisplay = document.getElementById('heroSpeedDisplay');
       if (speedDisplay) {
         speedDisplay.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
+      }
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: (spd) => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) video.playbackRate = spd;
+          },
+          args: [targetSpeed]
+        }).catch(() => {});
       }
       sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 });
     });
@@ -2392,6 +2472,17 @@ function setupEventListeners() {
       const speedDisplay = document.getElementById('heroSpeedDisplay');
       if (speedDisplay) {
         speedDisplay.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
+      }
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId },
+          func: (spd) => {
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            if (video) video.playbackRate = spd;
+          },
+          args: [targetSpeed]
+        }).catch(() => {});
       }
       sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 });
     });
@@ -2419,9 +2510,16 @@ function setupEventListeners() {
               if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
             } else {
               const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-              const video = document.querySelector('video');
+              const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+              if (player && typeof player.toggleFullscreen === 'function') {
+                try { player.toggleFullscreen(); } catch (_) {}
+              }
+              try {
+                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                (player || document).dispatchEvent(ev);
+              } catch (_) {}
               const target = player || video || document.documentElement;
-              if (target && target.requestFullscreen) {
+              if (target && target.requestFullscreen && !document.fullscreenElement) {
                 target.requestFullscreen().catch(() => {});
               }
             }
