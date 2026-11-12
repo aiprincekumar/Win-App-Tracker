@@ -34,7 +34,7 @@
 }
 
 body {
-  width: 395px;
+  width: 420px;
   min-height: 520px;
   max-height: 620px;
   overflow-y: auto;
@@ -1343,91 +1343,115 @@ button.spinning .refresh-spinner-icon,
 }
 
 /* ==========================================================================
-   Action Footer (Uniform Cyber-Dark Action Buttons)
+   Action Footer (2-Tier Responsive Cyber-Dark Toolbar)
+   Row 1: Quick Actions (Refresh, Media, Timer, HUD) - 4 across
+   Row 2: Primary Actions (Switch Tab, Dashboard) - 2 prominent across
+   Zero-clipping, anti-truncation layout with cyber-glassmorphic styling
    ========================================================================== */
 .footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   padding-top: 10px;
   border-top: 1px solid var(--border-dim);
 }
 
 .footer-btn {
-  flex: 1;
   min-width: 0;
-  height: 34px;
+  height: 32px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-dim);
-  border-radius: 7px;
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 10.5px;
   font-weight: 600;
   font-family: inherit;
   padding: 0 6px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.1s ease-out;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   user-select: none;
 }
 
 .footer-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .footer-btn:active {
   transform: scale(0.97);
 }
 
+.footer-btn .btn-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .footer-btn.btn-hud-action {
   background: rgba(245, 158, 11, 0.09);
-  border-color: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.32);
   color: #fcd34d;
 }
 
 .footer-btn.btn-hud-action:hover {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: rgba(245, 158, 11, 0.6);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.65);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.28);
 }
 
+/* Row 2 Primary Buttons: 2 across, 36px height, spacious, prominent cyber styling */
 .footer-btn.btn-switch-tab {
-  background: rgba(6, 182, 212, 0.1);
-  border-color: rgba(6, 182, 212, 0.32);
+  grid-column: span 2;
+  height: 36px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 0 12px;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.16), rgba(2, 132, 199, 0.2));
+  border: 1px solid rgba(6, 182, 212, 0.42);
   color: #38bdf8;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.15);
 }
 
 .footer-btn.btn-switch-tab:hover {
-  background: rgba(6, 182, 212, 0.24);
-  border-color: rgba(6, 182, 212, 0.65);
-  color: #e0f2fe;
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(2, 132, 199, 0.34));
+  border-color: rgba(6, 182, 212, 0.85);
+  color: #f0f9ff;
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+  transform: translateY(-1px);
+}
+
+.footer-btn.btn-switch-tab:active {
+  transform: translateY(0) scale(0.97);
 }
 
 .footer-btn.btn-dashboard-primary {
-  flex: 1.25;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(6, 182, 212, 0.24));
+  grid-column: span 2;
+  height: 36px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0 12px;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.22));
   border: 1px solid rgba(16, 185, 129, 0.55);
   color: #6ee7b7;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.18);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .footer-btn.btn-dashboard-primary:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.38), rgba(6, 182, 212, 0.38));
-  border-color: rgba(16, 185, 129, 0.88);
+  border-color: rgba(16, 185, 129, 0.9);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.38);
   transform: translateY(-1px);
 }
 
@@ -1452,25 +1476,27 @@ button.spinning .refresh-spinner-icon,
 }
 
 .footer-control-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
   padding-top: 10px;
   border-top: 1px solid var(--border-dim);
 }
 
 .footer-control-toolbar .toolbar-btn {
-  flex: 1;
   min-width: 0;
-  height: 34px;
-  padding: 0 4px;
-  gap: 3px;
-  font-size: 10px;
+  height: 32px;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 10.5px;
 }
 
+.footer-control-toolbar .toolbar-btn.btn-switch-tab,
 .footer-control-toolbar .toolbar-btn.btn-dashboard-primary {
-  flex: 1.25;
+  grid-column: span 2;
+  height: 36px;
+  font-size: 11.5px;
+  padding: 0 12px;
 }
 
 .timer-active-dot {
