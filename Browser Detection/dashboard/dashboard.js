@@ -2504,22 +2504,26 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
+          target: { tabId: targetTabId, allFrames: true },
           func: () => {
             if (document.fullscreenElement) {
               if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
             } else {
               const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
               const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+              let handled = false;
               if (player && typeof player.toggleFullscreen === 'function') {
-                try { player.toggleFullscreen(); } catch (_) {}
+                try { player.toggleFullscreen(); handled = true; } catch (_) {}
               }
-              try {
-                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                (player || document).dispatchEvent(ev);
-              } catch (_) {}
-              const target = player || video || document.documentElement;
-              if (target && target.requestFullscreen && !document.fullscreenElement) {
+              if (!handled && player) {
+                try {
+                  const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                  player.dispatchEvent(ev);
+                  handled = true;
+                } catch (_) {}
+              }
+              const target = player || video || (window === window.top ? document.documentElement : null);
+              if (!handled && target && target.requestFullscreen && !document.fullscreenElement) {
                 target.requestFullscreen().catch(() => {});
               }
             }

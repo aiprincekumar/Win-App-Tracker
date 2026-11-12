@@ -24,6 +24,56 @@
   }
   window.__MEDIA_SENTINEL_MAIN_INJECTED__ = true;
 
+  // ---------------------------------------------------------------------------
+  // Embedded Iframe Fullscreen Support & Policy Enforcement
+  // ---------------------------------------------------------------------------
+  // Guarantees Document.prototype.fullscreenEnabled and webkitFullscreenEnabled
+  // return true in embedded frames so YouTube's embedded player does not show
+  // "Full screen is unavailable. Learn More".
+  try {
+    const fsDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenEnabled');
+    if (!fsDesc || fsDesc.configurable) {
+      Object.defineProperty(Document.prototype, 'fullscreenEnabled', {
+        get() { return true; },
+        configurable: true,
+        enumerable: true
+      });
+    }
+  } catch (_) {}
+
+  try {
+    const wkFsDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'webkitFullscreenEnabled');
+    if (!wkFsDesc || wkFsDesc.configurable) {
+      Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', {
+        get() { return true; },
+        configurable: true,
+        enumerable: true
+      });
+    }
+  } catch (_) {}
+
+  // Hook Document.prototype.createElement to inject allowfullscreen & allow="... fullscreen" onto dynamic iframes
+  try {
+    const origCreateElement = Document.prototype.createElement;
+    Document.prototype.createElement = function(tagName, options) {
+      const element = origCreateElement.call(this, tagName, options);
+      if (tagName && typeof tagName === 'string' && tagName.toLowerCase() === 'iframe') {
+        try {
+          element.setAttribute('allowfullscreen', 'true');
+          element.setAttribute('webkitallowfullscreen', 'true');
+          element.setAttribute('mozallowfullscreen', 'true');
+          const curAllow = element.getAttribute('allow') || '';
+          if (!curAllow) {
+            element.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+          } else if (!/\bfullscreen\b/i.test(curAllow)) {
+            element.setAttribute('allow', `${curAllow.trim().replace(/;$/, '')}; fullscreen`);
+          }
+        } catch (_) {}
+      }
+      return element;
+    };
+  } catch (_) {}
+
   // Discrete YouTube quality levels from lowest to highest
   const QUALITY_LADDER = [
     'tiny',     // 144p
@@ -565,13 +615,19 @@
         } else {
           let handled = false;
           if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
-            try { moviePlayer.toggleFullscreen(); handled = true; } catch (_) {}
+            try {
+              moviePlayer.toggleFullscreen();
+              handled = true;
+            } catch (_) {}
           }
-          try {
-            const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-            (moviePlayer || document).dispatchEvent(ev);
-            handled = true;
-          } catch (_) {}
+          if (!handled) {
+            try {
+              const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+              const target = moviePlayer || document;
+              target.dispatchEvent(ev);
+              handled = true;
+            } catch (_) {}
+          }
           if (!handled) {
             const el = (video && video.parentElement) || video || document.documentElement;
             if (el && el.requestFullscreen) {

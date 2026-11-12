@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Web Activity & Media Sentinel",
   "short_name": "MediaSentinel",
-  "version": "2.4.8",
+  "version": "2.4.9",
   "description": "Cross-browser media telemetry detector, web activity time tracker, and Video Detector HUD bridge for Chrome, Edge, and Firefox.",
   "permissions": [
     "tabs",
