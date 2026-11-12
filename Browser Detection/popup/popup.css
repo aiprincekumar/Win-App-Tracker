@@ -1440,3 +1440,345 @@ button.spinning .refresh-spinner-icon,
   border-color: rgba(239, 68, 68, 0.3);
   color: #fca5a5;
 }
+
+/* ==========================================================================
+   Modern SVG Toolbar & Sleep Timer Popover Dialog (Phase 4 Standard)
+   ========================================================================== */
+
+.sentinel-svg-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.footer-control-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-dim);
+}
+
+.footer-control-toolbar .toolbar-btn {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 4px;
+  gap: 3px;
+  font-size: 10px;
+}
+
+.footer-control-toolbar .toolbar-btn.btn-dashboard-primary {
+  flex: 1.25;
+}
+
+.timer-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+  display: inline-block;
+}
+
+/* Header Time Badge */
+.ws-badge.time-badge {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.ws-badge.time-badge .time-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+/* Floating Sleep Timer Popover */
+.sleep-timer-popover {
+  position: absolute;
+  bottom: 52px;
+  left: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.popover-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popover-icon {
+  font-size: 15px;
+}
+
+.popover-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.popover-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.popover-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Active Countdown Section */
+.active-countdown-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.countdown-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.countdown-val {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #22c55e;
+}
+
+.countdown-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.countdown-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.countdown-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 3px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.btn-cancel-timer {
+  width: 100%;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-timer:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.7);
+  color: #fff;
+}
+
+/* Sleep Presets Grid */
+.sleep-presets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-micro-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.presets-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.preset-pill-btn {
+  padding: 6px 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.preset-pill-btn:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+}
+
+.custom-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-timer-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.custom-input-group {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+}
+
+.custom-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #f8fafc;
+  font-size: 11px;
+  outline: none;
+}
+
+.custom-input:focus {
+  border-color: #10b981;
+}
+
+.btn-set-custom {
+  padding: 4px 12px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 6px;
+  color: #6ee7b7;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-set-custom:hover {
+  background: rgba(16, 185, 129, 0.35);
+  color: #fff;
+}
+
+.fade-out-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.toggle-desc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.switch-toggle-sm {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.switch-toggle-sm input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round-sm {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  transition: 0.2s;
+}
+
+.slider-round-sm:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.switch-toggle-sm input:checked + .slider-round-sm {
+  background-color: #10b981;
+}
+
+.switch-toggle-sm input:checked + .slider-round-sm:before {
+  transform: translateX(14px);
+}
+
+/* Critical Pulse Animation (<60s remaining) */
+@keyframes sentinel-critical-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 1);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    border-color: rgba(239, 68, 68, 1);
+  }
+}
+
+.countdown-val.critical-pulse {
+  animation: sentinel-critical-pulse 1.5s infinite ease-in-out;
+  color: #ef4444;
+}

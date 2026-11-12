@@ -1121,7 +1121,8 @@ async function triggerSleepTimerFade() {
  * Sets a new sleep timer with specified duration and options
  */
 async function setSleepTimer(durationMinutes, options = {}) {
-  const mins = Math.max(1, Math.min(1440, parseInt(durationMinutes, 10) || 30));
+  const rawMins = parseInt(durationMinutes, 10);
+  const mins = isNaN(rawMins) ? 30 : Math.max(1, Math.min(1440, rawMins));
   const now = Date.now();
   const durationMs = mins * 60 * 1000;
 

@@ -18,6 +18,10 @@
         </div>
       </div>
       <div class="header-badges">
+        <div id="todayHeaderTimeBadge" class="ws-badge time-badge" title="Total Active Time Today">
+          <span class="ws-dot time-dot"></span>
+          <span id="todayHeaderTimeText" class="ws-text">0m</span>
+        </div>
         <div id="hubStatusBadge" class="ws-badge disconnected" title="Standalone SQLite Data Hub (ws://127.0.0.1:65433)">
           <span class="ws-dot"></span>
           <span id="hubStatusText" class="ws-text">Hub Offline</span>
@@ -250,24 +254,114 @@
       </section>
     </div>
 
-    <!-- Action Footer -->
+    <!-- Action Footer Toolbar -->
     <footer class="footer">
-      <button id="btnRefresh" class="footer-btn" title="Refresh Telemetry">
-        <span class="refresh-spinner-icon">🔄</span>
-        <span id="btnRefreshText">Refresh</span>
+      <!-- 1. Refresh Button -->
+      <button id="btnRefresh" class="footer-btn toolbar-btn" title="Refresh Telemetry" aria-label="Refresh Telemetry">
+        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        <span id="btnRefreshText" class="btn-label">Refresh</span>
       </button>
-      <button id="btnReconnectWs" class="footer-btn btn-hud-action" title="Launch & Connect Video Detector HUD">
-        <span id="btnReconnectWsIcon">⚡</span>
-        <span id="btnReconnectWsText">HUD</span>
+
+      <!-- 2. Global Play/Pause Button -->
+      <button id="btnGlobalMediaToggle" class="footer-btn toolbar-btn" title="Toggle Play / Pause Across All Tabs" aria-label="Toggle Play Pause">
+        <svg id="svgGlobalMediaIcon" class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon id="svgPlayPolygon" points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span id="lblGlobalMediaText" class="btn-label">Media</span>
       </button>
-      <button id="btnSwitchMediaTab" class="footer-btn btn-switch-tab" title="Switch to Media Tab">
-        <span id="btnSwitchMediaTabIcon">🎯</span>
-        <span id="btnSwitchMediaTabText">Switch Tab</span>
+
+      <!-- 3. Sleep Timer Launcher Button -->
+      <button id="btnSleepTimerTrigger" class="footer-btn toolbar-btn" title="Sleep Timer Options" aria-label="Sleep Timer" aria-haspopup="dialog" aria-expanded="false">
+        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span id="lblSleepTimerText" class="btn-label">Timer</span>
+        <span id="sleepTimerActiveDot" class="timer-active-dot hidden"></span>
       </button>
-      <button id="btnOpenDashboard" class="footer-btn btn-dashboard-primary" title="Open Dashboard">
-        <span id="btnOpenDashboardText">📊 Dashboard</span>
+
+      <!-- 4. HUD Bridge Button -->
+      <button id="btnReconnectWs" class="footer-btn toolbar-btn btn-hud-action" title="Launch & Connect Video Detector HUD" aria-label="HUD Bridge">
+        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        <span id="btnReconnectWsText" class="btn-label">HUD</span>
+      </button>
+
+      <!-- 5. Switch Tab Button -->
+      <button id="btnSwitchMediaTab" class="footer-btn toolbar-btn btn-switch-tab" title="Switch to Media Tab" aria-label="Switch Tab">
+        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+        <span id="btnSwitchMediaTabText" class="btn-label">Switch Tab</span>
+      </button>
+
+      <!-- 6. Dashboard Primary Button -->
+      <button id="btnOpenDashboard" class="footer-btn toolbar-btn btn-dashboard-primary" title="Open Dashboard" aria-label="Open Dashboard">
+        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="9" rx="1"/>
+          <rect x="14" y="3" width="7" height="5" rx="1"/>
+          <rect x="14" y="12" width="7" height="9" rx="1"/>
+          <rect x="3" y="16" width="7" height="5" rx="1"/>
+        </svg>
+        <span id="btnOpenDashboardText" class="btn-label">📊 Dashboard</span>
       </button>
     </footer>
+
+    <!-- Floating Sleep Timer Popover Dialog -->
+    <div id="sleepTimerPopover" class="sleep-timer-popover hidden" role="dialog" aria-modal="true" aria-labelledby="sleepPopoverTitle">
+      <div class="popover-header">
+        <div class="popover-title-row">
+          <span class="popover-icon">🌙</span>
+          <h3 id="sleepPopoverTitle" class="popover-title">Sleep Timer</h3>
+        </div>
+        <button id="btnCloseSleepPopover" class="popover-close-btn" aria-label="Close Popover">✕</button>
+      </div>
+
+      <div class="popover-body">
+        <!-- Active Countdown Section -->
+        <div id="activeCountdownContainer" class="active-countdown-container hidden">
+          <div class="countdown-display">
+            <span id="countdownTimeRemaining" class="countdown-val">00:00</span>
+            <span id="countdownStatusBadge" class="countdown-badge">Active</span>
+          </div>
+          <div class="countdown-progress-bar">
+            <div id="countdownProgressFill" class="countdown-fill" style="width: 100%;"></div>
+          </div>
+          <button id="btnCancelActiveTimer" class="btn-cancel-timer">Cancel Timer</button>
+        </div>
+
+        <!-- Presets Grid -->
+        <div id="sleepPresetsContainer" class="sleep-presets-container">
+          <span class="section-micro-label">Quick Presets:</span>
+          <div class="presets-btn-grid">
+            <button class="preset-pill-btn" data-minutes="15">15m</button>
+            <button class="preset-pill-btn" data-minutes="30">30m</button>
+            <button class="preset-pill-btn" data-minutes="45">45m</button>
+            <button class="preset-pill-btn" data-minutes="60">60m</button>
+          </div>
+
+          <div class="custom-timer-row">
+            <label for="customTimerInput" class="custom-timer-label">Custom:</label>
+            <div class="custom-input-group">
+              <input type="number" id="customTimerInput" min="1" max="1440" placeholder="Min" class="custom-input">
+              <button id="btnSetCustomTimer" class="btn-set-custom">Set</button>
+            </div>
+          </div>
+
+          <div class="fade-out-toggle-row">
+            <span class="toggle-desc">30s Audio Fade-out</span>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleSleepFade" checked>
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Toast Notification Floating Banner (Bottom Pinned - Zero Layout Shift Standard) -->
     <div id="popupToastNotification" class="toast-banner hidden" role="status" aria-live="polite">

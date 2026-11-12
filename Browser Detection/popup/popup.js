@@ -997,6 +997,8 @@ function renderStatsPills(data) {
   const pSessions = document.getElementById('pillSessionsCount');
 
   if (pToday) pToday.textContent = formatCenterTime(todaySeconds);
+  const pTodayHeader = document.getElementById('todayHeaderTimeText');
+  if (pTodayHeader) pTodayHeader.textContent = formatCenterTime(todaySeconds);
   if (pDaily) pDaily.textContent = formatCenterTime(dailyAvgSeconds);
   if (pSessions) pSessions.textContent = String(totalSessions);
 }
