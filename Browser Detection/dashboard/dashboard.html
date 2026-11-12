@@ -68,7 +68,7 @@
 
       <!-- Version & Profile footer -->
       <div class="sidebar-footer">
-        <span class="version-label">v2.4.6 Production Edition</span>
+        <span class="version-label">v2.4.7 Production Edition</span>
         <span class="author-label">Lead Architect: Atul Verma</span>
       </div>
     </aside>
@@ -640,6 +640,103 @@
                 <div class="settings-actions-bar">
                   <button id="btnSaveGeneralSettings" class="btn-save-primary">
                     💾 Save & Sync Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 1.5: Sleep Timer & Inactivity Sentinel -->
+            <div class="settings-card" id="cardSleepSettings">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">🌙</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingSleepSettings" class="settings-card-title">Sleep Timer & Inactivity Sentinel</h3>
+                  <span id="subSleepSettings" class="settings-card-sub">Automated playback cutoff, gentle audio fade-out, and idle power saving</span>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <!-- Default Sleep Duration -->
+                <div class="form-row">
+                  <div class="form-label-group">
+                    <label for="settingDefaultSleepDuration" id="lblDefaultSleepDuration" class="form-label">Default Sleep Duration</label>
+                    <span id="descDefaultSleepDuration" class="form-desc">Default countdown interval for quick 1-click sleep presets</span>
+                  </div>
+                  <select id="settingDefaultSleepDuration" class="styled-select form-control-select">
+                    <option value="15">15 Minutes</option>
+                    <option value="30" selected>30 Minutes</option>
+                    <option value="45">45 Minutes</option>
+                    <option value="60">60 Minutes</option>
+                    <option value="90">90 Minutes</option>
+                  </select>
+                </div>
+
+                <!-- Gradual Audio Fade-out Toggle -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="settingSleepFadeToggle" id="lblSleepFadeToggle" class="form-label">Gradual Audio Fade-out</label>
+                    <span id="descSleepFadeToggle" class="form-desc">Linearly step down media volume before pausing to prevent sudden audio cutoffs</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="settingSleepFadeToggle" checked>
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <!-- Fade Duration Selector -->
+                <div class="form-row" id="rowFadeDuration">
+                  <div class="form-label-group">
+                    <label for="settingFadeDuration" id="lblFadeDuration" class="form-label">Fade Duration Window</label>
+                    <span id="descFadeDuration" class="form-desc">Number of seconds allocated for smooth volume attenuation</span>
+                  </div>
+                  <select id="settingFadeDuration" class="styled-select form-control-select">
+                    <option value="15">15 Seconds</option>
+                    <option value="30" selected>30 Seconds (Recommended)</option>
+                    <option value="60">60 Seconds</option>
+                  </select>
+                </div>
+
+                <!-- Inactivity Auto-Sleep Toggle -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="settingInactivitySleepToggle" id="lblInactivitySleepToggle" class="form-label">Inactivity Auto-Sleep Sentinel</label>
+                    <span id="descInactivitySleepToggle" class="form-desc">Automatically pause playing media when system is detected idle (AFK)</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="settingInactivitySleepToggle">
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <!-- Inactivity Threshold Selector -->
+                <div class="form-row" id="rowInactivityThreshold">
+                  <div class="form-label-group">
+                    <label for="settingInactivityThreshold" id="lblInactivityThreshold" class="form-label">Inactivity Detection Threshold</label>
+                    <span id="descInactivityThreshold" class="form-desc">Duration of user inactivity required before auto-sleep engages</span>
+                  </div>
+                  <select id="settingInactivityThreshold" class="styled-select form-control-select">
+                    <option value="10">10 Minutes</option>
+                    <option value="15" selected>15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="60">60 Minutes</option>
+                  </select>
+                </div>
+
+                <!-- Show Badge Countdown Toggle -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="settingBadgeCountdownToggle" id="lblBadgeCountdownToggle" class="form-label">Toolbar Badge Countdown</label>
+                    <span id="descBadgeCountdownToggle" class="form-desc">Show dynamic countdown and color indicators on the browser icon</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="settingBadgeCountdownToggle" checked>
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <div class="settings-actions-bar">
+                  <button id="btnSaveSleepSettings" class="btn-save-primary">
+                    💾 Save Sleep Settings
                   </button>
                 </div>
               </div>

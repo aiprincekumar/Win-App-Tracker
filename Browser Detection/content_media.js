@@ -1083,25 +1083,104 @@
     dispatchMediaTelemetry(false);
   }, { passive: true });
 
+  let fadeIntervalId = null;
+
+  /**
+   * Executes smooth volume attenuation down to 0 before pausing media elements.
+   * Restores original volume on pause so future playback resumes at expected sound level.
+   */
+  function executeSmoothFadeAndPause(fadeDurationSec = 30) {
+    const mediaElements = Array.from(document.querySelectorAll('video, audio')).filter(el => !el.paused);
+    if (mediaElements.length === 0) return;
+
+    if (fadeIntervalId) {
+      clearInterval(fadeIntervalId);
+      fadeIntervalId = null;
+    }
+
+    const steps = 15;
+    const durationMs = Math.max(1000, Number(fadeDurationSec || 30) * 1000);
+    const stepIntervalMs = durationMs / steps;
+    let currentStep = 0;
+
+    // Cache initial volumes
+    const initialVolumes = mediaElements.map(el => ({ el, vol: el.volume }));
+
+    fadeIntervalId = setInterval(() => {
+      currentStep++;
+      const factor = Math.max(0, 1 - (currentStep / steps));
+
+      initialVolumes.forEach(({ el, vol }) => {
+        try {
+          el.volume = vol * factor;
+        } catch (_) {}
+      });
+
+      if (currentStep >= steps) {
+        clearInterval(fadeIntervalId);
+        fadeIntervalId = null;
+        initialVolumes.forEach(({ el, vol }) => {
+          try {
+            el.pause();
+            el.volume = vol; // Restore initial volume for clean subsequent playback
+          } catch (_) {}
+        });
+        try {
+          handleMediaControl('pause');
+        } catch (_) {}
+      }
+    }, stepIntervalMs);
+  }
+
   // Runtime IPC Message Listener (Queries & Controls)
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!message || !message.type) return;
+    if (!message || (!message.type && !message.action)) return;
+    const actionType = message.action || message.type;
 
-    if (message.type === 'QUERY_PAGE_MEDIA') {
+    if (actionType === 'QUERY_PAGE_MEDIA') {
       const { currentState } = evaluatePageMediaState();
       sendResponse(currentState);
       return true;
     }
 
-    if (message.type === 'MEDIA_CONTROL') {
+    if (actionType === 'MEDIA_CONTROL') {
       const result = handleMediaControl(message.action, message.data || {});
       sendResponse(result);
       return true;
     }
 
-    if (message.type === 'SET_VOLUME') {
+    if (actionType === 'SET_VOLUME') {
       const result = handleMediaControl('set_volume', message.data || { volume: message.volume, percent: message.percent });
       sendResponse(result);
+      return true;
+    }
+
+    if (actionType === 'FADE_AND_PAUSE') {
+      executeSmoothFadeAndPause(message.fadeDurationSeconds || 30);
+      sendResponse({ received: true });
+      return true;
+    }
+
+    if (actionType === 'PAUSE_MEDIA') {
+      if (fadeIntervalId) {
+        clearInterval(fadeIntervalId);
+        fadeIntervalId = null;
+      }
+      document.querySelectorAll('video, audio').forEach(el => {
+        try { el.pause(); } catch (_) {}
+      });
+      try {
+        handleMediaControl('pause');
+      } catch (_) {}
+      sendResponse({ paused: true });
+      return true;
+    }
+
+    if (actionType === 'RESUME_MEDIA') {
+      try {
+        handleMediaControl('play');
+      } catch (_) {}
+      sendResponse({ resumed: true });
       return true;
     }
 

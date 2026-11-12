@@ -284,6 +284,36 @@ let settings = {
   language: 'en'
 };
 
+// Sleep Timer & Inactivity Subsystem Schemas
+const DEFAULT_SLEEP_SETTINGS = Object.freeze({
+  defaultDurationMinutes: 30,
+  enableAudioFadeOut: true,
+  fadeDurationSeconds: 30,
+  enableInactivityAutoSleep: false,
+  inactivityThresholdMinutes: 15,
+  showBadgeCountdown: true,
+  pulseOnCritical: true
+});
+
+const INITIAL_SLEEP_TIMER_STATE = Object.freeze({
+  state: 'IDLE', // 'IDLE' | 'RUNNING' | 'PAUSED' | 'FADING' | 'TRIGGERED' | 'CANCELLED'
+  durationMinutes: 0,
+  durationMs: 0,
+  startTime: 0,
+  targetTime: 0,
+  pauseMedia: true,
+  pauseTracking: true,
+  enableFadeOut: true,
+  fadeDurationSeconds: 30,
+  lastUpdated: 0
+});
+
+let sleepTimerState = { ...INITIAL_SLEEP_TIMER_STATE };
+let sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS };
+
+const SLEEP_ALARM_NAME = 'sentinel_sleep_timer_alarm';
+const SLEEP_FADE_ALARM_NAME = 'sentinel_sleep_fade_alarm';
+
 let activeTabId = null;
 let activeWindowId = null;
 let activeDomain = null;
@@ -846,7 +876,9 @@ async function loadStorageData() {
       CONFIG.SETTINGS_STORAGE_KEY,
       CONFIG.OFFLINE_QUEUE_STORAGE_KEY,
       CONFIG.CLIENT_ID_STORAGE_KEY,
-      'language'
+      'language',
+      'sentinel_sleep_timer',
+      'sentinel_sleep_settings'
     ];
     const res = await browserAPI.storage.local.get(keys);
     if (res && res[CONFIG.CLIENT_ID_STORAGE_KEY]) {
@@ -914,11 +946,330 @@ async function loadStorageData() {
     } else if (settings.language) {
       await browserAPI.storage.local.set({ language: settings.language });
     }
+
+    // Hydrate Sleep Timer and Inactivity Settings from persistent storage
+    if (res && res.sentinel_sleep_settings) {
+      sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS, ...res.sentinel_sleep_settings };
+    }
+    if (res && res.sentinel_sleep_timer) {
+      sleepTimerState = { ...INITIAL_SLEEP_TIMER_STATE, ...res.sentinel_sleep_timer };
+      const now = Date.now();
+      if (sleepTimerState.state === 'RUNNING' && sleepTimerState.targetTime <= now) {
+        sleepTimerState.state = 'TRIGGERED';
+        sleepTimerState.triggeredAt = now;
+        saveSleepTimerState();
+        clearActionBadge();
+      } else if (sleepTimerState.state === 'RUNNING') {
+        const remainingMs = sleepTimerState.targetTime - now;
+        updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      }
+    }
   } catch (e) {
     console.error('[MediaSentinel] Error loading storage:', e);
   } finally {
     isStorageLoaded = true;
   }
+}
+
+// =============================================================================
+// Sleep Timer & Inactivity Subsystem Engine (Alarms, FSM & Volume Fade)
+// =============================================================================
+
+/**
+ * Loads sleep timer state and configuration from chrome.storage.local
+ */
+async function loadSleepTimerData() {
+  try {
+    const data = await browserAPI.storage.local.get(['sentinel_sleep_timer', 'sentinel_sleep_settings']);
+    if (data && data.sentinel_sleep_settings) {
+      sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS, ...data.sentinel_sleep_settings };
+    }
+    if (data && data.sentinel_sleep_timer) {
+      sleepTimerState = { ...INITIAL_SLEEP_TIMER_STATE, ...data.sentinel_sleep_timer };
+      const now = Date.now();
+      if (sleepTimerState.state === 'RUNNING' && sleepTimerState.targetTime <= now) {
+        sleepTimerState.state = 'TRIGGERED';
+        sleepTimerState.triggeredAt = now;
+        await saveSleepTimerState();
+        clearActionBadge();
+      } else if (sleepTimerState.state === 'RUNNING') {
+        const remainingMs = sleepTimerState.targetTime - now;
+        updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      }
+    }
+  } catch (err) {
+    console.error('[MediaSentinel] Failed to load sleep timer storage:', err);
+  }
+}
+
+/**
+ * Persists sleep timer state to chrome.storage.local
+ */
+async function saveSleepTimerState() {
+  try {
+    sleepTimerState.lastUpdated = Date.now();
+    await browserAPI.storage.local.set({ sentinel_sleep_timer: sleepTimerState });
+  } catch (err) {
+    console.error('[MediaSentinel] Failed to save sleep timer state:', err);
+  }
+}
+
+/**
+ * Persists user sleep settings to chrome.storage.local
+ */
+async function saveSleepTimerSettings(newSettings) {
+  try {
+    sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS, ...sleepTimerSettings, ...newSettings };
+    await browserAPI.storage.local.set({ sentinel_sleep_settings: sleepTimerSettings });
+    if (!sleepTimerSettings.showBadgeCountdown) {
+      clearActionBadge();
+    } else if (sleepTimerState.state === 'RUNNING') {
+      updateActionBadge(sleepTimerState.targetTime - Date.now(), sleepTimerState.durationMs);
+    }
+  } catch (err) {
+    console.error('[MediaSentinel] Failed to save sleep settings:', err);
+  }
+}
+
+/**
+ * Schedules deterministic MV3 chrome.alarms for timer expiration and audio fade
+ */
+async function scheduleSleepTimerAlarms(state) {
+  try {
+    await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
+    await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
+
+    if (state.state !== 'RUNNING') return;
+
+    const now = Date.now();
+    const remainingMs = state.targetTime - now;
+
+    if (remainingMs <= 0) {
+      await triggerSleepTimerExpiration();
+      return;
+    }
+
+    // Schedule final cutoff alarm
+    browserAPI.alarms.create(SLEEP_ALARM_NAME, { when: state.targetTime });
+
+    // Schedule fade alarm if enabled
+    if (state.enableFadeOut && remainingMs > (state.fadeDurationSeconds * 1000)) {
+      const fadeTarget = state.targetTime - (state.fadeDurationSeconds * 1000);
+      browserAPI.alarms.create(SLEEP_FADE_ALARM_NAME, { when: fadeTarget });
+    }
+  } catch (err) {
+    console.error('[MediaSentinel] Error scheduling sleep alarms:', err);
+  }
+}
+
+/**
+ * Triggers sleep timer expiration: marks TRIGGERED, clears badge, pauses media, commits tracking
+ */
+async function triggerSleepTimerExpiration() {
+  await ensureStorageLoaded();
+  console.info('[MediaSentinel] 🌙 Sleep timer expired! Pausing media streams and freezing counters.');
+
+  sleepTimerState.state = 'TRIGGERED';
+  sleepTimerState.triggeredAt = Date.now();
+  await saveSleepTimerState();
+
+  clearActionBadge();
+
+  // Broadcast global pause to all media tabs
+  if (sleepTimerState.pauseMedia) {
+    await dispatchGlobalMediaAction('PAUSE_ALL');
+  }
+
+  // Freeze active tracking intervals
+  if (sleepTimerState.pauseTracking) {
+    commitActiveInterval();
+    scheduleStorageSave(true);
+  }
+
+  // Notify frontend views
+  safeSendRuntimeMessage({
+    action: 'SLEEP_TIMER_EXPIRED',
+    type: 'SLEEP_TIMER_EXPIRED',
+    state: sleepTimerState
+  });
+}
+
+/**
+ * Triggers pre-expiration volume fade across active media tabs
+ */
+async function triggerSleepTimerFade() {
+  await ensureStorageLoaded();
+  if (sleepTimerState.state !== 'RUNNING') return;
+  sleepTimerState.state = 'FADING';
+  await saveSleepTimerState();
+
+  const targetTabs = new Set([
+    ...Array.from(activeMediaSessions.keys()),
+    ...Array.from(tabMediaMap.keys())
+  ]);
+
+  for (const tabId of targetTabs) {
+    safeSendTabMessage(tabId, {
+      action: 'FADE_AND_PAUSE',
+      type: 'FADE_AND_PAUSE',
+      fadeDurationSeconds: sleepTimerState.fadeDurationSeconds || 30
+    });
+  }
+}
+
+/**
+ * Sets a new sleep timer with specified duration and options
+ */
+async function setSleepTimer(durationMinutes, options = {}) {
+  const mins = Math.max(1, Math.min(1440, parseInt(durationMinutes, 10) || 30));
+  const now = Date.now();
+  const durationMs = mins * 60 * 1000;
+
+  sleepTimerState = {
+    state: 'RUNNING',
+    durationMinutes: mins,
+    durationMs: durationMs,
+    startTime: now,
+    targetTime: now + durationMs,
+    pauseMedia: options.pauseMedia !== undefined ? !!options.pauseMedia : true,
+    pauseTracking: options.pauseTracking !== undefined ? !!options.pauseTracking : true,
+    enableFadeOut: options.enableFadeOut !== undefined ? !!options.enableFadeOut : sleepTimerSettings.enableAudioFadeOut,
+    fadeDurationSeconds: options.fadeDurationSeconds || sleepTimerSettings.fadeDurationSeconds,
+    lastUpdated: now
+  };
+
+  await saveSleepTimerState();
+  await scheduleSleepTimerAlarms(sleepTimerState);
+  if (sleepTimerSettings.showBadgeCountdown) {
+    updateActionBadge(durationMs, durationMs);
+  }
+  return sleepTimerState;
+}
+
+/**
+ * Cancels active sleep timer and resets state
+ */
+async function cancelSleepTimer() {
+  try {
+    await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
+    await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
+  } catch (_) {}
+
+  sleepTimerState = {
+    ...INITIAL_SLEEP_TIMER_STATE,
+    state: 'CANCELLED',
+    lastUpdated: Date.now()
+  };
+  await saveSleepTimerState();
+  clearActionBadge();
+  return { success: true, state: sleepTimerState };
+}
+
+/**
+ * Computes dynamic RGB interpolation color between Green, Yellow and Red based on remaining percentage
+ */
+function calculateTimerColor(remainingMs, totalDurationMs) {
+  if (totalDurationMs <= 0) return '#ef4444';
+  const ratio = Math.max(0, Math.min(1, remainingMs / totalDurationMs));
+
+  const green = [34, 197, 94];   // #22c55e (> 50%)
+  const yellow = [234, 179, 8];   // #eab308 (15% - 50%)
+  const red = [239, 68, 68];     // #ef4444 (< 15%)
+
+  let r, g, b;
+  if (ratio > 0.5) {
+    const factor = (ratio - 0.5) / 0.5;
+    r = Math.round(yellow[0] + factor * (green[0] - yellow[0]));
+    g = Math.round(yellow[1] + factor * (green[1] - yellow[1]));
+    b = Math.round(yellow[2] + factor * (green[2] - yellow[2]));
+  } else if (ratio > 0.15) {
+    const factor = (ratio - 0.15) / 0.35;
+    r = Math.round(red[0] + factor * (yellow[0] - red[0]));
+    g = Math.round(red[1] + factor * (yellow[1] - red[1]));
+    b = Math.round(red[2] + factor * (yellow[2] - red[2]));
+  } else {
+    return '#ef4444';
+  }
+
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+/**
+ * Updates extension action toolbar badge text and background color in real time
+ */
+function updateActionBadge(remainingMs, totalDurationMs) {
+  if (!browserAPI.action || typeof browserAPI.action.setBadgeText !== 'function') return;
+  if (!sleepTimerSettings.showBadgeCountdown || remainingMs <= 0) {
+    clearActionBadge();
+    return;
+  }
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  const text = remainingSec >= 60 ? `${Math.ceil(remainingSec / 60)}m` : `${remainingSec}s`;
+  const color = calculateTimerColor(remainingMs, totalDurationMs);
+
+  try {
+    browserAPI.action.setBadgeText({ text });
+    browserAPI.action.setBadgeBackgroundColor({ color });
+  } catch (_) {}
+}
+
+/**
+ * Clears extension action toolbar badge text
+ */
+function clearActionBadge() {
+  if (!browserAPI.action || typeof browserAPI.action.setBadgeText !== 'function') return;
+  try {
+    browserAPI.action.setBadgeText({ text: '' });
+  } catch (_) {}
+}
+
+/**
+ * Dispatches global play/pause/resume across all active media tabs and sessions
+ */
+async function dispatchGlobalMediaAction(command = 'TOGGLE') {
+  let anyPlaying = false;
+  for (const session of activeMediaSessions.values()) {
+    if (session.isPlaying) {
+      anyPlaying = true;
+      break;
+    }
+  }
+  if (!anyPlaying) {
+    for (const mState of tabMediaMap.values()) {
+      if (mState && (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying))) {
+        anyPlaying = true;
+        break;
+      }
+    }
+  }
+
+  const targetAction = (command === 'PAUSE_ALL' || (command === 'TOGGLE' && anyPlaying)) ? 'PAUSE' : 'RESUME';
+
+  const targetTabs = new Set([
+    ...Array.from(activeMediaSessions.keys()),
+    ...Array.from(tabMediaMap.keys())
+  ]);
+
+  for (const tabId of targetTabs) {
+    const session = activeMediaSessions.get(tabId);
+    if (targetAction === 'PAUSE') {
+      if (session) session.isPlaying = false;
+      safeSendTabMessage(tabId, { action: 'PAUSE_MEDIA', type: 'PAUSE_MEDIA' });
+    } else {
+      if (session) {
+        session.isPlaying = true;
+        session.lastHeartbeat = Date.now();
+      }
+      safeSendTabMessage(tabId, { action: 'RESUME_MEDIA', type: 'RESUME_MEDIA' });
+    }
+  }
+
+  return {
+    success: true,
+    actionExecuted: targetAction,
+    isPlaying: targetAction === 'RESUME',
+    activeCount: targetTabs.size
+  };
 }
 
 /**
@@ -1668,7 +2019,7 @@ async function connectWebSocket() {
       }
 
       // Initial registration message
-      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.6';
+      const extensionVersion = (browserAPI.runtime && typeof browserAPI.runtime.getManifest === 'function' && browserAPI.runtime.getManifest()?.version) || '2.4.7';
       const reg = {
         type: 'REGISTER_CLIENT',
         client: 'Web Activity & Media Sentinel',
@@ -1865,6 +2216,29 @@ browserAPI.idle.onStateChanged.addListener(async (newState) => {
     commitActiveInterval();
     isUserActive = false;
     scheduleStorageSave(true);
+
+    // Inactivity Auto-Sleep Sentinel check
+    if (sleepTimerSettings && sleepTimerSettings.enableInactivityAutoSleep) {
+      let mediaPlaying = false;
+      for (const session of activeMediaSessions.values()) {
+        if (session.isPlaying) {
+          mediaPlaying = true;
+          break;
+        }
+      }
+      if (!mediaPlaying) {
+        for (const mState of tabMediaMap.values()) {
+          if (mState && (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying))) {
+            mediaPlaying = true;
+            break;
+          }
+        }
+      }
+      if (mediaPlaying) {
+        console.info('[MediaSentinel] Inactivity detected while media is streaming. Pausing unattended playback.');
+        await dispatchGlobalMediaAction('PAUSE_ALL');
+      }
+    }
   } else if (newState === 'active') {
     isUserActive = true;
     intervalStartTime = Date.now();
@@ -1883,7 +2257,16 @@ if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
 
 // Periodic Alarm for Storage Flush & WebSocket Verification
 browserAPI.alarms.create('sentinel_flush_alarm', { periodInMinutes: CONFIG.FLUSH_INTERVAL_MINUTES });
-browserAPI.alarms.onAlarm.addListener((alarm) => {
+browserAPI.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === SLEEP_ALARM_NAME) {
+    await triggerSleepTimerExpiration();
+    return;
+  }
+  if (alarm.name === SLEEP_FADE_ALARM_NAME) {
+    await triggerSleepTimerFade();
+    return;
+  }
+
   if (alarm.name === 'sentinel_flush_alarm') {
     commitActiveInterval();
     saveStorageData();
@@ -1906,6 +2289,16 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
       }
     }
     saveMediaHistory();
+
+    // Sleep Timer periodic check & badge countdown update
+    if (sleepTimerState && sleepTimerState.state === 'RUNNING') {
+      const remainingMs = sleepTimerState.targetTime - now;
+      if (remainingMs <= 0) {
+        await triggerSleepTimerExpiration();
+      } else {
+        updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      }
+    }
 
     if (!wsConnected) {
       if (!wsReconnectPaused) {
@@ -1932,7 +2325,8 @@ browserAPI.alarms.onAlarm.addListener((alarm) => {
 
 // Message Handling from Content Scripts and Popup
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || !message.type) return;
+  if (!message || (!message.type && !message.action)) return;
+  const msgType = message.action || message.type;
 
   // Media state reported from content script
   if (message.type === 'MEDIA_STATE_CHANGED') {
@@ -2035,7 +2429,9 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           activeDomain,
           activeTabId,
           todayStr: getTodayDateString(),
-          settings
+          settings,
+          sleepTimerState,
+          sleepTimerSettings
         });
       };
 
@@ -2534,6 +2930,71 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }, delay);
     });
     sendResponse({ initiated: true, dataHubConnected, nativeDispatched });
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sleep Timer Subsystem & Global Media IPC Message Handlers
+  // ---------------------------------------------------------------------------
+
+  if (msgType === 'SET_SLEEP_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const updatedState = await setSleepTimer(message.durationMinutes, message.options || {
+        enableFadeOut: message.enableFade !== undefined ? message.enableFade : undefined
+      });
+      sendResponse({ success: true, state: updatedState });
+    })();
+    return true;
+  }
+
+  if (msgType === 'CANCEL_SLEEP_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await cancelSleepTimer();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_SLEEP_TIMER_STATE') {
+    (async () => {
+      await ensureStorageLoaded();
+      if (sleepTimerState.state === 'RUNNING' && sleepTimerState.targetTime <= Date.now()) {
+        await triggerSleepTimerExpiration();
+      }
+      sendResponse({
+        success: true,
+        state: sleepTimerState,
+        settings: sleepTimerSettings
+      });
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_SLEEP_SETTINGS') {
+    (async () => {
+      await ensureStorageLoaded();
+      sendResponse({ success: true, settings: sleepTimerSettings });
+    })();
+    return true;
+  }
+
+  if (msgType === 'UPDATE_SLEEP_SETTINGS' || msgType === 'SAVE_SLEEP_SETTINGS') {
+    (async () => {
+      await ensureStorageLoaded();
+      await saveSleepTimerSettings(message.settings || {});
+      sendResponse({ success: true, settings: sleepTimerSettings });
+    })();
+    return true;
+  }
+
+  if (msgType === 'TOGGLE_GLOBAL_MEDIA') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await dispatchGlobalMediaAction(message.command || 'TOGGLE');
+      sendResponse(result);
+    })();
     return true;
   }
 });

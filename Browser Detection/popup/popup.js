@@ -1792,9 +1792,16 @@ function setupEventListeners() {
     });
   }
 
+  let lastFullscreenClick = 0;
+  let lastPipClick = 0;
+
   const btnFullscreen = document.getElementById('btnCtrlFullscreen');
   if (btnFullscreen) {
     btnFullscreen.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastFullscreenClick < 350) return;
+      lastFullscreenClick = now;
+
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
@@ -1814,14 +1821,20 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {});
+      } else {
+        // Fallback only when scripting API or tabId is unavailable
+        sendMediaControl('toggle_fullscreen');
       }
-      sendMediaControl('toggle_fullscreen');
     });
   }
 
   const btnPip = document.getElementById('btnCtrlPip');
   if (btnPip) {
     btnPip.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastPipClick < 350) return;
+      lastPipClick = now;
+
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
@@ -1838,8 +1851,10 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {});
+      } else {
+        // Fallback only when scripting API or tabId is unavailable
+        sendMediaControl('toggle_pip');
       }
-      sendMediaControl('toggle_pip');
     });
   }
 

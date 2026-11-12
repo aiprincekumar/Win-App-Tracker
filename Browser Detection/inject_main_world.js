@@ -563,18 +563,11 @@
         if (document.fullscreenElement) {
           if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
         } else {
-          const fsBtn = document.querySelector('.ytp-fullscreen-button');
-          if (fsBtn) {
-            fsBtn.click();
-          } else if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
+          if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
             try { moviePlayer.toggleFullscreen(); } catch (_) {}
           } else {
-            const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-            window.dispatchEvent(ev);
-            document.dispatchEvent(ev);
-
             const el = (video && video.parentElement) || video || document.documentElement;
-            if (el.requestFullscreen) {
+            if (el && el.requestFullscreen) {
               el.requestFullscreen().catch(() => {});
             }
           }

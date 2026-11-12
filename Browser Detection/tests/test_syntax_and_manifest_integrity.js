@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.6 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.7 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.6 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.7 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.6 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.6', 'version must be bumped to 2.4.6');
+  assert.strictEqual(manifest.version, '2.4.7', 'version must be bumped to 2.4.7');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.6 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.6 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.7 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.6 Production Edition'), 'dashboard.html must display v2.4.6 Production Edition');
+  assert(dashHtml.includes('v2.4.7 Production Edition'), 'dashboard.html must display v2.4.7 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.6 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.7 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
         }
       },
       onSuspend: { addListener: () => {} },
-      getManifest: () => ({ version: '2.4.6' })
+      getManifest: () => ({ version: '2.4.7' })
     },
     tabs: {
       get: async (tabId) => {
@@ -578,9 +578,9 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
   }
 
   // ---------------------------------------------------------------------------
-  // Test 10: Fullscreen & PiP User Gesture Context & Native OSD Event Binding
+  // Test 10: Fullscreen & PiP User Gesture Context & Edge Race Prevention
   // ---------------------------------------------------------------------------
-  console.log('\nTest 10: Fullscreen & PiP User Gesture Context & Native OSD Event Binding');
+  console.log('\nTest 10: Fullscreen & PiP User Gesture Context & Edge Race Prevention');
   {
     const popupPath = path.join(baseDir, 'popup/popup.js');
     const popupCode = fs.readFileSync(popupPath, 'utf8');
@@ -589,6 +589,19 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(popupCode.includes('browserAPI.scripting.executeScript'), 'popup.js must use scripting.executeScript for transient activation');
     assert(popupCode.includes('target.requestFullscreen'), 'popup.js executeScript must include requestFullscreen');
     assert(popupCode.includes('video.requestPictureInPicture'), 'popup.js executeScript must include requestPictureInPicture');
+
+    // Verify click debouncing cooldown
+    assert(popupCode.includes('lastFullscreenClick'), 'popup.js must have click debounce for fullscreen');
+    assert(popupCode.includes('lastPipClick'), 'popup.js must have click debounce for PiP');
+
+    // Verify sendMediaControl is ONLY in the else fallback branch (no double-trigger race condition)
+    assert(popupCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_fullscreen\');'), 'popup.js must not double-trigger toggle_fullscreen');
+    assert(popupCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_pip\');'), 'popup.js must not double-trigger toggle_pip');
+
+    const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
+    const dashCode = fs.readFileSync(dashPath, 'utf8');
+    assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_fullscreen\');'), 'dashboard.js must not double-trigger toggle_fullscreen');
+    assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_pip\');'), 'dashboard.js must not double-trigger toggle_pip');
 
     const injectPath = path.join(baseDir, 'inject_main_world.js');
     const injectCode = fs.readFileSync(injectPath, 'utf8');
@@ -601,8 +614,13 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     // Verify buggy in-page miniplayer button fallback was removed
     assert(!injectCode.includes('.ytp-miniplayer-button'), 'inject_main_world.js must NOT click .ytp-miniplayer-button (preventing creator mode bug)');
 
-    console.log('  ✅ popup.js executes scripting.executeScript to preserve transient user activation for Fullscreen & PiP');
+    // Verify synthetic click on .ytp-fullscreen-button was removed (preventing Edge "Fullscreen is unavailable" banner)
+    assert(!injectCode.includes('.ytp-fullscreen-button'), 'inject_main_world.js must NOT click .ytp-fullscreen-button (preventing Edge unavailable banner)');
+
+    console.log('  ✅ popup.js & dashboard.js execute scripting.executeScript without double-trigger race condition');
+    console.log('  ✅ Click debounce gates prevent rapid toggle bounce (eliminating Edge 10ms enable/disable)');
     console.log('  ✅ inject_main_world.js binds native fullscreenchange & pictureinpicture listeners for deterministic OSD');
+    console.log('  ✅ Synthetic .ytp-fullscreen-button click removed (eliminating Edge "Fullscreen is unavailable" bug)');
     console.log('  ✅ Buggy .ytp-miniplayer-button fallback completely eliminated (zero unwanted creator mode)');
   }
 

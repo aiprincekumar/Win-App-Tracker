@@ -2397,10 +2397,17 @@ function setupEventListeners() {
     });
   }
 
+  let lastHeroFsClick = 0;
+  let lastHeroPipClick = 0;
+
   // Window Modes, Switch Tab & Quality Controls
   const btnHeroFullscreen = document.getElementById('btnHeroFullscreen');
   if (btnHeroFullscreen) {
     btnHeroFullscreen.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastHeroFsClick < 350) return;
+      lastHeroFsClick = now;
+
       const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
 
@@ -2420,14 +2427,20 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {});
+      } else {
+        // Fallback only when scripting API or tabId is unavailable
+        sendMediaControl('toggle_fullscreen');
       }
-      sendMediaControl('toggle_fullscreen');
     });
   }
 
   const btnHeroPip = document.getElementById('btnHeroPip');
   if (btnHeroPip) {
     btnHeroPip.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastHeroPipClick < 350) return;
+      lastHeroPipClick = now;
+
       const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
 
@@ -2444,8 +2457,10 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {});
+      } else {
+        // Fallback only when scripting API or tabId is unavailable
+        sendMediaControl('toggle_pip');
       }
-      sendMediaControl('toggle_pip');
     });
   }
 
