@@ -176,6 +176,9 @@ const I18N_POPUP = {
     
     // Footer buttons
     btn_refresh: 'Refresh',
+    btn_tracking_pause: 'Tracking',
+    btn_tracking_pause_title: 'Pause Time Tracking',
+    btn_tracking_resume_title: 'Resume Time Tracking',
     btn_connect_hud: 'HUD',
     btn_connect_hud_title: 'Launch & Connect Video Detector HUD',
     btn_switch_tab: 'Switch Tab',
@@ -185,6 +188,8 @@ const I18N_POPUP = {
     
     // Toasts
     toast_refreshed: 'Telemetry refreshed',
+    toast_tracking_paused: 'Time tracking paused',
+    toast_tracking_resumed: 'Time tracking resumed',
     toast_hud_already: 'HUD is already connected',
     toast_hud_launching: 'Launching Video Detector HUD...',
     toast_hud_connected: 'HUD connected successfully',
@@ -288,6 +293,9 @@ const I18N_POPUP = {
     
     // Footer buttons
     btn_refresh: 'रीफ्रेश',
+    btn_tracking_pause: 'ट्रैकिंग',
+    btn_tracking_pause_title: 'टाइम ट्रैकिंग रोकें',
+    btn_tracking_resume_title: 'ट्रैकिंग फिर से शुरू करें',
     btn_connect_hud: 'HUD',
     btn_connect_hud_title: 'Video Detector HUD लॉन्च व कनेक्ट करें',
     btn_switch_tab: 'टैब स्विच',
@@ -297,6 +305,8 @@ const I18N_POPUP = {
     
     // Toasts
     toast_refreshed: 'डेटा रीफ्रेश हो गया',
+    toast_tracking_paused: 'टाइम ट्रैकिंग रोक दी गई है',
+    toast_tracking_resumed: 'टाइम ट्रैकिंग फिर से शुरू हो गई है',
     toast_hud_already: 'HUD पहले से कनेक्टेड है',
     toast_hud_launching: 'Video Detector HUD शुरू हो रहा है...',
     toast_hud_connected: 'HUD सफलतापूर्वक कनेक्ट हो गया',
@@ -377,6 +387,8 @@ function applyPopupLanguage(lang) {
   }
 
   setTxt('btnRefreshText', 'btn_refresh');
+  setTxt('btnToggleTrackingPauseText', 'btn_tracking_pause');
+  updateTrackingPauseButtonUI(isTrackingPaused);
   setTxt('btnReconnectWsText', 'btn_connect_hud');
   setTitle('btnReconnectWs', 'btn_connect_hud_title');
   setTxt('btnSwitchMediaTabText', 'btn_switch_tab');
@@ -420,6 +432,63 @@ let userManualOverride = false;
 let isInitialLoad = true;
 let lastMediaPlaying = false;
 let isDraggingVolume = false;
+let isTrackingPaused = false;
+
+/**
+ * Updates the Tracking Pause / Resume button UI in popup footer
+ * W3C Trusted Types compliant (zero innerHTML)
+ */
+function updateTrackingPauseButtonUI(isPaused) {
+  const btn = document.getElementById('btnToggleTrackingPause');
+  const svg = document.getElementById('svgTrackingPauseIcon');
+  if (!btn || !svg) return;
+
+  const isHi = (currentLang === 'hi');
+
+  if (isPaused) {
+    btn.classList.add('is-paused');
+    const resumeTitle = isHi ? t('btn_tracking_resume_title') : 'Resume Time Tracking';
+    btn.title = resumeTitle;
+    btn.setAttribute('aria-label', resumeTitle);
+
+    // Switch SVG to play polygon without innerHTML
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    polygon.setAttribute('points', '5 3 19 12 5 21 5 3');
+    polygon.setAttribute('fill', 'currentColor');
+    svg.appendChild(polygon);
+  } else {
+    btn.classList.remove('is-paused');
+    const pauseTitle = isHi ? t('btn_tracking_pause_title') : 'Pause Time Tracking';
+    btn.title = pauseTitle;
+    btn.setAttribute('aria-label', pauseTitle);
+
+    // Switch SVG to two vertical pause bars without innerHTML
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+    const rect1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect1.setAttribute('x', '6');
+    rect1.setAttribute('y', '4');
+    rect1.setAttribute('width', '4');
+    rect1.setAttribute('height', '16');
+    rect1.setAttribute('rx', '1');
+    rect1.setAttribute('fill', 'currentColor');
+
+    const rect2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect2.setAttribute('x', '14');
+    rect2.setAttribute('y', '4');
+    rect2.setAttribute('width', '4');
+    rect2.setAttribute('height', '16');
+    rect2.setAttribute('rx', '1');
+    rect2.setAttribute('fill', 'currentColor');
+
+    svg.appendChild(rect1);
+    svg.appendChild(rect2);
+  }
+}
 
 let currentTemporalTab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
@@ -1380,6 +1449,10 @@ async function refreshDashboard(forceRefresh = false) {
   }
 
   handleAutoTabSwitching(dashboardData);
+  if (typeof dashboardData.isTrackingPaused === 'boolean') {
+    isTrackingPaused = dashboardData.isTrackingPaused;
+    updateTrackingPauseButtonUI(isTrackingPaused);
+  }
   renderWebSocketBadge(dashboardData.wsConnected);
   renderMediaCard(dashboardData.globalMediaState);
   renderStatsPills(dashboardData);
@@ -1695,6 +1768,28 @@ function setupEventListeners() {
         const p = browserAPI.runtime.sendMessage({ type: 'TOGGLE_GLOBAL_MEDIA' }, (res) => {
           if (res && res.action) {
             showPopupToast(res.action === 'PAUSE_ALL' ? 'Paused all media' : 'Resumed media', 'info');
+          }
+          refreshDashboard(true);
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
+    });
+  }
+
+  // 5b. Time Tracking Pause / Resume Button
+  const btnToggleTrackingPause = document.getElementById('btnToggleTrackingPause');
+  if (btnToggleTrackingPause) {
+    btnToggleTrackingPause.addEventListener('click', () => {
+      try {
+        const p = browserAPI.runtime.sendMessage({ type: 'TOGGLE_TRACKING_PAUSE' }, (res) => {
+          if (res && typeof res.isTrackingPaused === 'boolean') {
+            isTrackingPaused = res.isTrackingPaused;
+            updateTrackingPauseButtonUI(isTrackingPaused);
+            if (isTrackingPaused) {
+              showPopupToast(t('toast_tracking_paused'), 'info');
+            } else {
+              showPopupToast(t('toast_tracking_resumed'), 'success');
+            }
           }
           refreshDashboard(true);
         });
@@ -2278,12 +2373,16 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
   // Load language preference, browser filter, tracking mode, and category from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
+  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category', 'sentinel_tracking_paused'], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
     } else if (res && res.media_sentinel_settings && res.media_sentinel_settings.language) {
       lang = res.media_sentinel_settings.language;
+    }
+    if (res && typeof res.sentinel_tracking_paused === 'boolean') {
+      isTrackingPaused = res.sentinel_tracking_paused;
+      updateTrackingPauseButtonUI(isTrackingPaused);
     }
     if (res && res.selected_browser_filter) {
       selectedBrowser = res.selected_browser_filter;
@@ -2318,12 +2417,19 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (message && (message.type === 'SLEEP_TIMER_EXPIRED' || message.action === 'SLEEP_TIMER_EXPIRED')) {
       renderSleepTimerUI({ state: 'TRIGGERED' });
       showPopupToast('Sleep timer expired - all media paused', 'info');
+    } else if (message && message.type === 'TRACKING_PAUSE_CHANGED') {
+      isTrackingPaused = Boolean(message.isTrackingPaused);
+      updateTrackingPauseButtonUI(isTrackingPaused);
     }
   });
 
   // Reactive Language and Browser Filter Synchronization across Dashboard & Popup
   browserAPI.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
+      if (changes.sentinel_tracking_paused) {
+        isTrackingPaused = Boolean(changes.sentinel_tracking_paused.newValue);
+        updateTrackingPauseButtonUI(isTrackingPaused);
+      }
       if (changes.language && changes.language.newValue) {
         applyPopupLanguage(changes.language.newValue);
       } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {

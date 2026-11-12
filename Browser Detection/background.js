@@ -209,6 +209,7 @@ if (typeof globalThis !== 'undefined') {
     dataHubFailureCount,
     dataHubReconnectIndex
   });
+  globalThis.getTrackingPauseState = () => isTrackingPaused;
 }
 
 // Configuration
@@ -320,6 +321,7 @@ let activeDomain = null;
 let intervalStartTime = Date.now();
 let isBrowserFocused = true;
 let isUserActive = true;
+let isTrackingPaused = false;
 
 // Media Map: tabId -> Media State Payload
 const tabMediaMap = new Map();
@@ -878,7 +880,8 @@ async function loadStorageData() {
       CONFIG.CLIENT_ID_STORAGE_KEY,
       'language',
       'sentinel_sleep_timer',
-      'sentinel_sleep_settings'
+      'sentinel_sleep_settings',
+      'sentinel_tracking_paused'
     ];
     const res = await browserAPI.storage.local.get(keys);
     if (res && res[CONFIG.CLIENT_ID_STORAGE_KEY]) {
@@ -963,6 +966,10 @@ async function loadStorageData() {
         const remainingMs = sleepTimerState.targetTime - now;
         updateActionBadge(remainingMs, sleepTimerState.durationMs);
       }
+    }
+
+    if (res && typeof res.sentinel_tracking_paused === 'boolean') {
+      isTrackingPaused = res.sentinel_tracking_paused;
     }
   } catch (e) {
     console.error('[MediaSentinel] Error loading storage:', e);
@@ -1600,6 +1607,11 @@ function updateMediaHistoryEntry(session, persist = false) {
  * Commits elapsed seconds for current active domain (Method A: Foreground Active Only)
  */
 function commitActiveInterval() {
+  if (isTrackingPaused) {
+    intervalStartTime = Date.now();
+    return;
+  }
+
   if (!activeDomain || !isBrowserFocused || !isUserActive) {
     intervalStartTime = Date.now();
     return;
@@ -2432,7 +2444,8 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           todayStr: getTodayDateString(),
           settings,
           sleepTimerState,
-          sleepTimerSettings
+          sleepTimerSettings,
+          isTrackingPaused
         });
       };
 
@@ -2998,6 +3011,32 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // Get current time tracking pause state
+  if (msgType === 'GET_TRACKING_PAUSE_STATE') {
+    (async () => {
+      await ensureStorageLoaded();
+      sendResponse({ success: true, isTrackingPaused });
+    })();
+    return true;
+  }
+
+  // Toggle time tracking pause/resume state
+  if (msgType === 'TOGGLE_TRACKING_PAUSE') {
+    (async () => {
+      await ensureStorageLoaded();
+      isTrackingPaused = !isTrackingPaused;
+      await browserAPI.storage.local.set({ sentinel_tracking_paused: isTrackingPaused });
+      if (!isTrackingPaused) {
+        intervalStartTime = Date.now();
+      } else {
+        commitActiveInterval();
+      }
+      safeSendRuntimeMessage({ type: 'TRACKING_PAUSE_CHANGED', isTrackingPaused });
+      sendResponse({ success: true, isTrackingPaused });
+    })();
+    return true;
+  }
 });
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -3053,8 +3092,8 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
   // Setup periodic 5-second streaming ticker for active domain delta commits and background media playback
   if (deltaCommitTicker) clearInterval(deltaCommitTicker);
   deltaCommitTicker = setInterval(async () => {
-    // 1. Commit active foreground domain interval
-    if (isBrowserFocused && isUserActive && activeDomain) {
+    // 1. Commit active foreground domain interval (only when tracking is active)
+    if (!isTrackingPaused && isBrowserFocused && isUserActive && activeDomain) {
       commitActiveInterval();
     }
 
@@ -3078,14 +3117,19 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
       if (session && session.isPlaying) {
         const isForeground = (tabId === activeTabId && isBrowserFocused);
         if (!isForeground) {
-          const elapsedMs = now - session.lastHeartbeat;
-          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
-          if (elapsedSec > 0) {
-            session.watchDuration += elapsedSec;
-            session.lastHeartbeat += (elapsedSec * 1000);
-            session.lastUpdated = now;
-            commitBackgroundMediaDelta(session.domain, elapsedSec);
-            updateMediaHistoryEntry(session, false);
+          if (isTrackingPaused) {
+            // When time tracking is paused, freeze background media delta accumulation
+            session.lastHeartbeat = now;
+          } else {
+            const elapsedMs = now - session.lastHeartbeat;
+            const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+            if (elapsedSec > 0) {
+              session.watchDuration += elapsedSec;
+              session.lastHeartbeat += (elapsedSec * 1000);
+              session.lastUpdated = now;
+              commitBackgroundMediaDelta(session.domain, elapsedSec);
+              updateMediaHistoryEntry(session, false);
+            }
           }
         } else {
           // Tab is in foreground; keep lastHeartbeat synced with now

@@ -1406,6 +1406,33 @@ button.spinning .refresh-spinner-icon,
   text-overflow: ellipsis;
 }
 
+/* Utility Button Accent: Time Tracking Pause / Resume (Amber) */
+.footer-btn.btn-tracking-pause {
+  height: 32px;
+  flex: 0 0 34px;
+  min-width: 34px;
+  padding: 0;
+}
+
+.footer-btn.btn-tracking-pause.is-paused {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.footer-btn.btn-tracking-pause.is-paused:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.75);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.footer-btn.btn-tracking-pause:active {
+  transform: translateY(0) scale(0.97);
+}
+
 /* Utility Button Accent: HUD Bridge (Amber) */
 .footer-btn.btn-hud-action {
   background: rgba(245, 158, 11, 0.09);

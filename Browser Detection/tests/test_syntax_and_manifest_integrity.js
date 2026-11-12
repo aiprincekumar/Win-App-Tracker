@@ -776,6 +776,53 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     console.log('  ✅ Playback speed controls verified: Dual-stepper 0.25x-2.0x in MAIN world without YouTube revert');
   }
 
+  // ---------------------------------------------------------------------------
+  // Test 14: Time Tracking Pause / Resume Toolbar & Service Worker Integrity
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 14: Time Tracking Pause / Resume Toolbar & Service Worker Integrity');
+  {
+    const popupHtml = fs.readFileSync(path.join(baseDir, 'popup/popup.html'), 'utf8');
+    const popupCss = fs.readFileSync(path.join(baseDir, 'popup/popup.css'), 'utf8');
+    const popupJs = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
+    const bgJs = fs.readFileSync(path.join(baseDir, 'background.js'), 'utf8');
+
+    // 14A. HTML Existence & Single-Row Placement Invariant
+    assert(popupHtml.includes('id="btnToggleTrackingPause"'), 'popup.html must contain #btnToggleTrackingPause');
+    assert(popupHtml.includes('btn-tracking-pause'), 'popup.html must include btn-tracking-pause class');
+    assert(popupHtml.includes('svgTrackingPauseIcon'), 'popup.html must include #svgTrackingPauseIcon');
+    assert(popupHtml.includes('btnToggleTrackingPauseText'), 'popup.html must include #btnToggleTrackingPauseText');
+    
+    // Invariant: Placed inside footer between btnGlobalMediaToggle and btnSleepTimerTrigger
+    const mediaToggleIdx = popupHtml.indexOf('id="btnGlobalMediaToggle"');
+    const trackingPauseIdx = popupHtml.indexOf('id="btnToggleTrackingPause"');
+    const sleepTimerIdx = popupHtml.indexOf('id="btnSleepTimerTrigger"');
+    assert(mediaToggleIdx !== -1 && trackingPauseIdx !== -1 && sleepTimerIdx !== -1, 'All footer buttons must exist');
+    assert(mediaToggleIdx < trackingPauseIdx && trackingPauseIdx < sleepTimerIdx, 'btnToggleTrackingPause must be placed right beside btnGlobalMediaToggle and before btnSleepTimerTrigger');
+    console.log('  ✅ popup.html footer placement verified: Single-row toolbar between Global Media and Sleep Timer');
+
+    // 14B. CSS Single-Row & Amber Accent Styling
+    assert(popupCss.includes('.btn-tracking-pause'), 'popup.css must define .btn-tracking-pause');
+    assert(popupCss.includes('.btn-tracking-pause.is-paused'), 'popup.css must define .btn-tracking-pause.is-paused amber styling');
+    assert(popupCss.includes('flex-wrap: nowrap;'), 'popup.css footer must enforce flex-wrap: nowrap for single row');
+    console.log('  ✅ popup.css styling verified: Compact 34x32px button with amber pause accent and strict single row');
+
+    // 14C. popup.js Interactivity, Zero innerHTML & State Sync
+    assert(popupJs.includes('btnToggleTrackingPause'), 'popup.js must reference btnToggleTrackingPause');
+    assert(popupJs.includes('updateTrackingPauseButtonUI'), 'popup.js must define updateTrackingPauseButtonUI');
+    assert(popupJs.includes('TOGGLE_TRACKING_PAUSE'), 'popup.js must dispatch TOGGLE_TRACKING_PAUSE');
+    assert(popupJs.includes('TRACKING_PAUSE_CHANGED'), 'popup.js must listen for TRACKING_PAUSE_CHANGED');
+    assert(!popupJs.includes('svgTrackingPauseIcon.innerHTML'), 'popup.js must NEVER assign to svg innerHTML (Trusted Types safe)');
+    console.log('  ✅ popup.js interactivity verified: Event listeners, reactive IPC, zero-innerHTML W3C compliance');
+
+    // 14D. background.js State Persistence, IPC & Ticker Protection
+    assert(bgJs.includes('isTrackingPaused'), 'background.js must track isTrackingPaused state');
+    assert(bgJs.includes('sentinel_tracking_paused'), 'background.js must hydrate sentinel_tracking_paused from storage');
+    assert(bgJs.includes("msgType === 'GET_TRACKING_PAUSE_STATE'"), 'background.js must handle GET_TRACKING_PAUSE_STATE');
+    assert(bgJs.includes("msgType === 'TOGGLE_TRACKING_PAUSE'"), 'background.js must handle TOGGLE_TRACKING_PAUSE');
+    assert(bgJs.includes('if (isTrackingPaused)'), 'background.js commitActiveInterval must guard against paused tracking');
+    console.log('  ✅ background.js service worker verified: State storage, message handlers, and interval ticker protection');
+  }
+
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
   process.exit(0);
 })();

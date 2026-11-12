@@ -272,7 +272,16 @@
         <span id="lblGlobalMediaText" class="btn-label">Media</span>
       </button>
 
-      <!-- 3. Sleep Timer Launcher Button -->
+      <!-- 3. Time Tracking Pause / Resume Button -->
+      <button id="btnToggleTrackingPause" class="footer-btn toolbar-btn btn-tracking-pause" title="Pause Time Tracking" aria-label="Pause Time Tracking">
+        <svg id="svgTrackingPauseIcon" class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect id="rectPauseLeft" x="6" y="4" width="4" height="16" rx="1"/>
+          <rect id="rectPauseRight" x="14" y="4" width="4" height="16" rx="1"/>
+        </svg>
+        <span id="btnToggleTrackingPauseText" class="btn-label">Tracking</span>
+      </button>
+
+      <!-- 4. Sleep Timer Launcher Button -->
       <button id="btnSleepTimerTrigger" class="footer-btn toolbar-btn" title="Sleep Timer Options" aria-label="Sleep Timer Options" aria-haspopup="dialog" aria-expanded="false">
         <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
