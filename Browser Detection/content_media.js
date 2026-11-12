@@ -713,10 +713,50 @@
   }
 
   /**
+   * Scans and ensures all <iframe> elements have proper fullscreen permissions and attributes.
+   * Resolves the "Full screen is unavailable. Learn More" embedded player error.
+   */
+  function ensureIframeFullscreenSupport(root = document) {
+    try {
+      let iframes = [];
+      if (root.querySelectorAll) {
+        iframes = Array.from(root.querySelectorAll('iframe'));
+      }
+      if (root.tagName === 'IFRAME') {
+        iframes.push(root);
+      }
+
+      for (const iframe of iframes) {
+        try {
+          // Set allowfullscreen attributes across standard and legacy vendor prefixes
+          if (!iframe.hasAttribute('allowfullscreen')) {
+            iframe.setAttribute('allowfullscreen', 'true');
+          }
+          if (!iframe.hasAttribute('webkitallowfullscreen')) {
+            iframe.setAttribute('webkitallowfullscreen', 'true');
+          }
+          if (!iframe.hasAttribute('mozallowfullscreen')) {
+            iframe.setAttribute('mozallowfullscreen', 'true');
+          }
+
+          // Ensure Permissions-Policy / allow attribute includes 'fullscreen'
+          const existingAllow = iframe.getAttribute('allow') || '';
+          if (!existingAllow) {
+            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+          } else if (!/\bfullscreen\b/i.test(existingAllow)) {
+            iframe.setAttribute('allow', `${existingAllow.trim().replace(/;$/, '')}; fullscreen`);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  /**
    * Scans document for media elements and attaches event listeners
    */
   function scanAndMonitorMedia() {
     ensureMainWorldInjected();
+    ensureIframeFullscreenSupport(document);
     const elements = findAllMediaNodes(document);
     elements.forEach(attachMediaListeners);
 
@@ -734,19 +774,28 @@
     observer = new MutationObserver(mutations => {
       let foundNew = false;
       for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
-              attachMediaListeners(node);
-              foundNew = true;
-            } else if (node.querySelectorAll) {
-              const nested = node.querySelectorAll('video, audio');
-              if (nested.length > 0) {
-                nested.forEach(attachMediaListeners);
+        if (mutation.type === 'childList') {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
+                attachMediaListeners(node);
                 foundNew = true;
+              } else if (node.querySelectorAll) {
+                const nested = node.querySelectorAll('video, audio');
+                if (nested.length > 0) {
+                  nested.forEach(attachMediaListeners);
+                  foundNew = true;
+                }
+              }
+
+              // Check and inject fullscreen attributes into dynamically added iframes
+              if (node.tagName === 'IFRAME' || (node.querySelectorAll && node.querySelector('iframe'))) {
+                ensureIframeFullscreenSupport(node);
               }
             }
           }
+        } else if (mutation.type === 'attributes' && mutation.target && mutation.target.tagName === 'IFRAME') {
+          ensureIframeFullscreenSupport(mutation.target);
         }
       }
       if (foundNew) {
@@ -757,7 +806,9 @@
     if (document.documentElement) {
       observer.observe(document.documentElement, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['src', 'allow', 'allowfullscreen']
       });
     }
 
@@ -983,11 +1034,35 @@
                 const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
                 (player || document).dispatchEvent(ev);
               } catch (_) {}
-              const el = player || primaryMediaElement.parentElement || primaryMediaElement;
+              const el = player || (primaryMediaElement && (primaryMediaElement.parentElement || primaryMediaElement));
               if (el && el.requestFullscreen) {
                 el.requestFullscreen().catch(() => {
-                  if (primaryMediaElement.requestFullscreen) primaryMediaElement.requestFullscreen().catch(() => {});
+                  if (primaryMediaElement && primaryMediaElement.requestFullscreen) {
+                    primaryMediaElement.requestFullscreen().catch(() => {
+                      if (!isTopFrame) {
+                        try {
+                          window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                        } catch (_) {}
+                      }
+                    });
+                  } else if (!isTopFrame) {
+                    try {
+                      window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                    } catch (_) {}
+                  }
                 });
+              } else if (primaryMediaElement && primaryMediaElement.requestFullscreen) {
+                primaryMediaElement.requestFullscreen().catch(() => {
+                  if (!isTopFrame) {
+                    try {
+                      window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                    } catch (_) {}
+                  }
+                });
+              } else if (!isTopFrame) {
+                try {
+                  window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
+                } catch (_) {}
               }
             }
             break;
@@ -1079,6 +1154,37 @@
   // Listen for real-time state broadcasts from Main World script
   window.addEventListener('__MEDIA_SENTINEL_PAGE_STATE__', () => {
     dispatchMediaTelemetry(false);
+  }, { passive: true });
+
+  // Top-frame cross-frame message listener for iframe fullscreen delegation
+  window.addEventListener('message', (event) => {
+    if (!isTopFrame || !event.data || event.data.type !== '__SENTINEL_IFRAME_FULLSCREEN__') return;
+
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      return;
+    }
+
+    // Locate source iframe that requested fullscreen
+    const iframes = Array.from(document.querySelectorAll('iframe'));
+    let targetIframe = iframes.find(iframe => {
+      try { return iframe.contentWindow === event.source; } catch (_) { return false; }
+    });
+
+    if (!targetIframe && iframes.length > 0) {
+      targetIframe = iframes.find(iframe => {
+        const src = (iframe.src || iframe.getAttribute('src') || '').toLowerCase();
+        return src.includes('youtube') || src.includes('embed') || src.includes('vimeo') || src.includes('video');
+      }) || iframes[0];
+    }
+
+    if (targetIframe) {
+      if (typeof targetIframe.requestFullscreen === 'function') {
+        targetIframe.requestFullscreen().catch(() => {});
+      } else if (typeof targetIframe.webkitRequestFullscreen === 'function') {
+        targetIframe.webkitRequestFullscreen();
+      }
+    }
   }, { passive: true });
 
   let fadeIntervalId = null;
