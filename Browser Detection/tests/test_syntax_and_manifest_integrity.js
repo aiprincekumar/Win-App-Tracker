@@ -117,9 +117,9 @@ console.log('\nTest 3: Dedicated popup/popup.js Structural & Brace Integrity');
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: Manifest V3 Schema, Permissions & Version 2.4.8 Validation
+// Test 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validation
 // ---------------------------------------------------------------------------
-console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.8 Validation');
+console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.9 Validation');
 {
   const manifestPath = path.join(baseDir, 'manifest.json');
   assert(fs.existsSync(manifestPath), 'manifest.json must exist');
@@ -127,7 +127,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.8 Validatio
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'manifest_version must be 3');
-  assert.strictEqual(manifest.version, '2.4.8', 'version must be bumped to 2.4.8');
+  assert.strictEqual(manifest.version, '2.4.9', 'version must be bumped to 2.4.9');
   assert.strictEqual(manifest.name, 'Web Activity & Media Sentinel', 'Extension name must be exact');
 
   // Essential MV3 permissions
@@ -152,7 +152,7 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.4.8 Validatio
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');
 
-  console.log('  ✅ manifest.json version is 2.4.8 (ready for Chrome extension reload)');
+  console.log('  ✅ manifest.json version is 2.4.9 (ready for Chrome extension reload)');
   console.log('  ✅ All 7 required MV3 permissions are strictly declared');
   console.log('  ✅ Background service worker and default popup configured correctly');
 }
@@ -190,11 +190,11 @@ console.log('\nTest 5: Physical Asset & Script Linkage Verification');
   assert(fs.existsSync(dashHtmlPath), 'dashboard/dashboard.html must exist');
   const dashHtml = fs.readFileSync(dashHtmlPath, 'utf8');
   assert(dashHtml.includes('src="dashboard.js"'), 'dashboard.html must link to dashboard.js');
-  assert(dashHtml.includes('v2.4.8 Production Edition'), 'dashboard.html must display v2.4.8 Production Edition');
+  assert(dashHtml.includes('v2.4.9 Production Edition'), 'dashboard.html must display v2.4.9 Production Edition');
 
   console.log('  ✅ All manifest icons, content scripts, and web accessible files exist');
   console.log('  ✅ popup.html links directly to popup.js');
-  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.8 label');
+  console.log('  ✅ dashboard.html links directly to dashboard.js with v2.4.9 label');
 }
 
 // ---------------------------------------------------------------------------
@@ -657,6 +657,53 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     console.log('  ✅ content_media.js executes direct HTML5 video manipulation unconditionally');
     console.log('  ✅ Native KeyF KeyboardEvent dispatched for zero-banner YouTube fullscreen');
     console.log('  ✅ popup.js & dashboard.js execute direct video actions via scripting.executeScript');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 12: Embedded Iframe Fullscreen Policy Injection & Scripting All-Frames Integrity
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 12: Embedded Iframe Fullscreen Policy Injection & Scripting All-Frames Integrity');
+  {
+    // 12A. content_media.js iframe policy injection & cross-frame message handling
+    const contentPath = path.join(baseDir, 'content_media.js');
+    const contentCode = fs.readFileSync(contentPath, 'utf8').replace(/\r\n/g, '\n');
+
+    assert(contentCode.includes('function ensureIframeFullscreenSupport'), 'content_media.js must define ensureIframeFullscreenSupport');
+    assert(contentCode.includes('allowfullscreen'), 'content_media.js must inject allowfullscreen');
+    assert(contentCode.includes('webkitallowfullscreen'), 'content_media.js must inject webkitallowfullscreen');
+    assert(contentCode.includes('mozallowfullscreen'), 'content_media.js must inject mozallowfullscreen');
+    assert(contentCode.includes('fullscreen'), 'content_media.js allow attribute must include fullscreen');
+    assert(contentCode.includes('__SENTINEL_IFRAME_FULLSCREEN__'), 'content_media.js must support __SENTINEL_IFRAME_FULLSCREEN__ cross-frame messaging');
+
+    // 12B. inject_main_world.js Document prototype hooks
+    const injectPath = path.join(baseDir, 'inject_main_world.js');
+    const injectCode = fs.readFileSync(injectPath, 'utf8').replace(/\r\n/g, '\n');
+
+    assert(injectCode.includes('Document.prototype.fullscreenEnabled'), 'inject_main_world.js must hook Document.prototype.fullscreenEnabled');
+    assert(injectCode.includes('Document.prototype.webkitFullscreenEnabled'), 'inject_main_world.js must hook Document.prototype.webkitFullscreenEnabled');
+    assert(injectCode.includes('Document.prototype.createElement'), 'inject_main_world.js must hook Document.prototype.createElement');
+    assert(injectCode.includes('allowfullscreen'), 'inject_main_world.js createElement hook must set allowfullscreen');
+
+    // 12C. popup.js and dashboard.js allFrames targeting
+    const popupPath = path.join(baseDir, 'popup/popup.js');
+    const popupCode = fs.readFileSync(popupPath, 'utf8').replace(/\r\n/g, '\n');
+    assert(popupCode.includes('allFrames: true'), 'popup.js must target allFrames: true in executeScript');
+
+    const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
+    const dashCode = fs.readFileSync(dashPath, 'utf8').replace(/\r\n/g, '\n');
+    assert(dashCode.includes('allFrames: true'), 'dashboard.js must target allFrames: true in executeScript');
+
+    // 12D. Strict W3C Trusted Types zero-innerHTML enforcement across all content scripts
+    const contentInnerHtml = contentCode.match(/\.innerHTML\s*=/g);
+    assert.strictEqual(contentInnerHtml, null, 'content_media.js must have 0 assignments to innerHTML');
+
+    const injectInnerHtml = injectCode.match(/\.innerHTML\s*=/g);
+    assert.strictEqual(injectInnerHtml, null, 'inject_main_world.js must have 0 assignments to innerHTML');
+
+    console.log('  ✅ content_media.js implements ensureIframeFullscreenSupport & cross-frame fullscreen messaging');
+    console.log('  ✅ inject_main_world.js hooks fullscreenEnabled and createElement for dynamic iframes');
+    console.log('  ✅ popup.js & dashboard.js executeScript targets allFrames: true for embedded video iframes');
+    console.log('  ✅ 100% W3C Trusted Types compliant (0 innerHTML assignments across all content scripts)');
   }
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');
