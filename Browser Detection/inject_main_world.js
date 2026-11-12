@@ -431,6 +431,29 @@
       const style = document.createElement('style');
       style.id = '__media_sentinel_web_fs_styles_main__';
       style.textContent = `
+        html.sentinel-has-web-fullscreen,
+        body.sentinel-has-web-fullscreen {
+          overflow: hidden !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+        .sentinel-has-web-fullscreen ytd-app,
+        .sentinel-has-web-fullscreen #content,
+        .sentinel-has-web-fullscreen #page-manager,
+        .sentinel-has-web-fullscreen ytd-watch-flexy,
+        .sentinel-has-web-fullscreen ytd-watch-grid,
+        .sentinel-has-web-fullscreen #columns,
+        .sentinel-has-web-fullscreen #primary,
+        .sentinel-has-web-fullscreen #primary-inner,
+        .sentinel-has-web-fullscreen #player,
+        .sentinel-has-web-fullscreen #player-container-outer,
+        .sentinel-has-web-fullscreen #player-container-inner,
+        .sentinel-has-web-fullscreen #player-container {
+          contain: none !important;
+          transform: none !important;
+          filter: none !important;
+          perspective: none !important;
+        }
         .sentinel-web-fullscreen {
           position: fixed !important;
           top: 0 !important;
@@ -439,6 +462,8 @@
           bottom: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
+          min-width: 100vw !important;
+          min-height: 100vh !important;
           max-width: 100vw !important;
           max-height: 100vh !important;
           z-index: 2147483647 !important;
@@ -446,15 +471,23 @@
           margin: 0 !important;
           padding: 0 !important;
         }
+        .sentinel-web-fullscreen .html5-video-container {
+          width: 100% !important;
+          height: 100% !important;
+        }
         .sentinel-web-fullscreen video {
           width: 100% !important;
           height: 100% !important;
           max-width: 100% !important;
           max-height: 100% !important;
+          left: 0 !important;
+          top: 0 !important;
           object-fit: contain !important;
         }
-        body.sentinel-has-web-fullscreen {
-          overflow: hidden !important;
+        .sentinel-web-fullscreen .ytp-chrome-bottom {
+          width: 100% !important;
+          left: 0 !important;
+          bottom: 0 !important;
         }
       `;
       (document.head || document.documentElement || document.body).appendChild(style);
@@ -467,17 +500,34 @@
   function toggleWebFullscreen(targetEl) {
     try {
       ensureWebFullscreenStyles();
-      const el = targetEl || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
+      const el = targetEl || document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
       if (!el) return false;
-      const isWebFs = el.classList.contains('sentinel-web-fullscreen');
+      const isWebFs = el.classList.contains('sentinel-web-fullscreen') || Boolean(document.querySelector('.sentinel-web-fullscreen'));
       if (isWebFs) {
-        el.classList.remove('sentinel-web-fullscreen');
+        const fsElements = document.querySelectorAll('.sentinel-web-fullscreen');
+        fsElements.forEach(item => item.classList.remove('sentinel-web-fullscreen'));
         if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
+        if (document.documentElement) document.documentElement.classList.remove('sentinel-has-web-fullscreen');
+        const moviePlayer = document.getElementById('movie_player');
+        if (moviePlayer) moviePlayer.classList.remove('ytp-fullscreen');
+        const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+        if (flexy && !document.fullscreenElement) {
+          try { flexy.removeAttribute('fullscreen'); } catch (_) {}
+        }
+        window.dispatchEvent(new Event('resize'));
         showOSD('Exit Fullscreen', '⛶');
         return false;
       } else {
         el.classList.add('sentinel-web-fullscreen');
         if (document.body) document.body.classList.add('sentinel-has-web-fullscreen');
+        if (document.documentElement) document.documentElement.classList.add('sentinel-has-web-fullscreen');
+        const moviePlayer = document.getElementById('movie_player');
+        if (moviePlayer) moviePlayer.classList.add('ytp-fullscreen');
+        const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+        if (flexy) {
+          try { flexy.setAttribute('fullscreen', ''); } catch (_) {}
+        }
+        window.dispatchEvent(new Event('resize'));
         showOSD('Web Fullscreen', '⛶');
         return true;
       }
@@ -490,9 +540,7 @@
     if (e.key === 'Escape' || e.code === 'Escape') {
       const fsEl = document.querySelector('.sentinel-web-fullscreen');
       if (fsEl) {
-        fsEl.classList.remove('sentinel-web-fullscreen');
-        if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
-        showOSD('Exit Fullscreen', '⛶');
+        toggleWebFullscreen(fsEl);
       }
     }
   }, { passive: true });
@@ -705,45 +753,43 @@
           if (document.fullscreenElement && document.exitFullscreen) {
             document.exitFullscreen().catch(() => {});
           }
-          const webFsEl = document.querySelector('.sentinel-web-fullscreen');
-          if (webFsEl) {
-            webFsEl.classList.remove('sentinel-web-fullscreen');
-            if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
-            showOSD('Exit Fullscreen', '⛶');
+          if (hasWebFs) {
+            toggleWebFullscreen();
           }
         } else {
-          let handled = false;
+          const target = moviePlayer || (video && (video.parentElement || video)) || document.querySelector('.html5-video-player') || video;
           const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
           if (ytFsBtn) {
-            try {
-              ytFsBtn.click();
-              handled = true;
-            } catch (_) {}
+            try { ytFsBtn.click(); } catch (_) {}
           }
-          if (!handled && moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
-            try {
-              moviePlayer.toggleFullscreen();
-              handled = true;
-            } catch (_) {}
+          if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
+            try { moviePlayer.toggleFullscreen(); } catch (_) {}
           }
-          if (!handled) {
+          try {
+            const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+            (moviePlayer || document.activeElement || document).dispatchEvent(ev);
+          } catch (_) {}
+
+          if (target && target.requestFullscreen) {
             try {
-              const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-              const target = moviePlayer || document.activeElement || document;
-              target.dispatchEvent(ev);
-              handled = true;
-            } catch (_) {}
-          }
-          if (!handled) {
-            const el = moviePlayer || (video && video.parentElement) || video;
-            if (el && el.requestFullscreen) {
-              el.requestFullscreen().catch(() => {
-                toggleWebFullscreen(el);
-              });
-            } else if (el) {
-              toggleWebFullscreen(el);
+              const p = target.requestFullscreen();
+              if (p && typeof p.then === 'function') {
+                p.catch(() => {
+                  toggleWebFullscreen(target);
+                });
+              }
+            } catch (_) {
+              toggleWebFullscreen(target);
             }
+          } else if (target) {
+            toggleWebFullscreen(target);
           }
+
+          setTimeout(() => {
+            if (!document.fullscreenElement && !document.querySelector('.sentinel-web-fullscreen')) {
+              toggleWebFullscreen(target);
+            }
+          }, 60);
         }
         break;
       }

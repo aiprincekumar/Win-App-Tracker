@@ -604,6 +604,10 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_fullscreen\');'), 'dashboard.js must not double-trigger toggle_fullscreen');
     assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_pip\');'), 'dashboard.js must not double-trigger toggle_pip');
 
+    // Verify unconditional duplicate sendMediaControl outside else block was completely eliminated
+    assert(!popupCode.includes("}\n      sendMediaControl('toggle_fullscreen'"), 'popup.js must not double-dispatch toggle_fullscreen outside else');
+    assert(!dashCode.includes("}\n      sendMediaControl('toggle_fullscreen'"), 'dashboard.js must not double-dispatch toggle_fullscreen outside else');
+
     const injectPath = path.join(baseDir, 'inject_main_world.js');
     const injectCode = fs.readFileSync(injectPath, 'utf8').replace(/\r\n/g, '\n');
 
@@ -741,6 +745,10 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     // 13B. Fullscreen Control Verification (Web Fullscreen CSS + Native Video Fullscreen)
     assert(contentCode.includes('sentinel-web-fullscreen'), 'content_media.js must define sentinel-web-fullscreen CSS fallback');
     assert(injectCode.includes('sentinel-web-fullscreen'), 'inject_main_world.js must define sentinel-web-fullscreen CSS fallback');
+    assert(injectCode.includes('contain: none !important'), 'inject_main_world.js must break containing blocks on YouTube parent containers');
+    assert(contentCode.includes('contain: none !important'), 'content_media.js must break containing blocks on YouTube parent containers');
+    assert(injectCode.includes('ytp-fullscreen'), 'inject_main_world.js must add ytp-fullscreen class on movie_player');
+    assert(injectCode.includes("new Event('resize')"), 'inject_main_world.js must dispatch resize event on window');
     assert(!bgCode.includes("nextState"), 'background.js must NOT implement window-level F11 fullscreen toggle');
     assert(contentCode.includes('.ytp-fullscreen-button'), 'content_media.js must check .ytp-fullscreen-button');
     assert(popupCode.includes('.ytp-fullscreen-button'), 'popup.js must target .ytp-fullscreen-button');
