@@ -4,7 +4,8 @@
  * Verifies:
  * 1. Syntax & Compilation check on all JS files via `node -c` and `vm.Script`
  * 2. Specific integrity of popup/popup.js (no unexpected token '}', clean transition after processDomainStats)
- * 3. manifest.json V3 integrity, version bump to 2.4.1, and all critical permissions
+ * 3. manifest.json V3 integrity, version bump to 2.4.9, and all critical permissions
+ * 6. Embedded iframe fullscreen policy injection and scripting all-frames execution
  * 4. Physical existence of all assets, icons, scripts, and HTML pages declared in manifest
  * 5. HTML script binding and version label consistency
  * 
@@ -679,8 +680,14 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     const injectPath = path.join(baseDir, 'inject_main_world.js');
     const injectCode = fs.readFileSync(injectPath, 'utf8').replace(/\r\n/g, '\n');
 
-    assert(injectCode.includes('Document.prototype.fullscreenEnabled'), 'inject_main_world.js must hook Document.prototype.fullscreenEnabled');
-    assert(injectCode.includes('Document.prototype.webkitFullscreenEnabled'), 'inject_main_world.js must hook Document.prototype.webkitFullscreenEnabled');
+    assert(
+      injectCode.includes('Document.prototype.fullscreenEnabled') || injectCode.includes("Document.prototype, 'fullscreenEnabled'"),
+      'inject_main_world.js must hook Document.prototype.fullscreenEnabled'
+    );
+    assert(
+      injectCode.includes('Document.prototype.webkitFullscreenEnabled') || injectCode.includes("Document.prototype, 'webkitFullscreenEnabled'"),
+      'inject_main_world.js must hook Document.prototype.webkitFullscreenEnabled'
+    );
     assert(injectCode.includes('Document.prototype.createElement'), 'inject_main_world.js must hook Document.prototype.createElement');
     assert(injectCode.includes('allowfullscreen'), 'inject_main_world.js createElement hook must set allowfullscreen');
 

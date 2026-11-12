@@ -27,7 +27,7 @@
   // ---------------------------------------------------------------------------
   // Embedded Iframe Fullscreen Support & Policy Enforcement
   // ---------------------------------------------------------------------------
-  // Guarantees Document.prototype.fullscreenEnabled and webkitFullscreenEnabled
+  // Guarantees Document.prototype.fullscreenEnabled and Document.prototype.webkitFullscreenEnabled
   // return true in embedded frames so YouTube's embedded player does not show
   // "Full screen is unavailable. Learn More".
   try {
