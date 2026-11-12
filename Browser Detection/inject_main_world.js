@@ -713,7 +713,14 @@
           }
         } else {
           let handled = false;
-          if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
+          const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+          if (ytFsBtn) {
+            try {
+              ytFsBtn.click();
+              handled = true;
+            } catch (_) {}
+          }
+          if (!handled && moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
             try {
               moviePlayer.toggleFullscreen();
               handled = true;
@@ -722,18 +729,20 @@
           if (!handled) {
             try {
               const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-              const target = moviePlayer || document;
+              const target = moviePlayer || document.activeElement || document;
               target.dispatchEvent(ev);
               handled = true;
             } catch (_) {}
           }
-          const el = (video && video.parentElement) || video || moviePlayer || document.documentElement;
-          if (el && el.requestFullscreen) {
-            el.requestFullscreen().catch(() => {
+          if (!handled) {
+            const el = moviePlayer || (video && video.parentElement) || video;
+            if (el && el.requestFullscreen) {
+              el.requestFullscreen().catch(() => {
+                toggleWebFullscreen(el);
+              });
+            } else if (el) {
               toggleWebFullscreen(el);
-            });
-          } else {
-            toggleWebFullscreen(el);
+            }
           }
         }
         break;

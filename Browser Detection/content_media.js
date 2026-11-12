@@ -1177,10 +1177,14 @@
                 if (document.body) document.body.classList.remove('sentinel-has-web-fullscreen');
               }
             } else {
+              const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+              if (ytFsBtn) {
+                try { ytFsBtn.click(); } catch (_) {}
+              }
               const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
               try {
                 const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                (player || document).dispatchEvent(ev);
+                (player || document.activeElement || document).dispatchEvent(ev);
               } catch (_) {}
               const el = player || (primaryMediaElement && (primaryMediaElement.parentElement || primaryMediaElement));
               if (el && el.requestFullscreen) {

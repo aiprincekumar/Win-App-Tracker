@@ -615,13 +615,13 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     // Verify buggy in-page miniplayer button fallback was removed
     assert(!injectCode.includes('.ytp-miniplayer-button'), 'inject_main_world.js must NOT click .ytp-miniplayer-button (preventing creator mode bug)');
 
-    // Verify synthetic click on .ytp-fullscreen-button was removed (preventing Edge "Fullscreen is unavailable" banner)
-    assert(!injectCode.includes('.ytp-fullscreen-button'), 'inject_main_world.js must NOT click .ytp-fullscreen-button (preventing Edge unavailable banner)');
+    // Verify native UI fullscreen button target exists in inject_main_world.js
+    assert(injectCode.includes('.ytp-fullscreen-button'), 'inject_main_world.js must target .ytp-fullscreen-button for native player fullscreen');
 
     console.log('  ✅ popup.js & dashboard.js execute scripting.executeScript without double-trigger race condition');
     console.log('  ✅ Click debounce gates prevent rapid toggle bounce (eliminating Edge 10ms enable/disable)');
     console.log('  ✅ inject_main_world.js binds native fullscreenchange & pictureinpicture listeners for deterministic OSD');
-    console.log('  ✅ Synthetic .ytp-fullscreen-button click removed (eliminating Edge "Fullscreen is unavailable" bug)');
+    console.log('  ✅ Native YouTube .ytp-fullscreen-button targeted for video-only fullscreen');
     console.log('  ✅ Buggy .ytp-miniplayer-button fallback completely eliminated (zero unwanted creator mode)');
   }
 
@@ -738,13 +738,16 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(injectCode.includes("data-sentinel-action"), 'inject_main_world.js must read data-sentinel-action fallback');
     console.log('  ✅ Tri-Channel Isolated-to-Main-World Bridge verified across content and inject scripts');
 
-    // 13B. Fullscreen Control Verification (Web Fullscreen CSS + Browser Window Toggle)
+    // 13B. Fullscreen Control Verification (Web Fullscreen CSS + Native Video Fullscreen)
     assert(contentCode.includes('sentinel-web-fullscreen'), 'content_media.js must define sentinel-web-fullscreen CSS fallback');
     assert(injectCode.includes('sentinel-web-fullscreen'), 'inject_main_world.js must define sentinel-web-fullscreen CSS fallback');
-    assert(bgCode.includes("chrome.windows.update"), 'background.js must implement window fullscreen toggle fallback');
+    assert(!bgCode.includes("nextState"), 'background.js must NOT implement window-level F11 fullscreen toggle');
+    assert(contentCode.includes('.ytp-fullscreen-button'), 'content_media.js must check .ytp-fullscreen-button');
+    assert(popupCode.includes('.ytp-fullscreen-button'), 'popup.js must target .ytp-fullscreen-button');
+    assert(dashCode.includes('.ytp-fullscreen-button'), 'dashboard.js must target .ytp-fullscreen-button');
     assert(popupCode.includes("world: 'MAIN'"), 'popup.js must target world: MAIN for fullscreen execution');
     assert(dashCode.includes("world: 'MAIN'"), 'dashboard.js must target world: MAIN for fullscreen execution');
-    console.log('  ✅ Fullscreen control verified: Web Fullscreen CSS fallback + Authoritative window toggle');
+    console.log('  ✅ Fullscreen control verified: Native YouTube UI button + KeyF + Web Fullscreen CSS fallback (zero window F11)');
 
     // 13C. Theater Mode Control Verification
     assert(contentCode.includes('.ytp-size-button'), 'content_media.js must click .ytp-size-button for theater mode');
