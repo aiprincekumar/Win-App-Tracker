@@ -2490,7 +2490,12 @@ function setupEventListeners() {
     const text = document.getElementById('wsStatusText');
     const btnText = document.getElementById('btnReconnectWsText');
 
-    if (badge) badge.className = 'ws-badge starting';
+    if (badge) {
+      badge.className = 'ws-badge starting';
+      const startingTitle = (currentLang === 'hi') ? `${t('hud_starting')} (ws://127.0.0.1:65432)` : `${t('hud_starting')} (ws://127.0.0.1:65432)`;
+      badge.title = startingTitle;
+      badge.setAttribute('aria-label', startingTitle);
+    }
     if (text) text.textContent = t('hud_starting');
     if (btnText) btnText.textContent = t('hud_starting');
 
@@ -2546,17 +2551,26 @@ function setupEventListeners() {
   const wsBadge = document.getElementById('wsStatusBadge');
   if (wsBadge) {
     wsBadge.addEventListener('click', handleConnectOrLaunchHUD);
+    wsBadge.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleConnectOrLaunchHUD();
+      }
+    });
   }
 
   const hubBadge = document.getElementById('hubStatusBadge');
   if (hubBadge) {
     let popupHubConnecting = false;
-    hubBadge.addEventListener('click', () => {
+    const triggerHubConnect = () => {
       if (popupHubConnecting) return;
       popupHubConnecting = true;
       const hubText = document.getElementById('hubStatusText');
       if (hubText) hubText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
       hubBadge.className = 'ws-badge starting';
+      const startingTitle = (currentLang === 'hi') ? 'SQLite डेटा हब: कनेक्ट हो रहा है...' : 'SQLite Data Hub: Connecting...';
+      hubBadge.title = startingTitle;
+      hubBadge.setAttribute('aria-label', startingTitle);
 
       try {
         const p = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
@@ -2583,6 +2597,28 @@ function setupEventListeners() {
           }
         }
       }, 500);
+    };
+
+    hubBadge.addEventListener('click', triggerHubConnect);
+    hubBadge.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerHubConnect();
+      }
+    });
+  }
+
+  const timeBadge = document.getElementById('todayHeaderTimeBadge');
+  if (timeBadge) {
+    const handleTimeBadgeClick = () => {
+      switchTopTab('tracking');
+    };
+    timeBadge.addEventListener('click', handleTimeBadgeClick);
+    timeBadge.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleTimeBadgeClick();
+      }
     });
   }
 
