@@ -30,4 +30,5 @@
 
 ### 🧪 Testing
 
+- *(badges)* Add comprehensive verification test suite for compact, icon-only header status badges, SVG icon geometry, and accessible keyboard navigation (test_header_status_badges.js)
 - Add verification test suite for active tab timer fix and dual media tracking
