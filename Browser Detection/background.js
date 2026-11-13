@@ -20,6 +20,48 @@ const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.brows
   : globalThis.chrome;
 
 // =============================================================================
+// Domain-Driven Layered Modular Subsystems (src/shared/ & src/background/)
+// =============================================================================
+const _SharedConstants = typeof SharedConstants !== 'undefined' ? SharedConstants : (typeof require === 'function' ? require('./src/shared/constants.js') : null);
+const _SharedContracts = typeof SharedContracts !== 'undefined' ? SharedContracts : (typeof require === 'function' ? require('./src/shared/contracts.js') : null);
+const _SharedFormatters = typeof SharedFormatters !== 'undefined' ? SharedFormatters : (typeof require === 'function' ? require('./src/shared/formatters.js') : null);
+const _ConfigManager = typeof ConfigManager !== 'undefined' ? ConfigManager : (typeof require === 'function' ? require('./src/background/config/config_manager.js') : null);
+const _StateManager = typeof StateManager !== 'undefined' ? StateManager : (typeof require === 'function' ? require('./src/background/state/state_manager.js') : null);
+const _StorageManager = typeof StorageManager !== 'undefined' ? StorageManager : (typeof require === 'function' ? require('./src/background/storage/storage_manager.js') : null);
+const _SleepTimerStorage = typeof SleepTimerStorage !== 'undefined' ? SleepTimerStorage : (typeof require === 'function' ? require('./src/background/storage/sleep_timer_storage.js') : null);
+const _ReconnectLadder = typeof ReconnectLadder !== 'undefined' ? ReconnectLadder : (typeof require === 'function' ? require('./src/background/ws/reconnect_ladder.js') : null);
+const _SilentProbe = typeof SilentProbe !== 'undefined' ? SilentProbe : (typeof require === 'function' ? require('./src/background/ws/silent_probe.js') : null);
+const _OfflineQueue = typeof OfflineQueue !== 'undefined' ? OfflineQueue : (typeof require === 'function' ? require('./src/background/ws/offline_queue.js') : null);
+const _DataHubClient = typeof DataHubClient !== 'undefined' ? DataHubClient : (typeof require === 'function' ? require('./src/background/ws/data_hub_client.js') : null);
+const _DomainTracker = typeof DomainTracker !== 'undefined' ? DomainTracker : (typeof require === 'function' ? require('./src/background/telemetry/domain_tracker.js') : null);
+const _DeltaStreamer = typeof DeltaStreamer !== 'undefined' ? DeltaStreamer : (typeof require === 'function' ? require('./src/background/telemetry/delta_streamer.js') : null);
+const _SleepTimerEngine = typeof SleepTimerEngine !== 'undefined' ? SleepTimerEngine : (typeof require === 'function' ? require('./src/background/telemetry/sleep_timer_engine.js') : null);
+const _TabListeners = typeof TabListeners !== 'undefined' ? TabListeners : (typeof require === 'function' ? require('./src/background/handlers/tab_listeners.js') : null);
+const _AlarmHandlers = typeof AlarmHandlers !== 'undefined' ? AlarmHandlers : (typeof require === 'function' ? require('./src/background/handlers/alarm_handlers.js') : null);
+const _IdleHandlers = typeof IdleHandlers !== 'undefined' ? IdleHandlers : (typeof require === 'function' ? require('./src/background/handlers/idle_handlers.js') : null);
+const _MessageRouter = typeof MessageRouter !== 'undefined' ? MessageRouter : (typeof require === 'function' ? require('./src/background/handlers/message_router.js') : null);
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.SentinelBackgroundModules = {
+    ConfigManager: _ConfigManager,
+    StateManager: _StateManager,
+    StorageManager: _StorageManager,
+    SleepTimerStorage: _SleepTimerStorage,
+    ReconnectLadder: _ReconnectLadder,
+    SilentProbe: _SilentProbe,
+    OfflineQueue: _OfflineQueue,
+    DataHubClient: _DataHubClient,
+    DomainTracker: _DomainTracker,
+    DeltaStreamer: _DeltaStreamer,
+    SleepTimerEngine: _SleepTimerEngine,
+    TabListeners: _TabListeners,
+    AlarmHandlers: _AlarmHandlers,
+    IdleHandlers: _IdleHandlers,
+    MessageRouter: _MessageRouter
+  };
+}
+
+// =============================================================================
 // Manifest V3 IPC Connection Guard & Unhandled Promise Rejection Sentinel
 // =============================================================================
 
