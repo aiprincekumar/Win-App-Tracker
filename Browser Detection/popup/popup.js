@@ -2024,7 +2024,7 @@ function setupEventListeners() {
   }
   document.addEventListener('click', (e) => {
     if (quickSettingsPopover && !quickSettingsPopover.classList.contains('hidden')) {
-      if (!quickSettingsPopover.contains(e.target) && e.target !== btnQuickSettings) {
+      if (!quickSettingsPopover.contains(e.target) && !btnQuickSettings.contains(e.target)) {
         quickSettingsPopover.classList.add('hidden');
         if (btnQuickSettings) btnQuickSettings.setAttribute('aria-expanded', 'false');
       }
