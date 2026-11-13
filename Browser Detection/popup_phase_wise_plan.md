@@ -684,8 +684,3 @@ node tests/test_volume_timeline_fullscreen_controls.js
 
 यह विस्तृत रोडमैप किसी भी इंजीनियर या सब-एजेंट के लिए एक संपूर्ण मार्गदर्शिका है।  
 आगामी विकास कार्य को **फेज़ 1 (क्विक सेटिंग्स व यूआई सुधार)** से शुरू किया जा सकता है, जिसके बाद क्रमशः फेज़ 2 से फेज़ 5 को पूरा किया जा सकता है।
-\`;
-
-fs.writeFileSync('popup_phase_wise_plan.md', content, 'utf8');
-console.log('Successfully written popup_phase_wise_plan.md, size:', fs.statSync('popup_phase_wise_plan.md').size);
-"
