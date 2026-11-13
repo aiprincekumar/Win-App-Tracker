@@ -690,7 +690,10 @@ function formatVideoTime(seconds) {
  * Formats seconds for center readout (compact)
  */
 function formatCenterTime(totalSeconds) {
-  const sec = Math.max(0, Math.round(totalSeconds));
+  const sec = Math.max(0, Math.round(totalSeconds || 0));
+  if (sec === 0) {
+    return '0h 00m';
+  }
   const hours = Math.floor(sec / 3600);
   const minutes = Math.floor((sec % 3600) / 60);
 
@@ -701,6 +704,17 @@ function formatCenterTime(totalSeconds) {
     return `${minutes}m`;
   }
   return `${sec}s`;
+}
+
+/**
+ * Returns today's date formatted as YYYY-MM-DD in local time
+ */
+function getTodayDateString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -903,6 +917,12 @@ function processDomainStats(data, tabType) {
       it.percent = ratio * 100;
     });
 
+    if (tabType === 'today' && targetTotal === 0 && typeof dataHubAnalytics.today_seconds === 'number' && dataHubAnalytics.today_seconds > 0) {
+      targetTotal = dataHubAnalytics.today_seconds;
+    } else if (tabType === 'daily' && targetTotal === 0 && typeof dataHubAnalytics.daily_average_seconds === 'number' && dataHubAnalytics.daily_average_seconds > 0) {
+      targetTotal = dataHubAnalytics.daily_average_seconds;
+    }
+
     items.sort((a, b) => b.seconds - a.seconds);
     return { items, totalSeconds: targetTotal };
   }
@@ -912,7 +932,7 @@ function processDomainStats(data, tabType) {
     return { items: [], totalSeconds: 0 };
   }
 
-  const todayStr = data.todayStr;
+  const todayStr = (data && data.todayStr) || getTodayDateString();
   const historyDays = Math.max(1, data.activityData.historyDaysCount || 1);
   const domains = data.activityData.domains;
 
@@ -1144,9 +1164,45 @@ function renderStatsPills(data) {
 
   const todayStats = processDomainStats(data, 'today');
   const dailyStats = processDomainStats(data, 'daily');
-  todaySeconds = todayStats.totalSeconds;
-  dailyAvgSeconds = dailyStats.totalSeconds;
-  totalSessions = todayStats.items.reduce((acc, curr) => acc + (curr.sessions || 0), 0);
+
+  if (dataHubConnected && dataHubAnalytics) {
+    todaySeconds = (typeof dataHubAnalytics.today_seconds === 'number')
+      ? dataHubAnalytics.today_seconds
+      : todayStats.totalSeconds;
+
+    dailyAvgSeconds = (typeof dataHubAnalytics.daily_average_seconds === 'number')
+      ? dataHubAnalytics.daily_average_seconds
+      : dailyStats.totalSeconds;
+
+    // Total sessions: sum from domain distribution
+    if (Array.isArray(dataHubAnalytics.domain_distribution)) {
+      totalSessions = dataHubAnalytics.domain_distribution.reduce((acc, curr) => {
+        return acc + (curr.session_count || curr.sessionCount || curr.sessions || 0);
+      }, 0);
+    }
+
+    // If today's sessions sum to 0, count all-time sessions so Sessions card shows the real session count
+    if (totalSessions === 0) {
+      const allTimeDist = (Array.isArray(dataHubAnalytics.all_time_domain_distribution) && dataHubAnalytics.all_time_domain_distribution.length > 0)
+        ? dataHubAnalytics.all_time_domain_distribution
+        : (dataHubAnalytics.domain_distribution || []);
+      totalSessions = allTimeDist.reduce((acc, curr) => {
+        return acc + (curr.session_count || curr.sessionCount || curr.sessions || 0);
+      }, 0);
+    }
+  } else {
+    todaySeconds = todayStats.totalSeconds;
+    dailyAvgSeconds = dailyStats.totalSeconds;
+
+    totalSessions = todayStats.items.reduce((acc, curr) => acc + (curr.sessions || 0), 0);
+
+    // If today's sessions sum to 0, sum entry.sessionCount across all domains
+    if (totalSessions === 0 && data && data.activityData && data.activityData.domains) {
+      for (const entry of Object.values(data.activityData.domains)) {
+        totalSessions += (entry.sessionCount || 0);
+      }
+    }
+  }
 
   const pToday = document.getElementById('pillTodayTime');
   const pDaily = document.getElementById('pillDailyAvg');
@@ -1521,7 +1577,10 @@ function handleAutoTabSwitching(data) {
  * Full dashboard refresh
  */
 async function refreshDashboard(forceRefresh = false) {
-  dashboardData = await fetchDashboardData(forceRefresh);
+  const freshData = await fetchDashboardData(forceRefresh);
+  if (freshData) {
+    dashboardData = freshData;
+  }
   if (!dashboardData) return;
 
   dataHubConnected = Boolean(dashboardData.dataHubConnected);
@@ -1536,7 +1595,7 @@ async function refreshDashboard(forceRefresh = false) {
             query: 'ANALYTICS',
             browser: selectedBrowser || 'all',
             tracking_mode: selectedTrackingMode || 'all',
-            date: dashboardData.todayStr || new Date().toISOString().split('T')[0]
+            date: (dashboardData && dashboardData.todayStr) || getTodayDateString()
           }, (hr) => {
             if (browserAPI.runtime.lastError || !hr || !hr.success) {
               res(null);
@@ -2394,6 +2453,7 @@ function setupEventListeners() {
         const { items, totalSeconds } = processDomainStats(dashboardData, currentTemporalTab);
         renderDonutChart(items, totalSeconds);
         renderDomainList(items, totalSeconds);
+        renderStatsPills(dashboardData);
       }
     });
   });
@@ -3374,6 +3434,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load language preference, browser filter, tracking mode, and category from storage
   browserAPI.storage.local.get([
+    'activityData',
+    'media_sentinel_activity_data',
     'language',
     'media_sentinel_settings',
     'selected_browser_filter',
@@ -3421,6 +3483,22 @@ document.addEventListener('DOMContentLoaded', () => {
       switchTopTab(res.active_popup_tab, false);
     } else if (res && res.quick_settings && res.quick_settings.default_tab && validTabs.includes(res.quick_settings.default_tab)) {
       switchTopTab(res.quick_settings.default_tab, false);
+    }
+
+    // Immediate hydration of cached activity data for 0ms blank flash
+    const cachedActivity = (res && res.activityData) || (res && res.media_sentinel_activity_data) || null;
+    if (cachedActivity && cachedActivity.domains) {
+      dashboardData = {
+        activityData: cachedActivity,
+        todayStr: getTodayDateString(),
+        wsConnected: false,
+        dataHubConnected: false,
+        globalMediaState: null
+      };
+      renderStatsPills(dashboardData);
+      const { items, totalSeconds } = processDomainStats(dashboardData, currentTemporalTab);
+      renderDonutChart(items, totalSeconds);
+      renderDomainList(items, totalSeconds);
     }
 
     if (res && res.smart_automations) {
@@ -3499,7 +3577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applyPopupLanguage(lang);
-    refreshDashboard();
+    refreshDashboard(true);
   });
 
   // High-frequency auto-refresh popup while open (every 1 second for live progress updates)

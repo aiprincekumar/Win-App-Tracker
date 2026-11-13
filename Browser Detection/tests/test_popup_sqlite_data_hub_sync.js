@@ -273,7 +273,13 @@ console.log('\nTest 3: renderStatsPills SQLite Aggregation vs Fallback Simulatio
     if (isHubConnected && hubAnalytics && Array.isArray(hubAnalytics.domain_distribution)) {
       todaySeconds = hubAnalytics.today_seconds || 0;
       dailyAvgSeconds = hubAnalytics.daily_average_seconds || 0;
-      totalSessions = hubAnalytics.domain_distribution.reduce((acc, curr) => acc + (curr.session_count || 0), 0);
+      totalSessions = hubAnalytics.domain_distribution.reduce((acc, curr) => acc + (curr.session_count || curr.sessionCount || curr.sessions || 0), 0);
+      if (totalSessions === 0) {
+        const allTimeDist = (Array.isArray(hubAnalytics.all_time_domain_distribution) && hubAnalytics.all_time_domain_distribution.length > 0)
+          ? hubAnalytics.all_time_domain_distribution
+          : (hubAnalytics.domain_distribution || []);
+        totalSessions = allTimeDist.reduce((acc, curr) => acc + (curr.session_count || curr.sessionCount || curr.sessions || 0), 0);
+      }
     } else {
       if (data && data.activityData && data.activityData.domains) {
         const todayStr = data.todayStr;
@@ -281,6 +287,11 @@ console.log('\nTest 3: renderStatsPills SQLite Aggregation vs Fallback Simulatio
           if (d.days && d.days[todayStr]) {
             todaySeconds += d.days[todayStr].seconds || 0;
             totalSessions += (d.days[todayStr].sessions || 1);
+          }
+        }
+        if (totalSessions === 0) {
+          for (const d of Object.values(data.activityData.domains)) {
+            totalSessions += (d.sessionCount || 0);
           }
         }
         dailyAvgSeconds = Math.round(todaySeconds / (data.activityData.historyDaysCount || 1));
@@ -302,6 +313,37 @@ console.log('\nTest 3: renderStatsPills SQLite Aggregation vs Fallback Simulatio
   assert.strictEqual(pillsOffline.todaySeconds, 900);
   assert.strictEqual(pillsOffline.totalSessions, 4);
   console.log('  ✅ Offline Stats Pills: Today: 900s, Sessions: 4 (Local Storage Fallback)');
+
+  // Connected mode - Zero Today fallback to All-Time sessions
+  const mockZeroTodayAnalytics = {
+    today_seconds: 0,
+    daily_average_seconds: 1800,
+    domain_distribution: [],
+    all_time_domain_distribution: [
+      { domain: 'google.com', seconds: 3600, session_count: 8 }
+    ]
+  };
+  const pillsZeroTodayOnline = testRenderStatsPills(mockLocalData, true, mockZeroTodayAnalytics);
+  assert.strictEqual(pillsZeroTodayOnline.totalSessions, 8, 'Zero today sessions must fallback to all-time sessions');
+  console.log('  ✅ Zero Today Sessions Fallback: Successfully recovered 8 sessions from all-time distribution');
+
+  // Fallback mode - Zero Today fallback to total domain sessionCount
+  const mockZeroTodayLocalData = {
+    todayStr: '2026-11-06',
+    activityData: {
+      historyDaysCount: 3,
+      domains: {
+        'twitter.com': {
+          totalSeconds: 900,
+          sessionCount: 15,
+          days: {}
+        }
+      }
+    }
+  };
+  const pillsZeroTodayOffline = testRenderStatsPills(mockZeroTodayLocalData, false, null);
+  assert.strictEqual(pillsZeroTodayOffline.totalSessions, 15, 'Zero today fallback must count total domain sessionCount');
+  console.log('  ✅ Zero Today Local Storage Fallback: Successfully recovered 15 sessions from domain total');
 }
 
 // ---------------------------------------------------------------------------
