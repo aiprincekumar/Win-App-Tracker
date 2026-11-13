@@ -36,16 +36,20 @@
       </div>
     </header>
 
-    <!-- Top Primary Multi-Tabs Navigation (4-Pillar Hub Architecture) -->
+    <!-- Top Primary Multi-Tabs Navigation (6-Tab Single-Word Architecture) -->
     <nav class="top-nav-tabs" role="tablist">
       <button id="mainTabMedia" class="top-tab-btn active" data-view="media" role="tab" aria-selected="true" aria-controls="viewMediaPane">
         <span class="top-tab-icon">🎬</span>
-        <span id="topTabMediaText" class="top-tab-label">Player</span>
+        <span id="topTabMediaText" class="top-tab-label">Media</span>
         <span id="tabMediaLiveDot" class="tab-live-dot hidden" title="Media Active"></span>
       </button>
       <button id="mainTabAudio" class="top-tab-btn" data-view="audio" role="tab" aria-selected="false" aria-controls="viewAudioPane">
         <span class="top-tab-icon">🎛️</span>
-        <span id="topTabAudioText" class="top-tab-label">Audio Lab</span>
+        <span id="topTabAudioText" class="top-tab-label">Audio</span>
+      </button>
+      <button id="mainTabTools" class="top-tab-btn" data-view="tools" role="tab" aria-selected="false" aria-controls="viewToolsPane">
+        <span class="top-tab-icon">⚡</span>
+        <span id="topTabToolsText" class="top-tab-label">Tools</span>
       </button>
       <button id="mainTabStudio" class="top-tab-btn" data-view="studio" role="tab" aria-selected="false" aria-controls="viewStudioPane">
         <span class="top-tab-icon">📚</span>
@@ -53,7 +57,11 @@
       </button>
       <button id="mainTabTracking" class="top-tab-btn" data-view="tracking" role="tab" aria-selected="false" aria-controls="viewTrackingPane">
         <span class="top-tab-icon">⏱️</span>
-        <span id="topTabTrackingText" class="top-tab-label">Focus</span>
+        <span id="topTabTrackingText" class="top-tab-label">Tracking</span>
+      </button>
+      <button id="mainTabDomains" class="top-tab-btn" data-view="domains" role="tab" aria-selected="false" aria-controls="viewDomainsPane">
+        <span class="top-tab-icon">🌐</span>
+        <span id="topTabDomainsText" class="top-tab-label">Domains</span>
       </button>
     </nav>
 
@@ -170,30 +178,6 @@
             </div>
           </div>
 
-          <!-- In-Card Micro-Actions Bar -->
-          <div id="playerMicroActionsRow" class="player-micro-actions-row hidden">
-            <button id="btnCardScreenshot" class="micro-action-btn" title="Capture Video Frame" aria-label="Capture Video Frame">
-              <span class="micro-icon">📸</span>
-              <span class="micro-label">Snap</span>
-            </button>
-            <button id="btnCardCinemaDim" class="micro-action-btn" title="Cinema Focus Dimmer" aria-label="Cinema Focus Dimmer">
-              <span class="micro-icon">🎯</span>
-              <span class="micro-label">Cinema</span>
-            </button>
-            <button id="btnCardLoopMedia" class="micro-action-btn" title="Loop Current Media" aria-label="Loop Current Media">
-              <span class="micro-icon">🔁</span>
-              <span class="micro-label">Loop</span>
-            </button>
-            <button id="btnCardNextTrack" class="micro-action-btn" title="Next Track / Video" aria-label="Next Track / Video">
-              <span class="micro-icon">⏭️</span>
-              <span class="micro-label">Next</span>
-            </button>
-            <button id="btnCardCopyTimestamp" class="micro-action-btn" title="Copy Link with Timestamp" aria-label="Copy Link with Timestamp">
-              <span class="micro-icon">📋</span>
-              <span class="micro-label">Copy Link</span>
-            </button>
-          </div>
-
           <!-- Idle Empty Guidance Container (when no media is playing) -->
           <div id="mediaEmptyPrompt" class="media-empty-prompt">
             <div class="empty-media-icon">📺</div>
@@ -201,46 +185,6 @@
             <button id="btnGoToTracking" class="btn-jump-tab" title="View Time Tracking">
               ⏱️ View Time Tracking
             </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Smart Automations Card -->
-      <section id="cardSmartAutomations" class="sub-card automations-card">
-        <div class="sub-card-header">
-          <span class="sub-card-title">⚡ Smart Automations</span>
-        </div>
-        <div class="automation-toggle-list">
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Auto-Pause on New Tab</span>
-              <span class="toggle-sub">Pause video when switching or opening new tabs</span>
-            </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleAutoPauseNewTab">
-              <span class="slider-round-sm"></span>
-            </label>
-          </div>
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Auto Ad Silencer</span>
-              <span class="toggle-sub">Mute audio automatically during ad banners</span>
-            </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleAutoAdSilencer">
-              <span class="slider-round-sm"></span>
-            </label>
-            <input type="checkbox" id="toggleAutoAdSilence" class="hidden" aria-hidden="true">
-          </div>
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Domain Speed Memory</span>
-              <span class="toggle-sub">Remember playback speed per domain</span>
-            </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleDomainSpeedMemory" checked>
-              <span class="slider-round-sm"></span>
-            </label>
           </div>
         </div>
       </section>
@@ -358,7 +302,79 @@
       </section>
     </div>
 
-    <!-- TAB 3: Studio / Vault View Pane -->
+    <!-- TAB 3: Tools & Utilities View Pane -->
+    <div id="viewToolsPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabTools">
+      <!-- Media Micro-Utilities Card -->
+      <section id="cardToolsMicroActions" class="sub-card tools-card">
+        <div class="sub-card-header">
+          <span class="sub-card-title">⚡ Quick Media Tools</span>
+        </div>
+        <div id="playerMicroActionsRow" class="player-micro-actions-row">
+          <button id="btnCardScreenshot" class="micro-action-btn" title="Capture Video Frame" aria-label="Capture Video Frame">
+            <span class="micro-icon">📸</span>
+            <span class="micro-label">Snap</span>
+          </button>
+          <button id="btnCardCinemaDim" class="micro-action-btn" title="Cinema Focus Dimmer" aria-label="Cinema Focus Dimmer">
+            <span class="micro-icon">🎯</span>
+            <span class="micro-label">Cinema</span>
+          </button>
+          <button id="btnCardLoopMedia" class="micro-action-btn" title="Loop Current Media" aria-label="Loop Current Media">
+            <span class="micro-icon">🔁</span>
+            <span class="micro-label">Loop</span>
+          </button>
+          <button id="btnCardNextTrack" class="micro-action-btn" title="Next Track / Video" aria-label="Next Track / Video">
+            <span class="micro-icon">⏭️</span>
+            <span class="micro-label">Next</span>
+          </button>
+          <button id="btnCardCopyTimestamp" class="micro-action-btn" title="Copy Link with Timestamp" aria-label="Copy Link with Timestamp">
+            <span class="micro-icon">📋</span>
+            <span class="micro-label">Copy Link</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Smart Automations Card -->
+      <section id="cardSmartAutomations" class="sub-card automations-card">
+        <div class="sub-card-header">
+          <span class="sub-card-title">🤖 Smart Automations</span>
+        </div>
+        <div class="automation-toggle-list">
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Auto-Pause on New Tab</span>
+              <span class="toggle-sub">Pause video when switching or opening new tabs</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleAutoPauseNewTab">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Auto Ad Silencer</span>
+              <span class="toggle-sub">Mute audio automatically during ad banners</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleAutoAdSilencer">
+              <span class="slider-round-sm"></span>
+            </label>
+            <input type="checkbox" id="toggleAutoAdSilence" class="hidden" aria-hidden="true">
+          </div>
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Domain Speed Memory</span>
+              <span class="toggle-sub">Remember playback speed per domain</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleDomainSpeedMemory" checked>
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 4: Studio / Vault View Pane -->
     <div id="viewStudioPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabStudio">
       <!-- Timestamp Note-Taking Card -->
       <section id="studioNoteCard" class="studio-card notes-card">
