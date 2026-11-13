@@ -2246,28 +2246,63 @@ button.spinning .refresh-spinner-icon,
 
 /* Sound Enhancements */
 .enhancement-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 .enhancement-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.enhancement-row:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.enhancement-row:has(input:checked) {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.04);
+}
+.enhancement-row:has(input:checked):hover {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.enhancement-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 20px;
+}
+.enhancement-item-header .switch-toggle-sm {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 .enhancement-info {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 .enhancement-name {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.25;
+  text-wrap: balance;
+  letter-spacing: -0.1px;
+  word-break: break-word;
 }
 .enhancement-desc {
   font-size: 9px;
   color: var(--text-secondary);
+  line-height: 1.35;
+  text-wrap: pretty;
+  word-break: break-word;
 }
 
 /* ==========================================================================
