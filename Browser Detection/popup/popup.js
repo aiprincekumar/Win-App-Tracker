@@ -686,7 +686,7 @@ function formatCenterTime(totalSeconds) {
 }
 
 /**
- * Switches the top-level tab (Player, Audio Lab, Studio, Focus)
+ * Switches the top-level tab (Media, Audio, Tools, Studio, Tracking, Domains)
  */
 function switchTopTab(tabName, isManual = false) {
   if (isManual) {
@@ -698,8 +698,10 @@ function switchTopTab(tabName, isManual = false) {
   const tabs = [
     { id: 'mainTabMedia', paneId: 'viewMediaPane', key: 'media' },
     { id: 'mainTabAudio', paneId: 'viewAudioPane', key: 'audio' },
+    { id: 'mainTabTools', paneId: 'viewToolsPane', key: 'tools' },
     { id: 'mainTabStudio', paneId: 'viewStudioPane', key: 'studio' },
-    { id: 'mainTabTracking', paneId: 'viewTrackingPane', key: 'tracking' }
+    { id: 'mainTabTracking', paneId: 'viewTrackingPane', key: 'tracking' },
+    { id: 'mainTabDomains', paneId: 'viewDomainsPane', key: 'domains' }
   ];
 
   tabs.forEach(t => {
@@ -1906,11 +1908,13 @@ function setupEventListeners() {
   if (popupListenersAttached) return;
   popupListenersAttached = true;
 
-  // Top Primary Multi-Tabs Navigation (4-Pillar Hub Architecture)
+  // Top Primary Multi-Tabs Navigation (6-Tab Single-Word Architecture)
   const tabMediaBtn = document.getElementById('mainTabMedia');
   const tabAudioBtn = document.getElementById('mainTabAudio');
+  const tabToolsBtn = document.getElementById('mainTabTools');
   const tabStudioBtn = document.getElementById('mainTabStudio');
   const tabTrackingBtn = document.getElementById('mainTabTracking');
+  const tabDomainsBtn = document.getElementById('mainTabDomains');
   const btnGoToTracking = document.getElementById('btnGoToTracking');
 
   if (tabMediaBtn) {
@@ -1925,6 +1929,12 @@ function setupEventListeners() {
     });
   }
 
+  if (tabToolsBtn) {
+    tabToolsBtn.addEventListener('click', () => {
+      switchTopTab('tools', true);
+    });
+  }
+
   if (tabStudioBtn) {
     tabStudioBtn.addEventListener('click', () => {
       switchTopTab('studio', true);
@@ -1934,6 +1944,12 @@ function setupEventListeners() {
   if (tabTrackingBtn) {
     tabTrackingBtn.addEventListener('click', () => {
       switchTopTab('tracking', true);
+    });
+  }
+
+  if (tabDomainsBtn) {
+    tabDomainsBtn.addEventListener('click', () => {
+      switchTopTab('domains', true);
     });
   }
 
@@ -1976,7 +1992,9 @@ function setupEventListeners() {
 
   if (selectDefaultTab) {
     selectDefaultTab.addEventListener('change', () => {
-      quickSettings.default_tab = selectDefaultTab.value;
+      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+      const chosen = selectDefaultTab.value;
+      quickSettings.default_tab = validTabs.includes(chosen) ? chosen : 'media';
       browserAPI.storage.local.set({ quick_settings: quickSettings });
     });
   }
@@ -3320,10 +3338,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selCat) selCat.value = selectedDomainCategory;
     }
 
-    // Hydrate 4-Pillar Hub Architecture States
-    if (res && res.active_popup_tab) {
+    // Hydrate 6-Tab Architecture States
+    const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+    if (res && res.active_popup_tab && validTabs.includes(res.active_popup_tab)) {
       switchTopTab(res.active_popup_tab, false);
-    } else if (res && res.quick_settings && res.quick_settings.default_tab) {
+    } else if (res && res.quick_settings && res.quick_settings.default_tab && validTabs.includes(res.quick_settings.default_tab)) {
       switchTopTab(res.quick_settings.default_tab, false);
     }
 
@@ -3388,7 +3407,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (res && res.quick_settings) {
       quickSettings = { ...quickSettings, ...res.quick_settings };
       const sTab = document.getElementById('selectDefaultTab');
-      if (sTab) sTab.value = quickSettings.default_tab || 'media';
+      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+      const defTab = validTabs.includes(quickSettings.default_tab) ? quickSettings.default_tab : 'media';
+      if (sTab) sTab.value = defTab;
       const sSync = document.getElementById('selectSyncInterval');
       if (sSync) sSync.value = String(quickSettings.sync_interval || 2000);
       const tSound = document.getElementById('toggleNotificationSound');
