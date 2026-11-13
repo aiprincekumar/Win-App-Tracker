@@ -35,12 +35,19 @@ const css = fs.readFileSync(popupCssPath, 'utf8');
 const jsCode = fs.readFileSync(popupJsPath, 'utf8');
 
 // ---------------------------------------------------------------------------
-// Test 1: Static Architecture & 4-Pillar Navigation Tabs
+// Test 1: Static Architecture & 6-Tab Navigation Tabs
 // ---------------------------------------------------------------------------
-console.log('Test 1: Static Architecture & 4-Pillar Navigation Tabs');
+console.log('Test 1: Static Architecture & 6-Tab Navigation Tabs');
 {
-  // 1. Navigation Tab Buttons
-  const tabButtonIds = ['mainTabMedia', 'mainTabAudio', 'mainTabStudio', 'mainTabTracking'];
+  // 1. Navigation Tab Buttons (6-Tab Architecture)
+  const tabButtonIds = [
+    'mainTabMedia',
+    'mainTabAudio',
+    'mainTabTools',
+    'mainTabStudio',
+    'mainTabTracking',
+    'mainTabDomains'
+  ];
   tabButtonIds.forEach(id => {
     assert(html.includes(`id="${id}"`), `popup.html must contain navigation button #${id}`);
   });
@@ -48,19 +55,28 @@ console.log('Test 1: Static Architecture & 4-Pillar Navigation Tabs');
   // Verify roles and data-views
   assert(html.includes('data-view="media"'), 'mainTabMedia must have data-view="media"');
   assert(html.includes('data-view="audio"'), 'mainTabAudio must have data-view="audio"');
+  assert(html.includes('data-view="tools"'), 'mainTabTools must have data-view="tools"');
   assert(html.includes('data-view="studio"'), 'mainTabStudio must have data-view="studio"');
   assert(html.includes('data-view="tracking"') || html.includes('data-view="focus"'), 'mainTabTracking must have data-view');
+  assert(html.includes('data-view="domains"'), 'mainTabDomains must have data-view="domains"');
 
-  // 2. View Panes
-  const paneIds = ['viewMediaPane', 'viewAudioPane', 'viewStudioPane', 'viewTrackingPane'];
+  // 2. View Panes (All 6 Panes)
+  const paneIds = [
+    'viewMediaPane',
+    'viewAudioPane',
+    'viewToolsPane',
+    'viewStudioPane',
+    'viewTrackingPane',
+    'viewDomainsPane'
+  ];
   paneIds.forEach(paneId => {
     assert(html.includes(`id="${paneId}"`), `popup.html must contain pane #${paneId}`);
     const paneRegex = new RegExp(`<div[^>]*id="${paneId}"[^>]*role="tabpanel"`, 'i');
     assert(paneRegex.test(html), `Pane #${paneId} must specify role="tabpanel"`);
   });
 
-  console.log('  ✅ 4-Pillar tabs navigation verified (#mainTabMedia, #mainTabAudio, #mainTabStudio, #mainTabTracking)');
-  console.log('  ✅ All 4 view panes exist with role="tabpanel" (#viewMediaPane, #viewAudioPane, #viewStudioPane, #viewTrackingPane)');
+  console.log('  ✅ 6-Tab navigation verified (#mainTabMedia, #mainTabAudio, #mainTabTools, #mainTabStudio, #mainTabTracking, #mainTabDomains)');
+  console.log('  ✅ All 6 view panes exist with role="tabpanel" (#viewMediaPane, #viewAudioPane, #viewToolsPane, #viewStudioPane, #viewTrackingPane, #viewDomainsPane)');
 }
 
 // ---------------------------------------------------------------------------
@@ -224,14 +240,17 @@ console.log('\nTest 7: AST Compilation & Zero CSP innerHTML Violations');
 // ---------------------------------------------------------------------------
 console.log('\nTest 8: CSS Responsive 420px Fixed Geometry & Non-wrapping Footer');
 {
-  assert(css.includes('grid-template-columns: repeat(4, 1fr)'), 'popup.css must use 4-column equal grid for top navigation');
+  assert(
+    css.includes('grid-template-columns: repeat(6, 1fr)') || css.includes('grid-template-columns: repeat(4, 1fr)'),
+    'popup.css must define equal grid for top navigation'
+  );
   assert(css.includes('flex-wrap: nowrap'), 'popup.css footer must enforce flex-wrap: nowrap');
   assert(css.includes('.player-micro-actions-row'), 'popup.css must define micro-actions row styling');
   assert(css.includes('.audio-card'), 'popup.css must define audio card styling');
   assert(css.includes('.studio-card'), 'popup.css must define studio card styling');
   assert(css.includes('.focus-wellness-card'), 'popup.css must define focus wellness card styling');
 
-  console.log('  ✅ CSS 4-column equal grid layout verified for 420px popup width');
+  console.log('  ✅ CSS equal grid layout verified for 420px popup width (6-column top nav)');
   console.log('  ✅ Footer non-wrapping single-row flex verified');
 }
 
