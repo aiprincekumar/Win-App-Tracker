@@ -261,6 +261,7 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
       attrs: {},
       children: [],
       firstChild: null,
+      parentElement: null,
       isConnected: true,
       getAttribute(name) { return this.attrs[name] || null; },
       setAttribute(name, val) { this.attrs[name] = String(val); },
@@ -282,7 +283,21 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
       addEventListener() {},
       removeEventListener() {},
       dispatchEvent() {},
-      matches() { return false; },
+      matches(selector) {
+        if (!selector) return false;
+        if (selector === ':hover') return false;
+        if (selector.includes('#movie_player') && this.id === 'movie_player') return true;
+        if (selector.includes('.html5-video-player') && this.classList.contains('html5-video-player')) return true;
+        return false;
+      },
+      closest(selector) {
+        let cur = this;
+        while (cur) {
+          if (cur.matches && cur.matches(selector)) return cur;
+          cur = cur.parentElement;
+        }
+        return null;
+      },
       click() {}
     };
   };
@@ -327,6 +342,9 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   const sandbox = {
     window: mockWindow,
     document: mockDoc,
+    globalThis: mockWindow,
+    HTMLElement: class HTMLElement {},
+    HTMLVideoElement: class HTMLVideoElement {},
     navigator: { userActivation: { isActive: false } },
     Date,
     parseInt,
@@ -348,10 +366,20 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
 
   const controller = sandbox.window.__SentinelFullscreenController;
   assert(controller, 'window.__SentinelFullscreenController must be instantiated in sandbox');
+  assert(sandbox.globalThis.__SentinelFullscreenController, 'globalThis.__SentinelFullscreenController must be defined');
   assert.strictEqual(typeof controller.toggle, 'function', 'controller.toggle must be a function');
+  assert.strictEqual(typeof controller.toggleWebFullscreen, 'function', 'controller.toggleWebFullscreen must be a function');
+  assert.strictEqual(typeof controller.toggleFullscreen, 'function', 'controller.toggleFullscreen must be a function');
   assert.strictEqual(typeof controller.enterWebFullscreen, 'function', 'controller.enterWebFullscreen must be a function');
   assert.strictEqual(typeof controller.exitWebFullscreen, 'function', 'controller.exitWebFullscreen must be a function');
   assert.strictEqual(typeof controller.isFullscreenActive, 'function', 'controller.isFullscreenActive must be a function');
+  assert.strictEqual(typeof controller.getTargetElement, 'function', 'controller.getTargetElement must be a function');
+
+  // Verify container targeting: when passed a video element inside #movie_player, getTargetElement returns #movie_player
+  const mockVideo = createMockElement('video');
+  mockMoviePlayer.appendChild(mockVideo);
+  const resolvedTarget = controller.getTargetElement(mockVideo);
+  assert.strictEqual(resolvedTarget, mockMoviePlayer, 'getTargetElement must return #movie_player container even when passed video element');
 
   // Verify initial state: false
   assert.strictEqual(controller.isFullscreenActive(), false, 'Fullscreen must initially be inactive');
@@ -376,7 +404,7 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   assert.strictEqual(mockDoc.documentElement.classList.contains('sentinel-fullscreen-active'), false, 'html must lose .sentinel-fullscreen-active');
   assert.strictEqual(controller.isFullscreenActive(), false, 'controller.isFullscreenActive() must report false');
 
-  console.log('  ✅ Simulated DOM Lifecycle: enterWebFullscreen, debounce gating, and exitWebFullscreen all verified clean');
+  console.log('  ✅ Simulated DOM Lifecycle: enterWebFullscreen, debounce gating, aliases, and container targeting all verified clean');
 }
 
 console.log('\n🎉 ALL FULLSCREEN CONTROLLER TESTS PASSED WITH 100% SUCCESS!\n');

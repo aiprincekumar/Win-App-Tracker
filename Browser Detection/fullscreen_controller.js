@@ -383,18 +383,48 @@
   }
 
   /**
-   * Helper to locate best target player or video container
+   * Helper to locate best target player or video container.
+   * Prioritizes player containers (#movie_player, .html5-video-player) to prevent
+   * inline container dimensions (854x480) from clipping or trapping HTML5 videos.
    */
   function getTargetElement(preferredTarget) {
+    if (typeof document === 'undefined') return preferredTarget || null;
+
+    // 1. YouTube player container is always the primary target on YouTube
+    const ytPlayer = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+    if (ytPlayer) {
+      return ytPlayer;
+    }
+
+    // 2. If a preferredTarget is supplied
     if (preferredTarget && (preferredTarget.nodeType === 1 || (typeof HTMLElement !== 'undefined' && preferredTarget instanceof HTMLElement))) {
+      // If preferredTarget is a video element, search for player container ancestors
+      if (preferredTarget.tagName === 'VIDEO' || preferredTarget.nodeName === 'VIDEO') {
+        const container = (typeof preferredTarget.closest === 'function')
+          ? preferredTarget.closest('#movie_player, .html5-video-player, ytd-player, .video-stream-container, .player-container, .jwplayer, [data-player-container]')
+          : null;
+        if (container) return container;
+        if (preferredTarget.parentElement && preferredTarget.parentElement !== document.body && preferredTarget.parentElement !== document.documentElement) {
+          return preferredTarget.parentElement;
+        }
+      }
       return preferredTarget;
     }
-    if (typeof document === 'undefined') return null;
-    return document.getElementById('movie_player') ||
-           document.querySelector('.html5-video-player') ||
-           document.querySelector('video')?.parentElement ||
-           document.querySelector('video') ||
-           document.body;
+
+    // 3. Fallback discovery for generic HTML5 video players
+    const video = document.querySelector('video');
+    if (video) {
+      const container = (typeof video.closest === 'function')
+        ? video.closest('#movie_player, .html5-video-player, ytd-player, .video-stream-container, .player-container, [data-player-container]')
+        : null;
+      if (container) return container;
+      if (video.parentElement && video.parentElement !== document.body && video.parentElement !== document.documentElement) {
+        return video.parentElement;
+      }
+      return video;
+    }
+
+    return document.body || document.documentElement || null;
   }
 
   /**
@@ -575,7 +605,7 @@
       Boolean(navigator.userActivation && navigator.userActivation.isActive);
 
     // If caller explicitly requested web fullscreen or document lacks active user gesture
-    if (options.forceWeb || !hasUserActivation) {
+    if ((options && options.forceWeb) || !hasUserActivation) {
       return enterWebFullscreen(targetEl);
     }
 
@@ -584,6 +614,20 @@
       enterWebFullscreen(targetEl);
     });
     return true;
+  }
+
+  /**
+   * Explicitly enters or exits Web Fullscreen with forceWeb option
+   */
+  function toggleWebFullscreen(targetEl, options = {}) {
+    return toggle(targetEl, { ...options, forceWeb: true });
+  }
+
+  /**
+   * Standard toggle alias for full API compatibility
+   */
+  function toggleFullscreen(targetEl, options = {}) {
+    return toggle(targetEl, options);
   }
 
   /**
@@ -701,9 +745,9 @@
   if (typeof window !== 'undefined') {
     window.addEventListener('__SENTINEL_FULLSCREEN_ACTION__', (e) => {
       if (!e.detail) return;
-      if (e.detail.action === 'toggle') {
-        toggle(null, e.detail.options);
-      } else if (e.detail.action === 'enter') {
+      if (e.detail.action === 'toggle' || e.detail.action === 'toggleWebFullscreen') {
+        toggle(null, { ...e.detail.options, forceWeb: true });
+      } else if (e.detail.action === 'enter' || e.detail.action === 'enterWeb') {
         enterWebFullscreen();
       } else if (e.detail.action === 'exit') {
         exitFullscreen();
@@ -757,6 +801,8 @@
   const controller = {
     __initialized: true,
     toggle,
+    toggleWebFullscreen,
+    toggleFullscreen,
     enterWebFullscreen,
     exitWebFullscreen,
     enterNativeFullscreen,
@@ -764,11 +810,15 @@
     isFullscreenActive,
     showOSD,
     setupInPageButton: attachFloatingButtonToPlayer,
-    ensureStyles
+    ensureStyles,
+    getTargetElement
   };
 
   if (typeof window !== 'undefined') {
     window.__SentinelFullscreenController = controller;
+  }
+  if (typeof globalThis !== 'undefined') {
+    globalThis.__SentinelFullscreenController = controller;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
