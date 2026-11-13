@@ -81,8 +81,10 @@
 
           <!-- Progress Bar & Numerical Readout (Watched / Total / Percentage) -->
           <div id="mediaProgressSection" class="media-progress-section hidden">
-            <div id="progressBarContainer" class="progress-bar-container" title="Click to Seek" tabindex="0">
-              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            <div id="progressBarContainer" class="progress-bar-container" title="Click or Drag to Seek" tabindex="0" role="slider" aria-label="Video Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;">
+                <span class="progress-thumb"></span>
+              </div>
             </div>
             <div class="progress-stats-row">
               <div class="time-group">

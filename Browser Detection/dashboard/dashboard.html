@@ -421,8 +421,10 @@
 
                 <!-- Video Progress Bar -->
                 <div class="hero-progress-section">
-                  <div id="heroProgressBar" class="hero-progress-track" title="Click to seek" tabindex="0">
-                    <div id="heroProgressFill" class="hero-progress-fill" style="width: 0%;"></div>
+                  <div id="heroProgressBar" class="hero-progress-track" title="Click or Drag to seek" tabindex="0" role="slider" aria-label="Video Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="heroProgressFill" class="hero-progress-fill" style="width: 0%;">
+                      <span class="hero-progress-thumb"></span>
+                    </div>
                   </div>
                   <div class="hero-progress-labels">
                     <span id="heroTimeElapsed" class="progress-time">00:00</span>
@@ -438,7 +440,7 @@
                     <span id="lblHeroVolume" class="vol-label">Live Volume:</span>
                     <span id="heroVolumeText" class="vol-pct-value">100%</span>
                   </div>
-                  <div id="heroVolumeBar" class="hero-volume-track" title="Click or drag to adjust volume" tabindex="0" role="slider">
+                  <div id="heroVolumeBar" class="hero-volume-track" title="Click or drag to adjust volume" tabindex="0" role="slider" aria-label="Volume Control" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
                     <div id="heroVolumeFill" class="hero-volume-fill" style="width: 100%;">
                       <span class="vol-thumb"></span>
                     </div>

@@ -971,6 +971,14 @@
           width: 100% !important;
           height: 100% !important;
         }
+        .sentinel-has-web-fullscreen #masthead-container,
+        .sentinel-has-web-fullscreen ytd-masthead,
+        .sentinel-has-web-fullscreen #masthead {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
         .sentinel-has-web-fullscreen ytd-app,
         .sentinel-has-web-fullscreen #content,
         .sentinel-has-web-fullscreen #page-manager,
@@ -1190,7 +1198,9 @@
             if (!Number.isFinite(dur) || dur <= 0) {
               dur = extractYouTubeDuration(primaryMediaElement);
             }
-            if (typeof data.percent === 'number' && dur > 0) {
+            if (typeof data.positionSeconds === 'number' && data.positionSeconds >= 0) {
+              primaryMediaElement.currentTime = data.positionSeconds;
+            } else if (typeof data.percent === 'number' && dur > 0) {
               primaryMediaElement.currentTime = (data.percent / 100) * dur;
             }
             break;
@@ -1225,14 +1235,20 @@
               }
             } else {
               const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+              let nativeToggled = false;
               if (ytFsBtn) {
-                try { ytFsBtn.click(); } catch (_) {}
+                try {
+                  ytFsBtn.click();
+                  nativeToggled = true;
+                } catch (_) {}
+              } else {
+                const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                try {
+                  const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                  (player || document.activeElement || document).dispatchEvent(ev);
+                  nativeToggled = true;
+                } catch (_) {}
               }
-              const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-              try {
-                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                (player || document.activeElement || document).dispatchEvent(ev);
-              } catch (_) {}
 
               const el = player || (primaryMediaElement && (primaryMediaElement.parentElement || primaryMediaElement));
               const target = el || primaryMediaElement;

@@ -569,6 +569,9 @@ let mediaSortMode = 'time_desc';
 
 let pendingDangerAction = null; // for modal confirmation
 let isDraggingHeroVolume = false;
+let lastHeroVolumeDragTime = 0;
+let isDraggingHeroProgress = false;
+let lastHeroProgressDragTime = 0;
 
 // =============================================================================
 // Helper Formatting Functions
@@ -1585,10 +1588,14 @@ function renderHeroMediaPlayer(pm) {
   const elPct = document.getElementById('heroProgressPercent');
   const elFill = document.getElementById('heroProgressFill');
 
-  if (elCur) elCur.textContent = formatDigitalTime(curTime);
-  if (elDur) elDur.textContent = isLive ? '🔴 LIVE' : (dur > 0 ? formatDigitalTime(dur) : '--:--');
-  if (elPct) elPct.textContent = isLive ? 'LIVE' : `${pct.toFixed(1)}%`;
-  if (elFill) elFill.style.width = `${pct}%`;
+  if (!isDraggingHeroProgress && (Date.now() - lastHeroProgressDragTime > 600)) {
+    if (elCur) elCur.textContent = formatDigitalTime(curTime);
+    if (elDur) elDur.textContent = isLive ? '🔴 LIVE' : (dur > 0 ? formatDigitalTime(dur) : '--:--');
+    if (elPct) elPct.textContent = isLive ? 'LIVE' : `${pct.toFixed(1)}%`;
+    if (elFill) elFill.style.width = `${pct}%`;
+    const heroProgress = document.getElementById('heroProgressBar');
+    if (heroProgress) heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+  }
 
   const volPct = Math.round((typeof pm.volume === 'number' ? pm.volume : 1) * 100);
   const isMuted = Boolean(pm.isMuted);
@@ -1598,16 +1605,20 @@ function renderHeroMediaPlayer(pm) {
   const muteBtn = document.getElementById('btnHeroMute');
   const volFill = document.getElementById('heroVolumeFill');
 
-  if (isMuted || volPct === 0) {
-    if (volText) volText.textContent = t('muted_vol');
-    if (volIcon) volIcon.textContent = '🔇';
-    if (muteBtn) muteBtn.textContent = t('btn_unmute');
-    if (volFill) volFill.style.width = '0%';
-  } else {
-    if (volText) volText.textContent = `${volPct}%`;
-    if (volIcon) volIcon.textContent = volPct > 50 ? '🔊' : '🔉';
-    if (muteBtn) muteBtn.textContent = t('btn_mute');
-    if (volFill) volFill.style.width = `${volPct}%`;
+  if (!isDraggingHeroVolume && (Date.now() - lastHeroVolumeDragTime > 600)) {
+    if (isMuted || volPct === 0) {
+      if (volText) volText.textContent = t('muted_vol');
+      if (volIcon) volIcon.textContent = '🔇';
+      if (muteBtn) muteBtn.textContent = t('btn_unmute');
+      if (volFill) volFill.style.width = '0%';
+    } else {
+      if (volText) volText.textContent = `${volPct}%`;
+      if (volIcon) volIcon.textContent = volPct > 50 ? '🔊' : '🔉';
+      if (muteBtn) muteBtn.textContent = t('btn_mute');
+      if (volFill) volFill.style.width = `${volPct}%`;
+    }
+    const heroVol = document.getElementById('heroVolumeBar');
+    if (heroVol) heroVol.setAttribute('aria-valuenow', String(isMuted ? 0 : volPct));
   }
 }
 
@@ -1952,7 +1963,7 @@ function sendMediaControl(action, data = {}, tabId = null) {
   if (actionKey === lastDashboardControlKey && (now - lastDashboardControlTime) < 280) {
     return;
   }
-  if (action !== 'set_volume' && (now - lastDashboardControlTime) < 180) {
+  if (action !== 'set_volume' && action !== 'seek_percent' && (now - lastDashboardControlTime) < 180) {
     return;
   }
   lastDashboardControlKey = actionKey;
@@ -1967,28 +1978,131 @@ function sendMediaControl(action, data = {}, tabId = null) {
     data,
     tabId: resolvedTabId
   }, () => {
-    setTimeout(refreshDashboard, 150);
+    if (!isDraggingHeroVolume && !isDraggingHeroProgress) {
+      setTimeout(refreshDashboard, 150);
+    }
   });
 }
 
-function sendSetVolume(percent) {
+function sendSetVolume(percent, targetTabId) {
   const vol = Math.max(0, Math.min(100, percent));
   safeRuntimeSendMessage({
     type: 'SET_VOLUME',
     percent: vol,
-    volume: vol / 100
+    volume: vol / 100,
+    tabId: targetTabId
   }, () => {
-    setTimeout(refreshDashboard, 150);
+    if (!isDraggingHeroVolume && !isDraggingHeroProgress) {
+      setTimeout(refreshDashboard, 150);
+    }
   });
 }
 
 function updateHeroVolumeFromEvent(e) {
   const container = document.getElementById('heroVolumeBar');
+  const fill = document.getElementById('heroVolumeFill');
+  const text = document.getElementById('heroVolumeText');
+  const icon = document.getElementById('heroVolumeIcon');
   if (!container) return;
+
   const rect = container.getBoundingClientRect();
-  const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-  const pct = Math.round((clickX / rect.width) * 100);
-  sendSetVolume(pct);
+  const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+  const pct = rect.width > 0 ? Math.max(0, Math.min(100, Math.round((clickX / rect.width) * 100))) : 100;
+
+  if (fill) fill.style.width = `${pct}%`;
+  if (text) text.textContent = `${pct}%`;
+  if (icon) icon.textContent = pct === 0 ? '🔇' : (pct > 50 ? '🔊' : '🔉');
+  container.setAttribute('aria-valuenow', String(pct));
+
+  const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+  const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+
+  // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms volume response)
+  if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+    browserAPI.scripting.executeScript({
+      target: { tabId: targetTabId, allFrames: true },
+      world: 'MAIN',
+      func: (volPercent) => {
+        const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+        const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+        if (moviePlayer && typeof moviePlayer.setVolume === 'function') {
+          try {
+            moviePlayer.setVolume(volPercent);
+            if (volPercent === 0 && typeof moviePlayer.mute === 'function') {
+              moviePlayer.mute();
+            } else if (volPercent > 0 && typeof moviePlayer.unMute === 'function') {
+              moviePlayer.unMute();
+            }
+          } catch (_) {}
+        }
+        if (video) {
+          try {
+            video.volume = volPercent / 100;
+            video.muted = (volPercent === 0);
+          } catch (_) {}
+        }
+      },
+      args: [pct]
+    }).catch(() => {});
+  }
+
+  sendSetVolume(pct, targetTabId);
+}
+
+function updateHeroProgressFromEvent(e) {
+  const container = document.getElementById('heroProgressBar');
+  const fill = document.getElementById('heroProgressFill');
+  const elCur = document.getElementById('heroTimeElapsed');
+  const elPct = document.getElementById('heroProgressPercent');
+  if (!container || !fill) return;
+
+  const rect = container.getBoundingClientRect();
+  const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+  const pct = rect.width > 0 ? Math.max(0, Math.min(100, (clickX / rect.width) * 100)) : 0;
+
+  fill.style.width = `${pct.toFixed(1)}%`;
+  if (elPct) elPct.textContent = `${pct.toFixed(1)}%`;
+  container.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+  const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+  const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
+  const targetSeconds = dur > 0 ? (pct / 100) * dur : 0;
+  if (dur > 0 && elCur) {
+    elCur.textContent = formatDigitalTime(targetSeconds);
+  }
+
+  const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+
+  // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms timeline seek)
+  if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+    browserAPI.scripting.executeScript({
+      target: { tabId: targetTabId, allFrames: true },
+      world: 'MAIN',
+      func: (seekPercent, seekSeconds) => {
+        const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+        const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+        let dur = 0;
+        if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+          try { dur = moviePlayer.getDuration() || 0; } catch (_) {}
+        }
+        if ((!dur || dur <= 0) && video) {
+          dur = video.duration || 0;
+        }
+        const target = seekSeconds > 0 ? seekSeconds : (dur > 0 ? (seekPercent / 100) * dur : 0);
+        if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+          try { moviePlayer.seekTo(target, true); } catch (_) {}
+        }
+        if (video) {
+          try { video.currentTime = target; } catch (_) {}
+        }
+      },
+      args: [pct, targetSeconds]
+    }).catch(() => {});
+  }
+
+  sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSeconds }, targetTabId);
 }
 
 // =============================================================================
@@ -2546,28 +2660,44 @@ function setupEventListeners() {
               const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
               const target = player || (video && video.parentElement) || video;
               const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+
+              let nativeTriggered = false;
               if (ytFsBtn) {
-                try { ytFsBtn.click(); } catch (_) {}
-              }
-              if (player && typeof player.toggleFullscreen === 'function') {
-                try { player.toggleFullscreen(); } catch (_) {}
-              }
-              if (player) {
+                try {
+                  ytFsBtn.click();
+                  nativeTriggered = true;
+                } catch (_) {}
+              } else if (player && typeof player.toggleFullscreen === 'function') {
+                try {
+                  player.toggleFullscreen();
+                  nativeTriggered = true;
+                } catch (_) {}
+              } else if (player) {
                 try {
                   const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
                   player.dispatchEvent(ev);
+                  nativeTriggered = true;
                 } catch (_) {}
               }
-              if (target && target.requestFullscreen && !document.fullscreenElement) {
+
+              const applyWebFs = () => {
+                if (target) target.classList.add('sentinel-web-fullscreen');
+                if (document.body) document.body.classList.add('sentinel-has-web-fullscreen');
+                if (document.documentElement) document.documentElement.classList.add('sentinel-has-web-fullscreen');
+                if (player) player.classList.add('ytp-fullscreen');
+                const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+                if (flexy) {
+                  try { flexy.setAttribute('fullscreen', ''); } catch (_) {}
+                }
+                window.dispatchEvent(new Event('resize'));
+              };
+
+              if (target && target.requestFullscreen && !document.fullscreenElement && !nativeTriggered) {
                 target.requestFullscreen().catch(() => {
-                  document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
-                    detail: JSON.stringify({ action: 'toggle_fullscreen', data: {} })
-                  }));
+                  applyWebFs();
                 });
-              } else {
-                document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
-                  detail: JSON.stringify({ action: 'toggle_fullscreen', data: {} })
-                }));
+              } else if (!document.fullscreenElement && !nativeTriggered) {
+                applyWebFs();
               }
             }
           }
@@ -2737,15 +2867,31 @@ function setupEventListeners() {
     });
   }
 
-  // Hero Video Seek Bar
+  // Hero Video Seek & Drag Bar (Timeline Movement)
   const heroProgress = document.getElementById('heroProgressBar');
   if (heroProgress) {
-    heroProgress.addEventListener('click', (e) => {
-      const rect = heroProgress.getBoundingClientRect();
-      const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      const pct = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-      sendMediaControl('seek_percent', { percent: pct });
+    heroProgress.addEventListener('pointerdown', (e) => {
+      isDraggingHeroProgress = true;
+      heroProgress.classList.add('dragging');
+      try { heroProgress.setPointerCapture(e.pointerId); } catch (_) {}
+      updateHeroProgressFromEvent(e);
     });
+
+    heroProgress.addEventListener('pointermove', (e) => {
+      if (isDraggingHeroProgress) updateHeroProgressFromEvent(e);
+    });
+
+    const stopHeroProgressDrag = (e) => {
+      if (isDraggingHeroProgress) {
+        isDraggingHeroProgress = false;
+        lastHeroProgressDragTime = Date.now();
+        heroProgress.classList.remove('dragging');
+        try { heroProgress.releasePointerCapture(e.pointerId); } catch (_) {}
+        updateHeroProgressFromEvent(e);
+      }
+    };
+    heroProgress.addEventListener('pointerup', stopHeroProgressDrag);
+    heroProgress.addEventListener('pointercancel', stopHeroProgressDrag);
   }
 
   // Hero Volume Bar (Click & Drag)
@@ -2753,6 +2899,7 @@ function setupEventListeners() {
   if (heroVol) {
     heroVol.addEventListener('pointerdown', (e) => {
       isDraggingHeroVolume = true;
+      heroVol.classList.add('dragging');
       try { heroVol.setPointerCapture(e.pointerId); } catch (_) {}
       updateHeroVolumeFromEvent(e);
     });
@@ -2764,6 +2911,8 @@ function setupEventListeners() {
     const stopHeroVolDrag = (e) => {
       if (isDraggingHeroVolume) {
         isDraggingHeroVolume = false;
+        lastHeroVolumeDragTime = Date.now();
+        heroVol.classList.remove('dragging');
         try { heroVol.releasePointerCapture(e.pointerId); } catch (_) {}
         updateHeroVolumeFromEvent(e);
       }

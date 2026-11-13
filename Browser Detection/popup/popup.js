@@ -432,6 +432,9 @@ let userManualOverride = false;
 let isInitialLoad = true;
 let lastMediaPlaying = false;
 let isDraggingVolume = false;
+let lastVolumeDragTime = 0;
+let isDraggingProgress = false;
+let lastProgressDragTime = 0;
 let isTrackingPaused = false;
 
 /**
@@ -701,7 +704,7 @@ function sendMediaControl(action, data = {}, tabId = null) {
   if (actionKey === lastControlActionKey && (now - lastControlActionTime) < 280) {
     return;
   }
-  if (action !== 'set_volume' && (now - lastControlActionTime) < 180) {
+  if (action !== 'set_volume' && action !== 'seek_percent' && (now - lastControlActionTime) < 180) {
     return;
   }
   lastControlActionKey = actionKey;
@@ -717,7 +720,9 @@ function sendMediaControl(action, data = {}, tabId = null) {
       data,
       tabId: resolvedTabId
     }, () => {
-      setTimeout(refreshDashboard, 120);
+      if (!isDraggingVolume && !isDraggingProgress) {
+        setTimeout(refreshDashboard, 120);
+      }
     });
     if (p && typeof p.catch === 'function') {
       p.catch(() => {});
@@ -1215,14 +1220,18 @@ function renderMediaCard(globalMediaState) {
       : (isLive ? 100 : (Number(pm.progressPercent) || 0));
 
     if (progressSection) progressSection.classList.remove('hidden');
-    if (progressBarFill) progressBarFill.style.width = `${pct.toFixed(1)}%`;
-    if (timeElapsed) timeElapsed.textContent = formatVideoTime(current);
-    if (timeDuration) timeDuration.textContent = isLive ? '🔴 LIVE' : (duration > 0 ? formatVideoTime(duration) : '--:--');
-    if (timeProgressPercent) timeProgressPercent.textContent = isLive ? 'LIVE' : `${pct.toFixed(1)}%`;
+    if (!isDraggingProgress && (Date.now() - lastProgressDragTime > 600)) {
+      if (progressBarFill) progressBarFill.style.width = `${pct.toFixed(1)}%`;
+      if (timeElapsed) timeElapsed.textContent = formatVideoTime(current);
+      if (timeDuration) timeDuration.textContent = isLive ? '🔴 LIVE' : (duration > 0 ? formatVideoTime(duration) : '--:--');
+      if (timeProgressPercent) timeProgressPercent.textContent = isLive ? 'LIVE' : `${pct.toFixed(1)}%`;
+      const progContainer = document.getElementById('progressBarContainer');
+      if (progContainer) progContainer.setAttribute('aria-valuenow', String(Math.round(pct)));
+    }
 
     // 6. Volume Progress Bar & Control Section
     if (volumeSection) volumeSection.classList.remove('hidden');
-    if (!isDraggingVolume) {
+    if (!isDraggingVolume && (Date.now() - lastVolumeDragTime > 600)) {
       const displayVol = isMuted ? 0 : volPercent;
       if (volumeBarFill) volumeBarFill.style.width = `${displayVol}%`;
       if (volumePercentReadout) volumePercentReadout.textContent = isMuted ? t('muted_percent') : `${volPercent}%`;
@@ -1482,7 +1491,97 @@ function updateVolumeFromEvent(e) {
   icon.textContent = percent === 0 ? '🔇' : (percent < 40 ? '🔉' : '🔊');
   container.setAttribute('aria-valuenow', String(percent));
 
-  sendMediaControl('set_volume', { percent, volume: percent / 100 });
+  const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
+    (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+  // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms volume response)
+  if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+    browserAPI.scripting.executeScript({
+      target: { tabId: targetTabId, allFrames: true },
+      world: 'MAIN',
+      func: (volPercent) => {
+        const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+        const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+        if (moviePlayer && typeof moviePlayer.setVolume === 'function') {
+          try {
+            moviePlayer.setVolume(volPercent);
+            if (volPercent === 0 && typeof moviePlayer.mute === 'function') {
+              moviePlayer.mute();
+            } else if (volPercent > 0 && typeof moviePlayer.unMute === 'function') {
+              moviePlayer.unMute();
+            }
+          } catch (_) {}
+        }
+        if (video) {
+          try {
+            video.volume = volPercent / 100;
+            video.muted = (volPercent === 0);
+          } catch (_) {}
+        }
+      },
+      args: [percent]
+    }).catch(() => {});
+  }
+
+  sendMediaControl('set_volume', { percent, volume: percent / 100 }, targetTabId);
+}
+
+/**
+ * Calculates timeline seek percent from pointer coordinate and updates UI + sends command
+ */
+function updateProgressFromEvent(e) {
+  const container = document.getElementById('progressBarContainer');
+  const fill = document.getElementById('progressBarFill');
+  const timeElapsed = document.getElementById('timeElapsed');
+  const timeProgressPercent = document.getElementById('timeProgressPercent');
+  if (!container || !fill) return;
+
+  const rect = container.getBoundingClientRect();
+  const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+  const pct = rect.width > 0 ? Math.max(0, Math.min(100, (clickX / rect.width) * 100)) : 0;
+
+  fill.style.width = `${pct.toFixed(1)}%`;
+  if (timeProgressPercent) timeProgressPercent.textContent = `${pct.toFixed(1)}%`;
+  container.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+  const pm = (activeMediaCached && activeMediaCached.tabId) ? activeMediaCached : (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia);
+  const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : (activeMediaCached && activeMediaCached.duration ? activeMediaCached.duration : 0);
+  const targetSeconds = dur > 0 ? (pct / 100) * dur : 0;
+  if (dur > 0 && timeElapsed) {
+    timeElapsed.textContent = formatVideoTime(targetSeconds);
+  }
+
+  const targetTabId = (pm && pm.tabId) || (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+
+  // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms timeline seek)
+  if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+    browserAPI.scripting.executeScript({
+      target: { tabId: targetTabId, allFrames: true },
+      world: 'MAIN',
+      func: (seekPercent, seekSeconds) => {
+        const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+        const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+        let dur = 0;
+        if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+          try { dur = moviePlayer.getDuration() || 0; } catch (_) {}
+        }
+        if ((!dur || dur <= 0) && video) {
+          dur = video.duration || 0;
+        }
+        const target = seekSeconds > 0 ? seekSeconds : (dur > 0 ? (seekPercent / 100) * dur : 0);
+        if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+          try { moviePlayer.seekTo(target, true); } catch (_) {}
+        }
+        if (video) {
+          try { video.currentTime = target; } catch (_) {}
+        }
+      },
+      args: [pct, targetSeconds]
+    }).catch(() => {});
+  }
+
+  sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSeconds }, targetTabId);
 }
 
 let popupListenersAttached = false;
@@ -2172,28 +2271,44 @@ function setupEventListeners() {
               const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
               const target = player || (video && video.parentElement) || video;
               const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+
+              let nativeTriggered = false;
               if (ytFsBtn) {
-                try { ytFsBtn.click(); } catch (_) {}
-              }
-              if (player && typeof player.toggleFullscreen === 'function') {
-                try { player.toggleFullscreen(); } catch (_) {}
-              }
-              if (player) {
+                try {
+                  ytFsBtn.click();
+                  nativeTriggered = true;
+                } catch (_) {}
+              } else if (player && typeof player.toggleFullscreen === 'function') {
+                try {
+                  player.toggleFullscreen();
+                  nativeTriggered = true;
+                } catch (_) {}
+              } else if (player) {
                 try {
                   const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
                   player.dispatchEvent(ev);
+                  nativeTriggered = true;
                 } catch (_) {}
               }
-              if (target && target.requestFullscreen && !document.fullscreenElement) {
+
+              const applyWebFs = () => {
+                if (target) target.classList.add('sentinel-web-fullscreen');
+                if (document.body) document.body.classList.add('sentinel-has-web-fullscreen');
+                if (document.documentElement) document.documentElement.classList.add('sentinel-has-web-fullscreen');
+                if (player) player.classList.add('ytp-fullscreen');
+                const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+                if (flexy) {
+                  try { flexy.setAttribute('fullscreen', ''); } catch (_) {}
+                }
+                window.dispatchEvent(new Event('resize'));
+              };
+
+              if (target && target.requestFullscreen && !document.fullscreenElement && !nativeTriggered) {
                 target.requestFullscreen().catch(() => {
-                  document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
-                    detail: JSON.stringify({ action: 'toggle_fullscreen', data: {} })
-                  }));
+                  applyWebFs();
                 });
-              } else {
-                document.dispatchEvent(new CustomEvent('__MEDIA_SENTINEL_ACTION__', {
-                  detail: JSON.stringify({ action: 'toggle_fullscreen', data: {} })
-                }));
+              } else if (!document.fullscreenElement && !nativeTriggered) {
+                applyWebFs();
               }
             }
           }
@@ -2342,26 +2457,46 @@ function setupEventListeners() {
     });
   }
 
-  // Progress Bar Seeking
+  // Progress Bar Seeking & Dragging (Timeline Movement)
   const progressContainer = document.getElementById('progressBarContainer');
   if (progressContainer) {
-    progressContainer.addEventListener('click', (e) => {
-      if (!activeMediaCached || !activeMediaCached.duration) return;
-      const rect = progressContainer.getBoundingClientRect();
-      const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-      const pct = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-      activeMediaCached.currentTime = (pct / 100) * activeMediaCached.duration;
-      activeMediaCached.progressPercent = pct;
-      renderMediaCard({ primaryMedia: activeMediaCached });
-      sendMediaControl('seek_percent', { percent: pct });
+    progressContainer.addEventListener('pointerdown', (e) => {
+      isDraggingProgress = true;
+      progressContainer.classList.add('dragging');
+      try {
+        progressContainer.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      updateProgressFromEvent(e);
     });
+
+    progressContainer.addEventListener('pointermove', (e) => {
+      if (isDraggingProgress) {
+        updateProgressFromEvent(e);
+      }
+    });
+
+    const stopProgressDrag = (e) => {
+      if (isDraggingProgress) {
+        isDraggingProgress = false;
+        lastProgressDragTime = Date.now();
+        progressContainer.classList.remove('dragging');
+        try {
+          progressContainer.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        updateProgressFromEvent(e);
+      }
+    };
+
+    progressContainer.addEventListener('pointerup', stopProgressDrag);
+    progressContainer.addEventListener('pointercancel', stopProgressDrag);
   }
 
-  // Volume Bar Scrubbing
+  // Volume Bar Scrubbing & Dragging
   const volumeContainer = document.getElementById('volumeBarContainer');
   if (volumeContainer) {
     volumeContainer.addEventListener('pointerdown', (e) => {
       isDraggingVolume = true;
+      volumeContainer.classList.add('dragging');
       try {
         volumeContainer.setPointerCapture(e.pointerId);
       } catch (_) {}
@@ -2377,6 +2512,8 @@ function setupEventListeners() {
     const stopVolumeDrag = (e) => {
       if (isDraggingVolume) {
         isDraggingVolume = false;
+        lastVolumeDragTime = Date.now();
+        volumeContainer.classList.remove('dragging');
         try {
           volumeContainer.releasePointerCapture(e.pointerId);
         } catch (_) {}

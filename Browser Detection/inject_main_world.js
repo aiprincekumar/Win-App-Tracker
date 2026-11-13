@@ -437,6 +437,14 @@
           width: 100% !important;
           height: 100% !important;
         }
+        .sentinel-has-web-fullscreen #masthead-container,
+        .sentinel-has-web-fullscreen ytd-masthead,
+        .sentinel-has-web-fullscreen #masthead {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
         .sentinel-has-web-fullscreen ytd-app,
         .sentinel-has-web-fullscreen #content,
         .sentinel-has-web-fullscreen #page-manager,
@@ -759,16 +767,24 @@
         } else {
           const target = moviePlayer || (video && (video.parentElement || video)) || document.querySelector('.html5-video-player') || video;
           const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+          let nativeToggled = false;
           if (ytFsBtn) {
-            try { ytFsBtn.click(); } catch (_) {}
+            try {
+              ytFsBtn.click();
+              nativeToggled = true;
+            } catch (_) {}
+          } else if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
+            try {
+              moviePlayer.toggleFullscreen();
+              nativeToggled = true;
+            } catch (_) {}
+          } else {
+            try {
+              const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+              (moviePlayer || document.activeElement || document).dispatchEvent(ev);
+              nativeToggled = true;
+            } catch (_) {}
           }
-          if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
-            try { moviePlayer.toggleFullscreen(); } catch (_) {}
-          }
-          try {
-            const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-            (moviePlayer || document.activeElement || document).dispatchEvent(ev);
-          } catch (_) {}
 
           if (target && target.requestFullscreen) {
             try {
@@ -991,13 +1007,14 @@
         if ((!dur || dur <= 0) && video) {
           dur = video.duration || 0;
         }
-        if (dur > 0) {
-          const target = (pct / 100) * dur;
-          if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
-            try { moviePlayer.seekTo(target, true); } catch (_) {}
-          } else if (video) {
-            video.currentTime = target;
-          }
+        const target = (typeof data.positionSeconds === 'number' && data.positionSeconds >= 0)
+          ? data.positionSeconds
+          : (dur > 0 ? (pct / 100) * dur : 0);
+        if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+          try { moviePlayer.seekTo(target, true); } catch (_) {}
+        }
+        if (video) {
+          try { video.currentTime = target; } catch (_) {}
         }
         showOSD(`${pct.toFixed(0)}%`, '📍');
         break;
@@ -1053,9 +1070,9 @@
       minCooldown = 300;
     } else if (action === 'step_speed' || action === 'set_speed' || action === 'cycle_speed') {
       minCooldown = 250;
-    } else if (action === 'seek_relative' || action === 'seek_percent') {
+    } else if (action === 'seek_relative') {
       minCooldown = 200;
-    } else if (action === 'set_volume' || action === 'SET_VOLUME') {
+    } else if (action === 'seek_percent' || action === 'set_volume' || action === 'SET_VOLUME') {
       minCooldown = 50;
     }
 

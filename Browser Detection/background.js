@@ -2740,7 +2740,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Direct SET_VOLUME relay (from Popup/Dashboard to Content Script)
   if (message.type === 'SET_VOLUME') {
     const globalMedia = synthesizeGlobalMediaState();
-    let targetTabId = (globalMedia.primaryMedia && globalMedia.primaryMedia.tabId) || activeTabId;
+    let targetTabId = (message.tabId ? Number(message.tabId) : null) || (globalMedia.primaryMedia && globalMedia.primaryMedia.tabId) || activeTabId;
 
     if (!targetTabId && activeTabId) {
       targetTabId = activeTabId;
