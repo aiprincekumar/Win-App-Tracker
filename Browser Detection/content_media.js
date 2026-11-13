@@ -1040,6 +1040,9 @@
    * Toggles CSS Web Fullscreen on target video/player element
    */
   function toggleWebFullscreen(targetElement) {
+    if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+      return window.__SentinelFullscreenController.toggle(targetElement);
+    }
     try {
       ensureWebFullscreenStyles();
       const el = targetElement || document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
@@ -1225,74 +1228,19 @@
             break;
           }
           case 'toggle_fullscreen': {
-            const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
-            if (document.fullscreenElement || hasWebFs) {
-              if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-              }
-              if (hasWebFs) {
-                toggleWebFullscreen();
-              }
+            if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+              window.__SentinelFullscreenController.toggle(primaryMediaElement);
             } else {
               const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
-              let nativeToggled = false;
               if (ytFsBtn) {
-                try {
-                  ytFsBtn.click();
-                  nativeToggled = true;
-                } catch (_) {}
+                try { ytFsBtn.click(); } catch (_) {}
               } else {
-                const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
                 try {
                   const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                  (player || document.activeElement || document).dispatchEvent(ev);
-                  nativeToggled = true;
+                  (document.getElementById('movie_player') || document).dispatchEvent(ev);
                 } catch (_) {}
               }
-
-              const el = player || (primaryMediaElement && (primaryMediaElement.parentElement || primaryMediaElement));
-              const target = el || primaryMediaElement;
-
-              if (target && target.requestFullscreen) {
-                try {
-                  const p = target.requestFullscreen();
-                  if (p && typeof p.then === 'function') {
-                    p.catch(() => {
-                      toggleWebFullscreen(target);
-                      if (!isTopFrame) {
-                        try {
-                          window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                        } catch (_) {}
-                      }
-                    });
-                  }
-                } catch (_) {
-                  toggleWebFullscreen(target);
-                  if (!isTopFrame) {
-                    try {
-                      window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                    } catch (_) {}
-                  }
-                }
-              } else if (target) {
-                toggleWebFullscreen(target);
-                if (!isTopFrame) {
-                  try {
-                    window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                  } catch (_) {}
-                }
-              }
-
-              setTimeout(() => {
-                if (!document.fullscreenElement && !document.querySelector('.sentinel-web-fullscreen')) {
-                  toggleWebFullscreen(target);
-                  if (!isTopFrame) {
-                    try {
-                      window.parent.postMessage({ type: '__SENTINEL_IFRAME_FULLSCREEN__' }, '*');
-                    } catch (_) {}
-                  }
-                }
-              }, 60);
+              toggleWebFullscreen(primaryMediaElement);
             }
             break;
           }

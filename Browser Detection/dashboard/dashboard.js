@@ -2639,6 +2639,10 @@ function setupEventListeners() {
           target: { tabId: targetTabId, allFrames: true },
           world: 'MAIN',
           func: () => {
+            if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+              window.__SentinelFullscreenController.toggle();
+              return;
+            }
             const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
             if (document.fullscreenElement || hasWebFs) {
               if (document.fullscreenElement && document.exitFullscreen) {

@@ -26,6 +26,7 @@
         "<all_urls>"
       ],
       "js": [
+        "fullscreen_controller.js",
         "content_media.js"
       ],
       "run_at": "document_start",
@@ -36,6 +37,7 @@
         "<all_urls>"
       ],
       "js": [
+        "fullscreen_controller.js",
         "inject_main_world.js"
       ],
       "run_at": "document_start",
@@ -46,6 +48,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "fullscreen_controller.js",
         "inject_main_world.js",
         "dashboard/*",
         "icons/*"

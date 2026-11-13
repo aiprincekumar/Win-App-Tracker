@@ -34,7 +34,8 @@ console.log('Test 1: Node.js Compiler Syntax Check (`node -c`) on All Extension 
     'background.js',
     'dashboard/dashboard.js',
     'content_media.js',
-    'inject_main_world.js'
+    'inject_main_world.js',
+    'fullscreen_controller.js'
   ];
 
   targetScripts.forEach((relPath) => {
@@ -60,7 +61,8 @@ console.log('\nTest 2: In-Memory AST Parsing & Compilation via `vm.Script`');
     'background.js',
     'dashboard/dashboard.js',
     'content_media.js',
-    'inject_main_world.js'
+    'inject_main_world.js',
+    'fullscreen_controller.js'
   ];
 
   targetScripts.forEach((relPath) => {

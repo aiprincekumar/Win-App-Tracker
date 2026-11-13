@@ -506,6 +506,9 @@
    * Toggles CSS Web Fullscreen on target element
    */
   function toggleWebFullscreen(targetEl) {
+    if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+      return window.__SentinelFullscreenController.toggle(targetEl);
+    }
     try {
       ensureWebFullscreenStyles();
       const el = targetEl || document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('video') || document.body;
@@ -756,56 +759,19 @@
       // 4. ADVANCED WINDOW MODES (Fullscreen, Theater Mode, Picture-in-Picture)
       // -----------------------------------------------------------------------
       case 'toggle_fullscreen': {
-        const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
-        if (document.fullscreenElement || hasWebFs) {
-          if (document.fullscreenElement && document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
-          }
-          if (hasWebFs) {
-            toggleWebFullscreen();
-          }
+        if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+          window.__SentinelFullscreenController.toggle(moviePlayer || video);
         } else {
-          const target = moviePlayer || (video && (video.parentElement || video)) || document.querySelector('.html5-video-player') || video;
           const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
-          let nativeToggled = false;
           if (ytFsBtn) {
-            try {
-              ytFsBtn.click();
-              nativeToggled = true;
-            } catch (_) {}
-          } else if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
-            try {
-              moviePlayer.toggleFullscreen();
-              nativeToggled = true;
-            } catch (_) {}
+            try { ytFsBtn.click(); } catch (_) {}
           } else {
             try {
               const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-              (moviePlayer || document.activeElement || document).dispatchEvent(ev);
-              nativeToggled = true;
+              (moviePlayer || document).dispatchEvent(ev);
             } catch (_) {}
           }
-
-          if (target && target.requestFullscreen) {
-            try {
-              const p = target.requestFullscreen();
-              if (p && typeof p.then === 'function') {
-                p.catch(() => {
-                  toggleWebFullscreen(target);
-                });
-              }
-            } catch (_) {
-              toggleWebFullscreen(target);
-            }
-          } else if (target) {
-            toggleWebFullscreen(target);
-          }
-
-          setTimeout(() => {
-            if (!document.fullscreenElement && !document.querySelector('.sentinel-web-fullscreen')) {
-              toggleWebFullscreen(target);
-            }
-          }, 60);
+          toggleWebFullscreen(moviePlayer || video);
         }
         break;
       }
