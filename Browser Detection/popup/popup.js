@@ -454,6 +454,13 @@ function applyPopupLanguage(lang) {
   setTxt('btnOpenDashboardText', 'btn_dashboard');
   setTitle('btnOpenDashboard', 'btn_dashboard_title');
 
+  const btnSettings = document.getElementById('btnQuickSettings');
+  if (btnSettings) {
+    const sTitle = (currentLang === 'hi') ? 'त्वरित सेटिंग्स' : 'Quick Settings';
+    btnSettings.title = sTitle;
+    btnSettings.setAttribute('aria-label', sTitle);
+  }
+
   // Re-render dynamic components with localized strings
   if (dashboardData) {
     renderWebSocketBadge(dashboardData.wsConnected);
@@ -548,6 +555,11 @@ function updateTrackingPauseButtonUI(isPaused) {
 
     svg.appendChild(rect1);
     svg.appendChild(rect2);
+  }
+
+  const timeBadge = document.getElementById('todayHeaderTimeBadge');
+  if (timeBadge) {
+    timeBadge.classList.toggle('paused', Boolean(isPaused));
   }
 }
 
@@ -1142,7 +1154,16 @@ function renderStatsPills(data) {
 
   if (pToday) pToday.textContent = formatCenterTime(todaySeconds);
   const pTodayHeader = document.getElementById('todayHeaderTimeText');
-  if (pTodayHeader) pTodayHeader.textContent = formatCenterTime(todaySeconds);
+  const formattedToday = formatCenterTime(todaySeconds);
+  if (pTodayHeader) pTodayHeader.textContent = formattedToday;
+  const timeBadge = document.getElementById('todayHeaderTimeBadge');
+  if (timeBadge) {
+    const timeTitle = (currentLang === 'hi')
+      ? `आज का कुल सक्रिय समय: ${formattedToday} (ट्रैकिंग देखने के लिए क्लिक करें)`
+      : `Total Active Time Today: ${formattedToday} (Click to view Tracking)`;
+    timeBadge.title = timeTitle;
+    timeBadge.setAttribute('aria-label', timeTitle);
+  }
   if (pDaily) pDaily.textContent = formatCenterTime(dailyAvgSeconds);
   if (pSessions) pSessions.textContent = String(totalSessions);
 }
@@ -1412,11 +1433,17 @@ function renderWebSocketBadge(isConnected) {
     if (isConnected) {
       badge.className = 'ws-badge connected';
       text.textContent = t('hud_connected');
-      badge.title = `${t('hud_connected')} (ws://127.0.0.1:65432)`;
+      const connTitle = `${t('hud_connected')} (ws://127.0.0.1:65432)`;
+      badge.title = connTitle;
+      badge.setAttribute('aria-label', connTitle);
     } else {
       badge.className = 'ws-badge disconnected';
       text.textContent = t('hud_offline');
-      badge.title = `${t('hud_offline')} (Port 65432)`;
+      const offTitle = (currentLang === 'hi')
+        ? `${t('hud_offline')} (Port 65432 - कनेक्ट करने के लिए क्लिक करें)`
+        : `${t('hud_offline')} (Port 65432 - Click to Connect/Launch)`;
+      badge.title = offTitle;
+      badge.setAttribute('aria-label', offTitle);
     }
   }
 
@@ -1435,12 +1462,20 @@ function renderDataHubBadge(isConnected) {
 
   if (isConnected) {
     badge.className = 'ws-badge connected';
-    text.textContent = 'Hub Active';
-    badge.title = 'Standalone SQLite Data Hub Connected (ws://127.0.0.1:65433)';
+    text.textContent = (currentLang === 'hi') ? 'डेटा हब सक्रिय' : 'Hub Active';
+    const connTitle = (currentLang === 'hi')
+      ? 'SQLite डेटा हब: सक्रिय (ws://127.0.0.1:65433)'
+      : 'SQLite Data Hub: Active (ws://127.0.0.1:65433)';
+    badge.title = connTitle;
+    badge.setAttribute('aria-label', connTitle);
   } else {
     badge.className = 'ws-badge disconnected';
-    text.textContent = 'Hub Offline';
-    badge.title = 'Standalone SQLite Data Hub Offline (Port 65433)';
+    text.textContent = (currentLang === 'hi') ? 'डेटा हब ऑफलाइन' : 'Hub Offline';
+    const offTitle = (currentLang === 'hi')
+      ? 'SQLite डेटा हब: ऑफलाइन (Port 65433 - कनेक्ट करने के लिए क्लिक करें)'
+      : 'SQLite Data Hub: Offline (Port 65433 - Click to Connect)';
+    badge.title = offTitle;
+    badge.setAttribute('aria-label', offTitle);
   }
 }
 

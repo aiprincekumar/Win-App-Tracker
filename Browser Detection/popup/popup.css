@@ -100,48 +100,162 @@ body::-webkit-scrollbar-thumb {
   color: var(--text-dim);
 }
 
+/* ==========================================================================
+   Header Badges (Icon-Only Compact Status Architecture)
+   ========================================================================== */
+
 .header-badges {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
-/* WebSocket Connection Badge */
-.ws-badge {
-  display: flex;
+/* Base Badge / Action Button Geometry: 30x30px Compact Uniform Capsule */
+.ws-badge,
+.btn-quick-settings {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-dim);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  outline: none;
+  box-sizing: border-box;
 }
 
+.ws-badge:hover,
+.btn-quick-settings:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.ws-badge:active,
+.btn-quick-settings:active {
+  transform: scale(0.94);
+}
+
+.ws-badge:focus-visible,
+.btn-quick-settings:focus-visible {
+  outline: 2px solid var(--accent-emerald);
+  outline-offset: 1px;
+}
+
+/* Header Badge SVG Icons */
+.ws-badge .badge-icon,
+.btn-quick-settings .badge-icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease, filter 0.2s ease;
+}
+
+/* Micro-Interaction: Gear Rotation on Quick Settings Hover */
+.btn-quick-settings:hover .badge-icon {
+  transform: rotate(45deg);
+}
+
+.btn-quick-settings[aria-expanded="true"] {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+/* Status Indicator Dot (Concentric Halo Cutout Pip) */
 .ws-dot {
-  width: 7px;
-  height: 7px;
+  position: absolute;
+  top: -2.5px;
+  right: -2.5px;
+  width: 7.5px;
+  height: 7.5px;
   border-radius: 50%;
   background-color: var(--text-dim);
+  border: 1.5px solid var(--bg-primary);
+  z-index: 2;
+  pointer-events: none;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* State 1: Connected / Active (Glowing Emerald) */
+.ws-badge.connected {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+}
+
+.ws-badge.connected:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #6ee7b7;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+}
+
+.ws-badge.connected .badge-icon {
+  color: #34d399;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.45));
 }
 
 .ws-badge.connected .ws-dot {
   background-color: var(--accent-emerald);
-  box-shadow: 0 0 8px var(--accent-emerald);
+  box-shadow: 0 0 7px var(--accent-emerald);
 }
-.ws-badge.connected {
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #a7f3d0;
+
+/* State 2: Disconnected / Offline (Muted Slate with Subtle Red Pip) */
+.ws-badge.disconnected {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #64748b;
+}
+
+.ws-badge.disconnected:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+}
+
+.ws-badge.disconnected .badge-icon {
+  color: #64748b;
+  filter: none;
+}
+
+.ws-badge.disconnected:hover .badge-icon {
+  color: #fca5a5;
 }
 
 .ws-badge.disconnected .ws-dot {
   background-color: var(--danger);
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
 }
-.ws-badge.disconnected {
-  color: #fca5a5;
+
+/* State 3: Starting / Connecting (Pulsing Amber) */
+.ws-badge.starting {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.ws-badge.starting .badge-icon {
+  color: #fbbf24;
+  animation: badge-pulse-icon 1.2s ease-in-out infinite;
 }
 
 .ws-badge.starting .ws-dot {
@@ -149,9 +263,81 @@ body::-webkit-scrollbar-thumb {
   box-shadow: 0 0 8px var(--accent-amber);
   animation: pulse-dot 0.8s ease-in-out infinite;
 }
-.ws-badge.starting {
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #fde68a;
+
+/* Header Session Time Badge */
+.ws-badge.time-badge {
+  background: rgba(16, 185, 129, 0.09);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.ws-badge.time-badge:hover {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.22);
+}
+
+.ws-badge.time-badge .badge-icon {
+  color: #34d399;
+}
+
+.ws-badge.time-badge .time-dot {
+  background-color: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.ws-badge.time-badge.paused {
+  background: rgba(245, 158, 11, 0.09);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.ws-badge.time-badge.paused .badge-icon {
+  color: #fbbf24;
+}
+
+.ws-badge.time-badge.paused .time-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+}
+
+/* Visually Hidden Screen Reader Text for Canonical DOM Preservations */
+.sr-only,
+.ws-badge .ws-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 1);
+  }
+}
+
+@keyframes badge-pulse-icon {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
 }
 
 /* Toast Banner (Fixed Bottom Floating - Zero Layout Shift Standard) */
@@ -1631,17 +1817,7 @@ button.spinning .refresh-spinner-icon,
   pointer-events: none;
 }
 
-/* Header Time Badge */
-.ws-badge.time-badge {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #34d399;
-}
-
-.ws-badge.time-badge .time-dot {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
-}
+/* Header Time Badge defined in Header Badges section above */
 
 /* Floating Sleep Timer Popover */
 .sleep-timer-popover {
@@ -1936,27 +2112,7 @@ button.spinning .refresh-spinner-icon,
    4-Pillar Hub Architecture: Quick Settings, Micro-Actions & Multi-Pane Layout
    ========================================================================== */
 
-/* Quick Settings Button */
-.btn-quick-settings {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-dim);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 3px 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-.btn-quick-settings:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: rotate(30deg);
-}
+/* Quick Settings Button styled in Header Badges section above */
 
 /* Quick Settings Popover */
 .quick-settings-popover {
