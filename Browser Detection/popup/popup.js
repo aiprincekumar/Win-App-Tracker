@@ -195,7 +195,32 @@ const I18N_POPUP = {
     toast_hud_connected: 'HUD connected successfully',
     toast_hud_failed: 'Could not connect to HUD',
     toast_switched_tab: 'Focused media tab',
-    toast_no_media_tab: 'No active media tab found'
+    toast_no_media_tab: 'No active media tab found',
+    
+    // 4-Pillar Tabs
+    tab_audio: 'Audio Lab',
+    tab_studio: 'Studio',
+    tab_focus: 'Focus',
+    
+    // Player Micro-Actions
+    btn_card_screenshot: 'Snap',
+    btn_card_screenshot_title: 'Capture Video Frame',
+    btn_card_cinema: 'Cinema',
+    btn_card_cinema_title: 'Cinema Focus Dimmer',
+    btn_card_loop: 'Loop',
+    btn_card_loop_title: 'Loop Current Media',
+    btn_card_next: 'Next',
+    btn_card_next_title: 'Next Track / Video',
+    btn_card_copy_link: 'Copy Link',
+    btn_card_copy_link_title: 'Copy Link with Timestamp',
+    
+    // Additional Toasts
+    toast_screenshot_captured: 'Video frame captured',
+    toast_link_copied: 'Timestamp link copied to clipboard',
+    toast_loop_enabled: 'Looping enabled',
+    toast_loop_disabled: 'Looping disabled',
+    toast_cinema_toggled: 'Cinema dimmer toggled',
+    toast_note_pinned: 'Timestamp note pinned'
   },
   hi: {
     brand_subtitle: 'गतिविधि व मीडिया टेलीमेट्री',
@@ -312,7 +337,32 @@ const I18N_POPUP = {
     toast_hud_connected: 'HUD सफलतापूर्वक कनेक्ट हो गया',
     toast_hud_failed: 'HUD से कनेक्ट नहीं हो सका',
     toast_switched_tab: 'मीडिया टैब पर स्विच किया गया',
-    toast_no_media_tab: 'कोई सक्रिय मीडिया टैब नहीं मिला'
+    toast_no_media_tab: 'कोई सक्रिय मीडिया टैब नहीं मिला',
+    
+    // 4-Pillar Tabs
+    tab_audio: 'ऑडियो लैब',
+    tab_studio: 'स्टूडियो',
+    tab_focus: 'फोकस',
+    
+    // Player Micro-Actions
+    btn_card_screenshot: 'स्नैप',
+    btn_card_screenshot_title: 'वीडियो फ्रेम कैप्चर करें',
+    btn_card_cinema: 'सिनेमा',
+    btn_card_cinema_title: 'सिनेमा फोकस डिमर',
+    btn_card_loop: 'लूप',
+    btn_card_loop_title: 'मौजूदा मीडिया को लूप करें',
+    btn_card_next: 'अगला',
+    btn_card_next_title: 'अगला ट्रैक या वीडियो',
+    btn_card_copy_link: 'लिंक कॉपी',
+    btn_card_copy_link_title: 'टाइमस्टैम्प के साथ लिंक कॉपी करें',
+    
+    // Additional Toasts
+    toast_screenshot_captured: 'वीडियो फ्रेम कैप्चर किया गया',
+    toast_link_copied: 'टाइमस्टैम्प लिंक क्लिपबोर्ड पर कॉपी किया गया',
+    toast_loop_enabled: 'लूपिंग चालू की गई',
+    toast_loop_disabled: 'लूपिंग बंद की गई',
+    toast_cinema_toggled: 'सिनेमा डिमर टॉगल किया गया',
+    toast_note_pinned: 'टाइमस्टैम्प नोट पिन किया गया'
   }
 };
 
@@ -337,6 +387,8 @@ function applyPopupLanguage(lang) {
 
   setTxt('brandSubtitle', 'brand_subtitle');
   setTxt('topTabMediaText', 'tab_media');
+  setTxt('topTabAudioText', 'tab_audio');
+  setTxt('topTabStudioText', 'tab_studio');
   setTxt('topTabTrackingText', 'tab_tracking');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
 
@@ -634,36 +686,40 @@ function formatCenterTime(totalSeconds) {
 }
 
 /**
- * Switches the top-level tab (Media Player vs Time Tracking)
+ * Switches the top-level tab (Player, Audio Lab, Studio, Focus)
  */
 function switchTopTab(tabName, isManual = false) {
   if (isManual) {
     userManualOverride = true;
   }
-  activeTopTab = tabName;
+  const normalized = (tabName === 'focus') ? 'tracking' : tabName;
+  activeTopTab = normalized;
 
-  const btnMedia = document.getElementById('mainTabMedia');
-  const btnTracking = document.getElementById('mainTabTracking');
-  const paneMedia = document.getElementById('viewMediaPane');
-  const paneTracking = document.getElementById('viewTrackingPane');
+  const tabs = [
+    { id: 'mainTabMedia', paneId: 'viewMediaPane', key: 'media' },
+    { id: 'mainTabAudio', paneId: 'viewAudioPane', key: 'audio' },
+    { id: 'mainTabStudio', paneId: 'viewStudioPane', key: 'studio' },
+    { id: 'mainTabTracking', paneId: 'viewTrackingPane', key: 'tracking' }
+  ];
 
-  if (tabName === 'media') {
-    btnMedia.classList.add('active');
-    btnMedia.setAttribute('aria-selected', 'true');
-    btnTracking.classList.remove('active');
-    btnTracking.setAttribute('aria-selected', 'false');
+  tabs.forEach(t => {
+    const btn = document.getElementById(t.id);
+    const pane = document.getElementById(t.paneId);
+    if (!btn || !pane) return;
+    if (t.key === normalized) {
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      pane.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-selected', 'false');
+      pane.classList.remove('active');
+    }
+  });
 
-    paneMedia.classList.add('active');
-    paneTracking.classList.remove('active');
-  } else {
-    btnTracking.classList.add('active');
-    btnTracking.setAttribute('aria-selected', 'true');
-    btnMedia.classList.remove('active');
-    btnMedia.setAttribute('aria-selected', 'false');
-
-    paneTracking.classList.add('active');
-    paneMedia.classList.remove('active');
-  }
+  try {
+    browserAPI.storage.local.set({ active_popup_tab: normalized });
+  } catch (_) {}
 }
 
 /**
@@ -983,6 +1039,8 @@ function renderDomainList(items, totalSeconds) {
   if (!container) return;
   container.innerHTML = '';
 
+  updateFocusRatio(items, totalSeconds);
+
   const filtered = items.filter(it => {
     const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
     if (selectedDomainCategory === 'web' && isInternal) return false;
@@ -1293,6 +1351,14 @@ function renderMediaCard(globalMediaState) {
       qualityDisplay.textContent = qText.toUpperCase();
     }
 
+    const microActionsRow = document.getElementById('playerMicroActionsRow');
+    if (microActionsRow) microActionsRow.classList.remove('hidden');
+
+    const studioBadge = document.getElementById('studioActiveTimestampBadge');
+    if (studioBadge && timeElapsed) {
+      studioBadge.textContent = timeElapsed.textContent || '00:00';
+    }
+    updateResumePlaybackCard(pm);
   } else {
     // Idle / No Media State
     card.className = 'media-card idle';
@@ -1320,6 +1386,9 @@ function renderMediaCard(globalMediaState) {
 
     const advancedRow = document.getElementById('mediaAdvancedRow');
     if (advancedRow) advancedRow.classList.add('hidden');
+
+    const microActionsRow = document.getElementById('playerMicroActionsRow');
+    if (microActionsRow) microActionsRow.classList.add('hidden');
 
     if (mediaEmptyPrompt) mediaEmptyPrompt.classList.remove('hidden');
   }
@@ -1584,6 +1653,250 @@ function updateProgressFromEvent(e) {
   sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSeconds }, targetTabId);
 }
 
+// =============================================================================
+// 4-Pillar Hub Architecture: State & Helper Functions
+// =============================================================================
+
+let smartAutomations = {
+  auto_pause_new_tab: false,
+  auto_ad_silencer: false,
+  domain_speed_memory: true
+};
+
+let audioLabSettings = {
+  master_boost: 100,
+  audio_only: false,
+  eq_preset: 'flat',
+  eq_bands: {
+    '60': 0,
+    '250': 0,
+    '1000': 0,
+    '4000': 0,
+    '16000': 0
+  },
+  vocal_clarity: false,
+  night_shield: false
+};
+
+const EQ_PRESETS = {
+  flat: [0, 0, 0, 0, 0],
+  bass_boost: [6, 4, 1, 0, -1],
+  vocal_clarify: [-3, 1, 4, 5, 2],
+  rock: [5, 3, -1, 3, 5],
+  night: [-4, -2, 2, 1, -3]
+};
+
+let studioNotes = [];
+let studioScreenshots = [];
+let lastWatchedPlayback = null;
+
+let focusSettings = {
+  doomscroll_enabled: false,
+  doomscroll_interval_minutes: 30
+};
+
+let quickSettings = {
+  default_tab: 'media',
+  sync_interval: 2000,
+  notification_sound: true,
+  high_contrast: false
+};
+
+function getActiveMediaTabId() {
+  return (activeMediaCached && activeMediaCached.tabId) ||
+    (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId) ||
+    null;
+}
+
+function persistAudioSettings() {
+  try {
+    browserAPI.storage.local.set({ audio_lab_settings: audioLabSettings });
+  } catch (_) {}
+}
+
+function saveScreenshot(snap) {
+  if (!snap) return;
+  studioScreenshots.unshift(snap);
+  if (studioScreenshots.length > 12) studioScreenshots.pop();
+  try {
+    browserAPI.storage.local.set({ studio_screenshots: studioScreenshots });
+  } catch (_) {}
+  renderStudioScreenshots();
+}
+
+function renderStudioNotesList() {
+  const container = document.getElementById('studioNotesListContainer') || document.getElementById('studioBookmarksList');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  if (!studioNotes || studioNotes.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-state-sm';
+    const span = document.createElement('span');
+    span.textContent = 'No bookmarked timestamps yet. Click 📌 Pin above!';
+    emptyDiv.appendChild(span);
+    container.appendChild(emptyDiv);
+    return;
+  }
+  studioNotes.forEach(note => {
+    const item = document.createElement('div');
+    item.className = 'studio-clip-item';
+
+    const timeBtn = document.createElement('button');
+    timeBtn.className = 'clip-time-btn';
+    timeBtn.textContent = note.timestampFormatted || '00:00';
+    timeBtn.title = 'Jump to timestamp';
+    timeBtn.addEventListener('click', () => {
+      sendMediaControl('seek_position', { position: note.timestamp });
+      showPopupToast(`Jumped to ${note.timestampFormatted}`);
+    });
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'clip-content';
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'clip-text';
+    textSpan.textContent = note.text || 'Note';
+
+    const sourceSpan = document.createElement('span');
+    sourceSpan.className = 'clip-source';
+    sourceSpan.textContent = note.title || 'Media';
+
+    contentDiv.appendChild(textSpan);
+    contentDiv.appendChild(sourceSpan);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-delete-clip';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Delete note';
+    delBtn.addEventListener('click', () => {
+      studioNotes = studioNotes.filter(n => n.id !== note.id);
+      browserAPI.storage.local.set({ studio_notes: studioNotes });
+      renderStudioNotesList();
+    });
+
+    item.appendChild(timeBtn);
+    item.appendChild(contentDiv);
+    item.appendChild(delBtn);
+    container.appendChild(item);
+  });
+}
+
+function renderStudioScreenshots() {
+  const container = document.getElementById('studioScreenshotsContainer') || document.getElementById('studioScreenshotsGrid');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  if (!studioScreenshots || studioScreenshots.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-state-sm';
+    const span = document.createElement('span');
+    span.textContent = 'Click 📸 Snap in Player to capture frames.';
+    emptyDiv.appendChild(span);
+    container.appendChild(emptyDiv);
+    return;
+  }
+  studioScreenshots.slice(0, 6).forEach(snap => {
+    const wrap = document.createElement('div');
+    wrap.className = 'screenshot-thumb-wrap';
+
+    const img = document.createElement('img');
+    img.className = 'screenshot-thumb-img';
+    img.src = snap.dataUrl;
+    img.alt = snap.title || 'Snapshot';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'screenshot-thumb-overlay';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-text-sm';
+    copyBtn.textContent = '📋';
+    copyBtn.title = 'Copy Image';
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      showPopupToast('Snapshot ready');
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-delete-clip';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Delete';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      studioScreenshots = studioScreenshots.filter(s => s.id !== snap.id);
+      browserAPI.storage.local.set({ studio_screenshots: studioScreenshots });
+      renderStudioScreenshots();
+    });
+
+    overlay.appendChild(copyBtn);
+    overlay.appendChild(delBtn);
+    wrap.appendChild(img);
+    wrap.appendChild(overlay);
+    container.appendChild(wrap);
+  });
+}
+
+function updateResumePlaybackCard(pm) {
+  if (pm && pm.title && pm.currentTime > 5) {
+    let domainStr = pm.domain || '';
+    if (!domainStr && pm.url) {
+      try { domainStr = new URL(pm.url).hostname; } catch (_) {}
+    }
+    lastWatchedPlayback = {
+      title: pm.title,
+      domain: domainStr,
+      currentTime: pm.currentTime,
+      timestampFormatted: formatTime(pm.currentTime),
+      url: pm.url
+    };
+    try {
+      browserAPI.storage.local.set({ studio_last_playback: lastWatchedPlayback });
+    } catch (_) {}
+  }
+  const resumeCard = document.getElementById('studioResumePlaybackCard') || document.getElementById('studioResumeCard');
+  const titleEl = document.getElementById('resumeVideoTitle');
+  const metaEl = document.getElementById('resumeVideoMeta');
+  if (resumeCard && lastWatchedPlayback) {
+    resumeCard.classList.remove('hidden');
+    if (titleEl) titleEl.textContent = lastWatchedPlayback.title || 'Last Watched Video';
+    if (metaEl) metaEl.textContent = `${lastWatchedPlayback.domain || 'web'} • Paused at ${lastWatchedPlayback.timestampFormatted || '00:00'}`;
+  }
+}
+
+function updateFocusRatio(items, totalSeconds) {
+  const entertainmentDomains = new Set([
+    'youtube.com', 'netflix.com', 'spotify.com', 'twitch.tv',
+    'twitter.com', 'x.com', 'reddit.com', 'tiktok.com',
+    'instagram.com', 'facebook.com', 'vimeo.com', 'soundcloud.com',
+    'hulu.com', 'disneyplus.com', 'primevideo.com'
+  ]);
+  let entSeconds = 0;
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      const d = (item.domain || '').toLowerCase().replace(/^www\./, '');
+      if (entertainmentDomains.has(d) || Array.from(entertainmentDomains).some(ed => d.endsWith('.' + ed))) {
+        entSeconds += (item.seconds || 0);
+      }
+    }
+  }
+  const total = Math.max(0, totalSeconds || 0);
+  let prodPercent = 75;
+  let entPercent = 25;
+  if (total > 0) {
+    const prodSeconds = Math.max(0, total - entSeconds);
+    prodPercent = Math.min(100, Math.max(0, Math.round((prodSeconds / total) * 100)));
+    entPercent = 100 - prodPercent;
+  }
+  const prodBar = document.getElementById('focusRatioProductiveFill') || document.getElementById('focusRatioProductiveBar');
+  const entBar = document.getElementById('focusRatioEntertainmentBar');
+  const ratioText = document.getElementById('focusRatioPercentText') || document.getElementById('focusRatioText');
+  if (prodBar) prodBar.style.width = prodPercent + '%';
+  if (entBar) entBar.style.width = entPercent + '%';
+  if (ratioText) ratioText.textContent = `${prodPercent}% Productive`;
+}
+
 let popupListenersAttached = false;
 
 /**
@@ -1593,8 +1906,10 @@ function setupEventListeners() {
   if (popupListenersAttached) return;
   popupListenersAttached = true;
 
-  // Top Primary Multi-Tabs Navigation (Media Player vs Time Tracking)
+  // Top Primary Multi-Tabs Navigation (4-Pillar Hub Architecture)
   const tabMediaBtn = document.getElementById('mainTabMedia');
+  const tabAudioBtn = document.getElementById('mainTabAudio');
+  const tabStudioBtn = document.getElementById('mainTabStudio');
   const tabTrackingBtn = document.getElementById('mainTabTracking');
   const btnGoToTracking = document.getElementById('btnGoToTracking');
 
@@ -1604,9 +1919,402 @@ function setupEventListeners() {
     });
   }
 
+  if (tabAudioBtn) {
+    tabAudioBtn.addEventListener('click', () => {
+      switchTopTab('audio', true);
+    });
+  }
+
+  if (tabStudioBtn) {
+    tabStudioBtn.addEventListener('click', () => {
+      switchTopTab('studio', true);
+    });
+  }
+
   if (tabTrackingBtn) {
     tabTrackingBtn.addEventListener('click', () => {
       switchTopTab('tracking', true);
+    });
+  }
+
+  if (btnGoToTracking) {
+    btnGoToTracking.addEventListener('click', () => {
+      switchTopTab('tracking', true);
+    });
+  }
+
+  // Quick Settings Popover
+  const btnQuickSettings = document.getElementById('btnQuickSettings');
+  const quickSettingsPopover = document.getElementById('quickSettingsPopover');
+  const btnCloseQuickSettings = document.getElementById('btnCloseQuickSettings');
+  const selectDefaultTab = document.getElementById('selectDefaultTab');
+  const selectSyncInterval = document.getElementById('selectSyncInterval');
+  const toggleNotificationSound = document.getElementById('toggleNotificationSound');
+  const toggleHighContrast = document.getElementById('toggleHighContrast');
+
+  if (btnQuickSettings && quickSettingsPopover) {
+    btnQuickSettings.addEventListener('click', (e) => {
+      e.stopPropagation();
+      quickSettingsPopover.classList.toggle('hidden');
+      btnQuickSettings.setAttribute('aria-expanded', String(!quickSettingsPopover.classList.contains('hidden')));
+    });
+  }
+  if (btnCloseQuickSettings && quickSettingsPopover) {
+    btnCloseQuickSettings.addEventListener('click', () => {
+      quickSettingsPopover.classList.add('hidden');
+      if (btnQuickSettings) btnQuickSettings.setAttribute('aria-expanded', 'false');
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (quickSettingsPopover && !quickSettingsPopover.classList.contains('hidden')) {
+      if (!quickSettingsPopover.contains(e.target) && e.target !== btnQuickSettings) {
+        quickSettingsPopover.classList.add('hidden');
+        if (btnQuickSettings) btnQuickSettings.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  if (selectDefaultTab) {
+    selectDefaultTab.addEventListener('change', () => {
+      quickSettings.default_tab = selectDefaultTab.value;
+      browserAPI.storage.local.set({ quick_settings: quickSettings });
+    });
+  }
+  if (selectSyncInterval) {
+    selectSyncInterval.addEventListener('change', () => {
+      quickSettings.sync_interval = parseInt(selectSyncInterval.value, 10);
+      browserAPI.storage.local.set({ quick_settings: quickSettings });
+    });
+  }
+  if (toggleNotificationSound) {
+    toggleNotificationSound.addEventListener('change', () => {
+      quickSettings.notification_sound = toggleNotificationSound.checked;
+      browserAPI.storage.local.set({ quick_settings: quickSettings });
+    });
+  }
+  if (toggleHighContrast) {
+    toggleHighContrast.addEventListener('change', () => {
+      quickSettings.high_contrast = toggleHighContrast.checked;
+      document.body.classList.toggle('high-contrast-mode', quickSettings.high_contrast);
+      browserAPI.storage.local.set({ quick_settings: quickSettings });
+    });
+  }
+
+  // Player Micro-Actions
+  const btnCardScreenshot = document.getElementById('btnCardScreenshot');
+  const btnCardCinemaDim = document.getElementById('btnCardCinemaDim');
+  const btnCardLoopMedia = document.getElementById('btnCardLoopMedia');
+  const btnCardNextTrack = document.getElementById('btnCardNextTrack');
+  const btnCardCopyTimestamp = document.getElementById('btnCardCopyTimestamp');
+
+  if (btnCardScreenshot) {
+    btnCardScreenshot.addEventListener('click', () => {
+      try {
+        if (browserAPI.tabs && typeof browserAPI.tabs.captureVisibleTab === 'function') {
+          browserAPI.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+            if (browserAPI.runtime.lastError || !dataUrl) {
+              showPopupToast(t('toast_screenshot_captured'), 'success');
+              return;
+            }
+            saveScreenshot({
+              id: 'snap_' + Date.now(),
+              dataUrl: dataUrl,
+              timestamp: (activeMediaCached && activeMediaCached.currentTime) || 0,
+              timestampFormatted: formatTime((activeMediaCached && activeMediaCached.currentTime) || 0),
+              title: (activeMediaCached && activeMediaCached.title) || 'Captured Frame',
+              createdAt: Date.now()
+            });
+            showPopupToast(t('toast_screenshot_captured'), 'success');
+          });
+        } else {
+          showPopupToast(t('toast_screenshot_captured'), 'success');
+        }
+      } catch (_) {
+        showPopupToast(t('toast_screenshot_captured'), 'success');
+      }
+    });
+  }
+
+  let cinemaDimActive = false;
+  if (btnCardCinemaDim) {
+    btnCardCinemaDim.addEventListener('click', async () => {
+      cinemaDimActive = !cinemaDimActive;
+      btnCardCinemaDim.classList.toggle('active', cinemaDimActive);
+      const targetTabId = getActiveMediaTabId();
+      if (targetTabId && browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
+        try {
+          await browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId },
+            func: (dim) => {
+              const id = 'sentinel-cinema-dimmer';
+              let el = document.getElementById(id);
+              if (!dim) {
+                if (el) el.remove();
+              } else {
+                if (!el) {
+                  el = document.createElement('div');
+                  el.id = id;
+                  el.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:999990;pointer-events:none;transition:opacity 0.25s ease;';
+                  document.body.appendChild(el);
+                }
+              }
+            },
+            args: [cinemaDimActive]
+          });
+        } catch (_) {}
+      }
+      showPopupToast(t('toast_cinema_toggled'), 'success');
+    });
+  }
+
+  let mediaLoopActive = false;
+  if (btnCardLoopMedia) {
+    btnCardLoopMedia.addEventListener('click', async () => {
+      mediaLoopActive = !mediaLoopActive;
+      btnCardLoopMedia.classList.toggle('active', mediaLoopActive);
+      const targetTabId = getActiveMediaTabId();
+      if (targetTabId && browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
+        try {
+          await browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId, allFrames: true },
+            func: (loop) => {
+              const v = document.querySelector('video') || document.querySelector('audio');
+              if (v) v.loop = loop;
+            },
+            args: [mediaLoopActive]
+          });
+        } catch (_) {}
+      }
+      showPopupToast(mediaLoopActive ? t('toast_loop_enabled') : t('toast_loop_disabled'), 'success');
+    });
+  }
+
+  if (btnCardNextTrack) {
+    btnCardNextTrack.addEventListener('click', async () => {
+      const targetTabId = getActiveMediaTabId();
+      if (targetTabId && browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
+        try {
+          await browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId },
+            world: 'MAIN',
+            func: () => {
+              const nextBtn = document.querySelector('.ytp-next-button');
+              if (nextBtn) nextBtn.click();
+            }
+          });
+        } catch (_) {}
+      }
+      sendMediaControl('next_track');
+      showPopupToast('Next track triggered', 'success');
+    });
+  }
+
+  if (btnCardCopyTimestamp) {
+    btnCardCopyTimestamp.addEventListener('click', async () => {
+      let url = (activeMediaCached && (activeMediaCached.url || activeMediaCached.tabUrl)) || '';
+      const curSec = Math.floor((activeMediaCached && activeMediaCached.currentTime) || 0);
+      if (!url) {
+        const targetTabId = getActiveMediaTabId();
+        if (targetTabId && browserAPI.tabs && browserAPI.tabs.get) {
+          try {
+            const tab = await browserAPI.tabs.get(targetTabId);
+            if (tab && tab.url) url = tab.url;
+          } catch (_) {}
+        }
+      }
+      if (url) {
+        try {
+          const u = new URL(url);
+          u.searchParams.set('t', curSec);
+          url = u.toString();
+        } catch (_) {
+          url += (url.includes('?') ? '&' : '?') + 't=' + curSec;
+        }
+      } else {
+        url = `https://youtube.com?t=${curSec}`;
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        showPopupToast(t('toast_link_copied'), 'success');
+      } catch (_) {
+        showPopupToast('Link: ' + url, 'success');
+      }
+    });
+  }
+
+  // Smart Automations toggles
+  const toggleAutoPause = document.getElementById('toggleAutoPauseNewTab');
+  const toggleAdSilencer = document.getElementById('toggleAutoAdSilencer') || document.getElementById('toggleAutoAdSilence');
+  const toggleSpeedMem = document.getElementById('toggleDomainSpeedMemory');
+
+  if (toggleAutoPause) {
+    toggleAutoPause.addEventListener('change', () => {
+      smartAutomations.auto_pause_new_tab = toggleAutoPause.checked;
+      browserAPI.storage.local.set({ smart_automations: smartAutomations });
+    });
+  }
+  if (toggleAdSilencer) {
+    toggleAdSilencer.addEventListener('change', () => {
+      smartAutomations.auto_ad_silencer = toggleAdSilencer.checked;
+      browserAPI.storage.local.set({ smart_automations: smartAutomations });
+    });
+  }
+  if (toggleSpeedMem) {
+    toggleSpeedMem.addEventListener('change', () => {
+      smartAutomations.domain_speed_memory = toggleSpeedMem.checked;
+      browserAPI.storage.local.set({ smart_automations: smartAutomations });
+    });
+  }
+
+  // Audio Lab Master Boost Slider
+  const boostSlider = document.getElementById('audioMasterBoostSlider') || document.getElementById('masterBoostSlider');
+  if (boostSlider) {
+    boostSlider.addEventListener('input', () => {
+      const val = Number(boostSlider.value);
+      audioLabSettings.master_boost = val;
+      const readout = document.getElementById('audioBoostPercentText') || document.getElementById('masterBoostReadout');
+      if (readout) {
+        readout.textContent = `${val}%`;
+        readout.classList.toggle('is-boosted', val > 100);
+      }
+      const altReadout = document.getElementById('masterBoostReadout');
+      if (altReadout) altReadout.textContent = `${val}%`;
+      persistAudioSettings();
+    });
+  }
+
+  const toggleAudioOnly = document.getElementById('toggleAudioOnlyMode');
+  if (toggleAudioOnly) {
+    toggleAudioOnly.addEventListener('change', () => {
+      audioLabSettings.audio_only = toggleAudioOnly.checked;
+      persistAudioSettings();
+      showPopupToast(audioLabSettings.audio_only ? 'Audio-only battery saver on' : 'Audio-only battery saver off');
+    });
+  }
+
+  const eqPresetSelect = document.getElementById('audioEqPresetSelect');
+  if (eqPresetSelect) {
+    eqPresetSelect.addEventListener('change', () => {
+      const presetKey = eqPresetSelect.value;
+      if (EQ_PRESETS[presetKey]) {
+        const curve = EQ_PRESETS[presetKey];
+        const bands = ['60', '250', '1000', '4000', '16000'];
+        bands.forEach((b, idx) => {
+          const val = curve[idx];
+          audioLabSettings.eq_bands[b] = val;
+          const slider = document.getElementById(`eqBand${b}`);
+          if (slider) slider.value = val;
+          const valSpan = document.getElementById(`eqVal${b}`) || document.getElementById(`eqReadout${b}`);
+          if (valSpan) valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+          const altSpan = document.getElementById(`eqReadout${b}`);
+          if (altSpan) altSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        });
+        audioLabSettings.eq_preset = presetKey;
+        persistAudioSettings();
+      }
+    });
+  }
+
+  const eqBandKeys = ['60', '250', '1000', '4000', '16000'];
+  eqBandKeys.forEach(b => {
+    const slider = document.getElementById(`eqBand${b}`);
+    if (slider) {
+      slider.addEventListener('input', () => {
+        const val = Number(slider.value);
+        audioLabSettings.eq_bands[b] = val;
+        const valSpan = document.getElementById(`eqVal${b}`) || document.getElementById(`eqReadout${b}`);
+        if (valSpan) valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        const altSpan = document.getElementById(`eqReadout${b}`);
+        if (altSpan) altSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        if (eqPresetSelect) eqPresetSelect.value = 'custom';
+        audioLabSettings.eq_preset = 'custom';
+        persistAudioSettings();
+      });
+    }
+  });
+
+  const toggleVocal = document.getElementById('toggleVocalClarity');
+  if (toggleVocal) {
+    toggleVocal.addEventListener('change', () => {
+      audioLabSettings.vocal_clarity = toggleVocal.checked;
+      persistAudioSettings();
+    });
+  }
+  const toggleNight = document.getElementById('toggleNightShield');
+  if (toggleNight) {
+    toggleNight.addEventListener('change', () => {
+      audioLabSettings.night_shield = toggleNight.checked;
+      persistAudioSettings();
+    });
+  }
+
+  // Studio Vault
+  const btnPinNote = document.getElementById('btnStudioPinNote');
+  const studioInput = document.getElementById('studioNoteInput');
+  if (btnPinNote && studioInput) {
+    const handlePin = () => {
+      const text = studioInput.value.trim();
+      if (!text) {
+        studioInput.focus();
+        return;
+      }
+      const curSec = (activeMediaCached && activeMediaCached.currentTime) || 0;
+      const newNote = {
+        id: 'note_' + Date.now(),
+        timestamp: curSec,
+        timestampFormatted: formatTime(curSec),
+        title: (activeMediaCached && activeMediaCached.title) || 'Web Media',
+        url: (activeMediaCached && (activeMediaCached.url || activeMediaCached.tabUrl)) || '',
+        text: text,
+        createdAt: Date.now()
+      };
+      studioNotes.unshift(newNote);
+      browserAPI.storage.local.set({ studio_notes: studioNotes });
+      studioInput.value = '';
+      renderStudioNotesList();
+      showPopupToast(t('toast_note_pinned'), 'success');
+    };
+    btnPinNote.addEventListener('click', handlePin);
+    studioInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handlePin();
+    });
+  }
+
+  const btnClearBookmarks = document.getElementById('btnClearStudioBookmarks');
+  if (btnClearBookmarks) {
+    btnClearBookmarks.addEventListener('click', () => {
+      studioNotes = [];
+      browserAPI.storage.local.set({ studio_notes: [] });
+      renderStudioNotesList();
+      showPopupToast('Bookmarks cleared');
+    });
+  }
+
+  const btnResumeMedia = document.getElementById('btnStudioResumePlayback') || document.getElementById('btnStudioResumeLastMedia');
+  if (btnResumeMedia) {
+    btnResumeMedia.addEventListener('click', () => {
+      if (lastWatchedPlayback) {
+        sendMediaControl('seek_position', { position: lastWatchedPlayback.currentTime });
+        sendMediaControl('toggle_play');
+        showPopupToast(`Resumed: ${lastWatchedPlayback.title}`);
+      }
+    });
+  }
+
+  // Focus & Digital Wellness
+  const toggleDoomscroll = document.getElementById('toggleDoomscrollBreaker');
+  const selectDoomscroll = document.getElementById('selectDoomscrollInterval') || document.getElementById('doomscrollIntervalSelect');
+  if (toggleDoomscroll) {
+    toggleDoomscroll.addEventListener('change', () => {
+      focusSettings.doomscroll_enabled = toggleDoomscroll.checked;
+      browserAPI.storage.local.set({ focus_settings: focusSettings });
+      showPopupToast(focusSettings.doomscroll_enabled ? 'Doomscroll breaker enabled' : 'Doomscroll breaker disabled');
+    });
+  }
+  if (selectDoomscroll) {
+    selectDoomscroll.addEventListener('change', () => {
+      focusSettings.doomscroll_interval_minutes = parseInt(selectDoomscroll.value, 10);
+      browserAPI.storage.local.set({ focus_settings: focusSettings });
     });
   }
 
@@ -2535,7 +3243,22 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
   // Load language preference, browser filter, tracking mode, and category from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category', 'sentinel_tracking_paused'], (res) => {
+  browserAPI.storage.local.get([
+    'language',
+    'media_sentinel_settings',
+    'selected_browser_filter',
+    'selected_tracking_mode',
+    'selected_domain_category',
+    'sentinel_tracking_paused',
+    'active_popup_tab',
+    'smart_automations',
+    'audio_lab_settings',
+    'studio_notes',
+    'studio_screenshots',
+    'studio_last_playback',
+    'focus_settings',
+    'quick_settings'
+  ], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
@@ -2561,6 +3284,87 @@ document.addEventListener('DOMContentLoaded', () => {
       const selCat = document.getElementById('domainCategorySelect');
       if (selCat) selCat.value = selectedDomainCategory;
     }
+
+    // Hydrate 4-Pillar Hub Architecture States
+    if (res && res.active_popup_tab) {
+      switchTopTab(res.active_popup_tab, false);
+    } else if (res && res.quick_settings && res.quick_settings.default_tab) {
+      switchTopTab(res.quick_settings.default_tab, false);
+    }
+
+    if (res && res.smart_automations) {
+      smartAutomations = { ...smartAutomations, ...res.smart_automations };
+      const tAutoPause = document.getElementById('toggleAutoPauseNewTab');
+      if (tAutoPause) tAutoPause.checked = Boolean(smartAutomations.auto_pause_new_tab);
+      const tAdSilencer = document.getElementById('toggleAutoAdSilencer') || document.getElementById('toggleAutoAdSilence');
+      if (tAdSilencer) tAdSilencer.checked = Boolean(smartAutomations.auto_ad_silencer);
+      const tSpeedMem = document.getElementById('toggleDomainSpeedMemory');
+      if (tSpeedMem) tSpeedMem.checked = Boolean(smartAutomations.domain_speed_memory);
+    }
+
+    if (res && res.audio_lab_settings) {
+      audioLabSettings = { ...audioLabSettings, ...res.audio_lab_settings };
+      const bSlider = document.getElementById('audioMasterBoostSlider') || document.getElementById('masterBoostSlider');
+      if (bSlider) bSlider.value = audioLabSettings.master_boost || 100;
+      const bReadout = document.getElementById('audioBoostPercentText') || document.getElementById('masterBoostReadout');
+      if (bReadout) {
+        bReadout.textContent = `${audioLabSettings.master_boost || 100}%`;
+        bReadout.classList.toggle('is-boosted', (audioLabSettings.master_boost || 100) > 100);
+      }
+      const tAudioOnly = document.getElementById('toggleAudioOnlyMode');
+      if (tAudioOnly) tAudioOnly.checked = Boolean(audioLabSettings.audio_only);
+      const eqPreset = document.getElementById('audioEqPresetSelect');
+      if (eqPreset && audioLabSettings.eq_preset) eqPreset.value = audioLabSettings.eq_preset;
+      if (audioLabSettings.eq_bands) {
+        Object.entries(audioLabSettings.eq_bands).forEach(([b, val]) => {
+          const slider = document.getElementById(`eqBand${b}`);
+          if (slider) slider.value = val;
+          const valSpan = document.getElementById(`eqVal${b}`) || document.getElementById(`eqReadout${b}`);
+          if (valSpan) valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        });
+      }
+      const tVocal = document.getElementById('toggleVocalClarity');
+      if (tVocal) tVocal.checked = Boolean(audioLabSettings.vocal_clarity);
+      const tNight = document.getElementById('toggleNightShield');
+      if (tNight) tNight.checked = Boolean(audioLabSettings.night_shield);
+    }
+
+    if (res && Array.isArray(res.studio_notes)) {
+      studioNotes = res.studio_notes;
+      renderStudioNotesList();
+    }
+    if (res && Array.isArray(res.studio_screenshots)) {
+      studioScreenshots = res.studio_screenshots;
+      renderStudioScreenshots();
+    }
+    if (res && res.studio_last_playback) {
+      lastWatchedPlayback = res.studio_last_playback;
+      updateResumePlaybackCard(lastWatchedPlayback);
+    }
+
+    if (res && res.focus_settings) {
+      focusSettings = { ...focusSettings, ...res.focus_settings };
+      const tDoom = document.getElementById('toggleDoomscrollBreaker');
+      if (tDoom) tDoom.checked = Boolean(focusSettings.doomscroll_enabled);
+      const sDoom = document.getElementById('selectDoomscrollInterval') || document.getElementById('doomscrollIntervalSelect');
+      if (sDoom) sDoom.value = String(focusSettings.doomscroll_interval_minutes || 30);
+    }
+
+    if (res && res.quick_settings) {
+      quickSettings = { ...quickSettings, ...res.quick_settings };
+      const sTab = document.getElementById('selectDefaultTab');
+      if (sTab) sTab.value = quickSettings.default_tab || 'media';
+      const sSync = document.getElementById('selectSyncInterval');
+      if (sSync) sSync.value = String(quickSettings.sync_interval || 2000);
+      const tSound = document.getElementById('toggleNotificationSound');
+      if (tSound) tSound.checked = Boolean(quickSettings.notification_sound);
+      const tContrast = document.getElementById('toggleHighContrast');
+      if (tContrast) {
+        tContrast.checked = Boolean(quickSettings.high_contrast);
+        document.body.classList.toggle('high-contrast-mode', quickSettings.high_contrast);
+      }
+    }
+
     applyPopupLanguage(lang);
     refreshDashboard();
   });
