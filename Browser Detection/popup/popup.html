@@ -30,19 +30,30 @@
           <span class="ws-dot"></span>
           <span id="wsStatusText" class="ws-text">HUD Offline</span>
         </div>
+        <button id="btnQuickSettings" class="btn-quick-settings" title="Quick Settings" aria-label="Open Settings" aria-haspopup="dialog" aria-expanded="false">
+          ⚙️
+        </button>
       </div>
     </header>
 
-    <!-- Top Primary Multi-Tabs Navigation -->
+    <!-- Top Primary Multi-Tabs Navigation (4-Pillar Hub Architecture) -->
     <nav class="top-nav-tabs" role="tablist">
       <button id="mainTabMedia" class="top-tab-btn active" data-view="media" role="tab" aria-selected="true" aria-controls="viewMediaPane">
         <span class="top-tab-icon">🎬</span>
-        <span id="topTabMediaText" class="top-tab-label">Live Media</span>
+        <span id="topTabMediaText" class="top-tab-label">Player</span>
         <span id="tabMediaLiveDot" class="tab-live-dot hidden" title="Media Active"></span>
+      </button>
+      <button id="mainTabAudio" class="top-tab-btn" data-view="audio" role="tab" aria-selected="false" aria-controls="viewAudioPane">
+        <span class="top-tab-icon">🎛️</span>
+        <span id="topTabAudioText" class="top-tab-label">Audio Lab</span>
+      </button>
+      <button id="mainTabStudio" class="top-tab-btn" data-view="studio" role="tab" aria-selected="false" aria-controls="viewStudioPane">
+        <span class="top-tab-icon">📚</span>
+        <span id="topTabStudioText" class="top-tab-label">Studio</span>
       </button>
       <button id="mainTabTracking" class="top-tab-btn" data-view="tracking" role="tab" aria-selected="false" aria-controls="viewTrackingPane">
         <span class="top-tab-icon">⏱️</span>
-        <span id="topTabTrackingText" class="top-tab-label">Time Tracking</span>
+        <span id="topTabTrackingText" class="top-tab-label">Focus</span>
       </button>
     </nav>
 
@@ -159,6 +170,30 @@
             </div>
           </div>
 
+          <!-- In-Card Micro-Actions Bar -->
+          <div id="playerMicroActionsRow" class="player-micro-actions-row hidden">
+            <button id="btnCardScreenshot" class="micro-action-btn" title="Capture Video Frame" aria-label="Capture Video Frame">
+              <span class="micro-icon">📸</span>
+              <span class="micro-label">Snap</span>
+            </button>
+            <button id="btnCardCinemaDim" class="micro-action-btn" title="Cinema Focus Dimmer" aria-label="Cinema Focus Dimmer">
+              <span class="micro-icon">🎯</span>
+              <span class="micro-label">Cinema</span>
+            </button>
+            <button id="btnCardLoopMedia" class="micro-action-btn" title="Loop Current Media" aria-label="Loop Current Media">
+              <span class="micro-icon">🔁</span>
+              <span class="micro-label">Loop</span>
+            </button>
+            <button id="btnCardNextTrack" class="micro-action-btn" title="Next Track / Video" aria-label="Next Track / Video">
+              <span class="micro-icon">⏭️</span>
+              <span class="micro-label">Next</span>
+            </button>
+            <button id="btnCardCopyTimestamp" class="micro-action-btn" title="Copy Link with Timestamp" aria-label="Copy Link with Timestamp">
+              <span class="micro-icon">📋</span>
+              <span class="micro-label">Copy Link</span>
+            </button>
+          </div>
+
           <!-- Idle Empty Guidance Container (when no media is playing) -->
           <div id="mediaEmptyPrompt" class="media-empty-prompt">
             <div class="empty-media-icon">📺</div>
@@ -169,6 +204,220 @@
           </div>
         </div>
       </section>
+
+      <!-- Smart Automations Card -->
+      <section id="cardSmartAutomations" class="sub-card automations-card">
+        <div class="sub-card-header">
+          <span class="sub-card-title">⚡ Smart Automations</span>
+        </div>
+        <div class="automation-toggle-list">
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Auto-Pause on New Tab</span>
+              <span class="toggle-sub">Pause video when switching or opening new tabs</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleAutoPauseNewTab">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Auto Ad Silencer</span>
+              <span class="toggle-sub">Mute audio automatically during ad banners</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleAutoAdSilencer">
+              <span class="slider-round-sm"></span>
+            </label>
+            <input type="checkbox" id="toggleAutoAdSilence" class="hidden" aria-hidden="true">
+          </div>
+          <div class="automation-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-name">Domain Speed Memory</span>
+              <span class="toggle-sub">Remember playback speed per domain</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleDomainSpeedMemory" checked>
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: Audio Lab View Pane -->
+    <div id="viewAudioPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabAudio">
+      <!-- Master Volume & Boost Card (0% to 200%) -->
+      <section class="audio-card boost-card">
+        <div class="audio-card-header">
+          <span class="audio-card-title">🔊 Master Volume & Boost</span>
+          <span id="audioBoostPercentText" class="boost-readout badge badge-accent">100%</span>
+          <span id="masterBoostReadout" class="hidden">100%</span>
+        </div>
+        <div class="boost-slider-container">
+          <input type="range" id="audioMasterBoostSlider" min="0" max="200" value="100" class="boost-range-slider" aria-label="Master Volume Boost">
+          <input type="range" id="masterBoostSlider" class="hidden" aria-hidden="true" min="0" max="200" value="100">
+          <div class="boost-scale-marks">
+            <span>0%</span>
+            <span>50%</span>
+            <span class="mark-normal">100% (Normal)</span>
+            <span>150%</span>
+            <span class="mark-boost">200% (Max)</span>
+          </div>
+        </div>
+        <div class="audio-only-row">
+          <div class="audio-only-label">
+            <span class="audio-only-icon">🔋</span>
+            <div>
+              <div class="audio-only-title">Audio-Only Mode</div>
+              <div class="audio-only-sub">Blank video to save battery and GPU cycles</div>
+            </div>
+          </div>
+          <label class="switch-toggle-sm">
+            <input type="checkbox" id="toggleAudioOnlyMode">
+            <span class="slider-round-sm"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 5-Band Graphic Equalizer Card -->
+      <section id="audioEqCard" class="audio-card eq-card">
+        <div class="audio-card-header">
+          <span class="audio-card-title">🎚️ 5-Band Graphic Equalizer</span>
+          <select id="audioEqPresetSelect" class="eq-preset-dropdown" aria-label="Equalizer Preset">
+            <option value="flat" selected>Flat</option>
+            <option value="bass_boost">Bass Boost</option>
+            <option value="vocal_clarify">Vocal Clarify</option>
+            <option value="rock">Rock</option>
+            <option value="night">Night</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="eq-bands-grid">
+          <div class="eq-band-col">
+            <span id="eqVal60" class="eq-db-val">0dB</span>
+            <span id="eqReadout60" class="hidden">0dB</span>
+            <input type="range" id="eqBand60" min="-12" max="12" value="0" step="1" orient="vertical" class="eq-vertical-slider" aria-label="60Hz Band">
+            <span class="eq-freq-label">60Hz</span>
+          </div>
+          <div class="eq-band-col">
+            <span id="eqVal250" class="eq-db-val">0dB</span>
+            <span id="eqReadout250" class="hidden">0dB</span>
+            <input type="range" id="eqBand250" min="-12" max="12" value="0" step="1" orient="vertical" class="eq-vertical-slider" aria-label="250Hz Band">
+            <span class="eq-freq-label">250Hz</span>
+          </div>
+          <div class="eq-band-col">
+            <span id="eqVal1000" class="eq-db-val">0dB</span>
+            <span id="eqReadout1000" class="hidden">0dB</span>
+            <input type="range" id="eqBand1000" min="-12" max="12" value="0" step="1" orient="vertical" class="eq-vertical-slider" aria-label="1kHz Band">
+            <span class="eq-freq-label">1kHz</span>
+          </div>
+          <div class="eq-band-col">
+            <span id="eqVal4000" class="eq-db-val">0dB</span>
+            <span id="eqReadout4000" class="hidden">0dB</span>
+            <input type="range" id="eqBand4000" min="-12" max="12" value="0" step="1" orient="vertical" class="eq-vertical-slider" aria-label="4kHz Band">
+            <span class="eq-freq-label">4kHz</span>
+          </div>
+          <div class="eq-band-col">
+            <span id="eqVal16000" class="eq-db-val">0dB</span>
+            <span id="eqReadout16000" class="hidden">0dB</span>
+            <input type="range" id="eqBand16000" min="-12" max="12" value="0" step="1" orient="vertical" class="eq-vertical-slider" aria-label="16kHz Band">
+            <span class="eq-freq-label">16kHz</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sound Enhancements Card -->
+      <section class="audio-card enhancements-card">
+        <div class="audio-card-header">
+          <span class="audio-card-title">✨ Sound Enhancements</span>
+        </div>
+        <div class="enhancement-list">
+          <div class="enhancement-row">
+            <div class="enhancement-info">
+              <span class="enhancement-name">🗣️ Vocal Clarity</span>
+              <span class="enhancement-desc">Highlight dialogue over loud music</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleVocalClarity">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+          <div class="enhancement-row">
+            <div class="enhancement-info">
+              <span class="enhancement-name">🌙 Night Listening Shield</span>
+              <span class="enhancement-desc">Compress sudden explosions & volume spikes</span>
+            </div>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleNightShield">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 3: Studio / Vault View Pane -->
+    <div id="viewStudioPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabStudio">
+      <!-- Timestamp Note-Taking Card -->
+      <section id="studioNoteCard" class="studio-card notes-card">
+        <div class="studio-card-header">
+          <span class="studio-card-title">📌 Timestamp Note</span>
+          <span id="studioActiveTimestampBadge" class="badge badge-accent">00:00</span>
+        </div>
+        <div class="note-input-row">
+          <input type="text" id="studioNoteInput" class="studio-input" placeholder="Note what happened here..." aria-label="Timestamp Note Input">
+          <button id="btnStudioPinNote" class="btn-pin-note" title="Pin Note at Current Time">
+            📌 Pin
+          </button>
+        </div>
+      </section>
+
+      <!-- Bookmarked Timestamps & Clips List Card -->
+      <section id="studioBookmarksCard" class="studio-card clips-card">
+        <div class="studio-card-header">
+          <span class="studio-card-title">📑 Bookmarked Moments</span>
+          <button id="btnClearStudioBookmarks" class="btn-text-sm" title="Clear all bookmarks">Clear All</button>
+        </div>
+        <div id="studioNotesListContainer" class="studio-items-list">
+          <div class="empty-state-sm">
+            <span>No bookmarked timestamps yet. Click 📌 Pin above!</span>
+          </div>
+        </div>
+        <div id="studioBookmarksList" class="hidden"></div>
+      </section>
+
+      <!-- Screenshots Gallery Card -->
+      <section id="studioScreenshotsCard" class="studio-card gallery-card">
+        <div class="studio-card-header">
+          <span class="studio-card-title">📸 Frame Captures</span>
+        </div>
+        <div id="studioScreenshotsContainer" class="screenshots-grid">
+          <div class="empty-state-sm">
+            <span>Click 📸 Snap in Player to capture frames.</span>
+          </div>
+        </div>
+        <div id="studioScreenshotsGrid" class="hidden"></div>
+      </section>
+
+      <!-- Pick Up Where You Left Off Card -->
+      <section id="studioResumePlaybackCard" class="studio-card resume-card hidden">
+        <div class="studio-card-header">
+          <span class="studio-card-title">⏳ Pick Up Where You Left Off</span>
+        </div>
+        <div class="resume-card-body">
+          <div class="resume-video-info">
+            <span id="resumeVideoTitle" class="resume-title">Last Watched Video</span>
+            <span id="resumeVideoMeta" class="resume-meta">youtube.com • Paused at 00:00</span>
+          </div>
+          <button id="btnStudioResumePlayback" class="btn-resume-action" title="Resume Playback">
+            ▶️ Resume
+          </button>
+          <button id="btnStudioResumeLastMedia" class="hidden">▶️</button>
+        </div>
+      </section>
+      <div id="studioResumeCard" class="hidden"></div>
     </div>
 
     <!-- TAB 2: Time Tracking View Pane -->
@@ -213,6 +462,53 @@
         <div class="stat-pill">
           <span id="pillSessionsLabel" class="pill-label">Sessions</span>
           <span id="pillSessionsCount" class="pill-value">0</span>
+        </div>
+      </section>
+
+      <!-- Digital Wellness & Focus Cards -->
+      <section id="cardFocusWellness" class="focus-wellness-card">
+        <!-- Focus Ratio Balance Bar -->
+        <div id="focusRatioBarContainer" class="focus-ratio-container">
+          <div class="focus-ratio-header">
+            <span class="focus-ratio-title">⚖️ Focus Ratio</span>
+            <span id="focusRatioPercentText" class="focus-ratio-readout">75% Productive</span>
+            <span id="focusRatioText" class="hidden">75% Productive</span>
+          </div>
+          <div class="ratio-progress-track">
+            <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
+            <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
+            <div id="focusRatioProductiveBar" class="hidden"></div>
+          </div>
+          <div class="ratio-labels-row">
+            <span class="ratio-lbl prod">🟢 Productive</span>
+            <span class="ratio-lbl ent">🟠 Media & Social</span>
+          </div>
+        </div>
+
+        <!-- Doomscroll Breaker Card -->
+        <div id="doomscrollBreakerCard" class="doomscroll-breaker-row">
+          <div class="doomscroll-info">
+            <span class="doomscroll-title">🛑 Doomscroll Breaker</span>
+            <span class="doomscroll-sub">Gentle pause nudge every</span>
+          </div>
+          <div class="doomscroll-controls">
+            <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+            </select>
+            <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+            </select>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleDoomscrollBreaker">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -370,6 +666,62 @@
               <span class="slider-round-sm"></span>
             </label>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Settings Floating Popover Dialog -->
+    <div id="quickSettingsPopover" class="quick-settings-popover hidden" role="dialog" aria-modal="true" aria-labelledby="quickSettingsTitle">
+      <div class="popover-header">
+        <div class="popover-title-row">
+          <span class="popover-icon">⚙️</span>
+          <h3 id="quickSettingsTitle" class="popover-title">Quick Settings</h3>
+        </div>
+        <button id="btnCloseQuickSettings" class="popover-close-btn" aria-label="Close Settings">✕</button>
+      </div>
+      <div class="popover-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">Default Active Tab</span>
+            <span class="setting-desc">Initial tab when opening popup</span>
+          </div>
+          <select id="selectDefaultTab" class="setting-select" aria-label="Default Tab">
+            <option value="media" selected>🎬 Player</option>
+            <option value="audio">🎛️ Audio Lab</option>
+            <option value="studio">📚 Studio</option>
+            <option value="tracking">⏱️ Focus</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">Auto-Sync Interval</span>
+            <span class="setting-desc">Background state sync frequency</span>
+          </div>
+          <select id="selectSyncInterval" class="setting-select" aria-label="Auto-Sync Interval">
+            <option value="1000">1s (Ultra Fast)</option>
+            <option value="2000" selected>2s (Default)</option>
+            <option value="5000">5s (Battery Saver)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">Notification Sound</span>
+            <span class="setting-desc">Subtle chime on timer completion</span>
+          </div>
+          <label class="switch-toggle-sm">
+            <input type="checkbox" id="toggleNotificationSound" checked>
+            <span class="slider-round-sm"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-name">High Contrast Mode</span>
+            <span class="setting-desc">Enhanced contrast for bright lighting</span>
+          </div>
+          <label class="switch-toggle-sm">
+            <input type="checkbox" id="toggleHighContrast">
+            <span class="slider-round-sm"></span>
+          </label>
         </div>
       </div>
     </div>
