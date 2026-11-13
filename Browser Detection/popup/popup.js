@@ -88,8 +88,12 @@ const I18N_POPUP = {
     hud_link_title: 'Video Detector HUD Link',
     
     // Tabs
-    tab_media: 'Live Media',
-    tab_tracking: 'Time Tracking',
+    tab_media: 'Media',
+    tab_audio: 'Audio',
+    tab_tools: 'Tools',
+    tab_studio: 'Studio',
+    tab_tracking: 'Tracking',
+    tab_domains: 'Domains',
     tab_media_active_title: 'Media Active',
     
     // Headings
@@ -197,9 +201,7 @@ const I18N_POPUP = {
     toast_switched_tab: 'Focused media tab',
     toast_no_media_tab: 'No active media tab found',
     
-    // 4-Pillar Tabs
-    tab_audio: 'Audio Lab',
-    tab_studio: 'Studio',
+    // Legacy / 4-Pillar Tabs
     tab_focus: 'Focus',
     
     // Player Micro-Actions
@@ -230,8 +232,12 @@ const I18N_POPUP = {
     hud_link_title: 'Video Detector HUD लिंक',
     
     // Tabs
-    tab_media: 'लाइव मीडिया',
-    tab_tracking: 'टाइम ट्रैकिंग',
+    tab_media: 'मीडिया',
+    tab_audio: 'ऑडियो',
+    tab_tools: 'टूल्स',
+    tab_studio: 'स्टूडियो',
+    tab_tracking: 'ट्रैकिंग',
+    tab_domains: 'डोमेन',
     tab_media_active_title: 'मीडिया सक्रिय है',
     
     // Headings
@@ -339,9 +345,7 @@ const I18N_POPUP = {
     toast_switched_tab: 'मीडिया टैब पर स्विच किया गया',
     toast_no_media_tab: 'कोई सक्रिय मीडिया टैब नहीं मिला',
     
-    // 4-Pillar Tabs
-    tab_audio: 'ऑडियो लैब',
-    tab_studio: 'स्टूडियो',
+    // Legacy / 4-Pillar Tabs
     tab_focus: 'फोकस',
     
     // Player Micro-Actions
@@ -388,8 +392,10 @@ function applyPopupLanguage(lang) {
   setTxt('brandSubtitle', 'brand_subtitle');
   setTxt('topTabMediaText', 'tab_media');
   setTxt('topTabAudioText', 'tab_audio');
+  setTxt('topTabToolsText', 'tab_tools');
   setTxt('topTabStudioText', 'tab_studio');
   setTxt('topTabTrackingText', 'tab_tracking');
+  setTxt('topTabDomainsText', 'tab_domains');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
 
   setTxt('lblTimeElapsed', 'watched');

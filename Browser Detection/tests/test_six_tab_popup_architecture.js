@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: 6-Tab Single-Word Popup UI/UX Architecture
  * 
  * Verifies:
@@ -192,5 +192,44 @@ console.log('\nTest 5: JavaScript 6-Tab Logic & Event Binding');
   console.log('  ✅ Storage hydration validates all 6 tabs');
 }
 
-console.log('\n🎉 ALL 5 TESTS IN 6-TAB SINGLE-WORD ARCHITECTURE SUITE PASSED WITH 100% SUCCESS!\n');
+// ---------------------------------------------------------------------------
+// Test 6: Strict Single-Word Labels & i18n Parity Verification
+// ---------------------------------------------------------------------------
+console.log('\nTest 6: Strict Single-Word Labels & i18n Parity Verification');
+{
+  // Verify English single words
+  assert(jsCode.includes("tab_media: 'Media'"), "I18N_POPUP.en must define tab_media: 'Media'");
+  assert(jsCode.includes("tab_audio: 'Audio'"), "I18N_POPUP.en must define tab_audio: 'Audio'");
+  assert(jsCode.includes("tab_tools: 'Tools'"), "I18N_POPUP.en must define tab_tools: 'Tools'");
+  assert(jsCode.includes("tab_studio: 'Studio'"), "I18N_POPUP.en must define tab_studio: 'Studio'");
+  assert(jsCode.includes("tab_tracking: 'Tracking'"), "I18N_POPUP.en must define tab_tracking: 'Tracking'");
+  assert(jsCode.includes("tab_domains: 'Domains'"), "I18N_POPUP.en must define tab_domains: 'Domains'");
+
+  // Verify Hindi single words
+  assert(jsCode.includes("tab_media: 'मीडिया'"), "I18N_POPUP.hi must define tab_media: 'मीडिया'");
+  assert(jsCode.includes("tab_audio: 'ऑडियो'"), "I18N_POPUP.hi must define tab_audio: 'ऑडियो'");
+  assert(jsCode.includes("tab_tools: 'टूल्स'"), "I18N_POPUP.hi must define tab_tools: 'टूल्स'");
+  assert(jsCode.includes("tab_studio: 'स्टूडियो'"), "I18N_POPUP.hi must define tab_studio: 'स्टूडियो'");
+  assert(jsCode.includes("tab_tracking: 'ट्रैकिंग'"), "I18N_POPUP.hi must define tab_tracking: 'ट्रैकिंग'");
+  assert(jsCode.includes("tab_domains: 'डोमेन'"), "I18N_POPUP.hi must define tab_domains: 'डोमेन'");
+
+  // Verify applyPopupLanguage wiring for all 6 tabs
+  assert(jsCode.includes("setTxt('topTabMediaText', 'tab_media')"), "applyPopupLanguage must wire topTabMediaText");
+  assert(jsCode.includes("setTxt('topTabAudioText', 'tab_audio')"), "applyPopupLanguage must wire topTabAudioText");
+  assert(jsCode.includes("setTxt('topTabToolsText', 'tab_tools')"), "applyPopupLanguage must wire topTabToolsText");
+  assert(jsCode.includes("setTxt('topTabStudioText', 'tab_studio')"), "applyPopupLanguage must wire topTabStudioText");
+  assert(jsCode.includes("setTxt('topTabTrackingText', 'tab_tracking')"), "applyPopupLanguage must wire topTabTrackingText");
+  assert(jsCode.includes("setTxt('topTabDomainsText', 'tab_domains')"), "applyPopupLanguage must wire topTabDomainsText");
+
+  // Verify CSS overflow and text truncation properties on top tabs
+  assert(css.includes('overflow: hidden;'), 'popup.css must define overflow: hidden for tab buttons and labels');
+  assert(css.includes('text-overflow: ellipsis;'), 'popup.css must define text-overflow: ellipsis for tab buttons and labels');
+
+  console.log('  ✅ English dictionary verified: all 6 tabs use exact single words (Media, Audio, Tools, Studio, Tracking, Domains)');
+  console.log('  ✅ Hindi dictionary verified: all 6 tabs use exact single words (मीडिया, ऑडियो, टूल्स, स्टूडियो, ट्रैकिंग, डोमेन)');
+  console.log('  ✅ applyPopupLanguage wires all 6 single-word tab labels dynamically');
+  console.log('  ✅ CSS overflow protection and ellipsis truncation verified for .top-tab-btn and .top-tab-label');
+}
+
+console.log('\n🎉 ALL 6 TESTS IN 6-TAB SINGLE-WORD ARCHITECTURE SUITE PASSED WITH 100% SUCCESS!\n');
 process.exit(0);

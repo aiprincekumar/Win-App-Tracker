@@ -267,6 +267,8 @@ button.spinning .refresh-spinner-icon,
   transition: all 0.18s ease;
   position: relative;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -336,6 +338,9 @@ button.spinning .refresh-spinner-icon,
 }
 
 .top-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: -0.2px;
 }
@@ -2245,20 +2250,32 @@ button.spinning .refresh-spinner-icon,
 }
 
 /* Sound Enhancements */
+.enhancements-card {
+  padding: 7px 10px;
+  gap: 5px;
+}
+.enhancements-card .audio-card-header {
+  min-height: unset;
+}
+.enhancements-card .audio-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
 .enhancement-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 .enhancement-row {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 8px 10px;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 7px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid var(--border-dim);
-  border-radius: 8px;
+  border-radius: 6px;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .enhancement-row:hover {
@@ -2266,7 +2283,7 @@ button.spinning .refresh-spinner-icon,
   border-color: rgba(255, 255, 255, 0.12);
 }
 .enhancement-row:has(input:checked) {
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.35);
   background: rgba(16, 185, 129, 0.04);
 }
 .enhancement-row:has(input:checked):hover {
@@ -2274,33 +2291,33 @@ button.spinning .refresh-spinner-icon,
 }
 .enhancement-item-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  min-height: 20px;
+  gap: 4px;
+  min-height: unset;
 }
 .enhancement-item-header .switch-toggle-sm {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 0;
 }
 .enhancement-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 .enhancement-name {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.25;
+  line-height: 1.2;
   text-wrap: balance;
   letter-spacing: -0.1px;
   word-break: break-word;
 }
 .enhancement-desc {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-secondary);
-  line-height: 1.35;
+  line-height: 1.2;
   text-wrap: pretty;
   word-break: break-word;
 }
