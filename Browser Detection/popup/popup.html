@@ -363,37 +363,43 @@
         <div class="sub-card-header">
           <span class="sub-card-title">🤖 Smart Automations</span>
         </div>
-        <div class="automation-toggle-list">
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Auto-Pause on New Tab</span>
-              <span class="toggle-sub">Pause video when switching or opening new tabs</span>
+        <div class="automation-list">
+          <div class="automation-row">
+            <div class="automation-item-header">
+              <span class="automation-name">⏸️ Auto-Pause on New Tab</span>
+              <label class="switch-toggle-sm">
+                <input type="checkbox" id="toggleAutoPauseNewTab">
+                <span class="slider-round-sm"></span>
+              </label>
             </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleAutoPauseNewTab">
-              <span class="slider-round-sm"></span>
-            </label>
+            <div class="automation-info">
+              <span class="automation-desc">Pause video on new or background tabs</span>
+            </div>
           </div>
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Auto Ad Silencer</span>
-              <span class="toggle-sub">Mute audio automatically during ad banners</span>
+          <div class="automation-row">
+            <div class="automation-item-header">
+              <span class="automation-name">🔇 Auto Ad Silencer</span>
+              <label class="switch-toggle-sm">
+                <input type="checkbox" id="toggleAutoAdSilencer">
+                <span class="slider-round-sm"></span>
+              </label>
+              <input type="checkbox" id="toggleAutoAdSilence" class="hidden" aria-hidden="true">
             </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleAutoAdSilencer">
-              <span class="slider-round-sm"></span>
-            </label>
-            <input type="checkbox" id="toggleAutoAdSilence" class="hidden" aria-hidden="true">
+            <div class="automation-info">
+              <span class="automation-desc">Mute audio automatically during ad banners</span>
+            </div>
           </div>
-          <div class="automation-toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-name">Domain Speed Memory</span>
-              <span class="toggle-sub">Remember playback speed per domain</span>
+          <div class="automation-row span-2">
+            <div class="automation-item-header">
+              <span class="automation-name">⚡ Domain Speed Memory</span>
+              <label class="switch-toggle-sm">
+                <input type="checkbox" id="toggleDomainSpeedMemory" checked>
+                <span class="slider-round-sm"></span>
+              </label>
             </div>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleDomainSpeedMemory" checked>
-              <span class="slider-round-sm"></span>
-            </label>
+            <div class="automation-info">
+              <span class="automation-desc">Remember playback speed per domain</span>
+            </div>
           </div>
         </div>
       </section>

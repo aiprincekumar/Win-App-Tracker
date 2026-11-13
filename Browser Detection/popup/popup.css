@@ -2243,41 +2243,89 @@ button.spinning .refresh-spinner-icon,
   gap: 6px;
 }
 
-/* Smart Automations Card */
+/* Smart Automations Card (Compact 2-Row Layout matching Sound Enhancements) */
 .automations-card {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.automation-toggle-list {
-  display: flex;
-  flex-direction: column;
+  padding: 9px 12px;
   gap: 7px;
 }
+.automations-card .sub-card-header {
+  min-height: unset;
+}
+.automations-card .sub-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.automation-list,
+.automation-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+}
+.automation-row,
 .automation-toggle-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-dim);
+  border-radius: 7px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.automation-row.span-2,
+.automation-toggle-row.span-2 {
+  grid-column: span 2;
+}
+.automation-row:hover,
+.automation-toggle-row:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.automation-row:has(input:checked),
+.automation-toggle-row:has(input:checked) {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.04);
+}
+.automation-row:has(input:checked):hover,
+.automation-toggle-row:has(input:checked):hover {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.automation-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 3px 0;
+  gap: 4px;
+  min-height: unset;
 }
+.automation-item-header .switch-toggle-sm {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+.automation-info,
 .toggle-info {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
+.automation-name,
 .toggle-name {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.2;
+  text-wrap: balance;
+  letter-spacing: -0.1px;
+  word-break: break-word;
 }
+.automation-desc,
 .toggle-sub {
-  font-size: 9px;
+  font-size: 8.5px;
   color: var(--text-secondary);
+  line-height: 1.2;
+  text-wrap: pretty;
+  word-break: break-word;
 }
 
 /* ==========================================================================
