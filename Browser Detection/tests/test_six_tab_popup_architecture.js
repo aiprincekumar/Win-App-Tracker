@@ -95,9 +95,11 @@ console.log('\nTest 2: 6 Dedicated View Panes & Section Decomposition');
 
   const smartAutoIdx = html.indexOf('id="cardSmartAutomations"');
   const toolsActionsIdx = html.indexOf('id="cardToolsMicroActions"');
+  const soundEnhanceIdx = html.indexOf('id="cardSoundEnhancements"');
 
   assert(smartAutoIdx > toolsPaneIdx && smartAutoIdx < studioPaneIdx, '#cardSmartAutomations must be inside #viewToolsPane');
   assert(toolsActionsIdx > toolsPaneIdx && toolsActionsIdx < studioPaneIdx, '#cardToolsMicroActions must be inside #viewToolsPane');
+  assert(soundEnhanceIdx > toolsPaneIdx && soundEnhanceIdx < studioPaneIdx, '#cardSoundEnhancements must be inside #viewToolsPane');
 
   // Domains pane must house .breakdown-section
   const breakdownIdx = html.indexOf('class="breakdown-section"');
@@ -129,6 +131,7 @@ console.log('\nTest 3: Canonical DOM Element IDs Invariant');
     'mediaSentinelCard', 'mediaPulseIcon', 'mediaStatusHeading', 'dynamicStatusBtn', 'dynamicStatusDot',
     'dynamicStatusText', 'mediaPlatformTag', 'mediaQualityBadge', 'mediaTitleText',
     'cardToolsMicroActions', 'btnCardScreenshot', 'btnCardCinemaDim', 'btnCardLoopMedia', 'btnCardNextTrack', 'btnCardCopyTimestamp',
+    'cardSoundEnhancements', 'toggleVocalClarity', 'toggleNightShield',
     'cardSmartAutomations', 'toggleAutoPauseNewTab', 'toggleAutoAdSilencer', 'toggleDomainSpeedMemory',
     'cardFocusWellness', 'focusRatioBarContainer', 'doomscrollBreakerCard',
     'domainSearchInput', 'browserFilterSelect', 'trackingModeSelect', 'domainCategorySelect', 'domainsListContainer', 'emptyDomainStateText',

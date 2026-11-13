@@ -2062,6 +2062,31 @@ button.spinning .refresh-spinner-icon,
   white-space: nowrap;
 }
 
+/* Sub-Cards (Used in Tools, Studio, and Utility Panes) */
+.sub-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.sub-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sub-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Smart Automations Card */
 .automations-card {
   padding: 10px 12px;
@@ -2221,17 +2246,17 @@ button.spinning .refresh-spinner-icon,
 .eq-bands-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  padding: 6px 0;
+  gap: 10px;
+  padding: 10px 0 6px 0;
 }
 .eq-band-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .eq-db-val {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 600;
   color: #a78bfa;
 }
@@ -2239,43 +2264,45 @@ button.spinning .refresh-spinner-icon,
   writing-mode: bt-lr;
   -webkit-appearance: slider-vertical;
   width: 8px;
-  height: 70px;
+  height: 85px;
   padding: 0 4px;
   cursor: pointer;
 }
 .eq-freq-label {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 /* Sound Enhancements */
 .enhancements-card {
-  padding: 7px 10px;
-  gap: 5px;
+  padding: 9px 12px;
+  gap: 7px;
 }
+.enhancements-card .sub-card-header,
 .enhancements-card .audio-card-header {
   min-height: unset;
 }
+.enhancements-card .sub-card-title,
 .enhancements-card .audio-card-title {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   line-height: 1.2;
 }
 .enhancement-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  gap: 7px;
 }
 .enhancement-row {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
-  padding: 5px 7px;
+  gap: 3px;
+  padding: 6px 8px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid var(--border-dim);
-  border-radius: 6px;
+  border-radius: 7px;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .enhancement-row:hover {
@@ -2306,7 +2333,7 @@ button.spinning .refresh-spinner-icon,
   gap: 1px;
 }
 .enhancement-name {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
@@ -2315,7 +2342,7 @@ button.spinning .refresh-spinner-icon,
   word-break: break-word;
 }
 .enhancement-desc {
-  font-size: 8px;
+  font-size: 8.5px;
   color: var(--text-secondary);
   line-height: 1.2;
   text-wrap: pretty;
