@@ -2318,31 +2318,133 @@ function setupEventListeners() {
   const btnCardNextTrack = document.getElementById('btnCardNextTrack');
   const btnCardCopyTimestamp = document.getElementById('btnCardCopyTimestamp');
 
-  if (btnCardScreenshot) {
-    btnCardScreenshot.addEventListener('click', () => {
-      try {
-        if (browserAPI.tabs && typeof browserAPI.tabs.captureVisibleTab === 'function') {
-          browserAPI.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
-            if (browserAPI.runtime.lastError || !dataUrl) {
-              showPopupToast(t('toast_screenshot_captured'), 'success');
-              return;
-            }
-            saveScreenshot({
-              id: 'snap_' + Date.now(),
-              dataUrl: dataUrl,
-              timestamp: (activeMediaCached && activeMediaCached.currentTime) || 0,
-              timestampFormatted: formatTime((activeMediaCached && activeMediaCached.currentTime) || 0),
-              title: (activeMediaCached && activeMediaCached.title) || 'Captured Frame',
-              createdAt: Date.now()
+  // Precision Video Frame Screenshot Extraction (Defect 10)
+  async function capturePrecisionScreenshot() {
+    const targetTabId = getActiveMediaTabId();
+    if (!targetTabId) {
+      showPopupToast('No active media tab found', 'warning');
+      return false;
+    }
+
+    const currentTime = (activeMediaCached && activeMediaCached.currentTime) || 0;
+    const title = (activeMediaCached && activeMediaCached.title) || 'Captured Frame';
+    const formattedTime = formatTime(currentTime);
+
+    const doFallbackTabCapture = () => {
+      return new Promise((resolve) => {
+        try {
+          if (browserAPI.tabs && typeof browserAPI.tabs.captureVisibleTab === 'function') {
+            browserAPI.tabs.captureVisibleTab(null, { format: 'png' }, (fallbackUrl) => {
+              if (browserAPI.runtime && browserAPI.runtime.lastError) {
+                showPopupToast('Screenshot capture failed', 'warning');
+                resolve(false);
+                return;
+              }
+              if (fallbackUrl) {
+                saveScreenshot({
+                  id: 'snap_' + Date.now(),
+                  dataUrl: fallbackUrl,
+                  timestamp: currentTime,
+                  timestampFormatted: formattedTime,
+                  title: title,
+                  createdAt: Date.now()
+                });
+                showPopupToast(t('toast_screenshot_captured') || 'Screenshot captured!', 'success');
+                resolve(true);
+              } else {
+                showPopupToast('Screenshot capture failed', 'warning');
+                resolve(false);
+              }
             });
-            showPopupToast(t('toast_screenshot_captured'), 'success');
-          });
-        } else {
-          showPopupToast(t('toast_screenshot_captured'), 'success');
+          } else {
+            showPopupToast('Screenshot capture failed', 'warning');
+            resolve(false);
+          }
+        } catch (_) {
+          showPopupToast('Screenshot capture failed', 'warning');
+          resolve(false);
         }
-      } catch (_) {
-        showPopupToast(t('toast_screenshot_captured'), 'success');
+      });
+    };
+
+    try {
+      let frameDataUrl = null;
+
+      // Tier 1: In-page precision video frame extraction via browserAPI.scripting.executeScript
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
+        try {
+          const results = await browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId, allFrames: true },
+            func: () => {
+              try {
+                const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+                if (!video || !video.videoWidth || !video.videoHeight) return null;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return null;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                return canvas.toDataURL('image/png');
+              } catch (_) {
+                return null;
+              }
+            }
+          });
+
+          if (results && Array.isArray(results)) {
+            const match = results.find(r => r && r.result);
+            if (match && match.result) {
+              frameDataUrl = match.result;
+            }
+          }
+        } catch (_) {
+          frameDataUrl = null;
+        }
       }
+
+      // Tier 1b: Dual-tier IPC fallback to content_media.js if executeScript didn't produce a frame
+      if (!frameDataUrl && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
+        try {
+          const ipcRes = await new Promise((resolve) => {
+            browserAPI.tabs.sendMessage(targetTabId, { action: 'CAPTURE_VIDEO_FRAME' }, (res) => {
+              if (browserAPI.runtime && browserAPI.runtime.lastError) {
+                resolve(null);
+              } else {
+                resolve(res);
+              }
+            });
+          });
+          if (ipcRes && ipcRes.success && ipcRes.dataUrl) {
+            frameDataUrl = ipcRes.dataUrl;
+          }
+        } catch (_) {}
+      }
+
+      if (frameDataUrl) {
+        saveScreenshot({
+          id: 'snap_' + Date.now(),
+          dataUrl: frameDataUrl,
+          timestamp: currentTime,
+          timestampFormatted: formattedTime,
+          title: title,
+          createdAt: Date.now()
+        });
+        showPopupToast(t('toast_screenshot_captured') || 'Screenshot captured!', 'success');
+        return true;
+      } else {
+        // Graceful fallback to captureVisibleTab (e.g. CORS tainted canvas or no video frame returned)
+        return await doFallbackTabCapture();
+      }
+    } catch (_) {
+      return await doFallbackTabCapture();
+    }
+  }
+
+  if (btnCardScreenshot) {
+    btnCardScreenshot.addEventListener('click', async () => {
+      await capturePrecisionScreenshot();
     });
   }
 
@@ -2601,15 +2703,69 @@ function setupEventListeners() {
     });
   }
 
+  // Closed Tab Media Session Revival (Defect 11)
+  function resumeLastMediaPlayback() {
+    if (!lastWatchedPlayback || !lastWatchedPlayback.url) {
+      showPopupToast('No previous playback found', 'warning');
+      return false;
+    }
+
+    const targetTabId = getActiveMediaTabId();
+    if (targetTabId) {
+      // Branch A (Tab Still Open): Send seek_position to lastWatchedPlayback.currentTime and toggle_play
+      sendMediaControl('seek_position', { position: lastWatchedPlayback.currentTime || 0 });
+      sendMediaControl('toggle_play');
+      showPopupToast(`Resumed: ${lastWatchedPlayback.title || 'Playback'}`);
+      return { branch: 'open_tab', tabId: targetTabId };
+    } else {
+      // Branch B (Tab Closed): Reopen tab with timestamp parameter
+      let resumeUrl = lastWatchedPlayback.url;
+      const sec = Math.floor(lastWatchedPlayback.currentTime || 0);
+
+      // Validate URL scheme is strictly http: or https:
+      try {
+        const parsed = new URL(resumeUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          showPopupToast('Invalid or unsupported media URL scheme', 'warning');
+          return false;
+        }
+        parsed.searchParams.set('t', sec);
+        resumeUrl = parsed.toString();
+      } catch (_) {
+        if (!resumeUrl.startsWith('http://') && !resumeUrl.startsWith('https://')) {
+          showPopupToast('Invalid or unsupported media URL scheme', 'warning');
+          return false;
+        }
+        resumeUrl += (resumeUrl.includes('?') ? '&' : '?') + 't=' + sec;
+      }
+
+      if (browserAPI.tabs && typeof browserAPI.tabs.create === 'function') {
+        browserAPI.tabs.create({ url: resumeUrl, active: true });
+      }
+      showPopupToast(`Reopening: ${lastWatchedPlayback.title || 'Playback'}`);
+      return { branch: 'closed_tab', url: resumeUrl };
+    }
+  }
+
   const btnResumeMedia = document.getElementById('btnStudioResumePlayback') || document.getElementById('btnStudioResumeLastMedia');
   if (btnResumeMedia) {
     btnResumeMedia.addEventListener('click', () => {
-      if (lastWatchedPlayback) {
-        sendMediaControl('seek_position', { position: lastWatchedPlayback.currentTime });
-        sendMediaControl('toggle_play');
-        showPopupToast(`Resumed: ${lastWatchedPlayback.title}`);
-      }
+      resumeLastMediaPlayback();
     });
+  }
+
+  // Expose Sentinel Studio Vault hooks for testing and inspection
+  if (typeof window !== 'undefined') {
+    window.__SentinelStudioVault = {
+      capturePrecisionScreenshot,
+      resumeLastMediaPlayback,
+      saveScreenshot,
+      getActiveMediaTabId,
+      getLastWatchedPlayback: () => lastWatchedPlayback,
+      setLastWatchedPlayback: (v) => { lastWatchedPlayback = v; },
+      getActiveMediaCached: () => activeMediaCached,
+      setActiveMediaCached: (v) => { activeMediaCached = v; }
+    };
   }
 
   // Focus & Digital Wellness

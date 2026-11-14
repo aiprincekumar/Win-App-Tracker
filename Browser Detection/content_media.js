@@ -1835,6 +1835,30 @@
       return true;
     }
 
+    if (actionType === 'CAPTURE_VIDEO_FRAME') {
+      try {
+        const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+        if (!video || !video.videoWidth || !video.videoHeight) {
+          sendResponse({ success: false, error: 'No active video element with valid dimensions found' });
+          return true;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          sendResponse({ success: false, error: 'Failed to create 2d canvas context' });
+          return true;
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        sendResponse({ success: true, dataUrl, width: canvas.width, height: canvas.height });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+      return true;
+    }
+
     return true;
   });
 
@@ -1853,6 +1877,23 @@
       saveDomainSpeed,
       getSanitizedHost,
       getState: () => ({ isRestoringSpeed, domainSpeedMemoryEnabled })
+    };
+    window.__SentinelMediaFrameCapture = {
+      captureVideoFrame: () => {
+        try {
+          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+          if (!video || !video.videoWidth || !video.videoHeight) return null;
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return null;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          return canvas.toDataURL('image/png');
+        } catch (_) {
+          return null;
+        }
+      }
     };
   }
 
