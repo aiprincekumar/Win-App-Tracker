@@ -694,6 +694,13 @@
     if (!media || monitoredElements.has(media)) return;
     monitoredElements.add(media);
 
+    if (media.tagName && media.tagName.toLowerCase() === 'video' && audioOnlyModeActive) {
+      try {
+        media.style.opacity = '0';
+        media.style.visibility = 'hidden';
+      } catch (_) {}
+    }
+
     const immediateEvents = [
       'play', 'playing', 'pause', 'ended', 'waiting',
       'volumechange', 'ratechange', 'loadedmetadata', 'durationchange',
@@ -1459,6 +1466,69 @@
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Audio Lab & Audio-Only Battery Saver Mode (Defect 02)
+  // ---------------------------------------------------------------------------
+  let audioOnlyModeActive = false;
+
+  /**
+   * Defect 02: Audio-Only Battery Saver
+   * Sets opacity = '0' and visibility = 'hidden' on all video elements when enabled,
+   * restoring opacity = '1' and visibility = 'visible' when disabled.
+   * Playback continues uninterrupted to save GPU decoding and battery power.
+   */
+  function setAudioOnlyMode(enabled) {
+    audioOnlyModeActive = Boolean(enabled);
+    const videos = document.querySelectorAll('video');
+    videos.forEach(v => {
+      try {
+        if (audioOnlyModeActive) {
+          v.style.opacity = '0';
+          v.style.visibility = 'hidden';
+        } else {
+          v.style.opacity = '1';
+          v.style.visibility = 'visible';
+        }
+      } catch (_) {}
+    });
+  }
+
+  /**
+   * Hydrates Audio Lab settings from local storage and observes real-time changes
+   */
+  function initAudioLabSettings() {
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.get(['audio_lab_settings'], (res) => {
+        if (res && res.audio_lab_settings) {
+          setAudioOnlyMode(Boolean(res.audio_lab_settings.audio_only));
+          try {
+            window.postMessage({
+              type: 'APPLY_AUDIO_LAB_SETTINGS',
+              settings: res.audio_lab_settings
+            }, '*');
+          } catch (_) {}
+        }
+      });
+    }
+
+    if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+      browserAPI.storage.onChanged.addListener((changes, areaName) => {
+        if ((areaName === 'local' || !areaName) && changes && changes.audio_lab_settings) {
+          const newSettings = changes.audio_lab_settings.newValue;
+          if (newSettings) {
+            setAudioOnlyMode(Boolean(newSettings.audio_only));
+            try {
+              window.postMessage({
+                type: 'APPLY_AUDIO_LAB_SETTINGS',
+                settings: newSettings
+              }, '*');
+            } catch (_) {}
+          }
+        }
+      });
+    }
+  }
+
   /**
    * Executes interactive media control actions (play, pause, toggle, mute, seek, speed, quality, window modes)
    */
@@ -1670,17 +1740,20 @@
       setupMutationObserver();
       initAdSilencer();
       restoreDomainSpeed();
+      initAudioLabSettings();
     });
   } else {
     scanAndMonitorMedia();
     setupMutationObserver();
     initAdSilencer();
     restoreDomainSpeed();
+    initAudioLabSettings();
   }
 
   // Early initialization attempt for fast hydration at document_start
   try {
     initAdSilencer();
+    initAudioLabSettings();
   } catch (_) {}
 
   // Extra scans during first 5 seconds to catch dynamically injected players
@@ -1835,6 +1908,19 @@
       return true;
     }
 
+    if (actionType === 'APPLY_AUDIO_LAB_SETTINGS') {
+      const settings = message.settings || {};
+      try {
+        window.postMessage({
+          type: 'APPLY_AUDIO_LAB_SETTINGS',
+          settings: settings
+        }, '*');
+      } catch (_) {}
+      setAudioOnlyMode(Boolean(settings && settings.audio_only));
+      sendResponse({ success: true, audio_only: Boolean(settings && settings.audio_only) });
+      return true;
+    }
+
     if (actionType === 'CAPTURE_VIDEO_FRAME') {
       try {
         const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
@@ -1894,6 +1980,11 @@
           return null;
         }
       }
+    };
+    window.__SentinelAudioOnlyMode = {
+      setAudioOnlyMode,
+      initAudioLabSettings,
+      getState: () => ({ audioOnlyModeActive })
     };
   }
 

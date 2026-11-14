@@ -1988,6 +1988,29 @@ function getActiveMediaTabId() {
 function persistAudioSettings() {
   try {
     browserAPI.storage.local.set({ audio_lab_settings: audioLabSettings });
+    const targetTabId = getActiveMediaTabId();
+    if (targetTabId && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
+      try {
+        const p = browserAPI.tabs.sendMessage(targetTabId, {
+          type: 'APPLY_AUDIO_LAB_SETTINGS',
+          settings: audioLabSettings
+        });
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
+      } catch (_) {}
+    }
+    // Also dispatch to background service worker for reliable relay
+    try {
+      const p2 = browserAPI.runtime.sendMessage({
+        type: 'APPLY_AUDIO_LAB_SETTINGS',
+        settings: audioLabSettings,
+        tabId: targetTabId
+      });
+      if (p2 && typeof p2.catch === 'function') {
+        p2.catch(() => {});
+      }
+    } catch (_) {}
   } catch (_) {}
 }
 
@@ -2976,17 +2999,32 @@ function setupEventListeners() {
       if (popupHubConnecting) return;
       popupHubConnecting = true;
       const hubText = document.getElementById('hubStatusText');
-      if (hubText) hubText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+      if (hubText) hubText.textContent = (currentLang === 'hi') ? 'लॉन्च हो रहा है...' : 'Launching...';
       hubBadge.className = 'ws-badge starting';
-      const startingTitle = (currentLang === 'hi') ? 'SQLite डेटा हब: कनेक्ट हो रहा है...' : 'SQLite Data Hub: Connecting...';
+      const startingTitle = (currentLang === 'hi') ? 'SQLite डेटा हब: लॉन्च हो रहा है...' : 'SQLite Data Hub: Launching...';
       hubBadge.title = startingTitle;
       hubBadge.setAttribute('aria-label', startingTitle);
+
+      showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub लॉन्च किया जा रहा है...' : 'Launching SQLite Data Hub (port 65433)...', 'starting');
+
+      // If Data Hub is offline, invoke datahub://launch hidden iframe URI trigger (mirroring videohud://launch)
+      if (!dataHubConnected) {
+        try {
+          let iframe = document.getElementById('__datahub_launcher_frame__');
+          if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = '__datahub_launcher_frame__';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+          }
+          iframe.src = 'datahub://launch';
+        } catch (_) {}
+      }
 
       try {
         const p = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (_) {}
-      showPopupToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...', 'info');
 
       let attempts = 0;
       const pollInterval = setInterval(async () => {
@@ -3016,6 +3054,18 @@ function setupEventListeners() {
         triggerHubConnect();
       }
     });
+
+    if (typeof window !== 'undefined') {
+      window.__SentinelAudioLabPopup = {
+        persistAudioSettings,
+        getAudioLabSettings: () => ({ ...audioLabSettings }),
+        setAudioLabSettings: (newSettings) => {
+          audioLabSettings = { ...audioLabSettings, ...newSettings };
+          persistAudioSettings();
+        },
+        triggerDataHubConnect: triggerHubConnect
+      };
+    }
   }
 
   const timeBadge = document.getElementById('todayHeaderTimeBadge');

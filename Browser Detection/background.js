@@ -2822,6 +2822,23 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
+  // Audio Lab Settings Relay from Popup to Content Script
+  if (message.type === 'APPLY_AUDIO_LAB_SETTINGS') {
+    const globalMedia = synthesizeGlobalMediaState();
+    let targetTabId = (message.tabId ? Number(message.tabId) : null) || (globalMedia.primaryMedia && globalMedia.primaryMedia.tabId) || activeTabId;
+    if (targetTabId) {
+      safeSendTabMessage(targetTabId, {
+        type: 'APPLY_AUDIO_LAB_SETTINGS',
+        settings: message.settings || {}
+      }, (res, err) => {
+        sendResponse({ success: !err, result: res });
+      });
+      return true;
+    }
+    sendResponse({ success: false, error: 'No active media tab found' });
+    return true;
+  }
+
   // Focus and switch to the browser tab where primary media is active
   if (message.type === 'JUMP_TO_MEDIA_TAB') {
     (async () => {
