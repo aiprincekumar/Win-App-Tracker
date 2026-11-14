@@ -607,6 +607,10 @@ function showPopupToast(message, type = 'success') {
   toast.className = `toast-banner ${type}`;
   toast.classList.remove('hidden');
 
+  if ((type === 'danger' || type === 'alert') && quickSettings && quickSettings.notification_sound) {
+    playNotificationChime();
+  }
+
   popupToastTimer = setTimeout(() => {
     toast.classList.add('hidden');
   }, 3500);
@@ -1925,6 +1929,56 @@ let quickSettings = {
   high_contrast: false
 };
 
+let dashboardSyncIntervalId = null;
+
+function startDashboardAutoSync(intervalMs) {
+  if (dashboardSyncIntervalId) {
+    clearInterval(dashboardSyncIntervalId);
+    dashboardSyncIntervalId = null;
+  }
+  const parsed = parseInt(intervalMs, 10);
+  const fallback = !isNaN(parsed) ? parsed : 2000;
+  const safeInterval = Math.max(500, Math.min(10000, fallback));
+  dashboardSyncIntervalId = setInterval(refreshDashboard, safeInterval);
+}
+
+function playNotificationChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    const now = ctx.currentTime;
+    // D5 (587.33Hz) ramping to A5 (880Hz) over 350ms duration
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.exponentialRampToValueAtTime(880.0, now + 0.35);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.36);
+
+    osc.onended = () => {
+      try {
+        ctx.close().catch(() => {});
+      } catch (_) {}
+    };
+  } catch (err) {
+    console.warn('[Popup] Notification chime suppressed:', err);
+  }
+}
+
 function getActiveMediaTabId() {
   return (activeMediaCached && activeMediaCached.tabId) ||
     (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId) ||
@@ -2237,12 +2291,16 @@ function setupEventListeners() {
     selectSyncInterval.addEventListener('change', () => {
       quickSettings.sync_interval = parseInt(selectSyncInterval.value, 10);
       browserAPI.storage.local.set({ quick_settings: quickSettings });
+      startDashboardAutoSync(quickSettings.sync_interval);
     });
   }
   if (toggleNotificationSound) {
     toggleNotificationSound.addEventListener('change', () => {
       quickSettings.notification_sound = toggleNotificationSound.checked;
       browserAPI.storage.local.set({ quick_settings: quickSettings });
+      if (quickSettings.notification_sound) {
+        playNotificationChime();
+      }
     });
   }
   if (toggleHighContrast) {
@@ -3713,8 +3771,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
       const defTab = validTabs.includes(quickSettings.default_tab) ? quickSettings.default_tab : 'media';
       if (sTab) sTab.value = defTab;
+      if (defTab !== 'media') {
+        switchTopTab(defTab, false);
+      }
       const sSync = document.getElementById('selectSyncInterval');
       if (sSync) sSync.value = String(quickSettings.sync_interval || 2000);
+      startDashboardAutoSync(quickSettings.sync_interval || 2000);
       const tSound = document.getElementById('toggleNotificationSound');
       if (tSound) tSound.checked = Boolean(quickSettings.notification_sound);
       const tContrast = document.getElementById('toggleHighContrast');
@@ -3728,8 +3790,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshDashboard(true);
   });
 
-  // High-frequency auto-refresh popup while open (every 1 second for live progress updates)
-  setInterval(refreshDashboard, 1000);
+  // Dynamic auto-refresh popup while open
+  startDashboardAutoSync(quickSettings.sync_interval || 2000);
 
   // Instant reactive updates via IPC broadcast
   browserAPI.runtime.onMessage.addListener((message) => {
@@ -3742,6 +3804,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (message && (message.type === 'SLEEP_TIMER_EXPIRED' || message.action === 'SLEEP_TIMER_EXPIRED')) {
       renderSleepTimerUI({ state: 'TRIGGERED' });
       showPopupToast('Sleep timer expired - all media paused', 'info');
+      if (quickSettings && quickSettings.notification_sound) {
+        playNotificationChime();
+      }
+    } else if (message && (message.type === 'ALERT_TRIGGERED' || message.type === 'DOOMSCROLL_ALERT')) {
+      showPopupToast(message.text || 'Alert triggered', 'danger');
+      if (quickSettings && quickSettings.notification_sound) {
+        playNotificationChime();
+      }
     } else if (message && message.type === 'TRACKING_PAUSE_CHANGED') {
       isTrackingPaused = Boolean(message.isTrackingPaused);
       updateTrackingPauseButtonUI(isTrackingPaused);
