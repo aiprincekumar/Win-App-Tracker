@@ -358,6 +358,11 @@ let sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS };
 const SLEEP_ALARM_NAME = 'sentinel_sleep_timer_alarm';
 const SLEEP_FADE_ALARM_NAME = 'sentinel_sleep_fade_alarm';
 
+// Digital Wellness & Doomscroll Breaker Alarm Subsystem (Phase 3: Defect 12)
+const DOOMSCROLL_ENTERTAINMENT_HOSTS = ['youtube.com', 'instagram.com', 'tiktok.com', 'twitter.com', 'x.com', 'reddit.com', 'netflix.com'];
+const DOOMSCROLL_ALARM_NAME = 'DOOMSCROLL_CHECK_ALARM';
+let doomscrollConsecutiveMinutes = 0;
+
 let activeTabId = null;
 let activeWindowId = null;
 let activeDomain = null;
@@ -2402,9 +2407,76 @@ if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
   });
 }
 
-// Periodic Alarm for Storage Flush & WebSocket Verification
+// Periodic Alarms: Storage Flush, WebSocket Verification & Digital Wellness
 browserAPI.alarms.create('sentinel_flush_alarm', { periodInMinutes: CONFIG.FLUSH_INTERVAL_MINUTES });
+browserAPI.alarms.create('DOOMSCROLL_CHECK_ALARM', { periodInMinutes: 1 });
+
+/**
+ * Digital Wellness & Doomscroll Breaker Alarm Handler (Phase 3: Defect 12)
+ * Periodically evaluates active tab against entertainment hosts, accumulates consecutive browsing minutes,
+ * triggers system notification and runtime alert when threshold is reached, and decrements on other sites.
+ */
+async function handleDoomscrollCheck() {
+  try {
+    const res = await browserAPI.storage.local.get(['focus_settings']);
+    const focus_settings = res ? res.focus_settings : null;
+    if (!focus_settings?.doomscroll_enabled) {
+      doomscrollConsecutiveMinutes = 0;
+      return;
+    }
+
+    if (!browserAPI.tabs || typeof browserAPI.tabs.query !== 'function') return;
+    const [activeTab] = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
+    if (!activeTab || !activeTab.url) {
+      doomscrollConsecutiveMinutes = Math.max(0, doomscrollConsecutiveMinutes - 1);
+      return;
+    }
+
+    let url;
+    try {
+      url = new URL(activeTab.url);
+    } catch (_) {
+      doomscrollConsecutiveMinutes = Math.max(0, doomscrollConsecutiveMinutes - 1);
+      return;
+    }
+
+    const hostName = (url.hostname || '').toLowerCase();
+    const isEntertainmentHost = DOOMSCROLL_ENTERTAINMENT_HOSTS.some(host => hostName === host || hostName.endsWith('.' + host));
+
+    if (isEntertainmentHost) {
+      doomscrollConsecutiveMinutes++;
+      const limit = Math.max(1, Math.min(240, Number(focus_settings.doomscroll_interval_minutes) || 30));
+      if (doomscrollConsecutiveMinutes >= limit) {
+        if (browserAPI.notifications && typeof browserAPI.notifications.create === 'function') {
+          browserAPI.notifications.create('doomscroll_nudge', {
+            type: 'basic',
+            iconUrl: 'icons/icon128.png',
+            title: 'Digital Wellness: Take a Break! 🧘',
+            message: `You have been browsing ${url.hostname} for ${doomscrollConsecutiveMinutes} minutes. Look away from the screen for 20 seconds.`,
+            priority: 2
+          });
+        }
+        if (browserAPI.runtime && typeof browserAPI.runtime.sendMessage === 'function') {
+          browserAPI.runtime.sendMessage({
+            type: 'DOOMSCROLL_ALERT',
+            text: `Break recommended: ${doomscrollConsecutiveMinutes}m on ${url.hostname}`
+          }).catch(() => {});
+        }
+        doomscrollConsecutiveMinutes = 0;
+      }
+    } else {
+      doomscrollConsecutiveMinutes = Math.max(0, doomscrollConsecutiveMinutes - 1);
+    }
+  } catch (err) {
+    console.error('[MediaSentinel] Error executing doomscroll check:', err);
+  }
+}
+
 browserAPI.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'DOOMSCROLL_CHECK_ALARM') {
+    await handleDoomscrollCheck();
+    return;
+  }
   if (alarm.name === SLEEP_ALARM_NAME) {
     await triggerSleepTimerExpiration();
     return;
@@ -3273,3 +3345,15 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     }
   }, CONFIG.DELTA_BATCH_INTERVAL_MS);
 })();
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
+  globalThis.handleDoomscrollCheck = handleDoomscrollCheck;
+  globalThis.getDoomscrollConsecutiveMinutes = () => doomscrollConsecutiveMinutes;
+  globalThis.setDoomscrollConsecutiveMinutes = (val) => { doomscrollConsecutiveMinutes = val; };
+  if (globalThis.SentinelBackgroundModules) {
+    globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
+    globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
+  }
+}
+

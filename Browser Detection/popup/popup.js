@@ -2626,6 +2626,7 @@ function setupEventListeners() {
     selectDoomscroll.addEventListener('change', () => {
       focusSettings.doomscroll_interval_minutes = parseInt(selectDoomscroll.value, 10);
       browserAPI.storage.local.set({ focus_settings: focusSettings });
+      showPopupToast(`Doomscroll interval set to ${focusSettings.doomscroll_interval_minutes}m`);
     });
   }
 
