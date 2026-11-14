@@ -710,6 +710,13 @@
     media.addEventListener('timeupdate', () => {
       dispatchMediaTelemetry(false);
     }, { passive: true });
+
+    // Defect 09: Track ratechange to save domain speed
+    media.addEventListener('ratechange', () => {
+      if (!isRestoringSpeed && typeof media.playbackRate === 'number') {
+        saveDomainSpeed(media.playbackRate);
+      }
+    }, { passive: true });
   }
 
   /**
@@ -759,6 +766,10 @@
     ensureIframeFullscreenSupport(document);
     const elements = findAllMediaNodes(document);
     elements.forEach(attachMediaListeners);
+
+    if (elements.length > 0) {
+      restoreDomainSpeed();
+    }
 
     if (elements.length > 0 || isTopFrame) {
       dispatchMediaTelemetry(true);
@@ -1158,6 +1169,296 @@
     }
   }, { passive: true });
 
+  // ===========================================================================
+  // Phase 2: Smart Automations Engine (Defects 08 & 09)
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Defect 08: YouTube Commercial Auto Ad Silencer
+  // ---------------------------------------------------------------------------
+  let adSilencerEnabled = false;
+  let isAdMuted = false;
+  let preAdVolume = 1.0;
+  let adObserver = null;
+
+  /**
+   * Defect 08: Detects presence of YouTube commercial ad markers in the DOM.
+   * Targets: .ad-showing, .video-ads.ytp-ad-module:not(:empty), .ytp-ad-player-overlay, .ytp-ad-text
+   * 
+   * @returns {boolean}
+   */
+  function checkAdMarkers() {
+    if (!window.location || !window.location.hostname || !window.location.hostname.includes('youtube.com')) {
+      return false;
+    }
+    try {
+      // 1. Check player element .ad-showing class
+      const moviePlayer = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+      if (moviePlayer && moviePlayer.classList && moviePlayer.classList.contains('ad-showing')) {
+        return true;
+      }
+      if (document.querySelector('.ad-showing')) {
+        return true;
+      }
+
+      // 2. Check .video-ads.ytp-ad-module:not(:empty)
+      const adMod = document.querySelector('.video-ads.ytp-ad-module');
+      if (adMod && (adMod.children.length > 0 || (adMod.textContent && adMod.textContent.trim().length > 0))) {
+        return true;
+      }
+      try {
+        if (document.querySelector('.video-ads.ytp-ad-module:not(:empty)')) {
+          return true;
+        }
+      } catch (_) {}
+
+      // 3. Check .ytp-ad-player-overlay
+      if (document.querySelector('.ytp-ad-player-overlay')) {
+        return true;
+      }
+
+      // 4. Check .ytp-ad-text
+      if (document.querySelector('.ytp-ad-text')) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /**
+   * Applies edge-triggered volume attenuation / mute when YouTube commercial ad begins,
+   * and restores pre-ad volume when commercial ends, preventing frame thrashing.
+   */
+  function checkAndApplyAdSilencer() {
+    if (!adSilencerEnabled) {
+      if (isAdMuted) {
+        // Disabled while muted: restore pre-ad volume
+        const videos = document.querySelectorAll('video');
+        videos.forEach(video => {
+          try {
+            video.muted = false;
+            if (typeof preAdVolume === 'number') {
+              video.volume = preAdVolume;
+            }
+          } catch (_) {}
+        });
+        isAdMuted = false;
+      }
+      return;
+    }
+
+    const isAd = checkAdMarkers();
+    const videos = document.querySelectorAll('video');
+
+    if (isAd && !isAdMuted) {
+      // Edge transition: Ad appeared & video not yet ad-muted
+      videos.forEach(video => {
+        try {
+          if (typeof video.volume === 'number' && video.volume > 0) {
+            preAdVolume = video.volume;
+          }
+          video.muted = true;
+        } catch (_) {}
+      });
+      isAdMuted = true;
+    } else if (!isAd && isAdMuted) {
+      // Edge transition: Ad disappeared & video is ad-muted
+      videos.forEach(video => {
+        try {
+          video.muted = false;
+          if (typeof preAdVolume === 'number') {
+            video.volume = preAdVolume;
+          }
+        } catch (_) {}
+      });
+      isAdMuted = false;
+    }
+  }
+
+  /**
+   * Defect 08: Initializes YouTube Commercial Auto Ad Silencer.
+   * Hydrates setting, listens to storage.onChanged for real-time reactivity without page reload,
+   * observes DOM for ad markers, and re-arms on YouTube SPA navigations (yt-navigate-finish).
+   */
+  function initAdSilencer() {
+    if (!window.location || !window.location.hostname || !window.location.hostname.includes('youtube.com')) {
+      return;
+    }
+
+    // Check smart_automations.auto_ad_silencer in browserAPI.storage.local
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.get(['smart_automations'], (res) => {
+        if (res && res.smart_automations) {
+          adSilencerEnabled = Boolean(res.smart_automations.auto_ad_silencer);
+        }
+        checkAndApplyAdSilencer();
+      });
+    }
+
+    // Listen to browserAPI.storage.onChanged for real-time reactivity without page reload
+    if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+      browserAPI.storage.onChanged.addListener((changes, areaName) => {
+        if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
+          const newVal = changes.smart_automations.newValue;
+          if (newVal && newVal.auto_ad_silencer !== undefined) {
+            adSilencerEnabled = Boolean(newVal.auto_ad_silencer);
+            checkAndApplyAdSilencer();
+          }
+        }
+      });
+    }
+
+    // Observe DOM for YouTube ad markers
+    if (typeof MutationObserver !== 'undefined' && !adObserver) {
+      adObserver = new MutationObserver(() => {
+        checkAndApplyAdSilencer();
+      });
+      const rootTarget = document.documentElement || document.body;
+      if (rootTarget && rootTarget.nodeType === 1) {
+        adObserver.observe(rootTarget, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      }
+    }
+
+    // Re-arm on YouTube SPA navigations (yt-navigate-finish)
+    ['yt-navigate-finish', 'yt-page-data-updated'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        if (isAdMuted) {
+          const videos = document.querySelectorAll('video');
+          videos.forEach(v => {
+            try {
+              v.muted = false;
+              if (typeof preAdVolume === 'number') {
+                v.volume = preAdVolume;
+              }
+            } catch (_) {}
+          });
+          isAdMuted = false;
+        }
+        setTimeout(checkAndApplyAdSilencer, 100);
+        setTimeout(checkAndApplyAdSilencer, 500);
+      }, { passive: true });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Defect 09: Domain Speed Memory
+  // ---------------------------------------------------------------------------
+  let isRestoringSpeed = false;
+  let domainSpeedMemoryEnabled = true;
+
+  /**
+   * Sanitizes host: window.location.hostname.replace(/^www\./, '')
+   * @returns {string}
+   */
+  function getSanitizedHost() {
+    try {
+      return (window.location.hostname || '').replace(/^www\./, '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /**
+   * Defect 09: Restores domain speed memory from storage for the current host.
+   * Looks up smart_automations.domain_speeds[host]. If between 0.25 and 4.0,
+   * sets video.playbackRate = targetSpeed on video elements.
+   */
+  function restoreDomainSpeed() {
+    const host = getSanitizedHost();
+    if (!host) return;
+
+    if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) return;
+
+    browserAPI.storage.local.get(['smart_automations'], (res) => {
+      if (!res || !res.smart_automations) return;
+      const smartAutomations = res.smart_automations;
+      if (smartAutomations.domain_speed_memory === false) {
+        domainSpeedMemoryEnabled = false;
+        return;
+      }
+      domainSpeedMemoryEnabled = true;
+
+      const domainSpeeds = smartAutomations.domain_speeds;
+      if (!domainSpeeds || typeof domainSpeeds !== 'object') return;
+
+      const targetSpeed = domainSpeeds[host];
+      if (typeof targetSpeed === 'number' && targetSpeed >= 0.25 && targetSpeed <= 4.0) {
+        const videos = document.querySelectorAll('video');
+        if (videos.length > 0) {
+          isRestoringSpeed = true;
+          try {
+            videos.forEach(video => {
+              try {
+                if (video.playbackRate !== targetSpeed) {
+                  video.playbackRate = targetSpeed;
+                }
+              } catch (_) {}
+            });
+          } finally {
+            setTimeout(() => {
+              isRestoringSpeed = false;
+            }, 100);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Defect 09: Saves domain playback speed into storage for current host.
+   * If domain_speed_memory is true, saves speed into smart_automations.domain_speeds[host].
+   * 
+   * @param {number} speed
+   */
+  function saveDomainSpeed(speed) {
+    if (isRestoringSpeed) return;
+    const numSpeed = Number(speed);
+    if (!Number.isFinite(numSpeed) || numSpeed < 0.25 || numSpeed > 4.0) return;
+    const host = getSanitizedHost();
+    if (!host) return;
+
+    if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) return;
+
+    browserAPI.storage.local.get(['smart_automations'], (res) => {
+      const smartAutomations = (res && res.smart_automations) ? { ...res.smart_automations } : {};
+      if (smartAutomations.domain_speed_memory === false) {
+        domainSpeedMemoryEnabled = false;
+        return;
+      }
+      domainSpeedMemoryEnabled = true;
+
+      const domainSpeeds = { ...(smartAutomations.domain_speeds || {}) };
+      if (domainSpeeds[host] === numSpeed) return; // Value unchanged
+
+      domainSpeeds[host] = numSpeed;
+      smartAutomations.domain_speeds = domainSpeeds;
+
+      browserAPI.storage.local.set({ smart_automations: smartAutomations }, () => {
+        if (browserAPI.runtime && browserAPI.runtime.lastError) {}
+      });
+    });
+  }
+
+  // Listen to browserAPI.storage.onChanged for real-time reactivity for domain_speed_memory
+  if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+    browserAPI.storage.onChanged.addListener((changes, areaName) => {
+      if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
+        const newVal = changes.smart_automations.newValue;
+        if (newVal && newVal.domain_speed_memory !== undefined) {
+          domainSpeedMemoryEnabled = Boolean(newVal.domain_speed_memory);
+          if (domainSpeedMemoryEnabled) {
+            restoreDomainSpeed();
+          }
+        }
+      }
+    });
+  }
+
   /**
    * Executes interactive media control actions (play, pause, toggle, mute, seek, speed, quality, window modes)
    */
@@ -1237,21 +1538,26 @@
           }
           case 'cycle_speed': {
             const cur = primaryMediaElement.playbackRate || 1.0;
-            primaryMediaElement.playbackRate = calculateNextLadderSpeed(cur, 'up');
+            const targetSpeed = calculateNextLadderSpeed(cur, 'up');
+            primaryMediaElement.playbackRate = targetSpeed;
+            saveDomainSpeed(targetSpeed);
             break;
           }
           case 'set_speed': {
             if (typeof data.rate === 'number' && data.rate > 0) {
-              primaryMediaElement.playbackRate = Math.max(0.25, Math.min(2.0, Math.round(data.rate * 100) / 100));
+              const targetSpeed = Math.max(0.25, Math.min(4.0, Math.round(data.rate * 100) / 100));
+              primaryMediaElement.playbackRate = targetSpeed;
+              saveDomainSpeed(targetSpeed);
             }
             break;
           }
           case 'step_speed': {
             const cur = primaryMediaElement.playbackRate || 1.0;
-            const targetSpeed = (typeof data.targetSpeed === 'number' && data.targetSpeed >= 0.25 && data.targetSpeed <= 2.0)
+            const targetSpeed = (typeof data.targetSpeed === 'number' && data.targetSpeed >= 0.25 && data.targetSpeed <= 4.0)
               ? data.targetSpeed
               : calculateNextLadderSpeed(cur, data.direction || (data.step < 0 ? 'down' : 'up'));
             primaryMediaElement.playbackRate = targetSpeed;
+            saveDomainSpeed(targetSpeed);
             break;
           }
           case 'toggle_fullscreen': {
@@ -1321,10 +1627,12 @@
   ['yt-navigate-finish', 'yt-page-data-updated', 'spfdone', 'yt-player-updated'].forEach(evt => {
     document.addEventListener(evt, () => {
       scanAndMonitorMedia();
+      restoreDomainSpeed();
       dispatchMediaTelemetry(true);
       [200, 500, 1000, 2000].forEach(delay => {
         setTimeout(() => {
           scanAndMonitorMedia();
+          restoreDomainSpeed();
           dispatchMediaTelemetry(true);
         }, delay);
       });
@@ -1334,6 +1642,7 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       scanAndMonitorMedia();
+      restoreDomainSpeed();
       dispatchMediaTelemetry(true);
     }
   }, { passive: true });
@@ -1341,6 +1650,7 @@
   window.addEventListener('popstate', () => {
     setTimeout(() => {
       scanAndMonitorMedia();
+      restoreDomainSpeed();
       dispatchMediaTelemetry(true);
     }, 200);
   }, { passive: true });
@@ -1348,6 +1658,7 @@
   window.addEventListener('hashchange', () => {
     setTimeout(() => {
       scanAndMonitorMedia();
+      restoreDomainSpeed();
       dispatchMediaTelemetry(true);
     }, 200);
   }, { passive: true });
@@ -1357,11 +1668,20 @@
     document.addEventListener('DOMContentLoaded', () => {
       scanAndMonitorMedia();
       setupMutationObserver();
+      initAdSilencer();
+      restoreDomainSpeed();
     });
   } else {
     scanAndMonitorMedia();
     setupMutationObserver();
+    initAdSilencer();
+    restoreDomainSpeed();
   }
+
+  // Early initialization attempt for fast hydration at document_start
+  try {
+    initAdSilencer();
+  } catch (_) {}
 
   // Extra scans during first 5 seconds to catch dynamically injected players
   [500, 1500, 3000, 5000].forEach(delay => {
@@ -1517,5 +1837,23 @@
 
     return true;
   });
+
+  // Expose Sentinel Smart Automations hooks for testing and inspection
+  if (typeof window !== 'undefined') {
+    window.__SentinelAdSilencer = {
+      init: initAdSilencer,
+      initAdSilencer,
+      checkAdMarkers,
+      checkAndApply: checkAndApplyAdSilencer,
+      checkAndApplyAdSilencer,
+      getState: () => ({ adSilencerEnabled, isAdMuted, preAdVolume })
+    };
+    window.__SentinelDomainSpeed = {
+      restoreDomainSpeed,
+      saveDomainSpeed,
+      getSanitizedHost,
+      getState: () => ({ isRestoringSpeed, domainSpeedMemoryEnabled })
+    };
+  }
 
 })();

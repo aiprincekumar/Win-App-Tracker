@@ -37,6 +37,17 @@
       } catch (_) {
         commitActiveDomainTime(null, null);
       }
+
+      if (typeof context.handleAutoPauseOnTabChange === 'function') {
+        context.handleAutoPauseOnTabChange(activeInfo.tabId).catch(() => {});
+      }
+    }
+
+    async function onTabCreated(tab) {
+      if (!tab || !tab.id) return;
+      if (typeof context.handleAutoPauseOnTabChange === 'function') {
+        context.handleAutoPauseOnTabChange(tab.id).catch(() => {});
+      }
     }
 
     async function onTabUpdated(tabId, changeInfo, tab) {
@@ -65,6 +76,7 @@
 
     return {
       onTabActivated,
+      onTabCreated,
       onTabUpdated,
       onTabRemoved
     };

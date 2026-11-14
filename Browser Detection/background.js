@@ -235,6 +235,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.safeSendRuntimeMessage = safeSendRuntimeMessage;
   globalThis.safeSendTabMessage = safeSendTabMessage;
   globalThis.isRestrictedTabUrl = isRestrictedTabUrl;
+  globalThis.handleAutoPauseOnTabChange = handleAutoPauseOnTabChange;
   globalThis.connectWebSocket = connectWebSocket;
   globalThis.connectDataHub = connectDataHub;
   globalThis.probePortLive = probePortLive;
@@ -1323,6 +1324,80 @@ async function dispatchGlobalMediaAction(command = 'TOGGLE') {
 }
 
 /**
+ * Defect 07: Auto-Pause on New Tab / Tab Switch
+ * Pauses background media in other tabs when a new tab is created or activated
+ * if smart_automations.auto_pause_new_tab is enabled in storage.
+ * 
+ * @param {number} newActiveOrCreatedTabId The ID of the newly activated or created tab
+ * @returns {Promise<{ pausedTabs: number[] }>}
+ */
+async function handleAutoPauseOnTabChange(newActiveOrCreatedTabId) {
+  const result = { pausedTabs: [] };
+  if (!newActiveOrCreatedTabId || typeof newActiveOrCreatedTabId !== 'number') {
+    return result;
+  }
+
+  try {
+    const res = await browserAPI.storage.local.get(['smart_automations']);
+    const autoPause = Boolean(res && res.smart_automations && res.smart_automations.auto_pause_new_tab);
+    if (!autoPause) return result;
+
+    const globalMedia = synthesizeGlobalMediaState();
+    const targetTabIds = new Set();
+
+    // Priority 1: primaryMedia if it is playing in a different tab
+    if (globalMedia && globalMedia.primaryMedia && globalMedia.primaryMedia.isPlaying) {
+      const pmTabId = Number(globalMedia.primaryMedia.tabId);
+      if (pmTabId && pmTabId !== newActiveOrCreatedTabId) {
+        targetTabIds.add(pmTabId);
+      }
+    }
+
+    // Priority 2: Check tabMediaMap for any playing media in other tabs
+    if (typeof tabMediaMap !== 'undefined' && tabMediaMap.forEach) {
+      tabMediaMap.forEach((mState, tId) => {
+        const numTabId = Number(tId);
+        if (numTabId && numTabId !== newActiveOrCreatedTabId && mState) {
+          if (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying)) {
+            targetTabIds.add(numTabId);
+          }
+        }
+      });
+    }
+
+    // Priority 3: Check activeMediaSessions for any audible/playing sessions in other tabs
+    if (typeof activeMediaSessions !== 'undefined' && activeMediaSessions.forEach) {
+      activeMediaSessions.forEach((session, tId) => {
+        const numTabId = Number(tId);
+        if (numTabId && numTabId !== newActiveOrCreatedTabId && session && session.isPlaying) {
+          targetTabIds.add(numTabId);
+        }
+      });
+    }
+
+    for (const tabId of targetTabIds) {
+      try {
+        let tab = null;
+        if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
+          tab = await browserAPI.tabs.get(tabId).catch(() => null);
+        }
+        // Ensure closed tabs or restricted schemes (chrome://) are caught silently
+        if (tab && isRestrictedTabUrl(tab.url)) {
+          continue;
+        }
+
+        // Safely send pause command using safeSendTabMessage
+        safeSendTabMessage(tabId, { type: 'CONTROL_MEDIA', action: 'pause' });
+        safeSendTabMessage(tabId, { type: 'PAUSE_MEDIA', action: 'PAUSE_MEDIA' });
+        result.pausedTabs.push(tabId);
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+  return result;
+}
+
+/**
  * Flushes memory activity data to chrome.storage.local safely
  */
 async function saveStorageData() {
@@ -2188,6 +2263,11 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
     switchActiveDomain(null, false);
   }
 
+  // Defect 07: Auto-Pause on Tab Switch
+  if (activeInfo && activeInfo.tabId) {
+    handleAutoPauseOnTabChange(activeInfo.tabId).catch(() => {});
+  }
+
   // Gentle wake-up if paused and cooled down (e.g. 2 minutes since last attempt)
   const tabSwitchNow = Date.now();
   if ((!wsConnected && wsReconnectPaused && (tabSwitchNow - lastWsAttemptTime > 120000)) ||
@@ -2195,6 +2275,18 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
     probeAndConnectServices();
   }
 });
+
+// New Tab Created (Defect 07: Auto-Pause on New Tab)
+if (browserAPI.tabs && browserAPI.tabs.onCreated) {
+  browserAPI.tabs.onCreated.addListener(async (tab) => {
+    try {
+      await ensureStorageLoaded();
+      if (tab && tab.id) {
+        handleAutoPauseOnTabChange(tab.id).catch(() => {});
+      }
+    } catch (_) {}
+  });
+}
 
 // Tab Updated (URL changed, page navigated, or audible audio state changed)
 browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
