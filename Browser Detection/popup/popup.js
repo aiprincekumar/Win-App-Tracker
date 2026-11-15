@@ -3518,109 +3518,56 @@ function setupEventListeners() {
         } catch (_) {}
       }
 
+      // 1. Direct Scripting Execution: Link directly to on-video overlay button or controller
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
           target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
-            const ctrl = window.__SentinelFullscreenController || globalThis.__SentinelFullscreenController;
-            if (ctrl && typeof ctrl.toggleWebFullscreen === 'function') {
-              ctrl.toggleWebFullscreen();
-              return;
+            // Priority 1: Trigger the in-page Floating Sentinel Fullscreen HUD Button
+            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
+            if (floatingBtn) {
+              try {
+                floatingBtn.click();
+                return;
+              } catch (_) {}
             }
+
+            // Priority 2: Use dedicated Sentinel Fullscreen Controller instance
             if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
-              window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
-              return;
+              try {
+                window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
+                return;
+              } catch (_) {}
             }
 
-            // Cross-world CustomEvent bridge
-            try {
-              window.dispatchEvent(new CustomEvent('__SENTINEL_FULLSCREEN_ACTION__', {
-                detail: { action: 'toggle', options: { forceWeb: true } }
-              }));
-            } catch (_) {}
-
-            const hasWebFs = Boolean(document.querySelector('.sentinel-web-fullscreen'));
-            if (document.fullscreenElement || hasWebFs) {
-              if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-              }
-              const webFsEl = document.querySelectorAll('.sentinel-web-fullscreen');
-              webFsEl.forEach(el => el.classList.remove('sentinel-web-fullscreen'));
-              if (document.body) {
-                document.body.classList.remove('sentinel-fullscreen-active');
-                document.body.classList.remove('sentinel-has-web-fullscreen');
-              }
-              if (document.documentElement) {
-                document.documentElement.classList.remove('sentinel-fullscreen-active');
-                document.documentElement.classList.remove('sentinel-has-web-fullscreen');
-              }
-              const moviePlayer = document.getElementById('movie_player');
-              if (moviePlayer) moviePlayer.classList.remove('ytp-fullscreen');
-              const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
-              if (flexy && !document.fullscreenElement) {
-                try { flexy.removeAttribute('fullscreen'); } catch (_) {}
-              }
-              window.dispatchEvent(new Event('resize'));
-            } else {
-              const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-              const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-              const target = player || (video && video.parentElement) || video;
-              const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
-
-              let nativeTriggered = false;
-              if (ytFsBtn) {
-                try {
-                  ytFsBtn.click();
-                  nativeTriggered = true;
-                } catch (_) {}
-              } else if (player && typeof player.toggleFullscreen === 'function') {
-                try {
-                  player.toggleFullscreen();
-                  nativeTriggered = true;
-                } catch (_) {}
-              } else if (player) {
-                try {
-                  const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                  player.dispatchEvent(ev);
-                  nativeTriggered = true;
-                } catch (_) {}
-              }
-
-              const applyWebFs = () => {
-                if (target) target.classList.add('sentinel-web-fullscreen');
-                if (document.body) {
-                  document.body.classList.add('sentinel-fullscreen-active');
-                  document.body.classList.add('sentinel-has-web-fullscreen');
-                }
-                if (document.documentElement) {
-                  document.documentElement.classList.add('sentinel-fullscreen-active');
-                  document.documentElement.classList.add('sentinel-has-web-fullscreen');
-                }
-                if (player) player.classList.add('ytp-fullscreen');
-                const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
-                if (flexy) {
-                  try { flexy.setAttribute('fullscreen', ''); } catch (_) {}
-                }
-                window.dispatchEvent(new Event('resize'));
-              };
-
-              if (target && target.requestFullscreen && !document.fullscreenElement && !nativeTriggered) {
-                target.requestFullscreen().catch(() => {
-                  applyWebFs();
-                });
-              } else if (!document.fullscreenElement && !nativeTriggered) {
-                applyWebFs();
-              }
+            // Priority 3: Fallback for native player or keyboard
+            const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+            if (ytFsBtn) {
+              try { ytFsBtn.click(); return; } catch (_) {}
+            }
+            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            const target = player || (video && video.parentElement) || video;
+            if (target && target.requestFullscreen && !document.fullscreenElement) {
+              target.requestFullscreen().catch(() => {});
+            } else if (player) {
+              try {
+                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                player.dispatchEvent(ev);
+              } catch (_) {}
             }
           }
         }).catch(() => {
-          sendMediaControl('toggle_fullscreen', {}, targetTabId);
+          sendMediaControl('toggle_fullscreen');
         });
       } else {
         // Fallback only when scripting API or tabId is unavailable
         sendMediaControl('toggle_fullscreen');
       }
+
+      // 2. Dispatch IPC Media Control message through background relay
+      sendMediaControl('toggle_fullscreen', {}, targetTabId);
     });
   }
 

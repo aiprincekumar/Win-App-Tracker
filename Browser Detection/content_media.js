@@ -1650,7 +1650,16 @@
             break;
           }
           case 'toggle_fullscreen': {
-            if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
+            if (floatingBtn) {
+              try {
+                floatingBtn.click();
+              } catch (_) {
+                if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+                  window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
+                }
+              }
+            } else if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
               window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
             } else {
               forwardActionToMainWorld('toggle_fullscreen', data);
@@ -1878,33 +1887,60 @@
   // Runtime IPC Message Listener (Queries & Controls)
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || (!message.type && !message.action)) return;
-    const actionType = message.action || message.type;
 
-    if (actionType === 'QUERY_PAGE_MEDIA') {
+    const msgType = message.type || '';
+    const msgAction = message.action || '';
+    const actionType = msgAction || msgType;
+
+    // 1. Telemetry Query
+    if (msgType === 'QUERY_PAGE_MEDIA' || msgAction === 'QUERY_PAGE_MEDIA') {
       const { currentState } = evaluatePageMediaState();
       sendResponse(currentState);
       return true;
     }
 
-    if (actionType === 'MEDIA_CONTROL') {
-      const result = handleMediaControl(message.action, message.data || {});
+    // 2. Standard MEDIA_CONTROL Envelope (from background worker or popup)
+    if (msgType === 'MEDIA_CONTROL' || msgAction === 'MEDIA_CONTROL') {
+      const targetAction = message.action && message.action !== 'MEDIA_CONTROL'
+        ? message.action
+        : (message.data && message.data.action);
+      const targetData = message.data || {};
+      const result = handleMediaControl(targetAction, targetData);
       sendResponse(result);
       return true;
     }
 
-    if (actionType === 'SET_VOLUME') {
+    // 3. Direct Media Action Fallback (when action is sent directly as type or action)
+    const KNOWN_MEDIA_ACTIONS = [
+      'play', 'pause', 'toggle_play', 'seek_relative', 'seek_percent',
+      'toggle_mute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
+      'cycle_speed', 'toggle_fullscreen', 'toggle_pip', 'toggle_theater',
+      'step_quality', 'set_quality'
+    ];
+    if (KNOWN_MEDIA_ACTIONS.includes(msgAction) || KNOWN_MEDIA_ACTIONS.includes(msgType)) {
+      const targetAction = KNOWN_MEDIA_ACTIONS.includes(msgAction) ? msgAction : msgType;
+      const targetData = message.data || (targetAction === 'set_volume' ? { volume: message.volume, percent: message.percent } : {});
+      const result = handleMediaControl(targetAction, targetData);
+      sendResponse(result);
+      return true;
+    }
+
+    // 4. Dedicated SET_VOLUME Envelope
+    if (msgType === 'SET_VOLUME' || msgAction === 'SET_VOLUME') {
       const result = handleMediaControl('set_volume', message.data || { volume: message.volume, percent: message.percent });
       sendResponse(result);
       return true;
     }
 
-    if (actionType === 'FADE_AND_PAUSE') {
+    // 5. Smooth Fade and Pause Envelope
+    if (msgType === 'FADE_AND_PAUSE' || msgAction === 'FADE_AND_PAUSE') {
       executeSmoothFadeAndPause(message.fadeDurationSeconds || 30);
       sendResponse({ received: true });
       return true;
     }
 
-    if (actionType === 'PAUSE_MEDIA') {
+    // 6. Direct PAUSE_MEDIA Command
+    if (msgType === 'PAUSE_MEDIA' || msgAction === 'PAUSE_MEDIA') {
       if (fadeIntervalId) {
         clearInterval(fadeIntervalId);
         fadeIntervalId = null;
@@ -1919,7 +1955,8 @@
       return true;
     }
 
-    if (actionType === 'RESUME_MEDIA') {
+    // 7. Direct RESUME_MEDIA Command
+    if (msgType === 'RESUME_MEDIA' || msgAction === 'RESUME_MEDIA') {
       try {
         handleMediaControl('play');
       } catch (_) {}
@@ -1927,6 +1964,7 @@
       return true;
     }
 
+    // 8. Audio Lab Settings
     if (actionType === 'APPLY_AUDIO_LAB_SETTINGS') {
       const settings = message.settings || {};
       try {
@@ -1940,6 +1978,7 @@
       return true;
     }
 
+    // 9. Video Frame Capture
     if (actionType === 'CAPTURE_VIDEO_FRAME') {
       try {
         const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
