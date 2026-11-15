@@ -30,25 +30,209 @@
   let observer = null;
   let titleObserver = null;
   let periodicHeartbeatTimer = null;
+  let fadeIntervalId = null;
+  let adObserver = null;
+
+  // Extension context invalidation lifecycle management
+  let isContextInvalidated = false;
+  let isOrphaned = false;
 
   /**
-   * Safe IPC message sender to background service worker
+   * Synchronously checks whether the extension context is still active and valid.
+   * When an extension is updated, reloaded, or uninstalled, browserAPI.runtime.id
+   * becomes undefined or throws "Extension context invalidated".
+   * 
+   * @returns {boolean}
+   */
+  function isExtensionContextValid() {
+    try {
+      return Boolean(browserAPI && browserAPI.runtime && browserAPI.runtime.id);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Alias for isExtensionContextValid
+   * @returns {boolean}
+   */
+  function isContextValid() {
+    return isExtensionContextValid();
+  }
+
+  /**
+   * Detects whether an error message or exception matches extension context invalidation.
+   * @param {Error|string} err
+   * @returns {boolean}
+   */
+  function isInvalidationError(err) {
+    if (!err) return false;
+    const msg = String(err.message || err.error || err);
+    return /Extension context invalidated/i.test(msg);
+  }
+
+  /**
+   * Graceful lifecycle teardown when extension context becomes invalidated/orphaned.
+   * Sets sticky flags, clears running timers, disconnects DOM observers, and prevents memory leaks.
+   */
+  function teardownMediaSentinel() {
+    if (isContextInvalidated) return;
+    isContextInvalidated = true;
+    isOrphaned = true;
+
+    // Clear periodic telemetry heartbeat timer
+    if (periodicHeartbeatTimer) {
+      clearInterval(periodicHeartbeatTimer);
+      periodicHeartbeatTimer = null;
+    }
+
+    // Clear smooth fade pause interval if active
+    if (fadeIntervalId) {
+      clearInterval(fadeIntervalId);
+      fadeIntervalId = null;
+    }
+
+    // Disconnect DOM MutationObservers
+    if (observer && typeof observer.disconnect === 'function') {
+      try { observer.disconnect(); } catch (_) {}
+      observer = null;
+    }
+    if (titleObserver && typeof titleObserver.disconnect === 'function') {
+      try { titleObserver.disconnect(); } catch (_) {}
+      titleObserver = null;
+    }
+    if (adObserver && typeof adObserver.disconnect === 'function') {
+      try { adObserver.disconnect(); } catch (_) {}
+      adObserver = null;
+    }
+
+    try {
+      console.debug('[Media Sentinel] Extension context invalidated; detached running intervals and observers.');
+    } catch (_) {}
+  }
+
+  const teardownInvalidatedContext = teardownMediaSentinel;
+
+  /**
+   * Safe storage getter with synchronous context validity check and error catching.
+   * If context is invalid or if browserAPI.storage throws an invalidation error,
+   * invokes teardownMediaSentinel and aborts silently.
+   * 
+   * @param {string|string[]|Object} keys
+   * @param {Function} callback
+   */
+  function safeStorageGet(keys, callback) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
+    try {
+      if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) {
+        return;
+      }
+      browserAPI.storage.local.get(keys, (res) => {
+        try {
+          const err = browserAPI.runtime && browserAPI.runtime.lastError;
+          if (err && isInvalidationError(err)) {
+            teardownMediaSentinel();
+            return;
+          }
+          if (typeof callback === 'function') {
+            callback(res);
+          }
+        } catch (cbErr) {
+          if (isInvalidationError(cbErr)) {
+            teardownMediaSentinel();
+          }
+        }
+      });
+    } catch (err) {
+      if (isInvalidationError(err)) {
+        teardownMediaSentinel();
+      }
+    }
+  }
+
+  /**
+   * Safe storage setter with synchronous context validity check and error catching.
+   * 
+   * @param {Object} items
+   * @param {Function} [callback]
+   */
+  function safeStorageSet(items, callback) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
+    try {
+      if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) {
+        return;
+      }
+      browserAPI.storage.local.set(items, () => {
+        try {
+          const err = browserAPI.runtime && browserAPI.runtime.lastError;
+          if (err && isInvalidationError(err)) {
+            teardownMediaSentinel();
+            return;
+          }
+          if (typeof callback === 'function') {
+            callback();
+          }
+        } catch (cbErr) {
+          if (isInvalidationError(cbErr)) {
+            teardownMediaSentinel();
+          }
+        }
+      });
+    } catch (err) {
+      if (isInvalidationError(err)) {
+        teardownMediaSentinel();
+      }
+    }
+  }
+
+  /**
+   * Safe IPC message sender to background service worker with extension context invalidation guard
    */
   function safeSendMessage(message, callback) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      if (callback && typeof callback === 'function') {
+        try { callback(null, new Error('Extension context invalidated')); } catch (_) {}
+      }
+      return;
+    }
     try {
-      if (browserAPI.runtime && browserAPI.runtime.id) {
+      if (browserAPI && browserAPI.runtime && browserAPI.runtime.id) {
         const maybePromise = browserAPI.runtime.sendMessage(message, (response) => {
-          const err = browserAPI.runtime.lastError;
-          if (callback && typeof callback === 'function') {
-            try { callback(response, err); } catch (_) {}
+          try {
+            const err = browserAPI.runtime.lastError;
+            if (err && isInvalidationError(err)) {
+              teardownMediaSentinel();
+            }
+            if (callback && typeof callback === 'function') {
+              try { callback(response, err); } catch (_) {}
+            }
+          } catch (innerErr) {
+            if (isInvalidationError(innerErr)) {
+              teardownMediaSentinel();
+            }
           }
         });
         if (maybePromise && typeof maybePromise.catch === 'function') {
-          maybePromise.catch(() => {});
+          maybePromise.catch((err) => {
+            if (isInvalidationError(err)) {
+              teardownMediaSentinel();
+            }
+          });
         }
+      } else {
+        teardownMediaSentinel();
       }
     } catch (e) {
-      // Extension context invalidated (e.g. extension updated/reloaded during dev)
+      if (isInvalidationError(e)) {
+        teardownMediaSentinel();
+      }
     }
   }
 
@@ -632,6 +816,11 @@
    * If this is a subframe and has NO media, skips to avoid clobbering top-frame state.
    */
   function dispatchMediaTelemetry(force = false) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
+
     const { currentState } = evaluatePageMediaState();
 
     // Prevent non-media iframes from clobbering top frame
@@ -709,17 +898,29 @@
 
     immediateEvents.forEach(evt => {
       media.addEventListener(evt, () => {
+        if (isContextInvalidated || !isExtensionContextValid()) {
+          teardownMediaSentinel();
+          return;
+        }
         dispatchMediaTelemetry(true);
       }, { passive: true });
     });
 
     // High-resolution timeupdate listener: broadcasts during active playback
     media.addEventListener('timeupdate', () => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       dispatchMediaTelemetry(false);
     }, { passive: true });
 
     // Defect 09: Track ratechange to save domain speed
     media.addEventListener('ratechange', () => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       if (!isRestoringSpeed && typeof media.playbackRate === 'number') {
         saveDomainSpeed(media.playbackRate);
       }
@@ -788,6 +989,10 @@
    * Scans document for media elements and attaches event listeners
    */
   function scanAndMonitorMedia() {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     ensureMainWorldInjected();
     ensureIframeFullscreenSupport(document);
     const elements = findAllMediaNodes(document);
@@ -806,9 +1011,17 @@
    * Observes DOM mutations for newly added media nodes (SPAs, YouTube, etc.)
    */
   function setupMutationObserver() {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     if (observer) return;
 
     observer = new MutationObserver(mutations => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       let foundNew = false;
       for (const mutation of mutations) {
         if (mutation.type === 'childList') {
@@ -853,6 +1066,10 @@
     const titleEl = document.querySelector('title');
     if (titleEl && !titleObserver) {
       titleObserver = new MutationObserver(() => {
+        if (isContextInvalidated || !isExtensionContextValid()) {
+          teardownMediaSentinel();
+          return;
+        }
         dispatchMediaTelemetry(true);
       });
       titleObserver.observe(titleEl, {
@@ -868,6 +1085,10 @@
    */
   function setupUserActivityListeners() {
     const onUserInteraction = () => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       const now = Date.now();
       if (now - lastActivityTimestamp >= 10000) {
         lastActivityTimestamp = now;
@@ -977,6 +1198,10 @@
    * Ensures main world bridge script is injected if not already running via manifest
    */
   function ensureMainWorldInjected() {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     try {
       const root = document.documentElement;
       if (root && root.getAttribute('data-sentinel-bridge-ready') === 'true') {
@@ -990,7 +1215,11 @@
       s.src = browserAPI.runtime.getURL('inject_main_world.js');
       s.onload = () => s.remove();
       (document.head || document.documentElement || document.body).appendChild(s);
-    } catch (_) {}
+    } catch (err) {
+      if (isInvalidationError(err)) {
+        teardownMediaSentinel();
+      }
+    }
   }
 
   /**
@@ -1205,7 +1434,7 @@
   let adSilencerEnabled = false;
   let isAdMuted = false;
   let preAdVolume = 1.0;
-  let adObserver = null;
+  // adObserver is declared in top-level lifecycle scope for clean teardown access
 
   /**
    * Defect 08: Detects presence of YouTube commercial ad markers in the DOM.
@@ -1307,36 +1536,51 @@
    * observes DOM for ad markers, and re-arms on YouTube SPA navigations (yt-navigate-finish).
    */
   function initAdSilencer() {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
+
     if (!window.location || !window.location.hostname || !window.location.hostname.includes('youtube.com')) {
       return;
     }
 
     // Check smart_automations.auto_ad_silencer in browserAPI.storage.local
-    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
-      browserAPI.storage.local.get(['smart_automations'], (res) => {
-        if (res && res.smart_automations) {
-          adSilencerEnabled = Boolean(res.smart_automations.auto_ad_silencer);
-        }
-        checkAndApplyAdSilencer();
-      });
-    }
+    safeStorageGet(['smart_automations'], (res) => {
+      if (res && res.smart_automations) {
+        adSilencerEnabled = Boolean(res.smart_automations.auto_ad_silencer);
+      }
+      checkAndApplyAdSilencer();
+    });
 
     // Listen to browserAPI.storage.onChanged for real-time reactivity without page reload
     if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
-      browserAPI.storage.onChanged.addListener((changes, areaName) => {
-        if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
-          const newVal = changes.smart_automations.newValue;
-          if (newVal && newVal.auto_ad_silencer !== undefined) {
-            adSilencerEnabled = Boolean(newVal.auto_ad_silencer);
-            checkAndApplyAdSilencer();
+      try {
+        browserAPI.storage.onChanged.addListener((changes, areaName) => {
+          if (!isExtensionContextValid() || isContextInvalidated) {
+            teardownMediaSentinel();
+            return;
           }
-        }
-      });
+          if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
+            const newVal = changes.smart_automations.newValue;
+            if (newVal && newVal.auto_ad_silencer !== undefined) {
+              adSilencerEnabled = Boolean(newVal.auto_ad_silencer);
+              checkAndApplyAdSilencer();
+            }
+          }
+        });
+      } catch (err) {
+        if (isInvalidationError(err)) teardownMediaSentinel();
+      }
     }
 
     // Observe DOM for YouTube ad markers
     if (typeof MutationObserver !== 'undefined' && !adObserver) {
       adObserver = new MutationObserver(() => {
+        if (isContextInvalidated || !isExtensionContextValid()) {
+          teardownMediaSentinel();
+          return;
+        }
         checkAndApplyAdSilencer();
       });
       const rootTarget = document.documentElement || document.body;
@@ -1353,6 +1597,10 @@
     // Re-arm on YouTube SPA navigations (yt-navigate-finish)
     ['yt-navigate-finish', 'yt-page-data-updated'].forEach(evt => {
       document.addEventListener(evt, () => {
+        if (isContextInvalidated || !isExtensionContextValid()) {
+          teardownMediaSentinel();
+          return;
+        }
         if (isAdMuted) {
           const videos = document.querySelectorAll('video');
           videos.forEach(v => {
@@ -1365,8 +1613,12 @@
           });
           isAdMuted = false;
         }
-        setTimeout(checkAndApplyAdSilencer, 100);
-        setTimeout(checkAndApplyAdSilencer, 500);
+        setTimeout(() => {
+          if (!isContextInvalidated && isExtensionContextValid()) checkAndApplyAdSilencer();
+        }, 100);
+        setTimeout(() => {
+          if (!isContextInvalidated && isExtensionContextValid()) checkAndApplyAdSilencer();
+        }, 500);
       }, { passive: true });
     });
   }
@@ -1395,12 +1647,14 @@
    * sets video.playbackRate = targetSpeed on video elements.
    */
   function restoreDomainSpeed() {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     const host = getSanitizedHost();
     if (!host) return;
 
-    if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) return;
-
-    browserAPI.storage.local.get(['smart_automations'], (res) => {
+    safeStorageGet(['smart_automations'], (res) => {
       if (!res || !res.smart_automations) return;
       const smartAutomations = res.smart_automations;
       if (smartAutomations.domain_speed_memory === false) {
@@ -1442,15 +1696,17 @@
    * @param {number} speed
    */
   function saveDomainSpeed(speed) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     if (isRestoringSpeed) return;
     const numSpeed = Number(speed);
     if (!Number.isFinite(numSpeed) || numSpeed < 0.25 || numSpeed > 4.0) return;
     const host = getSanitizedHost();
     if (!host) return;
 
-    if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) return;
-
-    browserAPI.storage.local.get(['smart_automations'], (res) => {
+    safeStorageGet(['smart_automations'], (res) => {
       const smartAutomations = (res && res.smart_automations) ? { ...res.smart_automations } : {};
       if (smartAutomations.domain_speed_memory === false) {
         domainSpeedMemoryEnabled = false;
@@ -1464,25 +1720,31 @@
       domainSpeeds[host] = numSpeed;
       smartAutomations.domain_speeds = domainSpeeds;
 
-      browserAPI.storage.local.set({ smart_automations: smartAutomations }, () => {
-        if (browserAPI.runtime && browserAPI.runtime.lastError) {}
-      });
+      safeStorageSet({ smart_automations: smartAutomations });
     });
   }
 
   // Listen to browserAPI.storage.onChanged for real-time reactivity for domain_speed_memory
   if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
-    browserAPI.storage.onChanged.addListener((changes, areaName) => {
-      if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
-        const newVal = changes.smart_automations.newValue;
-        if (newVal && newVal.domain_speed_memory !== undefined) {
-          domainSpeedMemoryEnabled = Boolean(newVal.domain_speed_memory);
-          if (domainSpeedMemoryEnabled) {
-            restoreDomainSpeed();
+    try {
+      browserAPI.storage.onChanged.addListener((changes, areaName) => {
+        if (!isExtensionContextValid() || isContextInvalidated) {
+          teardownMediaSentinel();
+          return;
+        }
+        if ((areaName === 'local' || !areaName) && changes && changes.smart_automations) {
+          const newVal = changes.smart_automations.newValue;
+          if (newVal && newVal.domain_speed_memory !== undefined) {
+            domainSpeedMemoryEnabled = Boolean(newVal.domain_speed_memory);
+            if (domainSpeedMemoryEnabled) {
+              restoreDomainSpeed();
+            }
           }
         }
-      }
-    });
+      });
+    } catch (err) {
+      if (isInvalidationError(err)) teardownMediaSentinel();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1516,35 +1778,46 @@
    * Hydrates Audio Lab settings from local storage and observes real-time changes
    */
   function initAudioLabSettings() {
-    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
-      browserAPI.storage.local.get(['audio_lab_settings'], (res) => {
-        if (res && res.audio_lab_settings) {
-          setAudioOnlyMode(Boolean(res.audio_lab_settings.audio_only));
-          try {
-            window.postMessage({
-              type: 'APPLY_AUDIO_LAB_SETTINGS',
-              settings: res.audio_lab_settings
-            }, '*');
-          } catch (_) {}
-        }
-      });
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
     }
 
+    safeStorageGet(['audio_lab_settings'], (res) => {
+      if (res && res.audio_lab_settings) {
+        setAudioOnlyMode(Boolean(res.audio_lab_settings.audio_only));
+        try {
+          window.postMessage({
+            type: 'APPLY_AUDIO_LAB_SETTINGS',
+            settings: res.audio_lab_settings
+          }, '*');
+        } catch (_) {}
+      }
+    });
+
     if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
-      browserAPI.storage.onChanged.addListener((changes, areaName) => {
-        if ((areaName === 'local' || !areaName) && changes && changes.audio_lab_settings) {
-          const newSettings = changes.audio_lab_settings.newValue;
-          if (newSettings) {
-            setAudioOnlyMode(Boolean(newSettings.audio_only));
-            try {
-              window.postMessage({
-                type: 'APPLY_AUDIO_LAB_SETTINGS',
-                settings: newSettings
-              }, '*');
-            } catch (_) {}
+      try {
+        browserAPI.storage.onChanged.addListener((changes, areaName) => {
+          if (!isExtensionContextValid() || isContextInvalidated) {
+            teardownMediaSentinel();
+            return;
           }
-        }
-      });
+          if ((areaName === 'local' || !areaName) && changes && changes.audio_lab_settings) {
+            const newSettings = changes.audio_lab_settings.newValue;
+            if (newSettings) {
+              setAudioOnlyMode(Boolean(newSettings.audio_only));
+              try {
+                window.postMessage({
+                  type: 'APPLY_AUDIO_LAB_SETTINGS',
+                  settings: newSettings
+                }, '*');
+              } catch (_) {}
+            }
+          }
+        });
+      } catch (err) {
+        if (isInvalidationError(err)) teardownMediaSentinel();
+      }
     }
   }
 
@@ -1761,11 +2034,19 @@
   // YouTube SPA Navigation Listeners & Visibility
   ['yt-navigate-finish', 'yt-page-data-updated', 'spfdone', 'yt-player-updated'].forEach(evt => {
     document.addEventListener(evt, () => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       scanAndMonitorMedia();
       restoreDomainSpeed();
       dispatchMediaTelemetry(true);
       [200, 500, 1000, 2000].forEach(delay => {
         setTimeout(() => {
+          if (isContextInvalidated || !isExtensionContextValid()) {
+            teardownMediaSentinel();
+            return;
+          }
           scanAndMonitorMedia();
           restoreDomainSpeed();
           dispatchMediaTelemetry(true);
@@ -1775,6 +2056,10 @@
   });
 
   document.addEventListener('visibilitychange', () => {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     if (!document.hidden) {
       scanAndMonitorMedia();
       restoreDomainSpeed();
@@ -1783,7 +2068,15 @@
   }, { passive: true });
 
   window.addEventListener('popstate', () => {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     setTimeout(() => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       scanAndMonitorMedia();
       restoreDomainSpeed();
       dispatchMediaTelemetry(true);
@@ -1791,7 +2084,15 @@
   }, { passive: true });
 
   window.addEventListener('hashchange', () => {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     setTimeout(() => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       scanAndMonitorMedia();
       restoreDomainSpeed();
       dispatchMediaTelemetry(true);
@@ -1801,6 +2102,10 @@
   // Initialization sequence
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       scanAndMonitorMedia();
       setupMutationObserver();
       initAdSilencer();
@@ -1808,22 +2113,30 @@
       initAudioLabSettings();
     });
   } else {
-    scanAndMonitorMedia();
-    setupMutationObserver();
-    initAdSilencer();
-    restoreDomainSpeed();
-    initAudioLabSettings();
+    if (!isContextInvalidated && isExtensionContextValid()) {
+      scanAndMonitorMedia();
+      setupMutationObserver();
+      initAdSilencer();
+      restoreDomainSpeed();
+      initAudioLabSettings();
+    }
   }
 
   // Early initialization attempt for fast hydration at document_start
   try {
-    initAdSilencer();
-    initAudioLabSettings();
+    if (!isContextInvalidated && isExtensionContextValid()) {
+      initAdSilencer();
+      initAudioLabSettings();
+    }
   } catch (_) {}
 
   // Extra scans during first 5 seconds to catch dynamically injected players
   [500, 1500, 3000, 5000].forEach(delay => {
     setTimeout(() => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       scanAndMonitorMedia();
     }, delay);
   });
@@ -1832,17 +2145,26 @@
 
   // Periodic heartbeat every 2 seconds to keep telemetry strictly synced
   periodicHeartbeatTimer = setInterval(() => {
+    if (!isExtensionContextValid() || isContextInvalidated) {
+      teardownMediaSentinel();
+      return;
+    }
     scanAndMonitorMedia();
     dispatchMediaTelemetry(false);
   }, 2000);
 
   // Listen for real-time state broadcasts from Main World script
   window.addEventListener('__MEDIA_SENTINEL_PAGE_STATE__', () => {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
     dispatchMediaTelemetry(false);
   }, { passive: true });
 
   // Top-frame cross-frame message listener for iframe fullscreen delegation
   window.addEventListener('message', (event) => {
+    if (isContextInvalidated) return;
     if (!isTopFrame || !event.data || event.data.type !== '__SENTINEL_IFRAME_FULLSCREEN__') return;
 
     if (document.fullscreenElement) {
@@ -1872,7 +2194,7 @@
     }
   }, { passive: true });
 
-  let fadeIntervalId = null;
+  // fadeIntervalId is declared in top-level lifecycle scope for clean teardown access
 
   /**
    * Executes smooth volume attenuation down to 0 before pausing media elements.
@@ -1896,6 +2218,10 @@
     const initialVolumes = mediaElements.map(el => ({ el, vol: el.volume }));
 
     fadeIntervalId = setInterval(() => {
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
       currentStep++;
       const factor = Math.max(0, 1 - (currentStep / steps));
 
@@ -1923,6 +2249,10 @@
 
   // Runtime IPC Message Listener (Queries & Controls)
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!isExtensionContextValid() || isContextInvalidated) {
+      teardownMediaSentinel();
+      return;
+    }
     if (!message || (!message.type && !message.action)) return;
 
     const msgType = message.type || '';
@@ -2080,6 +2410,17 @@
       setAudioOnlyMode,
       initAudioLabSettings,
       getState: () => ({ audioOnlyModeActive })
+    };
+    window.__SentinelMediaContext = {
+      isExtensionContextValid,
+      isContextValid,
+      isContextInvalidated: () => isContextInvalidated,
+      isOrphaned: () => isOrphaned,
+      teardownMediaSentinel,
+      teardownInvalidatedContext,
+      safeStorageGet,
+      safeStorageSet,
+      safeSendMessage
     };
   }
 
