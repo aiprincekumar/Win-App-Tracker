@@ -433,8 +433,13 @@
 
                 <h4 id="heroVideoTitle" class="hero-video-title">Video Title Placeholder</h4>
 
-                <!-- Video Progress Bar -->
+                <!-- Video Progress Bar & Precision Scrubber -->
                 <div class="hero-progress-section">
+                  <div class="scrubber-wrapper" id="heroMediaScrubberWrapper">
+                    <input type="range" id="heroMediaSeekSlider" class="hero-seek-slider" min="0" max="100" value="0" step="0.1" aria-label="Media timeline seek slider" />
+                    <div id="scrubberTooltip" class="scrubber-floating-tooltip hidden">00:00</div>
+                    <div id="scrubberChapterTicksContainer" class="scrubber-ticks-container"></div>
+                  </div>
                   <div id="heroProgressBar" class="hero-progress-track" title="Click or Drag to seek" tabindex="0" role="slider" aria-label="Video Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="heroProgressFill" class="hero-progress-fill" style="width: 0%;">
                       <span class="hero-progress-thumb"></span>

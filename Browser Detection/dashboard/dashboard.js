@@ -1139,6 +1139,19 @@ function formatDigitalTime(seconds) {
   return `${String(m).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`;
 }
 
+function formatHHMMSS(seconds) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const remSec = s % 60;
+
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`;
+}
+const formatTimeHHMMSS = formatHHMMSS;
+
 function formatTimestamp(ts) {
   if (!ts) return '-';
   const d = new Date(ts);
@@ -1642,6 +1655,8 @@ function switchTab(tabKey) {
     titleEl.textContent = t('title_settings');
     subEl.textContent = t('sub_settings');
   }
+
+  applyCardStaggerIndices();
 }
 
 // =============================================================================
@@ -1880,9 +1895,22 @@ function renderTimeTrackingTab(data) {
   const elTopDom = document.getElementById('trackMetricTopDomain');
   const elTopTime = document.getElementById('trackMetricTopDomainTime');
 
-  if (elToday) elToday.textContent = formatDuration(stats.todaySec);
-  if (elDaily) elDaily.textContent = formatDuration(stats.dailyAvgSec);
-  if (elTotal) elTotal.textContent = formatDuration(stats.totalSec);
+  const prevToday = Number(elToday && elToday.dataset ? elToday.dataset.rawSec : 0) || 0;
+  const prevDaily = Number(elDaily && elDaily.dataset ? elDaily.dataset.rawSec : 0) || 0;
+  const prevTotal = Number(elTotal && elTotal.dataset ? elTotal.dataset.rawSec : 0) || 0;
+
+  if (elToday) {
+    if (elToday.dataset) elToday.dataset.rawSec = stats.todaySec;
+    animateNumberRoll(elToday, prevToday, stats.todaySec, 600, '', formatDuration);
+  }
+  if (elDaily) {
+    if (elDaily.dataset) elDaily.dataset.rawSec = stats.dailyAvgSec;
+    animateNumberRoll(elDaily, prevDaily, stats.dailyAvgSec, 600, '', formatDuration);
+  }
+  if (elTotal) {
+    if (elTotal.dataset) elTotal.dataset.rawSec = stats.totalSec;
+    animateNumberRoll(elTotal, prevTotal, stats.totalSec, 600, '', formatDuration);
+  }
   if (elHist) elHist.textContent = t('metric_daily_sub', stats.historyDays);
   if (elFirst) elFirst.textContent = t('metric_total_sub', stats.firstTrackedDate);
 
@@ -2292,6 +2320,11 @@ function renderHeroMediaPlayer(pm) {
     if (heroProgress) {
       heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
       heroProgress.setAttribute('aria-valuetext', isLive ? 'LIVE' : `${formatDigitalTime(curTime)} / ${dur > 0 ? formatDigitalTime(dur) : '--:--'}`);
+    }
+    const seekSlider = document.getElementById('heroMediaSeekSlider');
+    if (seekSlider) {
+      seekSlider.value = String(pct);
+      seekSlider.setAttribute('aria-valuenow', String(Math.round(pct)));
     }
   }
 
@@ -2922,6 +2955,12 @@ function updateHeroProgressFromEvent(e) {
   fill.style.width = `${pct.toFixed(1)}%`;
   if (elPct) elPct.textContent = `${pct.toFixed(1)}%`;
   container.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+  const seekSlider = document.getElementById('heroMediaSeekSlider');
+  if (seekSlider) {
+    seekSlider.value = String(pct);
+    seekSlider.setAttribute('aria-valuenow', String(Math.round(pct)));
+  }
 
   const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
   const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
@@ -3621,6 +3660,165 @@ function initGlobalHotkeys() {
         break;
     }
   });
+}
+
+// =============================================================================
+// Phase 3: Precision Timeline Scrubber & Kinetic Micro-Motion Engine (Systems 4 & 5)
+// =============================================================================
+
+/**
+ * Attaches precision floating tooltip, sub-second timestamp tracking,
+ * and throttled haptic feedback ticks to the hero media timeline scrubber.
+ *
+ * @param {HTMLElement} scrubberEl - Seek slider or scrubber container element
+ * @param {HTMLElement} tooltipEl - Floating tooltip element
+ * @param {number|Function} durationSec - Media duration in seconds (or getter fn)
+ */
+function initPrecisionScrubber(scrubberEl, tooltipEl, durationSec = 0) {
+  if (!scrubberEl || !tooltipEl) return;
+
+  let lastTickPercent = -1;
+
+  function updateTooltipPosition(e) {
+    const rect = (typeof scrubberEl.getBoundingClientRect === 'function')
+      ? scrubberEl.getBoundingClientRect()
+      : { left: 0, width: scrubberEl.offsetWidth || 100 };
+    const rectWidth = (rect && rect.width > 0) ? rect.width : (scrubberEl.offsetWidth || 100);
+    const rectLeft = (rect && typeof rect.left === 'number') ? rect.left : 0;
+    const clientX = (e && typeof e.clientX === 'number')
+      ? e.clientX
+      : (e && e.touches && e.touches[0] ? e.touches[0].clientX : rectLeft);
+    const offsetX = Math.max(0, Math.min(clientX - rectLeft, rectWidth));
+    const percent = rectWidth > 0 ? (offsetX / rectWidth) : 0;
+    const dur = typeof durationSec === 'function' ? durationSec() : (Number(durationSec) || 100);
+    const hoverSeconds = percent * dur;
+
+    tooltipEl.style.left = `${offsetX}px`;
+    tooltipEl.textContent = formatHHMMSS(hoverSeconds);
+    tooltipEl.classList.remove('hidden');
+
+    // Throttled audio tick hook: when position shifts by >= 1%
+    const currentPercentRounded = Math.round(percent * 100);
+    if (lastTickPercent === -1 || Math.abs(currentPercentRounded - lastTickPercent) >= 1) {
+      lastTickPercent = currentPercentRounded;
+      const haptics = (typeof window !== 'undefined' && window.sentinelHaptics)
+        ? window.sentinelHaptics
+        : (typeof globalThis !== 'undefined' && globalThis.sentinelHaptics ? globalThis.sentinelHaptics : null);
+      if (haptics && typeof haptics.playTick === 'function') {
+        try { haptics.playTick(); } catch (_) {}
+      }
+    }
+  }
+
+  scrubberEl.addEventListener('mousemove', updateTooltipPosition);
+  scrubberEl.addEventListener('mouseleave', () => {
+    tooltipEl.classList.add('hidden');
+    lastTickPercent = -1;
+  });
+
+  // Keyboard Seeking Support with ArrowRight / ArrowLeft
+  scrubberEl.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const haptics = (typeof window !== 'undefined' && window.sentinelHaptics)
+        ? window.sentinelHaptics
+        : (typeof globalThis !== 'undefined' && globalThis.sentinelHaptics ? globalThis.sentinelHaptics : null);
+      if (haptics && typeof haptics.playTick === 'function') {
+        try { haptics.playTick(); } catch (_) {}
+      }
+    }
+  });
+}
+
+/**
+ * 60fps GPU-accelerated kinetic odometer number rolling using Ease-Out Quart easing.
+ *
+ * @param {HTMLElement} el - Target DOM element
+ * @param {number} startVal - Initial number
+ * @param {number} targetVal - Target destination number
+ * @param {number} durationMs - Animation duration in ms (default: 600)
+ * @param {string} unitSuffix - Suffix to append to textContent (e.g. '%', 's')
+ * @param {Function|null} formatter - Optional custom formatter function (e.g. formatDuration)
+ */
+function animateNumberRoll(el, startVal, targetVal, durationMs = 600, unitSuffix = '', formatter = null) {
+  if (!el) return;
+  const start = Number(startVal) || 0;
+  const target = Number(targetVal) || 0;
+  const duration = Number(durationMs) || 600;
+  const startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const easeOutQuart = (x) => 1 - Math.pow(1 - x, 4);
+
+  function step(currentTime) {
+    const now = (typeof currentTime === 'number' && !isNaN(currentTime))
+      ? currentTime
+      : ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+    const elapsed = now - startTime;
+    const progress = Math.min(Math.max(elapsed / duration, 0), 1);
+    const eased = easeOutQuart(progress);
+    const current = Math.round(start + (target - start) * eased);
+
+    if (typeof formatter === 'function') {
+      el.textContent = formatter(current);
+    } else {
+      el.textContent = `${current}${unitSuffix || ''}`;
+    }
+
+    if (progress < 1) {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(step);
+      } else {
+        setTimeout(() => step(now + 16), 16);
+      }
+    }
+  }
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(step);
+  } else {
+    step(startTime);
+  }
+}
+
+/**
+ * Renders discrete chapter tick markers along the timeline scrubber track.
+ *
+ * @param {Array<number|Object>} chapters - Array of timestamps or {time, title} objects
+ * @param {number} durationSec - Total media duration in seconds
+ */
+function renderScrubberChapterTicks(chapters = [], durationSec = 0) {
+  const container = document.getElementById('scrubberChapterTicksContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!Array.isArray(chapters) || chapters.length === 0 || durationSec <= 0) return;
+  chapters.forEach(ch => {
+    const timeSec = typeof ch === 'number' ? ch : (ch.time || ch.seconds || 0);
+    const pct = Math.max(0, Math.min(100, (timeSec / durationSec) * 100));
+    const tick = document.createElement('div');
+    tick.className = 'scrubber-chapter-tick';
+    tick.style.left = `${pct.toFixed(2)}%`;
+    if (ch.title) tick.title = `${ch.title} (${formatHHMMSS(timeSec)})`;
+    container.appendChild(tick);
+  });
+}
+
+/**
+ * Dynamically assigns staggered card entrance animation indices (--card-index)
+ * to active bento cards to achieve hardware-accelerated 40ms stagger micro-motion.
+ */
+function applyCardStaggerIndices() {
+  if (typeof document === 'undefined') return;
+  const activePane = (typeof document.querySelector === 'function')
+    ? (document.querySelector('.tab-pane.active') || document.querySelector('.tab-pane:not(.hidden)'))
+    : null;
+  if (activePane && typeof activePane.querySelectorAll === 'function') {
+    const cards = activePane.querySelectorAll('.bento-card');
+    if (cards && typeof cards.forEach === 'function') {
+      cards.forEach((card, idx) => {
+        if (card && card.style && typeof card.style.setProperty === 'function') {
+          card.style.setProperty('--card-index', String(idx + 1));
+        }
+      });
+    }
+  }
 }
 
 // =============================================================================
@@ -4410,6 +4608,48 @@ function setupEventListeners() {
     });
   }
 
+  // Phase 3: Precision Timeline Scrubber & Slider Thumb Hook (System 4)
+  const seekSlider = document.getElementById('heroMediaSeekSlider');
+  const scrubberTooltip = document.getElementById('scrubberTooltip');
+  const scrubberWrapper = document.getElementById('heroMediaScrubberWrapper');
+
+  if (seekSlider && scrubberTooltip) {
+    initPrecisionScrubber(seekSlider, scrubberTooltip, () => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      return (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 100;
+    });
+
+    seekSlider.addEventListener('input', (e) => {
+      const pct = parseFloat(e.target.value) || 0;
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
+      const targetSec = dur > 0 ? (pct / 100) * dur : 0;
+      const elCur = document.getElementById('heroTimeElapsed');
+      const elPct = document.getElementById('heroProgressPercent');
+      const fill = document.getElementById('heroProgressFill');
+      if (fill) fill.style.width = `${pct.toFixed(1)}%`;
+      if (elCur && dur > 0) elCur.textContent = formatDigitalTime(targetSec);
+      if (elPct) elPct.textContent = `${pct.toFixed(1)}%`;
+      seekSlider.setAttribute('aria-valuenow', String(Math.round(pct)));
+    });
+
+    seekSlider.addEventListener('change', (e) => {
+      const pct = parseFloat(e.target.value) || 0;
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
+      const targetSec = dur > 0 ? (pct / 100) * dur : 0;
+      const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+      const fill = document.getElementById('heroProgressFill');
+      if (fill) fill.style.width = `${pct.toFixed(1)}%`;
+      sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSec }, targetTabId);
+    });
+  } else if (scrubberWrapper && scrubberTooltip) {
+    initPrecisionScrubber(scrubberWrapper, scrubberTooltip, () => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      return (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 100;
+    });
+  }
+
   // Hero Volume Bar (Click & Drag)
   const heroVol = document.getElementById('heroVolumeBar');
   if (heroVol) {
@@ -4808,6 +5048,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
   document.addEventListener('DOMContentLoaded', () => {
     startLiveClock();
     setupEventListeners();
+    applyCardStaggerIndices();
 
     // Load language preference, browser filter, tracking mode, category, sleep, theme, and audio lab from storage
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
@@ -4943,6 +5184,22 @@ if (typeof module !== 'undefined' && module.exports) {
     renderHotkeysList,
     exportDashboardBackup,
     SHORTCUTS_REGISTRY,
-    switchTab
+    switchTab,
+    // Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers exports
+    formatHHMMSS,
+    formatTimeHHMMSS,
+    initPrecisionScrubber,
+    animateNumberRoll,
+    renderScrubberChapterTicks,
+    applyCardStaggerIndices
   };
+}
+
+if (typeof window !== 'undefined') {
+  window.formatHHMMSS = formatHHMMSS;
+  window.formatTimeHHMMSS = formatTimeHHMMSS;
+  window.initPrecisionScrubber = initPrecisionScrubber;
+  window.animateNumberRoll = animateNumberRoll;
+  window.renderScrubberChapterTicks = renderScrubberChapterTicks;
+  window.applyCardStaggerIndices = applyCardStaggerIndices;
 }
