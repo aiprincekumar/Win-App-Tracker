@@ -3464,6 +3464,7 @@ function setupEventListeners() {
   }
 
   const handleToggleMute = () => {
+    lastMuteToggleTime = Date.now();
     if (activeMediaCached) {
       activeMediaCached.isMuted = !activeMediaCached.isMuted;
       renderMediaCard({ primaryMedia: activeMediaCached });
@@ -3494,7 +3495,7 @@ function setupEventListeners() {
           }
         }
       }).then(() => {
-        setTimeout(refreshDashboard, 180);
+        // Optimistic cooldown lock active: avoid premature telemetry refresh
       }).catch(() => {
         sendMediaControl('toggle_mute');
       });
@@ -3516,6 +3517,7 @@ function setupEventListeners() {
   const btnSpeedDown = document.getElementById('btnCtrlSpeedDown');
   if (btnSpeedDown) {
     btnSpeedDown.addEventListener('click', () => {
+      lastSpeedChangeTime = Date.now();
       const cur = (activeMediaCached && typeof activeMediaCached.playbackRate === 'number')
         ? activeMediaCached.playbackRate
         : 1.0;
@@ -3557,7 +3559,7 @@ function setupEventListeners() {
           },
           args: [targetSpeed]
         }).then(() => {
-          setTimeout(refreshDashboard, 180);
+          // Optimistic cooldown lock active: avoid premature telemetry refresh
         }).catch(() => {
           sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
         });
@@ -3570,6 +3572,7 @@ function setupEventListeners() {
   const btnSpeedUp = document.getElementById('btnCtrlSpeedUp');
   if (btnSpeedUp) {
     btnSpeedUp.addEventListener('click', () => {
+      lastSpeedChangeTime = Date.now();
       const cur = (activeMediaCached && typeof activeMediaCached.playbackRate === 'number')
         ? activeMediaCached.playbackRate
         : 1.0;
@@ -3611,7 +3614,7 @@ function setupEventListeners() {
           },
           args: [targetSpeed]
         }).then(() => {
-          setTimeout(refreshDashboard, 180);
+          // Optimistic cooldown lock active: avoid premature telemetry refresh
         }).catch(() => {
           sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
         });
