@@ -1549,6 +1549,29 @@
   }
 
   /**
+   * Checks whether the current page is on YouTube domain
+   */
+  function isYouTubeDomain() {
+    try {
+      return Boolean(window.location && window.location.hostname && window.location.hostname.includes('youtube.com'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Checks whether the Main World bridge is injected and active
+   */
+  function isMainWorldBridgeActive() {
+    try {
+      const root = document.documentElement || document.body;
+      return Boolean(root && typeof root.getAttribute === 'function' && root.getAttribute('data-sentinel-bridge-ready') === 'true');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
    * Executes interactive media control actions (play, pause, toggle, mute, seek, speed, quality, window modes)
    */
   function handleMediaControl(action, data = {}) {
@@ -1558,16 +1581,24 @@
       return { success: false, ignored: true, reason: 'No media in this subframe' };
     }
 
+    const isYouTube = typeof isYouTubeDomain === 'function'
+      ? isYouTubeDomain()
+      : Boolean(typeof window !== 'undefined' && window.location && window.location.hostname && window.location.hostname.includes('youtube.com'));
+
+    const isBridgeActive = typeof isMainWorldBridgeActive === 'function'
+      ? isMainWorldBridgeActive()
+      : Boolean(typeof document !== 'undefined' && (document.documentElement || document.body) && typeof (document.documentElement || document.body).getAttribute === 'function' && (document.documentElement || document.body).getAttribute('data-sentinel-bridge-ready') === 'true');
+
+    const isMainWorldTarget = isYouTube || isBridgeActive;
+
     // 1. Forward action to Main World engine (essential for YouTube native player methods, volume slider & OSD)
     // Avoid double-toggle race for toggle_fullscreen across isolated and main worlds
-    if (action !== 'toggle_fullscreen') {
+    if (isMainWorldTarget && action !== 'toggle_fullscreen') {
       forwardActionToMainWorld(action, data);
-    }
-
-    // 2. Perform direct HTML5 video element manipulation
-    // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
-    // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
-    if (primaryMediaElement) {
+    } else if (primaryMediaElement || action === 'toggle_fullscreen') {
+      // 2. Perform direct HTML5 video element manipulation ONLY when not handled by Main World bridge
+      // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
+      // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
       try {
         switch (action) {
           case 'play': {

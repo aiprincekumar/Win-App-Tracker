@@ -3323,34 +3323,6 @@ function setupEventListeners() {
     const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
       (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-    if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-      browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId },
-        world: 'MAIN',
-        func: () => {
-          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-          if (moviePlayer && typeof moviePlayer.getPlayerState === 'function') {
-            try {
-              if (moviePlayer.getPlayerState() === 1) {
-                moviePlayer.pauseVideo();
-              } else {
-                moviePlayer.playVideo();
-              }
-              return;
-            } catch (_) {}
-          }
-          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-          if (video) {
-            if (video.paused) {
-              const p = video.play();
-              if (p && typeof p.catch === 'function') p.catch(() => {});
-            } else {
-              video.pause();
-            }
-          }
-        }
-      }).catch(() => {});
-    }
     sendMediaControl('toggle_play', {}, targetTabId);
   };
 
@@ -3371,35 +3343,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            let cur = 0;
-            let dur = 999999;
-            if (moviePlayer && typeof moviePlayer.getCurrentTime === 'function') {
-              try { cur = moviePlayer.getCurrentTime() || 0; } catch (_) {}
-            } else if (video && Number.isFinite(video.currentTime)) {
-              cur = video.currentTime;
-            }
-            if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
-              try { dur = moviePlayer.getDuration() || 999999; } catch (_) {}
-            } else if (video && Number.isFinite(video.duration) && video.duration > 0) {
-              dur = video.duration;
-            }
-            const clampedTarget = Math.max(0, Math.min(dur, cur - 10));
-            if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
-              try { moviePlayer.seekTo(clampedTarget, true); } catch (_) {}
-            }
-            if (video) {
-              try { video.currentTime = clampedTarget; } catch (_) {}
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);
     });
   }
@@ -3415,35 +3358,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            let cur = 0;
-            let dur = 999999;
-            if (moviePlayer && typeof moviePlayer.getCurrentTime === 'function') {
-              try { cur = moviePlayer.getCurrentTime() || 0; } catch (_) {}
-            } else if (video && Number.isFinite(video.currentTime)) {
-              cur = video.currentTime;
-            }
-            if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
-              try { dur = moviePlayer.getDuration() || 999999; } catch (_) {}
-            } else if (video && Number.isFinite(video.duration) && video.duration > 0) {
-              dur = video.duration;
-            }
-            const clampedTarget = Math.max(0, Math.min(dur, cur + 10));
-            if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
-              try { moviePlayer.seekTo(clampedTarget, true); } catch (_) {}
-            }
-            if (video) {
-              try { video.currentTime = clampedTarget; } catch (_) {}
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);
     });
   }
@@ -3457,30 +3371,6 @@ function setupEventListeners() {
     const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
       (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-    if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-      browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId },
-        world: 'MAIN',
-        func: () => {
-          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-          if (moviePlayer && typeof moviePlayer.isMuted === 'function') {
-            try {
-              if (moviePlayer.isMuted()) {
-                if (typeof moviePlayer.unMute === 'function') moviePlayer.unMute();
-              } else {
-                if (typeof moviePlayer.mute === 'function') moviePlayer.mute();
-              }
-            } catch (_) {}
-          }
-          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-          if (video) {
-            try {
-              video.muted = !video.muted;
-            } catch (_) {}
-          }
-        }
-      }).catch(() => {});
-    }
     sendMediaControl('toggle_mute', {}, targetTabId);
   };
 
@@ -3520,26 +3410,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: (spd) => {
-            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-            const p = moviePlayer;
-            if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
-              try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
-            } else if (p && typeof p.setPlaybackRate === 'function') {
-              try { p.setPlaybackRate(spd); } catch (_) {}
-            }
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            if (video) {
-              try { video.playbackRate = spd; } catch (_) {}
-            }
-          },
-          args: [targetSpeed]
-        }).catch(() => {});
-      }
       sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
     });
   }
@@ -3570,26 +3440,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: (spd) => {
-            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-            const p = moviePlayer;
-            if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
-              try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
-            } else if (p && typeof p.setPlaybackRate === 'function') {
-              try { p.setPlaybackRate(spd); } catch (_) {}
-            }
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            if (video) {
-              try { video.playbackRate = spd; } catch (_) {}
-            }
-          },
-          args: [targetSpeed]
-        }).catch(() => {});
-      }
       sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
     });
   }
@@ -3615,49 +3465,6 @@ function setupEventListeners() {
         } catch (_) {}
       }
 
-      // 1. Direct Scripting Execution: Link directly to on-video overlay button or controller
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            // Priority 1: Trigger the in-page Floating Sentinel Fullscreen HUD Button
-            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
-            if (floatingBtn) {
-              try { floatingBtn.click(); return; } catch (_) {}
-            }
-
-            // Priority 2: Use dedicated Sentinel Fullscreen Controller instance
-            if (window.__SentinelFullscreenController) {
-              try {
-                if (typeof window.__SentinelFullscreenController.toggleWebFullscreen === 'function') {
-                  window.__SentinelFullscreenController.toggleWebFullscreen();
-                  return;
-                }
-                window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
-                return;
-              } catch (_) {}
-            }
-
-            // Priority 3: Fallback for native player or keyboard
-            const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
-            if (ytFsBtn) {
-              try { ytFsBtn.click(); return; } catch (_) {}
-            }
-            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            const target = player || (video && video.parentElement) || video;
-            if (target && target.requestFullscreen && !document.fullscreenElement) {
-              target.requestFullscreen().catch(() => {});
-            } else if (player) {
-              try {
-                const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                player.dispatchEvent(ev);
-              } catch (_) {}
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('toggle_fullscreen', {}, targetTabId);
     });
   }
@@ -3672,20 +3479,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          func: () => {
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            if (!video) return;
-            if (document.pictureInPictureElement) {
-              if (document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
-            } else if (video.requestPictureInPicture) {
-              video.requestPictureInPicture().catch(() => {});
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('toggle_pip', {}, targetTabId);
     });
   }
@@ -3696,23 +3489,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            const btn = document.querySelector('.ytp-size-button');
-            if (btn) {
-              btn.click();
-            } else {
-              try {
-                const ev = new KeyboardEvent('keydown', { key: 't', code: 'KeyT', keyCode: 84, which: 84, bubbles: true });
-                (document.getElementById('movie_player') || document).dispatchEvent(ev);
-              } catch (_) {}
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('toggle_theater', {}, targetTabId);
     });
   }
@@ -3723,35 +3499,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            const p = document.getElementById('movie_player') || window.movie_player;
-            if (p) {
-              const ladder = ['tiny', 'small', 'medium', 'large', 'hd720', 'hd1080', 'hd1440', 'hd2160', 'hd2880', 'highres'];
-              let avail = [];
-              if (typeof p.getAvailableQualityLevels === 'function') {
-                try { avail = p.getAvailableQualityLevels() || []; } catch (_) {}
-              }
-              const valid = ladder.filter(q => avail.includes(q));
-              const list = valid.length > 0 ? valid : ladder;
-              let cur = (typeof p.getPlaybackQuality === 'function') ? (p.getPlaybackQuality() || '') : '';
-              let idx = list.indexOf(cur);
-              if (idx === -1) idx = Math.floor(list.length / 2);
-              const nextIdx = Math.max(0, idx - 1);
-              const target = list[nextIdx];
-              if (typeof p.setPlaybackQualityRange === 'function') {
-                try { p.setPlaybackQualityRange(target, target); } catch (_) {}
-              }
-              if (typeof p.setPlaybackQuality === 'function') {
-                try { p.setPlaybackQuality(target); } catch (_) {}
-              }
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('step_quality', { direction: 'down' }, targetTabId);
     });
   }
@@ -3762,35 +3509,6 @@ function setupEventListeners() {
       const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
         (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
 
-      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
-        browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
-          world: 'MAIN',
-          func: () => {
-            const p = document.getElementById('movie_player') || window.movie_player;
-            if (p) {
-              const ladder = ['tiny', 'small', 'medium', 'large', 'hd720', 'hd1080', 'hd1440', 'hd2160', 'hd2880', 'highres'];
-              let avail = [];
-              if (typeof p.getAvailableQualityLevels === 'function') {
-                try { avail = p.getAvailableQualityLevels() || []; } catch (_) {}
-              }
-              const valid = ladder.filter(q => avail.includes(q));
-              const list = valid.length > 0 ? valid : ladder;
-              let cur = (typeof p.getPlaybackQuality === 'function') ? (p.getPlaybackQuality() || '') : '';
-              let idx = list.indexOf(cur);
-              if (idx === -1) idx = Math.floor(list.length / 2);
-              const nextIdx = Math.min(list.length - 1, idx + 1);
-              const target = list[nextIdx];
-              if (typeof p.setPlaybackQualityRange === 'function') {
-                try { p.setPlaybackQualityRange(target, target); } catch (_) {}
-              }
-              if (typeof p.setPlaybackQuality === 'function') {
-                try { p.setPlaybackQuality(target); } catch (_) {}
-              }
-            }
-          }
-        }).catch(() => {});
-      }
       sendMediaControl('step_quality', { direction: 'up' }, targetTabId);
     });
   }
