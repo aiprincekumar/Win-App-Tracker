@@ -817,6 +817,13 @@ function formatVideoTime(seconds) {
 }
 
 /**
+ * Formats seconds into digital video time format (alias for formatVideoTime)
+ */
+function formatTime(seconds) {
+  return formatVideoTime(seconds);
+}
+
+/**
  * Formats seconds for center readout (compact)
  */
 function formatCenterTime(totalSeconds) {

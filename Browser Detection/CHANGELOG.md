@@ -10,6 +10,7 @@
 - *(popup)* Add tracking method selector, category filter, and mini internal scheme badges
 
 ### 🐛 Bug Fixes
+- *(popup)* Define formatTime alias to formatVideoTime to eliminate ReferenceError in playback resume, precision screenshot, and note creation
 - *(media)* Fix popup media controls (play/pause, seek +/-10s, mute, speed +/-, timeline scrubber, volume slider) and link fullscreen button directly to on-video overlay button handler, preserving universal play/pause button 100% untouched, bump version to 2.5.0
 - *(test)* Add comprehensive automated verification test suite for media controls and on-video overlay fullscreen linking (tests/test_media_controls_and_fullscreen_fix.js)
 
@@ -32,5 +33,6 @@
 
 ### 🧪 Testing
 
+- *(popup)* Add formatTime resolution & runtime sanity verification test suite (tests/test_popup_formattime_resolution.js)
 - *(badges)* Add comprehensive verification test suite for compact, icon-only header status badges, SVG icon geometry, and accessible keyboard navigation (test_header_status_badges.js)
 - Add verification test suite for active tab timer fix and dual media tracking
