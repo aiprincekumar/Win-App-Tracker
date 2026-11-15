@@ -120,6 +120,21 @@
             <span class="lang-icon">🌐</span>
             <span id="langToggleText">English</span>
           </button>
+          <!-- 1-Click Theme Switcher (Dark / Light Mode) -->
+          <button id="btnThemeToggle" class="btn-action-outline topbar-btn btn-theme-toggle" title="Switch to Light Mode" aria-label="Switch to Light Mode" data-i18n-title="theme_toggle_light">
+            <svg class="topbar-icon theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span id="themeToggleText">Light</span>
+          </button>
           <button id="btnGlobalRefresh" class="btn-action-outline" title="Refresh Data">
             <span class="refresh-spinner-icon">🔄</span>
             <span id="btnGlobalRefreshText">Refresh</span>
@@ -440,7 +455,7 @@
                     <span id="lblHeroVolume" class="vol-label">Live Volume:</span>
                     <span id="heroVolumeText" class="vol-pct-value">100%</span>
                   </div>
-                  <div id="heroVolumeBar" class="hero-volume-track" title="Click or drag to adjust volume" tabindex="0" role="slider" aria-label="Volume Control" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+                  <div id="heroVolumeBar" class="hero-volume-track" title="Click or drag to adjust volume" tabindex="0" role="slider" aria-label="Media Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
                     <div id="heroVolumeFill" class="hero-volume-fill" style="width: 100%;">
                       <span class="vol-thumb"></span>
                     </div>
@@ -480,6 +495,34 @@
                 </div>
                 <h4 id="headingPlayerIdle" class="idle-heading">No Media Currently Playing</h4>
                 <p id="subPlayerIdle" class="idle-sub">Play YouTube, Netflix, Hotstar or any media in any browser tab. Live status and controls will appear here.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Lab & DSP Telemetry Widget -->
+          <div id="heroAudioLabStatus" class="audio-lab-widget glass-card">
+            <div class="audio-lab-header">
+              <div class="audio-lab-title-group">
+                <span class="audio-lab-icon">🎛️</span>
+                <h3 id="audioLabTitle" class="audio-lab-title" data-i18n="audiolab_title">Audio Lab & DSP Telemetry</h3>
+              </div>
+              <div class="audio-lab-badges">
+                <span id="audioLabPresetBadge" class="badge badge-preset">Flat</span>
+                <span id="audioLabVocalBadge" class="badge badge-feature">Vocal: OFF</span>
+                <span id="audioLabNightBadge" class="badge badge-feature">Night: OFF</span>
+              </div>
+            </div>
+            <div class="audio-lab-body">
+              <div class="audio-boost-control">
+                <div class="boost-label-row">
+                  <span id="lblAudioMasterBoost" class="boost-label" data-i18n="audiolab_master_boost">Master Volume Boost</span>
+                  <span id="heroAudioBoostVal" class="boost-value">100%</span>
+                </div>
+                <input type="range" id="heroAudioBoostSlider" min="100" max="200" step="5" value="100" class="audio-boost-slider" aria-label="Master Volume Boost" />
+              </div>
+              <div class="audio-lab-status-note">
+                <span class="status-indicator-dot online"></span>
+                <span id="audioLabStatusText" class="audio-lab-note" data-i18n="audiolab_dsp_active">Offscreen Web Audio DSP Pipeline Active</span>
               </div>
             </div>
           </div>

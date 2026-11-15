@@ -319,7 +319,24 @@ const DASHBOARD_I18N = {
     toast_all_wiped: 'All extension data and history wiped successfully',
     toast_switched_tab: 'Focused active media tab',
     toast_no_media_tab: 'No active media tab found',
-    toast_lang_changed: 'Language set to English'
+    toast_lang_changed: 'Language set to English',
+
+    // Theme & Accessibility (Defects 16 & 17)
+    theme_toggle_light: 'Switch to Light Mode',
+    theme_toggle_dark: 'Switch to Dark Mode',
+    theme_active_light: 'Light theme activated',
+    theme_active_dark: 'Dark theme activated',
+    theme_btn_light: 'Light',
+    theme_btn_dark: 'Dark',
+
+    // Audio Lab Telemetry (Defect 15)
+    audiolab_title: 'Audio Lab & DSP Telemetry',
+    audiolab_master_boost: 'Master Volume Boost',
+    audiolab_dsp_active: 'Offscreen Web Audio DSP Pipeline Active',
+    audiolab_vocal_on: 'Vocal: ON',
+    audiolab_vocal_off: 'Vocal: OFF',
+    audiolab_night_on: 'Night: ON',
+    audiolab_night_off: 'Night: OFF'
   },
   hi: {
     // Brand & Header
@@ -551,7 +568,24 @@ const DASHBOARD_I18N = {
     toast_all_wiped: 'एक्सटेंशन का समस्त डेटा व इतिहास पूर्णतः रीसेट हो चुका है',
     toast_switched_tab: 'सक्रिय मीडिया टैब पर स्विच किया गया',
     toast_no_media_tab: 'कोई सक्रिय मीडिया टैब नहीं मिला',
-    toast_lang_changed: 'भाषा बदलकर हिन्दी कर दी गई'
+    toast_lang_changed: 'भाषा बदलकर हिन्दी कर दी गई',
+
+    // Theme & Accessibility (Defects 16 & 17)
+    theme_toggle_light: 'लाइट थीम चालू करें',
+    theme_toggle_dark: 'डार्क थीम चालू करें',
+    theme_active_light: 'लाइट थीम सक्रिय की गई',
+    theme_active_dark: 'डार्क थीम सक्रिय की गई',
+    theme_btn_light: 'लाइट',
+    theme_btn_dark: 'डार्क',
+
+    // Audio Lab Telemetry (Defect 15)
+    audiolab_title: 'ऑडियो लैब व DSP टेलीमेट्री',
+    audiolab_master_boost: 'मास्टर वॉल्यूम बूस्ट',
+    audiolab_dsp_active: 'ऑफस्क्रीन वेब ऑडियो DSP पाइपलाइन सक्रिय',
+    audiolab_vocal_on: 'वोकल: चालू',
+    audiolab_vocal_off: 'वोकल: बंद',
+    audiolab_night_on: 'नाइट: चालू',
+    audiolab_night_off: 'नाइट: बंद'
   }
 };
 
@@ -564,6 +598,215 @@ function t(key, ...args) {
     return val(...args);
   }
   return val;
+}
+
+// =============================================================================
+// Theme Architecture State & Helpers (Defect 16 - Light & Dark Theme Sync)
+// =============================================================================
+let currentTheme = 'dark';
+
+// Early theme restore to prevent theme flash
+try {
+  if (typeof localStorage !== 'undefined') {
+    const savedEarlyTheme = localStorage.getItem('ui_theme') || localStorage.getItem('theme');
+    if (savedEarlyTheme === 'light' || savedEarlyTheme === 'dark') {
+      currentTheme = savedEarlyTheme;
+    }
+  }
+} catch (_) {}
+if (typeof document !== 'undefined') {
+  if (document.documentElement && typeof document.documentElement.setAttribute === 'function') {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+  }
+  if (document.body) {
+    if (typeof document.body.setAttribute === 'function') {
+      document.body.setAttribute('data-theme', currentTheme);
+    }
+    if (document.body.classList && typeof document.body.classList.add === 'function') {
+      if (currentTheme === 'light') {
+        document.body.classList.add('theme-light');
+        document.body.classList.remove('theme-dark');
+      } else {
+        document.body.classList.add('theme-dark');
+        document.body.classList.remove('theme-light');
+      }
+    }
+  }
+}
+
+function applyTheme(theme) {
+  currentTheme = (theme === 'light') ? 'light' : 'dark';
+  if (typeof document !== 'undefined') {
+    if (document.body) {
+      if (document.body.classList && typeof document.body.classList.add === 'function') {
+        if (currentTheme === 'light') {
+          document.body.classList.add('theme-light');
+          document.body.classList.remove('theme-dark');
+        } else {
+          document.body.classList.add('theme-dark');
+          document.body.classList.remove('theme-light');
+        }
+      }
+      if (typeof document.body.setAttribute === 'function') {
+        document.body.setAttribute('data-theme', currentTheme);
+      }
+    }
+    if (document.documentElement && typeof document.documentElement.setAttribute === 'function') {
+      document.documentElement.setAttribute('data-theme', currentTheme);
+    }
+  }
+  updateThemeToggleUI(currentTheme);
+}
+
+function updateThemeToggleUI(theme) {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('btnThemeToggle');
+  if (!btn) return;
+
+  const isLight = (theme === 'light');
+  const label = isLight ? t('theme_toggle_dark') : t('theme_toggle_light');
+  btn.title = label;
+  if (typeof btn.setAttribute === 'function') {
+    btn.setAttribute('aria-label', label);
+  }
+
+  const txtEl = document.getElementById('themeToggleText');
+  if (txtEl) {
+    txtEl.textContent = isLight ? t('theme_btn_dark') : t('theme_btn_light');
+  }
+
+  if (typeof btn.querySelector !== 'function') return;
+  const svg = btn.querySelector('.theme-toggle-icon');
+  if (!svg) return;
+
+  // W3C Trusted Types safe DOM node replacement (zero innerHTML)
+  while (svg.firstChild) {
+    svg.removeChild(svg.firstChild);
+  }
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  if (isLight) {
+    // Moon icon for switching to dark mode
+    if (typeof document.createElementNS === 'function') {
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z');
+      svg.appendChild(path);
+    }
+  } else {
+    // Sun icon for switching to light mode
+    if (typeof document.createElementNS === 'function') {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', '12');
+      circle.setAttribute('cy', '12');
+      circle.setAttribute('r', '5');
+      svg.appendChild(circle);
+
+      const rays = [
+        ['12', '1', '12', '3'],
+        ['12', '21', '12', '23'],
+        ['4.22', '4.22', '5.64', '5.64'],
+        ['18.36', '18.36', '19.78', '19.78'],
+        ['1', '12', '3', '12'],
+        ['21', '12', '23', '12'],
+        ['4.22', '19.78', '5.64', '18.36'],
+        ['18.36', '5.64', '19.78', '4.22']
+      ];
+      rays.forEach(([x1, y1, x2, y2]) => {
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        svg.appendChild(line);
+      });
+    }
+  }
+}
+
+async function toggleThemeMode() {
+  const nextTheme = (currentTheme === 'light') ? 'dark' : 'light';
+  applyTheme(nextTheme);
+
+  if (typeof showToast === 'function') {
+    showToast(
+      (nextTheme === 'light') ? t('theme_active_light') : t('theme_active_dark')
+    );
+  }
+
+  // Persist to chrome.storage.local with fallback to localStorage
+  try {
+    const api = (typeof browserAPI !== 'undefined' && browserAPI.storage && browserAPI.storage.local)
+      ? browserAPI
+      : ((typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) ? chrome : (typeof browser !== 'undefined' && browser.storage ? browser : null));
+    if (api && api.storage && api.storage.local) {
+      await api.storage.local.set({ ui_theme: nextTheme, theme: nextTheme });
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('ui_theme', nextTheme);
+      localStorage.setItem('theme', nextTheme);
+    }
+  } catch (_) {}
+}
+
+// =============================================================================
+// Audio Lab Telemetry & DSP Controls State (Defect 15 - Web Audio Parity)
+// =============================================================================
+let dashboardAudioLabSettings = {
+  master_boost: 100,
+  eq_preset: 'flat',
+  vocal_clarity: false,
+  night_shield: false
+};
+
+function updateDashboardAudioLabUI(settings) {
+  if (!settings) return;
+  dashboardAudioLabSettings = { ...dashboardAudioLabSettings, ...settings };
+
+  const boostVal = dashboardAudioLabSettings.master_boost || 100;
+  const boostValEl = document.getElementById('heroAudioBoostVal');
+  if (boostValEl) {
+    boostValEl.textContent = `${boostVal}%`;
+  }
+
+  const slider = document.getElementById('heroAudioBoostSlider');
+  if (slider && Number(slider.value) !== Number(boostVal)) {
+    slider.value = String(boostVal);
+  }
+
+  const presetBadge = document.getElementById('audioLabPresetBadge');
+  if (presetBadge) {
+    const preset = dashboardAudioLabSettings.eq_preset || 'flat';
+    presetBadge.textContent = preset.charAt(0).toUpperCase() + preset.slice(1).replace('_', ' ');
+  }
+
+  const vocalBadge = document.getElementById('audioLabVocalBadge');
+  if (vocalBadge) {
+    const isVocal = Boolean(dashboardAudioLabSettings.vocal_clarity);
+    vocalBadge.textContent = isVocal ? t('audiolab_vocal_on') : t('audiolab_vocal_off');
+    if (vocalBadge.classList && typeof vocalBadge.classList.add === 'function') {
+      if (isVocal) {
+        vocalBadge.classList.add('badge-active');
+      } else {
+        vocalBadge.classList.remove('badge-active');
+      }
+    }
+  }
+
+  const nightBadge = document.getElementById('audioLabNightBadge');
+  if (nightBadge) {
+    const isNight = Boolean(dashboardAudioLabSettings.night_shield);
+    nightBadge.textContent = isNight ? t('audiolab_night_on') : t('audiolab_night_off');
+    if (nightBadge.classList && typeof nightBadge.classList.add === 'function') {
+      if (isNight) {
+        nightBadge.classList.add('badge-active');
+      } else {
+        nightBadge.classList.remove('badge-active');
+      }
+    }
+  }
 }
 
 // Global Dashboard State
@@ -765,6 +1008,7 @@ function applyDashboardLanguage(lang) {
   setTxt('btnGlobalRefreshText', 'btn_refresh');
   setTxt('langToggleText', 'lang_btn_text');
   setTitle('btnLangToggle', 'lang_btn_title');
+  updateThemeToggleUI(currentTheme);
 
   // Sidebar navigation
   setTxt('navTrackingText', 'nav_tracking');
@@ -860,6 +1104,12 @@ function applyDashboardLanguage(lang) {
   setTxt('thColMediaRes', 'th_media_res');
   setTxt('thColMediaDate', 'th_media_date');
   setTxt('txtMediaEmpty', 'media_empty');
+
+  // Audio Lab & DSP Telemetry widget
+  setTxt('audioLabTitle', 'audiolab_title');
+  setTxt('lblAudioMasterBoost', 'audiolab_master_boost');
+  setTxt('audioLabStatusText', 'audiolab_dsp_active');
+  updateDashboardAudioLabUI(dashboardAudioLabSettings);
 
   // Tab C static texts
   setTxt('headingGeneralSettings', 'general_settings_heading');
@@ -1797,7 +2047,10 @@ function renderHeroMediaPlayer(pm) {
     if (elPct) elPct.textContent = isLive ? 'LIVE' : `${pct.toFixed(1)}%`;
     if (elFill) elFill.style.width = `${pct}%`;
     const heroProgress = document.getElementById('heroProgressBar');
-    if (heroProgress) heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+    if (heroProgress) {
+      heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+      heroProgress.setAttribute('aria-valuetext', isLive ? 'LIVE' : `${formatDigitalTime(curTime)} / ${dur > 0 ? formatDigitalTime(dur) : '--:--'}`);
+    }
   }
 
   const volPct = Math.round((typeof pm.volume === 'number' ? pm.volume : 1) * 100);
@@ -1821,7 +2074,10 @@ function renderHeroMediaPlayer(pm) {
       if (volFill) volFill.style.width = `${volPct}%`;
     }
     const heroVol = document.getElementById('heroVolumeBar');
-    if (heroVol) heroVol.setAttribute('aria-valuenow', String(isMuted ? 0 : volPct));
+    if (heroVol) {
+      heroVol.setAttribute('aria-valuenow', String(isMuted ? 0 : volPct));
+      heroVol.setAttribute('aria-valuetext', isMuted ? 'Muted' : `${volPct}%`);
+    }
   }
 }
 
@@ -2372,6 +2628,7 @@ function updateHeroVolumeFromEvent(e) {
   if (text) text.textContent = `${pct}%`;
   if (icon) icon.textContent = pct === 0 ? '🔇' : (pct > 50 ? '🔊' : '🔉');
   container.setAttribute('aria-valuenow', String(pct));
+  container.setAttribute('aria-valuetext', `${pct}%`);
 
   const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
   const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
@@ -2427,6 +2684,7 @@ function updateHeroProgressFromEvent(e) {
   const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
   const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
   const targetSeconds = dur > 0 ? (pct / 100) * dur : 0;
+  container.setAttribute('aria-valuetext', `${formatDigitalTime(targetSeconds)} / ${dur > 0 ? formatDigitalTime(dur) : '--:--'}`);
   if (dur > 0 && elCur) {
     elCur.textContent = formatDigitalTime(targetSeconds);
   }
@@ -2717,6 +2975,14 @@ function setupEventListeners() {
         media_sentinel_settings: { ...cachedSettings, language: nextLang }
       });
       showToast(t('toast_lang_changed'));
+    });
+  }
+
+  // 2b. 1-Click Theme Switcher (Light / Dark Mode Toggle - Defect 16)
+  const btnThemeToggle = document.getElementById('btnThemeToggle');
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', () => {
+      toggleThemeMode();
     });
   }
 
@@ -3329,6 +3595,71 @@ function setupEventListeners() {
     };
     heroProgress.addEventListener('pointerup', stopHeroProgressDrag);
     heroProgress.addEventListener('pointercancel', stopHeroProgressDrag);
+
+    // Keyboard Accessibility for Hero Progress Slider (Defect 17 - WCAG AA Compliance)
+    heroProgress.addEventListener('keydown', (e) => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const dur = (pm && Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 0;
+      if (dur <= 0) return;
+
+      let cur = (pm && typeof pm.currentTime === 'number') ? pm.currentTime : 0;
+      let targetSeconds = cur;
+      let handled = false;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        handled = true;
+        targetSeconds = Math.min(dur, cur + 5);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        handled = true;
+        targetSeconds = Math.max(0, cur - 5);
+      } else if (e.key === 'PageUp') {
+        handled = true;
+        targetSeconds = Math.min(dur, cur + 30);
+      } else if (e.key === 'PageDown') {
+        handled = true;
+        targetSeconds = Math.max(0, cur - 30);
+      } else if (e.key === 'Home') {
+        handled = true;
+        targetSeconds = 0;
+      } else if (e.key === 'End') {
+        handled = true;
+        targetSeconds = dur;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        if (pm) pm.currentTime = targetSeconds;
+        const pct = Math.max(0, Math.min(100, (targetSeconds / dur) * 100));
+        const fill = document.getElementById('heroProgressFill');
+        const elCur = document.getElementById('heroTimeElapsed');
+        const elPct = document.getElementById('heroProgressPercent');
+        if (fill) fill.style.width = `${pct.toFixed(1)}%`;
+        if (elCur) elCur.textContent = formatDigitalTime(targetSeconds);
+        if (elPct) elPct.textContent = `${pct.toFixed(1)}%`;
+        heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+        heroProgress.setAttribute('aria-valuetext', `${formatDigitalTime(targetSeconds)} / ${formatDigitalTime(dur)}`);
+
+        const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+        if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+          browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId, allFrames: true },
+            world: 'MAIN',
+            func: (secs) => {
+              const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+              const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+              if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+                try { moviePlayer.seekTo(secs, true); } catch (_) {}
+              }
+              if (video) {
+                try { video.currentTime = secs; } catch (_) {}
+              }
+            },
+            args: [targetSeconds]
+          }).catch(() => {});
+        }
+        sendMediaControl('seek', { seconds: targetSeconds }, targetTabId);
+      }
+    });
   }
 
   // Hero Volume Bar (Click & Drag)
@@ -3356,6 +3687,135 @@ function setupEventListeners() {
     };
     heroVol.addEventListener('pointerup', stopHeroVolDrag);
     heroVol.addEventListener('pointercancel', stopHeroVolDrag);
+
+    // Keyboard Accessibility for Hero Volume Slider (Defect 17 - WCAG AA Compliance)
+    heroVol.addEventListener('keydown', (e) => {
+      const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      let currentVolPct = 100;
+      if (pm && typeof pm.volume === 'number') {
+        currentVolPct = Math.round(pm.volume * 100);
+      } else {
+        const text = document.getElementById('heroVolumeText');
+        if (text && text.textContent) {
+          currentVolPct = parseInt(text.textContent, 10) || 100;
+        }
+      }
+
+      let newPct = currentVolPct;
+      let handled = false;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        handled = true;
+        newPct = Math.min(100, currentVolPct + 5);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        handled = true;
+        newPct = Math.max(0, currentVolPct - 5);
+      } else if (e.key === 'PageUp') {
+        handled = true;
+        newPct = Math.min(100, currentVolPct + 20);
+      } else if (e.key === 'PageDown') {
+        handled = true;
+        newPct = Math.max(0, currentVolPct - 20);
+      } else if (e.key === 'Home') {
+        handled = true;
+        newPct = 0;
+      } else if (e.key === 'End') {
+        handled = true;
+        newPct = 100;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        if (pm) {
+          pm.volume = newPct / 100;
+          pm.isMuted = (newPct === 0);
+        }
+        const fill = document.getElementById('heroVolumeFill');
+        const text = document.getElementById('heroVolumeText');
+        const icon = document.getElementById('heroVolumeIcon');
+        const muteBtn = document.getElementById('btnHeroMute');
+        if (fill) fill.style.width = `${newPct}%`;
+        if (text) text.textContent = newPct === 0 ? t('muted_vol') : `${newPct}%`;
+        if (icon) icon.textContent = newPct === 0 ? '🔇' : (newPct > 50 ? '🔊' : '🔉');
+        if (muteBtn) muteBtn.textContent = newPct === 0 ? t('btn_unmute') : t('btn_mute');
+        heroVol.setAttribute('aria-valuenow', String(newPct));
+        heroVol.setAttribute('aria-valuetext', `${newPct}%`);
+
+        const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+        if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+          browserAPI.scripting.executeScript({
+            target: { tabId: targetTabId, allFrames: true },
+            world: 'MAIN',
+            func: (volPercent) => {
+              const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+              const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+              if (moviePlayer && typeof moviePlayer.setVolume === 'function') {
+                try {
+                  moviePlayer.setVolume(volPercent);
+                  if (volPercent === 0 && typeof moviePlayer.mute === 'function') {
+                    moviePlayer.mute();
+                  } else if (volPercent > 0 && typeof moviePlayer.unMute === 'function') {
+                    moviePlayer.unMute();
+                  }
+                } catch (_) {}
+              }
+              if (video) {
+                try {
+                  video.volume = volPercent / 100;
+                  video.muted = (volPercent === 0);
+                } catch (_) {}
+              }
+            },
+            args: [newPct]
+          }).catch(() => {});
+        }
+        sendSetVolume(newPct, targetTabId);
+      }
+    });
+  }
+
+  // 7b. Audio Lab Master Volume Boost Slider (Defect 15 - Web Audio Parity)
+  const boostSlider = document.getElementById('heroAudioBoostSlider');
+  if (boostSlider) {
+    boostSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10) || 100;
+      const boostValEl = document.getElementById('heroAudioBoostVal');
+      if (boostValEl) boostValEl.textContent = `${val}%`;
+    });
+
+    boostSlider.addEventListener('change', (e) => {
+      const val = parseInt(e.target.value, 10) || 100;
+      try {
+        if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+          browserAPI.storage.local.get(['audio_lab_settings'], (res) => {
+            const cur = (res && res.audio_lab_settings) || {};
+            const updated = { ...cur, master_boost: val };
+            browserAPI.storage.local.set({ audio_lab_settings: updated });
+
+            // Dispatch to active media tab and background runtime
+            const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+            const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+            if (targetTabId && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
+              try {
+                const p = browserAPI.tabs.sendMessage(targetTabId, {
+                  type: 'APPLY_AUDIO_LAB_SETTINGS',
+                  settings: updated
+                });
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+              } catch (_) {}
+            }
+            try {
+              const p2 = browserAPI.runtime.sendMessage({
+                type: 'APPLY_AUDIO_LAB_SETTINGS',
+                settings: updated,
+                tabId: targetTabId
+              });
+              if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
+            } catch (_) {}
+          });
+        }
+      } catch (_) {}
+    });
   }
 
   // 8. Media History Filter & Search
@@ -3479,6 +3939,16 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       if (changes.sentinel_sleep_settings && changes.sentinel_sleep_settings.newValue) {
         populateSleepSettingsForm(changes.sentinel_sleep_settings.newValue);
       }
+      if (changes.ui_theme && changes.ui_theme.newValue) {
+        applyTheme(changes.ui_theme.newValue);
+      } else if (changes.theme && changes.theme.newValue) {
+        applyTheme(changes.theme.newValue);
+      }
+      if (changes.audio_lab_settings && changes.audio_lab_settings.newValue) {
+        updateDashboardAudioLabUI(changes.audio_lab_settings.newValue);
+      } else if (changes.audioLabConfig && changes.audioLabConfig.newValue) {
+        updateDashboardAudioLabUI(changes.audioLabConfig.newValue);
+      }
       refreshDashboard();
     }
   });
@@ -3490,9 +3960,20 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     startLiveClock();
     setupEventListeners();
 
-    // Load language preference, browser filter, tracking mode, category, and sleep settings from storage
+    // Load language preference, browser filter, tracking mode, category, sleep, theme, and audio lab from storage
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
-      browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'sentinel_sleep_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
+      browserAPI.storage.local.get([
+        'language',
+        'media_sentinel_settings',
+        'sentinel_sleep_settings',
+        'selected_browser_filter',
+        'selected_tracking_mode',
+        'selected_domain_category',
+        'ui_theme',
+        'theme',
+        'audio_lab_settings',
+        'audioLabConfig'
+      ], (res) => {
         let lang = 'en';
         if (res && res.language) {
           lang = res.language;
@@ -3504,6 +3985,17 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         }
         if (res && res.sentinel_sleep_settings) {
           populateSleepSettingsForm(res.sentinel_sleep_settings);
+        }
+        if (res && (res.ui_theme || res.theme)) {
+          applyTheme(res.ui_theme || res.theme);
+        } else {
+          try {
+            const localTheme = localStorage.getItem('ui_theme') || localStorage.getItem('theme');
+            if (localTheme) applyTheme(localTheme);
+          } catch (_) {}
+        }
+        if (res && (res.audio_lab_settings || res.audioLabConfig)) {
+          updateDashboardAudioLabUI(res.audio_lab_settings || res.audioLabConfig);
         }
         if (res && res.selected_browser_filter) {
           selectedBrowser = res.selected_browser_filter;
@@ -3574,6 +4066,15 @@ if (typeof module !== 'undefined' && module.exports) {
     applyDashboardLanguage,
     updateSelectOptions,
     getCurrentLang: () => currentLang,
-    setCurrentLang: (val) => { currentLang = val; }
+    setCurrentLang: (val) => { currentLang = val; },
+    // Phase 5 Theme, A11y & Audio Lab exports
+    applyTheme,
+    toggleThemeMode,
+    updateThemeToggleUI,
+    getCurrentTheme: () => currentTheme,
+    setCurrentTheme: (val) => { currentTheme = val; },
+    updateDashboardAudioLabUI,
+    getDashboardAudioLabSettings: () => dashboardAudioLabSettings,
+    setDashboardAudioLabSettings: (val) => { dashboardAudioLabSettings = val; }
   };
 }
