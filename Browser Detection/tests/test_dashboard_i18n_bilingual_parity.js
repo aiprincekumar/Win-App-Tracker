@@ -424,7 +424,7 @@ console.log('\nTest 7: W3C Trusted Types & Zero innerHTML Security Audit');
 
   // Verify dashboard.html sleep settings card uses text nodes and no dangerous inline scripts
   const html = fs.readFileSync(dashHtmlPath, 'utf8');
-  const sleepCardMatch = html.match(/<div class="settings-card" id="cardSleepSettings">([\s\S]*?)<\/div>\s*<\/div>/);
+  const sleepCardMatch = html.match(/<div class="settings-card[^"]*" id="cardSleepSettings">([\s\S]*?)<\/div>\s*<\/div>/);
   assert(sleepCardMatch, '#cardSleepSettings container must exist in dashboard.html');
   const sleepCardHtml = sleepCardMatch[0];
 

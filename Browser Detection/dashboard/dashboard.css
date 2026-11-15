@@ -42,6 +42,19 @@
   --shadow-glow-emerald: 0 0 20px rgba(16, 185, 129, 0.25);
   --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.25);
 
+  /* iOS 26 Liquid Glass & Specular Depth Engine Tokens (System 2) */
+  --glass-surface-bg: rgba(18, 24, 38, 0.72);
+  --glass-surface-hover: rgba(26, 34, 52, 0.85);
+  --glass-border-specular: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  --shadow-ambient: 0 12px 32px -4px rgba(0, 0, 0, 0.45);
+  --shadow-specular-glow: 0 0 20px -2px rgba(16, 185, 129, 0.15);
+  --glass-blur-radius: 24px;
+
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -91,6 +104,19 @@ html[data-theme="light"] body {
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* iOS 26 Liquid Glass Light Mode Tokens (System 2) */
+  --glass-surface-bg: rgba(255, 255, 255, 0.85);
+  --glass-surface-hover: rgba(255, 255, 255, 0.95);
+  --glass-border-specular: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(203, 213, 225, 0.5) 50%,
+    rgba(148, 163, 184, 0.2) 100%
+  );
+  --shadow-ambient: 0 12px 32px -4px rgba(0, 0, 0, 0.08);
+  --shadow-specular-glow: 0 0 20px -2px rgba(16, 185, 129, 0.18);
+  --glass-blur-radius: 24px;
 
   font-family: var(--font-family);
   background-color: var(--bg-deep);
@@ -779,6 +805,143 @@ button.spinning .refresh-spinner-icon,
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Sentinel iOS 26 Liquid Glass & Bento Grid Layout Architecture (System 1 & System 2)
+   ========================================================================== */
+
+/* 12-Column Bento Grid Container */
+.bento-grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: minmax(140px, auto);
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 1720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tab-pane.bento-grid-container.active {
+  display: grid;
+}
+
+/* Bento Card Base & Zero CLS Guarantee */
+.bento-card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease;
+  min-height: 140px; /* Zero CLS guarantee */
+}
+
+/* Bento Column & Row Utility Spans */
+.bento-span-12 { grid-column: span 12; }
+.bento-span-8  { grid-column: span 8; }
+.bento-span-6  { grid-column: span 6; }
+.bento-span-4  { grid-column: span 4; }
+.bento-span-3  { grid-column: span 3; }
+.bento-span-2  { grid-column: span 2; }
+.bento-row-span-2 { grid-row: span 2; }
+
+/* Liquid Glass Materiality & Specular Depth Engine */
+.liquid-glass-card {
+  background: var(--glass-surface-bg);
+  backdrop-filter: blur(var(--glass-blur-radius)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-radius)) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-image: var(--glass-border-specular) 1;
+  box-shadow: var(--shadow-ambient);
+  border-radius: 18px;
+}
+
+.liquid-glass-card:hover {
+  background: var(--glass-surface-hover);
+  box-shadow: var(--shadow-ambient), var(--shadow-specular-glow);
+  transform: translateY(-2px);
+}
+
+/* Specific overrides for compound card classes ensuring liquid glass depth */
+.metric-card.liquid-glass-card,
+.analytics-hero-card.liquid-glass-card,
+.live-player-hero-card.liquid-glass-card,
+.data-table-card.liquid-glass-card,
+.settings-card.liquid-glass-card,
+.audio-lab-widget.liquid-glass-card {
+  background: var(--glass-surface-bg);
+  backdrop-filter: blur(var(--glass-blur-radius)) saturate(190%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-radius)) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-image: var(--glass-border-specular) 1;
+  box-shadow: var(--shadow-ambient);
+  border-radius: 18px;
+}
+
+.metric-card.liquid-glass-card:hover,
+.analytics-hero-card.liquid-glass-card:hover,
+.live-player-hero-card.liquid-glass-card:hover,
+.data-table-card.liquid-glass-card:hover,
+.settings-card.liquid-glass-card:hover,
+.audio-lab-widget.liquid-glass-card:hover {
+  background: var(--glass-surface-hover);
+  box-shadow: var(--shadow-ambient), var(--shadow-specular-glow);
+  transform: translateY(-2px);
+}
+
+.settings-grid.bento-grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+/* Responsive Collapse Rules */
+@media (max-width: 1200px) {
+  .bento-span-8, .bento-span-4 { grid-column: span 12; }
+  .bento-span-3 { grid-column: span 6; }
+}
+
+@media (max-width: 768px) {
+  .bento-span-12, .bento-span-8, .bento-span-6, .bento-span-4, .bento-span-3 {
+    grid-column: span 12;
+  }
+  .bento-grid-container {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+}
+
+/* Skeleton Shimmer Loaders with Min-Height Reservation for Zero CLS */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  min-height: 140px;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.12) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: skeletonShimmer 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* ========================================================================= */

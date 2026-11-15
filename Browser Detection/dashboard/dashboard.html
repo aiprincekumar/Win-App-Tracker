@@ -150,9 +150,9 @@
         <!-- ================================================================= -->
         <section id="paneTracking" class="tab-pane active" role="tabpanel" aria-labelledby="navTabTracking">
           
-          <!-- Key Metrics Cards Row -->
-          <div class="metrics-grid">
-            <div class="metric-card">
+          <div id="tabContentTimeTracking" class="bento-grid-container">
+            <!-- Key Metrics Cards Row (4 Bento Spans of 3 cols each = 12 cols) -->
+            <div class="metric-card bento-card liquid-glass-card bento-span-3">
               <div class="metric-header">
                 <span id="lblMetricToday" class="metric-label">Today's Browsing Time</span>
                 <span class="metric-icon-box cyan">⏱️</span>
@@ -165,7 +165,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-3">
               <div class="metric-header">
                 <span id="lblMetricDaily" class="metric-label">Daily Average</span>
                 <span class="metric-icon-box emerald">📊</span>
@@ -178,7 +178,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-3">
               <div class="metric-header">
                 <span id="lblMetricTotal" class="metric-label">Total Tracked Time</span>
                 <span class="metric-icon-box violet">⏳</span>
@@ -191,7 +191,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-3">
               <div class="metric-header">
                 <span id="lblMetricTopDomain" class="metric-label">Top Website</span>
                 <span class="metric-icon-box amber">🏆</span>
@@ -203,113 +203,113 @@
                 <span id="trackMetricTopDomainTime" class="metric-subtext">Most active domain</span>
               </div>
             </div>
-          </div>
 
-          <!-- Temporal Subtabs & Visual Graph Row -->
-          <div class="analytics-hero-card">
-            <div class="card-top-bar">
-              <div class="card-title-group">
-                <h3 id="headingUsageDist" class="card-heading">Website Usage Time Distribution</h3>
-                <span id="captionUsageDist" class="card-caption">Select time range: Today, Daily Average, or Total Time</span>
+            <!-- Temporal Subtabs & Visual Graph Row -->
+            <div id="timeDistributionCard" class="analytics-hero-card bento-card liquid-glass-card bento-span-12">
+              <div class="card-top-bar">
+                <div class="card-title-group">
+                  <h3 id="headingUsageDist" class="card-heading">Website Usage Time Distribution</h3>
+                  <span id="captionUsageDist" class="card-caption">Select time range: Today, Daily Average, or Total Time</span>
+                </div>
+
+                <!-- Temporal Subtabs Toggle -->
+                <div class="temporal-subtabs" role="tablist">
+                  <button class="subtab-btn active" data-temporal="today" role="tab" aria-selected="true">
+                    <span id="subtabTodayText">📅 Today</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="daily" role="tab" aria-selected="false">
+                    <span id="subtabDailyText">📈 Daily Avg</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="total" role="tab" aria-selected="false">
+                    <span id="subtabTotalText">🌐 Total Time</span>
+                  </button>
+                </div>
               </div>
 
-              <!-- Temporal Subtabs Toggle -->
-              <div class="temporal-subtabs" role="tablist">
-                <button class="subtab-btn active" data-temporal="today" role="tab" aria-selected="true">
-                  <span id="subtabTodayText">📅 Today</span>
-                </button>
-                <button class="subtab-btn" data-temporal="daily" role="tab" aria-selected="false">
-                  <span id="subtabDailyText">📈 Daily Avg</span>
-                </button>
-                <button class="subtab-btn" data-temporal="total" role="tab" aria-selected="false">
-                  <span id="subtabTotalText">🌐 Total Time</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Visualization Content Grid (Donut Chart + Top 5 Distribution Bars) -->
-            <div class="visual-charts-layout">
-              <!-- Donut Chart Widget -->
-              <div class="donut-chart-container">
-                <div class="donut-svg-wrapper">
-                  <svg id="dashboardDonutSvg" class="dashboard-donut-svg" viewBox="0 0 240 240" width="220" height="220">
-                    <circle cx="120" cy="120" r="90" class="donut-background-track"></circle>
-                    <g id="dashboardDonutSlices"></g>
-                  </svg>
-                  <div class="donut-center-info">
-                    <span id="donutCenterBigTime" class="donut-center-time">0h 00m</span>
-                    <span id="donutCenterSubLabel" class="donut-center-label">Today's Total Time</span>
+              <!-- Visualization Content Grid (Donut Chart + Top 5 Distribution Bars) -->
+              <div class="visual-charts-layout">
+                <!-- Donut Chart Widget -->
+                <div class="donut-chart-container">
+                  <div class="donut-svg-wrapper">
+                    <svg id="dashboardDonutSvg" class="dashboard-donut-svg" viewBox="0 0 240 240" width="220" height="220">
+                      <circle cx="120" cy="120" r="90" class="donut-background-track"></circle>
+                      <g id="dashboardDonutSlices"></g>
+                    </svg>
+                    <div class="donut-center-info">
+                      <span id="donutCenterBigTime" class="donut-center-time">0h 00m</span>
+                      <span id="donutCenterSubLabel" class="donut-center-label">Today's Total Time</span>
+                    </div>
+                  </div>
+                  <div id="donutLegendList" class="donut-legend-grid">
+                    <!-- Generated via JS -->
                   </div>
                 </div>
-                <div id="donutLegendList" class="donut-legend-grid">
-                  <!-- Generated via JS -->
-                </div>
-              </div>
 
-              <!-- Top Domains Bar Distribution -->
-              <div class="top-distribution-bars">
-                <h4 id="headingTopBreakdown" class="sub-heading">Top Activity Breakdown</h4>
-                <div id="topBarsListContainer" class="top-bars-list">
-                  <!-- Generated via JS -->
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Comprehensive Domain Breakdown Table Card -->
-          <div class="data-table-card">
-            <div class="table-header-controls">
-              <div class="table-title-group">
-                <h3 id="headingDomainTable" class="table-heading">Domain Breakdown Table</h3>
-                <span id="tableDomainCountLabel" class="table-count-badge">0 domains</span>
-              </div>
-
-              <div class="table-search-filter">
-                <div class="search-input-wrapper">
-                  <span class="search-icon">🔍</span>
-                  <input type="text" id="tableDomainSearch" class="styled-search-input" placeholder="Search domain (e.g. youtube, github)...">
-                </div>
-                <div class="table-sort-wrapper">
-                  <label for="domainCategorySelect" id="lblDomainCategory" class="sort-label">Category:</label>
-                  <select id="domainCategorySelect" class="styled-select">
-                    <option value="all" selected>🌐 All Pages</option>
-                    <option value="web">🌍 Websites</option>
-                    <option value="internal">⚙️ Internal</option>
-                  </select>
-                </div>
-                <div class="table-sort-wrapper">
-                  <label for="tableSortSelect" id="lblTableSort" class="sort-label">Sort by:</label>
-                  <select id="tableSortSelect" class="styled-select">
-                    <option value="time_desc" selected>Time: High to Low</option>
-                    <option value="time_asc">Time: Low to High</option>
-                    <option value="sessions_desc">Sessions: High to Low</option>
-                    <option value="name_asc">Domain Name (A to Z)</option>
-                  </select>
+                <!-- Top Domains Bar Distribution -->
+                <div class="top-distribution-bars">
+                  <h4 id="headingTopBreakdown" class="sub-heading">Top Activity Breakdown</h4>
+                  <div id="topBarsListContainer" class="top-bars-list">
+                    <!-- Generated via JS -->
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- The Table -->
-            <div class="table-responsive-container">
-              <table class="modern-data-table" id="domainAnalyticsTable">
-                <thead>
-                  <tr>
-                    <th id="thColDomain" class="col-domain">Website / Domain</th>
-                    <th id="thColTime" class="col-time">Time Spent</th>
-                    <th id="thColRatio" class="col-ratio">Ratio</th>
-                    <th id="thColSessions" class="col-sessions">Sessions</th>
-                    <th id="thColLast" class="col-last">Last Active</th>
-                  </tr>
-                </thead>
-                <tbody id="domainTableBody">
-                  <!-- Populated by JavaScript -->
-                </tbody>
-              </table>
-            </div>
+            <!-- Comprehensive Domain Breakdown Table Card -->
+            <div class="data-table-card bento-card liquid-glass-card bento-span-12">
+              <div class="table-header-controls">
+                <div class="table-title-group">
+                  <h3 id="headingDomainTable" class="table-heading">Domain Breakdown Table</h3>
+                  <span id="tableDomainCountLabel" class="table-count-badge">0 domains</span>
+                </div>
 
-            <div id="domainTableEmptyState" class="table-empty-box hidden">
-              <span class="empty-icon">🌐</span>
-              <p id="txtDomainEmpty" class="empty-text">No browsing activity recorded yet. Browse any website to start tracking!</p>
+                <div class="table-search-filter">
+                  <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="tableDomainSearch" class="styled-search-input" placeholder="Search domain (e.g. youtube, github)...">
+                  </div>
+                  <div class="table-sort-wrapper">
+                    <label for="domainCategorySelect" id="lblDomainCategory" class="sort-label">Category:</label>
+                    <select id="domainCategorySelect" class="styled-select">
+                      <option value="all" selected>🌐 All Pages</option>
+                      <option value="web">🌍 Websites</option>
+                      <option value="internal">⚙️ Internal</option>
+                    </select>
+                  </div>
+                  <div class="table-sort-wrapper">
+                    <label for="tableSortSelect" id="lblTableSort" class="sort-label">Sort by:</label>
+                    <select id="tableSortSelect" class="styled-select">
+                      <option value="time_desc" selected>Time: High to Low</option>
+                      <option value="time_asc">Time: Low to High</option>
+                      <option value="sessions_desc">Sessions: High to Low</option>
+                      <option value="name_asc">Domain Name (A to Z)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- The Table -->
+              <div class="table-responsive-container">
+                <table class="modern-data-table" id="domainAnalyticsTable">
+                  <thead>
+                    <tr>
+                      <th id="thColDomain" class="col-domain">Website / Domain</th>
+                      <th id="thColTime" class="col-time">Time Spent</th>
+                      <th id="thColRatio" class="col-ratio">Ratio</th>
+                      <th id="thColSessions" class="col-sessions">Sessions</th>
+                      <th id="thColLast" class="col-last">Last Active</th>
+                    </tr>
+                  </thead>
+                  <tbody id="domainTableBody">
+                    <!-- Populated by JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div id="domainTableEmptyState" class="table-empty-box hidden">
+                <span class="empty-icon">🌐</span>
+                <p id="txtDomainEmpty" class="empty-text">No browsing activity recorded yet. Browse any website to start tracking!</p>
+              </div>
             </div>
           </div>
         </section>
@@ -319,9 +319,9 @@
         <!-- ================================================================= -->
         <section id="paneMedia" class="tab-pane" role="tabpanel" aria-labelledby="navTabMedia">
           
-          <!-- Key Media Summary Metrics Cards -->
-          <div class="metrics-grid">
-            <div class="metric-card">
+          <div id="tabContentMediaAnalytics" class="bento-grid-container">
+            <!-- Key Media Summary Metrics Cards -->
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaTotalWatch" class="metric-label">Total Video Watch Time</span>
                 <span class="metric-icon-box rose">🎬</span>
@@ -334,7 +334,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaAvgWatch" class="metric-label">Avg Watch Time per Video</span>
                 <span class="metric-icon-box cyan">⏱️</span>
@@ -347,7 +347,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaAvgVolume" class="metric-label">Average Volume</span>
                 <span class="metric-icon-box emerald">🔊</span>
@@ -360,7 +360,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaPeakVolume" class="metric-label">Peak Volume</span>
                 <span class="metric-icon-box amber">⚡</span>
@@ -373,7 +373,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaLowVolume" class="metric-label">Lowest Volume</span>
                 <span class="metric-icon-box violet">🔉</span>
@@ -386,7 +386,7 @@
               </div>
             </div>
 
-            <div class="metric-card">
+            <div class="metric-card bento-card liquid-glass-card bento-span-4">
               <div class="metric-header">
                 <span id="lblMediaSessions" class="metric-label">Total Media Sessions</span>
                 <span class="metric-icon-box blue">🎞️</span>
@@ -398,10 +398,9 @@
                 <span id="subMediaSessions" class="metric-subtext">Tracked Sessions</span>
               </div>
             </div>
-          </div>
 
           <!-- Hero Widget: Live Media Player Sentinel Card -->
-          <div class="live-player-hero-card">
+          <div id="heroMediaPlayerCard" class="live-player-hero-card bento-card liquid-glass-card bento-span-8 bento-row-span-2">
             <div class="player-hero-header">
               <div class="player-title-badge-group">
                 <span id="playerPulseDot" class="player-pulse-dot idle">●</span>
@@ -500,7 +499,7 @@
           </div>
 
           <!-- Audio Lab & DSP Telemetry Widget -->
-          <div id="heroAudioLabStatus" class="audio-lab-widget glass-card">
+          <div id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2">
             <div class="audio-lab-header">
               <div class="audio-lab-title-group">
                 <span class="audio-lab-icon">🎛️</span>
@@ -634,7 +633,7 @@
           </div>
 
           <!-- Media Playback History Table Card -->
-          <div class="data-table-card">
+          <div class="data-table-card bento-card liquid-glass-card bento-span-12">
             <div class="table-header-controls">
               <div class="table-title-group">
                 <h3 id="headingMediaHistory" class="table-heading">Media Playback History</h3>
@@ -693,16 +692,17 @@
               <p id="txtMediaEmpty" class="empty-text">No media playback history recorded yet.</p>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         <!-- ================================================================= -->
         <!-- TAB C: SETTINGS & DATA MANAGEMENT                                 -->
         <!-- ================================================================= -->
         <section id="paneSettings" class="tab-pane" role="tabpanel" aria-labelledby="navTabSettings">
           
-          <div class="settings-grid">
+          <div id="tabContentSettings" class="bento-grid-container settings-grid">
             <!-- Card 1: Extension General Settings -->
-            <div class="settings-card">
+            <div class="settings-card bento-card liquid-glass-card bento-span-6">
               <div class="settings-card-header">
                 <span class="settings-card-icon">⚙️</span>
                 <div class="settings-card-title-group">
@@ -797,7 +797,7 @@
             </div>
 
             <!-- Card 1.5: Sleep Timer & Inactivity Sentinel -->
-            <div class="settings-card" id="cardSleepSettings">
+            <div class="settings-card bento-card liquid-glass-card bento-span-6" id="cardSleepSettings">
               <div class="settings-card-header">
                 <span class="settings-card-icon">🌙</span>
                 <div class="settings-card-title-group">
@@ -894,7 +894,7 @@
             </div>
 
             <!-- Card 2: Export Data Section -->
-            <div class="settings-card">
+            <div class="settings-card bento-card liquid-glass-card bento-span-6">
               <div class="settings-card-header">
                 <span class="settings-card-icon">📥</span>
                 <div class="settings-card-title-group">
@@ -940,7 +940,7 @@
             </div>
 
             <!-- Card 3: Danger Zone / Clear Data -->
-            <div class="settings-card danger-card">
+            <div class="settings-card danger-card bento-card liquid-glass-card bento-span-6">
               <div class="settings-card-header">
                 <span class="settings-card-icon">⚠️</span>
                 <div class="settings-card-title-group">
