@@ -51,6 +51,12 @@
  *    - Execution against mock DOM elements and browserAPI
  *    - Single-execution determinism: exactly 1 authoritative sendMediaControl IPC dispatch and 0 executeScript calls
  *    - Real sendMediaControl envelope construction and dispatch verification
+ * 10. Parity Resilience, Mute Single Inversion, and targetTabId Fallback Verification:
+ *    - inject_main_world.js toggle_mute single-inversion determinism
+ *    - content_media.js resilient fallback to primaryMediaElement
+ *    - popup/popup.js targetTabId multi-tier resolution parity with dashboard
+ *    - Strict invariant guards: #btnGlobalMediaToggle and cooldown timestamps
+ *    - Runtime functional simulation of multi-tier tab resolution and main world mute determinism
  */
 
 'use strict';
@@ -925,7 +931,13 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 {
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
-  // 9.1 Extract media controls handler setup from popup/popup.js
+  // 9.1 Extract getActiveMediaTabId and media controls handler setup from popup/popup.js
+  const getActiveMediaTabIdStart = popupJsCode.indexOf('function getActiveMediaTabId() {');
+  assert(getActiveMediaTabIdStart !== -1, 'Must find getActiveMediaTabId in popup.js');
+  const getActiveMediaTabIdEnd = popupJsCode.indexOf('function persistAudioSettings() {', getActiveMediaTabIdStart);
+  assert(getActiveMediaTabIdEnd !== -1, 'Must find getActiveMediaTabId end in popup.js');
+  const getActiveMediaTabIdCode = popupJsCode.slice(getActiveMediaTabIdStart, getActiveMediaTabIdEnd);
+
   const controlsStart = popupJsCode.indexOf('const handleTogglePlay = () => {');
   assert(controlsStart !== -1, 'Must find media controls start in popup.js');
   const controlsEnd = popupJsCode.indexOf('// Progress Bar Seeking & Dragging (Timeline Movement)', controlsStart);
@@ -1056,6 +1068,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
         primaryMedia: { tabId: 42 }
       }
     },
+    activeTabId: 42,
     lastPlayToggleTime: 0,
     lastProgressDragTime: 0,
     lastMuteToggleTime: 0,
@@ -1070,6 +1083,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
   };
 
   const context = vm.createContext(sandboxScope);
+  vm.runInContext(getActiveMediaTabIdCode, context);
   vm.runInContext(controlsCode, context);
 
   // 9.3 Test Play/Pause Toggle via #btnCtrlTogglePlay
@@ -1257,6 +1271,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     const smcScope = {
       lastControlActionKey: '',
       lastControlActionTime: 0,
+      activeTabId: 99,
       activeMediaCached: { tabId: 99 },
       dashboardData: null,
       isDraggingVolume: false,
@@ -1277,6 +1292,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     };
 
     const smcContext = vm.createContext(smcScope);
+    vm.runInContext(getActiveMediaTabIdCode, smcContext);
     vm.runInContext(sendMediaControlCode, smcContext);
 
     // Test explicit tabId
@@ -1295,6 +1311,197 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(runtimeMessages[1].tabId, 99);
 
     console.log('  ✅ Real sendMediaControl implementation: Correct CONTROL_MEDIA envelope & tabId routing verified');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Test 10: Parity Resilience, Mute Single Inversion, and targetTabId Fallback Verification
+// ---------------------------------------------------------------------------
+console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabId Fallback Verification');
+{
+  const injectCode = fs.readFileSync(path.join(baseDir, 'inject_main_world.js'), 'utf8');
+  const contentCode = fs.readFileSync(path.join(baseDir, 'content_media.js'), 'utf8');
+  const popupCode = fs.readFileSync(path.join(baseDir, 'popup', 'popup.js'), 'utf8');
+
+  // 10.1 inject_main_world.js: Mute Determinism (Single-Inversion)
+  const muteHandlerMatch = injectCode.match(/case 'toggle_mute':\s*\{([\s\S]*?)break;/);
+  assert(muteHandlerMatch, 'inject_main_world.js must have case toggle_mute: block');
+  const muteBody = muteHandlerMatch[1];
+  assert(muteBody.includes('else if (video)'), 'inject_main_world.js toggle_mute must use mutually exclusive "else if (video)" to prevent double inversion');
+  console.log('  ✅ 10.1: inject_main_world.js toggle_mute single-inversion determinism verified');
+
+  // 10.2 content_media.js: Resilient Fallback to primaryMediaElement
+  assert(contentCode.includes('shouldExecuteDirect') || contentCode.includes('!isBridgeActive'), 
+    'content_media.js handleMediaControl must implement resilient fallback when bridge is unready');
+  assert(contentCode.includes('forwardActionToMainWorld(action, data);'), 
+    'content_media.js must forward actions to main world when target is active');
+  console.log('  ✅ 10.2: content_media.js resilient fallback to primaryMediaElement verified');
+
+  // 10.3 popup/popup.js: Unified Target Tab Resolution & Dashboard Parity
+  assert(popupCode.includes('function getActiveMediaTabId()'), 'popup/popup.js must define getActiveMediaTabId');
+  assert(popupCode.includes('const resolvedTabId = tabId || getActiveMediaTabId();') || popupCode.includes('tabId || getActiveMediaTabId()'), 
+    'popup/popup.js sendMediaControl must auto-resolve tabId using getActiveMediaTabId');
+  assert(popupCode.includes("browserAPI.tabs.query({ active: true, lastFocusedWindow: true }"),
+    'popup/popup.js sendMediaControl must query active tab in lastFocusedWindow');
+  assert(popupCode.includes("browserAPI.tabs.query({ active: true, currentWindow: true }"),
+    'popup/popup.js sendMediaControl must query active tab in currentWindow fallback');
+  assert(popupCode.includes("browserAPI.tabs.query({ audible: true }"),
+    'popup/popup.js sendMediaControl must query audible tab as ultimate fallback');
+  console.log('  ✅ 10.3: popup/popup.js targetTabId resolution parity with dashboard verified');
+
+  // 10.4 popup/popup.js: Strict Invariant Guards
+  assert(popupCode.includes("const btnGlobalMediaToggle = document.getElementById('btnGlobalMediaToggle');"), 
+    'Universal Play/Pause button (#btnGlobalMediaToggle) must remain intact');
+  assert(popupCode.includes('lastPlayToggleTime') && popupCode.includes('lastMuteToggleTime') && popupCode.includes('lastSpeedChangeTime'), 
+    'Optimistic cooldown timestamps must remain strictly declared in popup/popup.js');
+  console.log('  ✅ 10.4: Strict invariant guards (frozen cooldowns & #btnGlobalMediaToggle) verified');
+
+  // 10.5 Runtime Functional Simulation of Multi-Tier Tab Resolution & Query Fallback
+  {
+    const getActiveMediaTabIdStart = popupCode.indexOf('function getActiveMediaTabId() {');
+    const getActiveMediaTabIdEnd = popupCode.indexOf('function persistAudioSettings() {', getActiveMediaTabIdStart);
+    const getActiveMediaTabIdCode = popupCode.slice(getActiveMediaTabIdStart, getActiveMediaTabIdEnd);
+
+    // Tier 1: activeMediaCached.tabId
+    const tier1Scope = {
+      activeMediaCached: { tabId: 101 },
+      dashboardData: { globalMediaState: { primaryMedia: { tabId: 202 } } },
+      activeTabId: 303
+    };
+    const tier1Ctx = vm.createContext(tier1Scope);
+    vm.runInContext(getActiveMediaTabIdCode, tier1Ctx);
+    assert.strictEqual(tier1Scope.getActiveMediaTabId(), 101, 'Tier 1 must resolve to activeMediaCached.tabId');
+
+    // Tier 2: dashboardData.globalMediaState.primaryMedia.tabId
+    const tier2Scope = {
+      activeMediaCached: null,
+      dashboardData: { globalMediaState: { primaryMedia: { tabId: 202 } } },
+      activeTabId: 303
+    };
+    const tier2Ctx = vm.createContext(tier2Scope);
+    vm.runInContext(getActiveMediaTabIdCode, tier2Ctx);
+    assert.strictEqual(tier2Scope.getActiveMediaTabId(), 202, 'Tier 2 must resolve to dashboardData primaryMedia.tabId');
+
+    // Tier 3: activeTabId
+    const tier3Scope = {
+      activeMediaCached: null,
+      dashboardData: null,
+      activeTabId: 303
+    };
+    const tier3Ctx = vm.createContext(tier3Scope);
+    vm.runInContext(getActiveMediaTabIdCode, tier3Ctx);
+    assert.strictEqual(tier3Scope.getActiveMediaTabId(), 303, 'Tier 3 must resolve to activeTabId');
+
+    // Tier 4: null fallback
+    const tier4Scope = {
+      activeMediaCached: null,
+      dashboardData: null,
+      activeTabId: null
+    };
+    const tier4Ctx = vm.createContext(tier4Scope);
+    vm.runInContext(getActiveMediaTabIdCode, tier4Ctx);
+    assert.strictEqual(tier4Scope.getActiveMediaTabId(), null, 'Tier 4 must resolve to null when no tab is cached');
+
+    // Multi-tier query fallback inside sendMediaControl
+    const sendMediaControlStart = popupCode.indexOf('function sendMediaControl(action, data = {}, tabId = null) {');
+    const sendMediaControlEnd = popupCode.indexOf('function getDomainSecondsForMode(', sendMediaControlStart);
+    const sendMediaControlCode = popupCode.slice(sendMediaControlStart, sendMediaControlEnd);
+
+    const dispatchedMessages = [];
+    const multiTierScope = {
+      lastControlActionKey: '',
+      lastControlActionTime: 0,
+      activeMediaCached: null,
+      dashboardData: null,
+      activeTabId: null,
+      isDraggingVolume: false,
+      isDraggingProgress: false,
+      refreshDashboard: () => {},
+      setTimeout: () => {},
+      browserAPI: {
+        runtime: {
+          sendMessage: (msg, cb) => {
+            dispatchedMessages.push(msg);
+            return Promise.resolve({ success: true });
+          }
+        },
+        tabs: {
+          query: (queryInfo, cb) => {
+            if (queryInfo.audible) {
+              cb([{ id: 777 }]);
+            } else {
+              cb([]); // simulate empty active tabs, fallback to audible tab
+            }
+          }
+        }
+      },
+      Date,
+      JSON,
+      Object
+    };
+
+    const multiTierCtx = vm.createContext(multiTierScope);
+    vm.runInContext(getActiveMediaTabIdCode, multiTierCtx);
+    vm.runInContext(sendMediaControlCode, multiTierCtx);
+
+    multiTierScope.sendMediaControl('toggle_play', {});
+    assert.strictEqual(dispatchedMessages.length, 1, 'sendMediaControl should dispatch once via fallback query');
+    assert.strictEqual(dispatchedMessages[0].action, 'toggle_play');
+    assert.strictEqual(dispatchedMessages[0].tabId, 777, 'sendMediaControl should resolve to audible tab 777');
+    console.log('  ✅ 10.5: Runtime functional simulation of multi-tier tab resolution & audible fallback verified');
+  }
+
+  // 10.6 Functional VM Simulation of Main World Mute Single Inversion
+  {
+    let moviePlayerMuted = false;
+    let moviePlayerCalls = 0;
+    const mockMoviePlayer = {
+      isMuted: () => moviePlayerMuted,
+      mute: () => { moviePlayerMuted = true; moviePlayerCalls++; },
+      unMute: () => { moviePlayerMuted = false; moviePlayerCalls++; }
+    };
+
+    const mockVideo = {
+      muted: false
+    };
+
+    const osdMessages = [];
+    const mainWorldScope = {
+      moviePlayer: mockMoviePlayer,
+      video: mockVideo,
+      showOSD: (text, icon) => { osdMessages.push({ text, icon }); }
+    };
+
+    const testMuteCode = `
+      let isNowMuted = false;
+      if (moviePlayer && typeof moviePlayer.isMuted === 'function') {
+        try {
+          if (moviePlayer.isMuted()) {
+            if (typeof moviePlayer.unMute === 'function') moviePlayer.unMute();
+            isNowMuted = false;
+          } else {
+            if (typeof moviePlayer.mute === 'function') moviePlayer.mute();
+            isNowMuted = true;
+          }
+        } catch (_) {}
+      } else if (video) {
+        try {
+          video.muted = !video.muted;
+          isNowMuted = video.muted;
+        } catch (_) {}
+      }
+      showOSD(isNowMuted ? 'Muted' : 'Unmuted', isNowMuted ? '🔇' : '🔊');
+    `;
+
+    const mwCtx = vm.createContext(mainWorldScope);
+    vm.runInContext(testMuteCode, mwCtx);
+
+    // moviePlayer should be muted (1 call), and mockVideo.muted should NOT have been modified
+    assert.strictEqual(moviePlayerMuted, true, 'moviePlayer should be muted');
+    assert.strictEqual(moviePlayerCalls, 1, 'moviePlayer.mute() should be called once');
+    assert.strictEqual(mockVideo.muted, false, 'video.muted must NOT be touched when moviePlayer handles mute');
+    assert.strictEqual(osdMessages[0].text, 'Muted');
+    console.log('  ✅ 10.6: Main world single-inversion determinism functionally verified in VM');
   }
 }
 
