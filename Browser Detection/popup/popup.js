@@ -3314,8 +3314,10 @@ function setupEventListeners() {
 
   // Media Controls
   const handleTogglePlay = () => {
+    lastPlayToggleTime = Date.now();
     if (activeMediaCached) {
       activeMediaCached.isPlaying = !activeMediaCached.isPlaying;
+      activeMediaCached.state = activeMediaCached.isPlaying ? 'playing' : 'paused';
       renderMediaCard({ primaryMedia: activeMediaCached });
     }
     const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
@@ -3348,7 +3350,7 @@ function setupEventListeners() {
           }
         }
       }).then(() => {
-        setTimeout(refreshDashboard, 180);
+        // Optimistic cooldown lock active: avoid premature telemetry refresh
       }).catch(() => {
         sendMediaControl('toggle_play');
       });
