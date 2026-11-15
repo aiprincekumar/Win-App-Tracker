@@ -729,6 +729,10 @@
   /**
    * Scans and ensures all <iframe> elements have proper fullscreen permissions and attributes.
    * Resolves the "Full screen is unavailable. Learn More" embedded player error.
+   * 
+   * Prioritizes modern Permissions-Policy (allow="... fullscreen") and avoids setting redundant
+   * legacy allowfullscreen attributes when allow is supported, eliminating Chromium Blink
+   * precedence warnings ("Allow attribute will take precedence over 'allowfullscreen'").
    */
   function ensureIframeFullscreenSupport(root = document) {
     try {
@@ -742,23 +746,38 @@
 
       for (const iframe of iframes) {
         try {
-          // Set allowfullscreen attributes across standard and legacy vendor prefixes
-          if (!iframe.hasAttribute('allowfullscreen')) {
-            iframe.setAttribute('allowfullscreen', 'true');
-          }
-          if (!iframe.hasAttribute('webkitallowfullscreen')) {
-            iframe.setAttribute('webkitallowfullscreen', 'true');
-          }
-          if (!iframe.hasAttribute('mozallowfullscreen')) {
-            iframe.setAttribute('mozallowfullscreen', 'true');
-          }
+          const supportsAllow = 'allow' in iframe || (typeof HTMLIFrameElement !== 'undefined' && 'allow' in HTMLIFrameElement.prototype);
+          if (supportsAllow) {
+            // Remove redundant legacy attributes first to prevent Blink from emitting:
+            // "Allow attribute will take precedence over 'allowfullscreen'."
+            if (iframe.hasAttribute('allowfullscreen')) {
+              iframe.removeAttribute('allowfullscreen');
+            }
+            if (iframe.hasAttribute('webkitallowfullscreen')) {
+              iframe.removeAttribute('webkitallowfullscreen');
+            }
+            if (iframe.hasAttribute('mozallowfullscreen')) {
+              iframe.removeAttribute('mozallowfullscreen');
+            }
 
-          // Ensure Permissions-Policy / allow attribute includes 'fullscreen'
-          const existingAllow = iframe.getAttribute('allow') || '';
-          if (!existingAllow) {
-            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-          } else if (!/\bfullscreen\b/i.test(existingAllow)) {
-            iframe.setAttribute('allow', `${existingAllow.trim().replace(/;$/, '')}; fullscreen`);
+            // Prioritize modern Permissions-Policy / allow attribute with fullscreen
+            const existingAllow = iframe.getAttribute('allow') || '';
+            if (!existingAllow) {
+              iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+            } else if (!/\bfullscreen\b/i.test(existingAllow)) {
+              iframe.setAttribute('allow', `${existingAllow.trim().replace(/;$/, '')}; fullscreen`);
+            }
+          } else {
+            // Fallback for legacy browsers without Permissions Policy (allow attribute) support
+            if (!iframe.hasAttribute('allowfullscreen')) {
+              iframe.setAttribute('allowfullscreen', 'true');
+            }
+            if (!iframe.hasAttribute('webkitallowfullscreen')) {
+              iframe.setAttribute('webkitallowfullscreen', 'true');
+            }
+            if (!iframe.hasAttribute('mozallowfullscreen')) {
+              iframe.setAttribute('mozallowfullscreen', 'true');
+            }
           }
         } catch (_) {}
       }

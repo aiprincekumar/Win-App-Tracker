@@ -52,21 +52,27 @@
     }
   } catch (_) {}
 
-  // Hook Document.prototype.createElement to inject allowfullscreen & allow="... fullscreen" onto dynamic iframes
+  // Hook Document.prototype.createElement to inject allow="... fullscreen" onto dynamic iframes with legacy fallback
   try {
     const origCreateElement = Document.prototype.createElement;
     Document.prototype.createElement = function(tagName, options) {
       const element = origCreateElement.call(this, tagName, options);
       if (tagName && typeof tagName === 'string' && tagName.toLowerCase() === 'iframe') {
         try {
-          element.setAttribute('allowfullscreen', 'true');
-          element.setAttribute('webkitallowfullscreen', 'true');
-          element.setAttribute('mozallowfullscreen', 'true');
-          const curAllow = element.getAttribute('allow') || '';
-          if (!curAllow) {
-            element.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-          } else if (!/\bfullscreen\b/i.test(curAllow)) {
-            element.setAttribute('allow', `${curAllow.trim().replace(/;$/, '')}; fullscreen`);
+          const supportsAllow = 'allow' in element || (typeof HTMLIFrameElement !== 'undefined' && 'allow' in HTMLIFrameElement.prototype);
+          if (supportsAllow) {
+            // Prioritize modern Permissions-Policy / allow attribute with fullscreen
+            const curAllow = element.getAttribute('allow') || '';
+            if (!curAllow) {
+              element.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+            } else if (!/\bfullscreen\b/i.test(curAllow)) {
+              element.setAttribute('allow', `${curAllow.trim().replace(/;$/, '')}; fullscreen`);
+            }
+          } else {
+            // Legacy fallback when Permissions Policy (allow attribute) is unsupported
+            element.setAttribute('allowfullscreen', 'true');
+            element.setAttribute('webkitallowfullscreen', 'true');
+            element.setAttribute('mozallowfullscreen', 'true');
           }
         } catch (_) {}
       }
