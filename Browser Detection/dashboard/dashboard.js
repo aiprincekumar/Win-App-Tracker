@@ -1949,31 +1949,62 @@ function exportFullJson() {
   showToast(t('toast_json_downloaded'));
 }
 
-function exportTimeTrackingCsv() {
-  if (!dashboardData || !dashboardData.activityData) return;
+/**
+ * Universal RFC 4180 compliant CSV cell escaper with CSV formula injection mitigation (OWASP).
+ * Handles null, undefined, special characters, newlines, commas, and double quotes.
+ * Mitigates DDE/CSV formula injection by prepending a single quote when string begins with [=+\-@\t\r].
+ *
+ * @param {*} val
+ * @returns {string}
+ */
+function escapeCsvCell(val) {
+  if (val === null || val === undefined) return '""';
+  let str = String(val);
+  // 1. CSV Formula Injection Defense (OWASP: DDE mitigation)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  // 2. RFC 4180 quote escaping
+  return '"' + str.replace(/"/g, '""') + '"';
+}
 
-  const actData = dashboardData.activityData;
+function exportTimeTrackingCsv(customData) {
+  const data = (customData && customData.activityData) ? customData : dashboardData;
+  if (!data || !data.activityData) return;
+
+  const actData = data.activityData;
   const domains = actData.domains || {};
-  const todayStr = dashboardData.todayStr || new Date().toISOString().split('T')[0];
+  const todayStr = data.todayStr || new Date().toISOString().split('T')[0];
 
-  const headers = ['Domain', 'Today Seconds', 'Today Formatted', 'Total Seconds', 'Total Formatted', 'Sessions Count', 'Last Active Timestamp'];
-  const rows = [headers];
+  const headers = [
+    'Domain',
+    'Today Seconds',
+    'Today Formatted',
+    'Total Seconds',
+    'Total Formatted',
+    'Sessions Count',
+    'Last Active'
+  ].map(escapeCsvCell);
+
+  const rows = [headers.join(',')];
 
   for (const [dom, obj] of Object.entries(domains)) {
-    const todaySec = (obj.days && obj.days[todayStr]) ? obj.days[todayStr].seconds : 0;
-    const totalSec = obj.totalSeconds || 0;
-    rows.push([
-      `"${dom}"`,
+    const todaySec = (obj.days && obj.days[todayStr]) ? (Number(obj.days[todayStr].seconds) || 0) : 0;
+    const totalSec = Number(obj.totalSeconds) || 0;
+    const sessionCount = Number(obj.sessionCount) || 1;
+    const row = [
+      escapeCsvCell(dom),
       todaySec,
-      `"${formatDuration(todaySec)}"`,
+      escapeCsvCell(formatDuration(todaySec)),
       totalSec,
-      `"${formatDuration(totalSec)}"`,
-      obj.sessionCount || 1,
-      `"${formatTimestamp(obj.lastActive)}"`
-    ]);
+      escapeCsvCell(formatDuration(totalSec)),
+      sessionCount,
+      escapeCsvCell(formatTimestamp(obj.lastActive))
+    ];
+    rows.push(row.join(','));
   }
 
-  const csvContent = rows.map(r => r.join(',')).join('\n');
+  const csvContent = '\uFEFF' + rows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1984,29 +2015,48 @@ function exportTimeTrackingCsv() {
   showToast(t('toast_tracking_csv_downloaded'));
 }
 
-function exportMediaHistoryCsv() {
-  const history = mediaHistoryData || [];
-  const headers = ['ID', 'Title', 'Platform', 'Domain', 'URL', 'Watch Duration (sec)', 'Watch Duration Formatted', 'Avg Volume (%)', 'Peak Volume (%)', 'Low Volume (%)', 'Resolution', 'Timestamp'];
-  const rows = [headers];
+function exportMediaHistoryCsv(customHistory) {
+  const history = Array.isArray(customHistory) ? customHistory : (mediaHistoryData || []);
+  const headers = [
+    'ID',
+    'Title',
+    'Platform',
+    'Domain',
+    'URL',
+    'Watch Duration (sec)',
+    'Watch Duration Formatted',
+    'Avg Volume (%)',
+    'Peak Volume (%)',
+    'Low Volume (%)',
+    'Resolution',
+    'Timestamp'
+  ].map(escapeCsvCell);
+
+  const rows = [headers.join(',')];
 
   history.forEach(it => {
-    rows.push([
-      `"${it.id || ''}"`,
-      `"${(it.title || '').replace(/"/g, '""')}"`,
-      `"${it.platform || ''}"`,
-      `"${it.domain || ''}"`,
-      `"${it.url || ''}"`,
-      it.watchDuration || 0,
-      `"${formatDuration(it.watchDuration)}"`,
-      it.averageVolume !== undefined ? it.averageVolume : 100,
-      it.peakVolume !== undefined ? it.peakVolume : 100,
-      it.lowVolume !== undefined ? it.lowVolume : 100,
-      `"${it.resolution || ''}"`,
-      `"${formatTimestamp(it.timestamp)}"`
-    ]);
+    const watchSec = Number(it.watchDuration) || 0;
+    const avgVol = it.averageVolume !== undefined ? Number(it.averageVolume) : 100;
+    const peakVol = it.peakVolume !== undefined ? Number(it.peakVolume) : 100;
+    const lowVol = it.lowVolume !== undefined ? Number(it.lowVolume) : 100;
+    const row = [
+      escapeCsvCell(it.id || ''),
+      escapeCsvCell(it.title || ''),
+      escapeCsvCell(it.platform || ''),
+      escapeCsvCell(it.domain || ''),
+      escapeCsvCell(it.url || ''),
+      watchSec,
+      escapeCsvCell(formatDuration(watchSec)),
+      avgVol,
+      peakVol,
+      lowVol,
+      escapeCsvCell(it.resolution || ''),
+      escapeCsvCell(formatTimestamp(it.timestamp))
+    ];
+    rows.push(row.join(','));
   });
 
-  const csvContent = rows.map(r => r.join(',')).join('\n');
+  const csvContent = '\uFEFF' + rows.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3250,6 +3300,9 @@ if (typeof module !== 'undefined' && module.exports) {
     populateSleepSettingsForm,
     saveDashboardSettings,
     saveSleepSettings,
-    cachedSettings
+    cachedSettings,
+    escapeCsvCell,
+    exportTimeTrackingCsv,
+    exportMediaHistoryCsv
   };
 }
