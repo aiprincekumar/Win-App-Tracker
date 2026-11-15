@@ -3368,6 +3368,7 @@ function setupEventListeners() {
   const btnRewind = document.getElementById('btnCtrlRewind');
   if (btnRewind) {
     btnRewind.addEventListener('click', () => {
+      lastProgressDragTime = Date.now();
       if (activeMediaCached && typeof activeMediaCached.currentTime === 'number') {
         activeMediaCached.currentTime = Math.max(0, activeMediaCached.currentTime - 10);
         renderMediaCard({ primaryMedia: activeMediaCached });
@@ -3403,7 +3404,7 @@ function setupEventListeners() {
             }
           }
         }).then(() => {
-          setTimeout(refreshDashboard, 180);
+          // Optimistic cooldown lock active: avoid premature telemetry refresh
         }).catch(() => {
           sendMediaControl('seek_relative', { offsetSeconds: -10 });
         });
@@ -3416,6 +3417,7 @@ function setupEventListeners() {
   const btnForward = document.getElementById('btnCtrlForward');
   if (btnForward) {
     btnForward.addEventListener('click', () => {
+      lastProgressDragTime = Date.now();
       if (activeMediaCached && typeof activeMediaCached.currentTime === 'number') {
         activeMediaCached.currentTime = activeMediaCached.currentTime + 10;
         renderMediaCard({ primaryMedia: activeMediaCached });
@@ -3451,7 +3453,7 @@ function setupEventListeners() {
             }
           }
         }).then(() => {
-          setTimeout(refreshDashboard, 180);
+          // Optimistic cooldown lock active: avoid premature telemetry refresh
         }).catch(() => {
           sendMediaControl('seek_relative', { offsetSeconds: 10 });
         });
