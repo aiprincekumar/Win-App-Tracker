@@ -4,9 +4,10 @@
 > **दस्तावेज़ प्रकार (Document Type):** Local Project Feature Memory & Diagnostic Matrix (Rule 20 & 23)  
 > **प्रोजेक्ट पाथ (Project Path):** [`c:\Users\Atul Verma\Desktop\Win App Tracker\Browser Detection`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection)  
 > **अंतिम सिंक्रोनाइज़ेशन (Last Synchronized):** 2026-11-16  
-> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE04-QA`
-> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Dashboard Phase 4: Bilingual i18n Parity & Centralized Dictionary Expansion certified Grade A+ with 100% test pass rate across all 6 suites)
+> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261116-IPC-RESTORE-PHASE3`
+> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Unconditional IPC Media Control Dispatch & Fullscreen Linkage certified Grade A+ with 100% test pass rate across all 8 major test suites)
 > **संबंधित दस्तावेज़ (Associated Deliverables):**  
+> - अनकंडीशनल मीडिया कंट्रोल आईपीसी डॉसियर: [`temp_prompt/unconditional_media_control_ipc/INDEX.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/temp_prompt/unconditional_media_control_ipc/INDEX.md)  
 > - काम न करने वाले फ़ंक्शन की सूची (Popup): [`popup_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_non_working_functions.md)  
 > - फेज़-वाइज़ कार्यान्वयन ब्लूप्रिंट (Popup): [`popup_phase_wise_plan.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_phase_wise_plan.md)  
 > - काम न करने वाले फ़ंक्शन की सूची (Dashboard): [`dashboard_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_non_working_functions.md)  
@@ -16,11 +17,11 @@
 
 ## 🚦 0. लाइव एजेंट स्थिति एवं स्टेटफुल हैंडऑफ लेजर (Decision Gate State Ledger)
 
-- **सक्रिय कार्य आईडी (Task ID):** `TASK-DASHBOARD-PHASE04-QA`
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-UNCONDITIONAL-IPC-MEDIA-CONTROL-001`
 - **वर्तमान गेट अवस्था (Current State):** `COMPLETED`
-- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE04-QA` (Issued by Level 2 Manager, Closed by QA Subagent)
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261116-IPC-RESTORE-PHASE3` (Issued by Level 2 Manager, Closed by QA Subagent)
 - **सब-मैनेजर हार्टबीट (Sub Manager Heartbeat):** `HEALTHY` (Zero zombie processes, zero stalled tasks)
-- **अंतिम माइलस्टोन (Active Milestone):** Dashboard Phase 4: Bilingual i18n Parity & Centralized Dictionary Expansion (Defect 14) certified Grade A+ with 100% test pass rate across all 6 suites. Commit c5b91e8 certified, 199 symmetrical EN/HI keys, W3C Trusted Types CSP compliance, gitleaks 0 leaks.
+- **अंतिम माइलस्टोन (Active Milestone):** Unconditional IPC Media Control Dispatch & Overlay Fullscreen Linkage (Defect 14) certified Grade A+ with 100% test pass rate across all 8 major test suites (`tests/test_media_controls_and_fullscreen_fix.js`, `tests/test_volume_timeline_fullscreen_controls.js`, `tests/test_syntax_and_manifest_integrity.js`, `tests/test_fullscreen_controller.js`, `tests/test_theme_toggle.js`, `tests/test_light_mode_contrast_and_wcag.js`, `tests/test_four_pillar_hub_ui.js`, `tests/test_six_tab_popup_architecture.js`). Verified W3C Trusted Types CSP compliance, gitleaks 0 leaks detected.
 
 ---
 
@@ -69,6 +70,7 @@
 | **39** | `dashboard/dashboard.js`<br>`tests/test_dashboard_window_focus_and_hub_retry.js` | SQLite Data Hub कनेक्शन टूटने पर ऑटो-रीकनेक्ट बैकऑफ लैडर अनुपस्थित था, जिससे हब डेमन रीस्टार्ट होने पर भी डैशबोर्ड ऑफलाइन ही रहता था (डैशबोर्ड दोष 12)। | `HUB_RETRY_INTERVALS = [1000, 2000, 5000, 10000, 30000]` बैकऑफ लैडर लागू किया, `scheduleDataHubAutoReconnect` इंजन बनाया, `visibilitychange` लिस्नर से हिडन टैब पर टाइमर पॉज़ व विज़िबल पर तुरंत री-चेक जोड़ा, और रीकनेक्ट बटन पर तत्काल रीसेट किया। | SQLite Data Hub कनेक्शन टूटने पर बिना किसी सीपीयू या बैटरी ड्रेन के ऑटो-रीकनेक्ट होता है और टैब बैकग्राउंड में जाने पर टाइमर सुरक्षित पॉज़ होता है। | डैशबोर्ड फेज़ 3 | `node tests/test_dashboard_window_focus_and_hub_retry.js` |
 | **40** | `dashboard/dashboard.js`<br>`tests/test_dashboard_window_focus_and_hub_retry.js` | SQLite Data Hub ऑफलाइन होने पर मल्टी-ब्राउज़र फिल्टर (Edge, Brave, Opera) चुनने पर यूजर को कोई स्पष्टीकरण नहीं मिलता था कि डेटा क्यों खाली है (डैशबोर्ड दोष 13)। | `#browserFilterSelect` बदलने पर ऑफलाइन रिमोट ब्राउज़र के लिए द्विभाषी (EN/HI) गाइडेंस टोस्ट जोड़ा; `updateDataHubStatus` में नॉन-क्रोम ऑप्शन्स में `[Hub Offline]` एनोटेशन जोड़ा व हब एक्टिव होने पर क्लीन लेबल्स री-स्टोर किए। | हब ऑफलाइन होने पर रिमोट ब्राउज़र डेटा सिंक की आवश्यकता का स्पष्ट टोस्ट संदेश मिलता है और ड्रॉपडाउन में स्पष्ट ऑफलाइन स्थिति दिखाई देती है। | डैशबोर्ड फेज़ 3 | `node tests/test_dashboard_window_focus_and_hub_retry.js` |
 | **41** | `dashboard/dashboard.js`<br>`tests/test_dashboard_i18n_bilingual_parity.js` | स्लीप टाइमर व इनएक्टिविटी सेंटिनल कंट्रोल्स के टेक्स्ट व सेलेक्ट ऑप्शन्स `DASHBOARD_I18N` में अनुपस्थित थे, जिससे भाषा बदलने पर स्लीप कार्ड अंग्रेजी में ही रहता था (डैशबोर्ड दोष 14)। | `DASHBOARD_I18N.en` व `hi` में 36 नए कीज़ जोड़कर 199 कीज़ की पूर्ण सममित डिक्शनरी बनाई; `applyDashboardLanguage` में स्लीप कार्ड व सेलेक्ट ऑप्शन्स का डायनेमिक टेक्स्ट रिफ्लेक्शन जोड़ा; 0 innerHTML W3C CSP अनुपालन बनाए रखा। | भाषा टॉगल (EN <-> HI) करने पर पूरा स्लीप सेटिंग्स कार्ड, हेडर्स, सबटाइटल्स, लेबल्स, हेल्प टेक्स्ट व सेलेक्ट ऑप्शन्स शुद्ध हिंदी/अंग्रेजी में तुरंत अपडेट होते हैं, बिना मान बदले। | डैशबोर्ड फेज़ 4 | `node tests/test_dashboard_i18n_bilingual_parity.js` |
+| **42** | `popup/popup.js`<br>`tests/test_media_controls_and_fullscreen_fix.js` | `sendMediaControl` was trapped inside `.catch()` of `browserAPI.scripting.executeScript`, which resolved without error, preventing IPC execution. `allFrames: true` caused cross-frame toggle race conditions. | Unconditional `sendMediaControl` IPC dispatch, top-frame targeting (`target: { tabId }`), on-video overlay button click integration for fullscreen, and comprehensive runtime functional mock test suite. | All first-row media controls and fullscreen button work reliably via unconditional IPC dispatch + top-frame DOM execution with zero cross-frame race conditions. | Phase 1 & 2 | Tests 1-9 in `tests/test_media_controls_and_fullscreen_fix.js` passing with exit code 0. |
 
 ---
 

@@ -169,7 +169,7 @@ console.log('\nTest 4: popup/popup.js Controls Logic Verification');
   assert(popupJs.includes('lastFullscreenClick'), 'popup.js must have click debounce for fullscreen');
   assert(popupJs.includes('target.requestFullscreen'), 'popup.js executeScript must include requestFullscreen');
   assert(popupJs.includes("key: 'f', code: 'KeyF'"), 'popup.js must include KeyF');
-  assert(popupJs.includes("sendMediaControl('toggle_fullscreen')"), 'popup.js must have fallback toggle_fullscreen');
+  assert(popupJs.includes("sendMediaControl('toggle_fullscreen'"), 'popup.js must have fallback toggle_fullscreen');
 
   console.log('  ✅ popup.js timeline dragging, volume control, 0ms scripting injection, and snapback guards verified');
 }

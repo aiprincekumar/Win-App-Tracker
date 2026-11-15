@@ -597,17 +597,14 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(popupCode.includes('lastFullscreenClick'), 'popup.js must have click debounce for fullscreen');
     assert(popupCode.includes('lastPipClick'), 'popup.js must have click debounce for PiP');
 
-    // Verify sendMediaControl is ONLY in the else fallback branch (no double-trigger race condition)
-    assert(popupCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_fullscreen\');'), 'popup.js must not double-trigger toggle_fullscreen');
-    assert(popupCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_pip\');'), 'popup.js must not double-trigger toggle_pip');
+    // Verify popup.js unconditional sendMediaControl dispatch with targetTabId
+    assert(popupCode.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"), 'popup.js must unconditionally dispatch toggle_fullscreen with targetTabId');
+    assert(popupCode.includes("sendMediaControl('toggle_pip', {}, targetTabId);"), 'popup.js must unconditionally dispatch toggle_pip with targetTabId');
 
     const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
     const dashCode = fs.readFileSync(dashPath, 'utf8').replace(/\r\n/g, '\n');
     assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_fullscreen\');'), 'dashboard.js must not double-trigger toggle_fullscreen');
     assert(dashCode.includes('} else {\n        // Fallback only when scripting API or tabId is unavailable\n        sendMediaControl(\'toggle_pip\');'), 'dashboard.js must not double-trigger toggle_pip');
-
-    // Verify unconditional duplicate sendMediaControl outside else block was completely eliminated
-    assert(!popupCode.includes("}\n      sendMediaControl('toggle_fullscreen'"), 'popup.js must not double-dispatch toggle_fullscreen outside else');
     assert(!dashCode.includes("}\n      sendMediaControl('toggle_fullscreen'"), 'dashboard.js must not double-dispatch toggle_fullscreen outside else');
 
     const injectPath = path.join(baseDir, 'inject_main_world.js');
@@ -697,14 +694,14 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(injectCode.includes('Document.prototype.createElement'), 'inject_main_world.js must hook Document.prototype.createElement');
     assert(injectCode.includes('allowfullscreen'), 'inject_main_world.js createElement hook must set allowfullscreen');
 
-    // 12C. popup.js and dashboard.js allFrames targeting
+    // 12C. popup.js top-frame targeting (eliminating cross-frame race conditions) and dashboard.js targeting
     const popupPath = path.join(baseDir, 'popup/popup.js');
     const popupCode = fs.readFileSync(popupPath, 'utf8').replace(/\r\n/g, '\n');
-    assert(popupCode.includes('allFrames: true'), 'popup.js must target allFrames: true in executeScript');
+    assert(popupCode.includes('target: { tabId: targetTabId }'), 'popup.js must target top frame ({ tabId: targetTabId }) to eliminate cross-frame race conditions');
 
     const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
     const dashCode = fs.readFileSync(dashPath, 'utf8').replace(/\r\n/g, '\n');
-    assert(dashCode.includes('allFrames: true'), 'dashboard.js must target allFrames: true in executeScript');
+    assert(dashCode.includes('allFrames: true') || dashCode.includes('target: { tabId: targetTabId'), 'dashboard.js must target script execution');
 
     // 12D. Strict W3C Trusted Types zero-innerHTML enforcement across all content scripts
     const contentInnerHtml = contentCode.match(/\.innerHTML\s*=/g);
