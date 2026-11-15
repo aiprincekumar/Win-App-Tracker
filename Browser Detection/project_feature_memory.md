@@ -4,8 +4,8 @@
 > **दस्तावेज़ प्रकार (Document Type):** Local Project Feature Memory & Diagnostic Matrix (Rule 20 & 23)  
 > **प्रोजेक्ट पाथ (Project Path):** [`c:\Users\Atul Verma\Desktop\Win App Tracker\Browser Detection`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection)  
 > **अंतिम सिंक्रोनाइज़ेशन (Last Synchronized):** 2026-11-16  
-> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE03-QA`
-> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Dashboard Phase 3: Window Focus Restoration & SQLite Hub Reconnect Resilience certified Grade A+ with 100% test pass rate across all 5 suites)
+> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE04-QA`
+> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Dashboard Phase 4: Bilingual i18n Parity & Centralized Dictionary Expansion certified Grade A+ with 100% test pass rate across all 6 suites)
 > **संबंधित दस्तावेज़ (Associated Deliverables):**  
 > - काम न करने वाले फ़ंक्शन की सूची (Popup): [`popup_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_non_working_functions.md)  
 > - फेज़-वाइज़ कार्यान्वयन ब्लूप्रिंट (Popup): [`popup_phase_wise_plan.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_phase_wise_plan.md)  
@@ -16,11 +16,11 @@
 
 ## 🚦 0. लाइव एजेंट स्थिति एवं स्टेटफुल हैंडऑफ लेजर (Decision Gate State Ledger)
 
-- **सक्रिय कार्य आईडी (Task ID):** `TASK-DASHBOARD-PHASE03-QA`
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-DASHBOARD-PHASE04-QA`
 - **वर्तमान गेट अवस्था (Current State):** `COMPLETED`
-- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE03-QA` (Issued by Level 2 Manager, Closed by QA Subagent)
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE04-QA` (Issued by Level 2 Manager, Closed by QA Subagent)
 - **सब-मैनेजर हार्टबीट (Sub Manager Heartbeat):** `HEALTHY` (Zero zombie processes, zero stalled tasks)
-- **अंतिम माइलस्टोन (Active Milestone):** Dashboard Phase 3: Window Focus Restoration & SQLite Hub Reconnect Resilience (Defects 11, 12, 13) certified Grade A+ with 100% test pass rate across all 5 suites. Commits d309986 and 1e019c7 certified, gitleaks 0 leaks.
+- **अंतिम माइलस्टोन (Active Milestone):** Dashboard Phase 4: Bilingual i18n Parity & Centralized Dictionary Expansion (Defect 14) certified Grade A+ with 100% test pass rate across all 6 suites. Commit c5b91e8 certified, 199 symmetrical EN/HI keys, W3C Trusted Types CSP compliance, gitleaks 0 leaks.
 
 ---
 
@@ -68,6 +68,7 @@
 | **38** | `background.js`<br>`tests/test_dashboard_window_focus_and_hub_retry.js` | In `activateAndFocusTab`, focusing windowId only updated `{ focused: true }`. When the target window was minimized to taskbar, Chromium did not restore it to normal state, leaving the media tab hidden (डैशबोर्ड दोष 11)। | `activateAndFocusTab` में `browserAPI.windows.get(winId)` से विंडो स्थिति की जांच जोड़ी; यदि `state === 'minimized'` हो तो `{ state: 'normal', focused: true }` से विंडो री-स्टोर की, व सेफ फॉलबैक कैच ब्लॉक लगाया। | टास्कबार में मिनिमाइज्ड विंडो 'Jump to Tab' क्लिक करते ही तुरंत सामान्य आकार में अन-मिनिमाइज होकर स्क्रीन पर फोकस होती है। | डैशबोर्ड फेज़ 3 | `node tests/test_dashboard_window_focus_and_hub_retry.js` |
 | **39** | `dashboard/dashboard.js`<br>`tests/test_dashboard_window_focus_and_hub_retry.js` | SQLite Data Hub कनेक्शन टूटने पर ऑटो-रीकनेक्ट बैकऑफ लैडर अनुपस्थित था, जिससे हब डेमन रीस्टार्ट होने पर भी डैशबोर्ड ऑफलाइन ही रहता था (डैशबोर्ड दोष 12)। | `HUB_RETRY_INTERVALS = [1000, 2000, 5000, 10000, 30000]` बैकऑफ लैडर लागू किया, `scheduleDataHubAutoReconnect` इंजन बनाया, `visibilitychange` लिस्नर से हिडन टैब पर टाइमर पॉज़ व विज़िबल पर तुरंत री-चेक जोड़ा, और रीकनेक्ट बटन पर तत्काल रीसेट किया। | SQLite Data Hub कनेक्शन टूटने पर बिना किसी सीपीयू या बैटरी ड्रेन के ऑटो-रीकनेक्ट होता है और टैब बैकग्राउंड में जाने पर टाइमर सुरक्षित पॉज़ होता है। | डैशबोर्ड फेज़ 3 | `node tests/test_dashboard_window_focus_and_hub_retry.js` |
 | **40** | `dashboard/dashboard.js`<br>`tests/test_dashboard_window_focus_and_hub_retry.js` | SQLite Data Hub ऑफलाइन होने पर मल्टी-ब्राउज़र फिल्टर (Edge, Brave, Opera) चुनने पर यूजर को कोई स्पष्टीकरण नहीं मिलता था कि डेटा क्यों खाली है (डैशबोर्ड दोष 13)। | `#browserFilterSelect` बदलने पर ऑफलाइन रिमोट ब्राउज़र के लिए द्विभाषी (EN/HI) गाइडेंस टोस्ट जोड़ा; `updateDataHubStatus` में नॉन-क्रोम ऑप्शन्स में `[Hub Offline]` एनोटेशन जोड़ा व हब एक्टिव होने पर क्लीन लेबल्स री-स्टोर किए। | हब ऑफलाइन होने पर रिमोट ब्राउज़र डेटा सिंक की आवश्यकता का स्पष्ट टोस्ट संदेश मिलता है और ड्रॉपडाउन में स्पष्ट ऑफलाइन स्थिति दिखाई देती है। | डैशबोर्ड फेज़ 3 | `node tests/test_dashboard_window_focus_and_hub_retry.js` |
+| **41** | `dashboard/dashboard.js`<br>`tests/test_dashboard_i18n_bilingual_parity.js` | स्लीप टाइमर व इनएक्टिविटी सेंटिनल कंट्रोल्स के टेक्स्ट व सेलेक्ट ऑप्शन्स `DASHBOARD_I18N` में अनुपस्थित थे, जिससे भाषा बदलने पर स्लीप कार्ड अंग्रेजी में ही रहता था (डैशबोर्ड दोष 14)। | `DASHBOARD_I18N.en` व `hi` में 36 नए कीज़ जोड़कर 199 कीज़ की पूर्ण सममित डिक्शनरी बनाई; `applyDashboardLanguage` में स्लीप कार्ड व सेलेक्ट ऑप्शन्स का डायनेमिक टेक्स्ट रिफ्लेक्शन जोड़ा; 0 innerHTML W3C CSP अनुपालन बनाए रखा। | भाषा टॉगल (EN <-> HI) करने पर पूरा स्लीप सेटिंग्स कार्ड, हेडर्स, सबटाइटल्स, लेबल्स, हेल्प टेक्स्ट व सेलेक्ट ऑप्शन्स शुद्ध हिंदी/अंग्रेजी में तुरंत अपडेट होते हैं, बिना मान बदले। | डैशबोर्ड फेज़ 4 | `node tests/test_dashboard_i18n_bilingual_parity.js` |
 
 ---
 
@@ -89,13 +90,15 @@
 - **फेज़ 1 कार्यान्वयन टोकन (Phase 1 Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE01-QA` (Grade A+ Certified - Commit `10fa43c`)
 - **फेज़ 2 कार्यान्वयन टोकन (Phase 2 Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE02-QA` (Grade A+ Certified - Commit `93b3bd3`)
 - **फेज़ 3 कार्यान्वयन व क्यूए टोकन (Phase 3 Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE03-QA` (Grade A+ Certified - Commits `d309986`, `1e019c7`)
+- **फेज़ 4 कार्यान्वयन व क्यूए टोकन (Phase 4 Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE04-QA` (Grade A+ Certified - Commit `c5b91e8`)
 - **सत्यापित दस्तावेज (Deliverables):**
   1. [`dashboard_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_non_working_functions.md) (17 दोष, 44 कार्यरत फीचर्स, तुलनात्मक मैट्रिक्स)
   2. [`dashboard_phase_wise_plan.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_phase_wise_plan.md) (5-फेज़ तकनीकी ब्लूप्रिंट, कोड प्रक्रियाएं, टेस्ट गेट्स)
   3. [`tests/test_dashboard_sleep_settings_sync.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/tests/test_dashboard_sleep_settings_sync.js) (7 विस्तृत टेस्ट्स, 100% पास)
   4. [`tests/test_dashboard_csv_export_rfc4180.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/tests/test_dashboard_csv_export_rfc4180.js) (6 व्यापक सुइट्स, 100% पास)
   5. [`tests/test_dashboard_window_focus_and_hub_retry.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/tests/test_dashboard_window_focus_and_hub_retry.js) (6 व्यापक सुइट्स, 100% पास)
-- **कुल इंटरएक्टिव कंट्रोल्स:** 56 (54 कार्यरत + 3 रीकनेक्ट व विंडो रेजिलिएंस फीचर्स पूर्णतः प्रमाणित)
+  6. [`tests/test_dashboard_i18n_bilingual_parity.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/tests/test_dashboard_i18n_bilingual_parity.js) (7 व्यापक सुइट्स, 100% पास)
+- **कुल इंटरएक्टिव कंट्रोल्स:** 58 (54 कार्यरत + 3 रीकनेक्ट व विंडो रेजिलिएंस + 1 भाषा टॉगल व स्लीप सेलेक्ट ऑप्शन्स पैरिटी पूर्णतः प्रमाणित)
 - **फेज़ 1 समाधान स्थिति (Phase 1 Status - Defects 01-08 RESOLVED):**
   - ✅ **दोष 01:** डिफ़ॉल्ट स्लीप टाइमर चयनकर्ता (`#settingDefaultSleepDuration`) - `populateSleepSettingsForm()` बाउंड व सिंक।
   - ✅ **दोष 02:** ग्रेजुअल ऑडियो फेड-आउट टॉगल (`#settingSleepFadeToggle`) - स्टोरेज लोडिंग व टॉगल बाउंड।
@@ -112,6 +115,7 @@
   - ✅ **दोष 11:** मिनिमाइज्ड विंडो अन-मिनिमाइज व फोकस रेस्टोरेशन (`activateAndFocusTab`) - `browserAPI.windows.get` से `state === 'minimized'` की पहचान, `{ state: 'normal', focused: true }` से विंडो रिस्टोर व सेफ फॉलबैक कैच ब्लॉक सत्यापित।
   - ✅ **दोष 12:** SQLite Data Hub ऑटो-रीकनेक्ट बैकऑफ लैडर (`scheduleDataHubAutoReconnect`) - `HUB_RETRY_INTERVALS = [1000, 2000, 5000, 10000, 30000]` प्रोग्रेशन, `visibilitychange` पर बैकग्राउंड सीपीयू/बैटरी सेवर पॉज़ व विज़िबल पर तत्काल री-कनेक्ट सत्यापित।
   - ✅ **दोष 13:** मल्टी-ब्राउज़र फ़िल्टर ऑफलाइन गाइडेंस व द्विभाषी टोस्ट (`#browserFilterSelect`) - रिमोट ब्राउज़र्स पर `[Hub Offline]` एनोटेशन, हब कनेक्ट पर क्लीन लेबल रेस्टोरेशन, तथा ऑफलाइन चयन पर हिंदी/अंग्रेजी गाइडेंस टोस्ट पूर्णतः सत्यापित।
-- **आगामी फेज़ (Remaining 4 Defects):**
-  - फेज़ 4: द्विभाषी i18n पैरिटी व सेंट्रलाइज्ड डिक्शनरी विस्तार (दोष 14)
+- **फेज़ 4 समाधान स्थिति (Phase 4 Status - Defect 14 RESOLVED):**
+  - ✅ **दोष 14:** द्विभाषी i18n पैरिटी व स्लीप सेटिंग्स डिक्शनरी विस्तार (`DASHBOARD_I18N` & `applyDashboardLanguage`) - 199 सममित कीज़ (en/hi), 0 मिसिंग कीज़, 0 Devanagari स्क्रिप्ट इन English, 0 मिक्स्ड स्टेटस टोकन्स इन Hindi, सेलेक्ट ऑप्शन्स का डायनेमिक टेक्स्ट अपडेट (`updateSelectOptions` preserving option.value), और 100% W3C Trusted Types CSP अनुपालन (0 innerHTML) सत्यापित।
+- **आगामी फेज़ (Remaining 3 Defects):**
   - फेज़ 5: विजुअल एक्सेसिबिलिटी, लाइट थीम व ऑडियो लैब पैरिटी (दोष 15-17)
