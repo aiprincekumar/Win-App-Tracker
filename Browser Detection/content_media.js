@@ -1910,7 +1910,14 @@
       return true;
     }
 
-    // 3. Direct Media Action Fallback (when action is sent directly as type or action)
+    // 3. Dedicated SET_VOLUME Envelope (from background worker or popup)
+    if (msgType === 'SET_VOLUME' || msgAction === 'SET_VOLUME') {
+      const result = handleMediaControl('set_volume', message.data || { volume: message.volume, percent: message.percent });
+      sendResponse(result);
+      return true;
+    }
+
+    // 4. Direct Media Action Fallback (when action is sent directly as type or action)
     const KNOWN_MEDIA_ACTIONS = [
       'play', 'pause', 'toggle_play', 'seek_relative', 'seek_percent',
       'toggle_mute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
@@ -1919,15 +1926,8 @@
     ];
     if (KNOWN_MEDIA_ACTIONS.includes(msgAction) || KNOWN_MEDIA_ACTIONS.includes(msgType)) {
       const targetAction = KNOWN_MEDIA_ACTIONS.includes(msgAction) ? msgAction : msgType;
-      const targetData = message.data || (targetAction === 'set_volume' ? { volume: message.volume, percent: message.percent } : {});
+      const targetData = message.data || ((targetAction === 'set_volume' || targetAction === 'SET_VOLUME') ? { volume: message.volume, percent: message.percent } : {});
       const result = handleMediaControl(targetAction, targetData);
-      sendResponse(result);
-      return true;
-    }
-
-    // 4. Dedicated SET_VOLUME Envelope
-    if (msgType === 'SET_VOLUME' || msgAction === 'SET_VOLUME') {
-      const result = handleMediaControl('set_volume', message.data || { volume: message.volume, percent: message.percent });
       sendResponse(result);
       return true;
     }
