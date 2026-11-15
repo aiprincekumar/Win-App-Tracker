@@ -228,7 +228,7 @@ console.log('\nTest 6: Integration with content_media.js, inject_main_world.js &
   assert(injectCode.includes('window.__SentinelFullscreenController.toggle'), 'inject_main_world.js must delegate to window.__SentinelFullscreenController.toggle');
 
   // popup.js and dashboard.js integration
-  assert(popupCode.includes('window.__SentinelFullscreenController.toggle'), 'popup.js executeScript must delegate to window.__SentinelFullscreenController.toggle');
+  assert(popupCode.includes("sendMediaControl('toggle_fullscreen'"), 'popup.js must dispatch single authoritative toggle_fullscreen IPC');
   assert(dashCode.includes('window.__SentinelFullscreenController.toggle'), 'dashboard.js executeScript must delegate to window.__SentinelFullscreenController.toggle');
 
   console.log('  ✅ Seamless unified delegation to window.__SentinelFullscreenController across all scripts');

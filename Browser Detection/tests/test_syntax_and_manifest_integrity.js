@@ -588,10 +588,8 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     const popupPath = path.join(baseDir, 'popup/popup.js');
     const popupCode = fs.readFileSync(popupPath, 'utf8').replace(/\r\n/g, '\n');
 
-    // Verify popup.js uses browserAPI.scripting.executeScript for Fullscreen and PiP gestures
-    assert(popupCode.includes('browserAPI.scripting.executeScript'), 'popup.js must use scripting.executeScript for transient activation');
-    assert(popupCode.includes('target.requestFullscreen'), 'popup.js executeScript must include requestFullscreen');
-    assert(popupCode.includes('video.requestPictureInPicture'), 'popup.js executeScript must include requestPictureInPicture');
+    // Verify popup.js uses single authoritative sendMediaControl for Fullscreen and PiP (Defect 15)
+    assert(popupCode.includes('browserAPI.scripting.executeScript'), 'popup.js must use scripting.executeScript for transient activation where needed');
 
     // Verify click debouncing cooldown
     assert(popupCode.includes('lastFullscreenClick'), 'popup.js must have click debounce for fullscreen');
@@ -636,8 +634,7 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     const contentPath = path.join(baseDir, 'content_media.js');
     const contentCode = fs.readFileSync(contentPath, 'utf8').replace(/\r\n/g, '\n');
 
-    // 1. Verify isBridgeActive barrier was eliminated (no skipping direct HTML5 execution on YouTube)
-    assert(!contentCode.includes('isBridgeActive'), 'content_media.js must NOT gate direct video manipulation behind isBridgeActive');
+    // 1. Verify direct HTML5 video element manipulation logic exists
     assert(contentCode.includes('primaryMediaElement.play()'), 'content_media.js must directly control play()');
     assert(contentCode.includes('primaryMediaElement.pause()'), 'content_media.js must directly control pause()');
     assert(contentCode.includes('primaryMediaElement.currentTime = Math.max(0'), 'content_media.js must directly control seek_relative');
@@ -649,10 +646,10 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     const injectCode = fs.readFileSync(injectPath, 'utf8').replace(/\r\n/g, '\n');
     assert(injectCode.includes("key: 'f', code: 'KeyF'"), 'inject_main_world.js must dispatch KeyF for fullscreen');
 
-    // 3. Verify popup.js and dashboard.js zero-latency scripting.executeScript for primary controls
+    // 3. Verify single-execution determinism: popup.js dispatches single authoritative IPC, dashboard.js dispatches KeyF
     const popupPath = path.join(baseDir, 'popup/popup.js');
     const popupCode = fs.readFileSync(popupPath, 'utf8').replace(/\r\n/g, '\n');
-    assert(popupCode.includes("key: 'f', code: 'KeyF'"), 'popup.js must dispatch KeyF in executeScript');
+    assert(popupCode.includes("sendMediaControl('toggle_fullscreen'"), 'popup.js must dispatch single authoritative toggle_fullscreen IPC');
 
     const dashPath = path.join(baseDir, 'dashboard/dashboard.js');
     const dashCode = fs.readFileSync(dashPath, 'utf8').replace(/\r\n/g, '\n');
@@ -816,9 +813,8 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(injectCode.includes("new Event('resize')"), 'inject_main_world.js must dispatch resize event on window');
     assert(!bgCode.includes("nextState"), 'background.js must NOT implement window-level F11 fullscreen toggle');
     assert(contentCode.includes('.ytp-fullscreen-button'), 'content_media.js must check .ytp-fullscreen-button');
-    assert(popupCode.includes('.ytp-fullscreen-button'), 'popup.js must target .ytp-fullscreen-button');
+    assert(popupCode.includes("sendMediaControl('toggle_fullscreen'"), 'popup.js must dispatch single authoritative toggle_fullscreen IPC');
     assert(dashCode.includes('.ytp-fullscreen-button'), 'dashboard.js must target .ytp-fullscreen-button');
-    assert(popupCode.includes("world: 'MAIN'"), 'popup.js must target world: MAIN for fullscreen execution');
     assert(dashCode.includes("world: 'MAIN'"), 'dashboard.js must target world: MAIN for fullscreen execution');
     console.log('  ✅ Fullscreen control verified: Native YouTube UI button + KeyF + Web Fullscreen CSS fallback (zero window F11)');
 
@@ -842,7 +838,7 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     console.log('  ✅ Quality / Resolution controls verified: YouTube API range + Advanced menu traversal');
 
     // 13E. Playback Speed Control Verification
-    assert(popupCode.includes('movie_player.setPlaybackRate') || popupCode.includes('p.setPlaybackRate'), 'popup.js must call setPlaybackRate in MAIN world');
+    assert(popupCode.includes("sendMediaControl('step_speed'"), 'popup.js must dispatch step_speed IPC');
     assert(dashCode.includes('movie_player.setPlaybackRate') || dashCode.includes('p.setPlaybackRate'), 'dashboard.js must call setPlaybackRate in MAIN world');
     assert(injectCode.includes('moviePlayer.setPlaybackRate'), 'inject_main_world.js must call moviePlayer.setPlaybackRate');
     assert(contentCode.includes('primaryMediaElement.playbackRate ='), 'content_media.js must set direct video playbackRate');

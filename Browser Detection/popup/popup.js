@@ -2425,7 +2425,7 @@ function setupEventListeners() {
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
         try {
           const results = await browserAPI.scripting.executeScript({
-            target: { tabId: targetTabId },
+            target: { tabId: targetTabId, allFrames: true },
             func: () => {
               try {
                 const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
