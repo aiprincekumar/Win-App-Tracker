@@ -274,6 +274,7 @@ const DASHBOARD_I18N = {
     
     // Toasts
     toast_settings_saved: 'Settings saved and synchronized successfully',
+    toast_sleep_saved: 'Sleep timer settings saved and synchronized successfully',
     toast_refreshed: 'Dashboard data refreshed successfully',
     toast_hud_already: 'HUD is already connected',
     toast_hud_launching: 'Launching Desktop HUD...',
@@ -474,6 +475,7 @@ const DASHBOARD_I18N = {
     
     // Toasts
     toast_settings_saved: 'सेटिंग्स सफलतापूर्वक सहेजी गईं और एक्सटेंशन से सिंक हो गईं',
+    toast_sleep_saved: 'स्लीप टाइमर सेटिंग्स सफलतापूर्वक सहेजी गईं और सिंक हो गईं',
     toast_refreshed: 'डैशबोर्ड डेटा पूर्णतः रीफ्रेश हो गया',
     toast_hud_already: 'HUD पहले से कनेक्टेड है',
     toast_hud_launching: 'Video Detector HUD लॉन्च हो रहा है...',
@@ -557,7 +559,15 @@ let cachedSettings = {
   notificationsEnabled: true,
   historyRetentionDays: 60,
   theme: 'dark',
-  language: 'en'
+  language: 'en',
+  // Sleep Timer & Inactivity Subsystem (Phase 1)
+  defaultDurationMinutes: 30,
+  enableAudioFadeOut: true,
+  fadeDurationSeconds: 30,
+  enableInactivityAutoSleep: false,
+  inactivityThresholdMinutes: 15,
+  showBadgeCountdown: true,
+  pulseOnCritical: true
 };
 
 let domainSearchQuery = '';
@@ -1740,6 +1750,69 @@ function renderMediaHistoryTable(history) {
 // TAB C: Settings & Data Management
 // =============================================================================
 
+function populateSleepSettingsForm(settings) {
+  if (!settings) return;
+
+  const sleepDurSelect = document.getElementById('settingDefaultSleepDuration');
+  const sleepFadeToggle = document.getElementById('settingSleepFadeToggle');
+  const fadeDurSelect = document.getElementById('settingFadeDuration');
+  const inactSleepToggle = document.getElementById('settingInactivitySleepToggle');
+  const inactThreshSelect = document.getElementById('settingInactivityThreshold');
+  const badgeCountToggle = document.getElementById('settingBadgeCountdownToggle');
+
+  const defaultDuration = settings.defaultDurationMinutes !== undefined 
+    ? settings.defaultDurationMinutes 
+    : settings.defaultSleepDuration;
+  if (sleepDurSelect && defaultDuration !== undefined) {
+    sleepDurSelect.value = String(defaultDuration);
+    cachedSettings.defaultDurationMinutes = parseInt(defaultDuration, 10) || 30;
+  }
+
+  const fadeEnabled = settings.enableAudioFadeOut !== undefined 
+    ? settings.enableAudioFadeOut 
+    : settings.sleepFadeEnabled;
+  if (sleepFadeToggle && fadeEnabled !== undefined) {
+    sleepFadeToggle.checked = Boolean(fadeEnabled);
+    cachedSettings.enableAudioFadeOut = Boolean(fadeEnabled);
+  }
+
+  const fadeDuration = settings.fadeDurationSeconds !== undefined 
+    ? settings.fadeDurationSeconds 
+    : settings.sleepFadeDuration;
+  if (fadeDurSelect && fadeDuration !== undefined) {
+    fadeDurSelect.value = String(fadeDuration);
+    cachedSettings.fadeDurationSeconds = parseInt(fadeDuration, 10) || 30;
+  }
+
+  const inactEnabled = settings.enableInactivityAutoSleep !== undefined 
+    ? settings.enableInactivityAutoSleep 
+    : settings.inactivitySleepEnabled;
+  if (inactSleepToggle && inactEnabled !== undefined) {
+    inactSleepToggle.checked = Boolean(inactEnabled);
+    cachedSettings.enableInactivityAutoSleep = Boolean(inactEnabled);
+  }
+
+  const inactThreshold = settings.inactivityThresholdMinutes !== undefined 
+    ? settings.inactivityThresholdMinutes 
+    : settings.inactivityThreshold;
+  if (inactThreshSelect && inactThreshold !== undefined) {
+    inactThreshSelect.value = String(inactThreshold);
+    cachedSettings.inactivityThresholdMinutes = parseInt(inactThreshold, 10) || 15;
+  }
+
+  const badgeCountdown = settings.showBadgeCountdown !== undefined 
+    ? settings.showBadgeCountdown 
+    : settings.badgeCountdownEnabled;
+  if (badgeCountToggle && badgeCountdown !== undefined) {
+    badgeCountToggle.checked = Boolean(badgeCountdown);
+    cachedSettings.showBadgeCountdown = Boolean(badgeCountdown);
+  }
+
+  if (settings.pulseOnCritical !== undefined) {
+    cachedSettings.pulseOnCritical = Boolean(settings.pulseOnCritical);
+  }
+}
+
 function populateSettingsForm(settings) {
   if (!settings) return;
   cachedSettings = { ...cachedSettings, ...settings };
@@ -1769,6 +1842,9 @@ function populateSettingsForm(settings) {
   if (retSelect && settings.historyRetentionDays) {
     retSelect.value = String(settings.historyRetentionDays);
   }
+
+  // Hydrate sleep controls if sleep configuration is present in payload
+  populateSleepSettingsForm(settings);
 }
 
 function saveDashboardSettings() {
@@ -1791,9 +1867,13 @@ function saveDashboardSettings() {
     theme: 'dark'
   };
 
+  // Preserve sleep settings from cachedSettings
   cachedSettings = { ...cachedSettings, ...newSettings };
 
-  browserAPI.storage.local.set({ language: selectedLang });
+  browserAPI.storage.local.set({ 
+    language: selectedLang,
+    media_sentinel_settings: cachedSettings
+  });
 
   safeRuntimeSendMessage({
     type: 'UPDATE_SETTINGS',
@@ -1805,6 +1885,41 @@ function saveDashboardSettings() {
     } else {
       showToast(t('toast_settings_saved'));
     }
+  });
+}
+
+function saveSleepSettings() {
+  const sleepDurSelect = document.getElementById('settingDefaultSleepDuration');
+  const sleepFadeToggle = document.getElementById('settingSleepFadeToggle');
+  const fadeDurSelect = document.getElementById('settingFadeDuration');
+  const inactSleepToggle = document.getElementById('settingInactivitySleepToggle');
+  const inactThreshSelect = document.getElementById('settingInactivityThreshold');
+  const badgeCountToggle = document.getElementById('settingBadgeCountdownToggle');
+
+  const sleepSettings = {
+    defaultDurationMinutes: parseInt(sleepDurSelect ? sleepDurSelect.value : 30, 10) || 30,
+    enableAudioFadeOut: sleepFadeToggle ? sleepFadeToggle.checked : true,
+    fadeDurationSeconds: parseInt(fadeDurSelect ? fadeDurSelect.value : 30, 10) || 30,
+    enableInactivityAutoSleep: inactSleepToggle ? inactSleepToggle.checked : false,
+    inactivityThresholdMinutes: parseInt(inactThreshSelect ? inactThreshSelect.value : 15, 10) || 15,
+    showBadgeCountdown: badgeCountToggle ? badgeCountToggle.checked : true,
+    pulseOnCritical: cachedSettings.pulseOnCritical !== undefined ? cachedSettings.pulseOnCritical : true
+  };
+
+  // Update cachedSettings
+  cachedSettings = { ...cachedSettings, ...sleepSettings };
+
+  // Persist to local storage under sentinel_sleep_settings and media_sentinel_settings
+  browserAPI.storage.local.set({
+    sentinel_sleep_settings: sleepSettings,
+    media_sentinel_settings: cachedSettings
+  }, () => {
+    safeRuntimeSendMessage({
+      type: 'UPDATE_SLEEP_SETTINGS',
+      settings: sleepSettings
+    }, (res) => {
+      showToast(t('toast_sleep_saved') || 'Sleep timer settings saved and synchronized');
+    });
   });
 }
 
@@ -2130,6 +2245,9 @@ function refreshDashboard(forceRefresh = false) {
       // Settings
       if (response.settings) {
         populateSettingsForm(response.settings);
+      }
+      if (response.sleepTimerSettings) {
+        populateSleepSettingsForm(response.sleepTimerSettings);
       }
 
       // If Standalone Data Hub is connected, query analytics for the selected browser filter
@@ -2997,6 +3115,11 @@ function setupEventListeners() {
     btnSaveSettings.addEventListener('click', saveDashboardSettings);
   }
 
+  const btnSaveSleep = document.getElementById('btnSaveSleepSettings');
+  if (btnSaveSleep) {
+    btnSaveSleep.addEventListener('click', saveSleepSettings);
+  }
+
   // 10. Export Buttons
   const btnExpJson = document.getElementById('btnExportFullJson');
   if (btnExpJson) btnExpJson.addEventListener('click', exportFullJson);
@@ -3057,6 +3180,9 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {
       applyDashboardLanguage(changes.media_sentinel_settings.newValue.language);
     }
+    if (changes.sentinel_sleep_settings && changes.sentinel_sleep_settings.newValue) {
+      populateSleepSettingsForm(changes.sentinel_sleep_settings.newValue);
+    }
     refreshDashboard();
   }
 });
@@ -3066,13 +3192,19 @@ document.addEventListener('DOMContentLoaded', () => {
   startLiveClock();
   setupEventListeners();
 
-  // Load language preference, browser filter, tracking mode, and category from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
+  // Load language preference, browser filter, tracking mode, category, and sleep settings from storage
+  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'sentinel_sleep_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
     let lang = 'en';
     if (res && res.language) {
       lang = res.language;
     } else if (res && res.media_sentinel_settings && res.media_sentinel_settings.language) {
       lang = res.media_sentinel_settings.language;
+    }
+    if (res && res.media_sentinel_settings) {
+      populateSettingsForm(res.media_sentinel_settings);
+    }
+    if (res && res.sentinel_sleep_settings) {
+      populateSleepSettingsForm(res.sentinel_sleep_settings);
     }
     if (res && res.selected_browser_filter) {
       selectedBrowser = res.selected_browser_filter;
@@ -3111,3 +3243,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    populateSettingsForm,
+    populateSleepSettingsForm,
+    saveDashboardSettings,
+    saveSleepSettings,
+    cachedSettings
+  };
+}
