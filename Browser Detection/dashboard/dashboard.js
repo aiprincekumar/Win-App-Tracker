@@ -551,6 +551,11 @@ function isInternalDomain(domain) {
 let dataHubConnected = false;
 let dataHubAnalytics = null;
 let detectedBrowserType = 'chrome';
+
+// SQLite Data Hub Auto-Reconnect Backoff Ladder (Phase 3 - Defect 12)
+let hubReconnectAttempts = 0;
+let hubReconnectTimer = null;
+const HUB_RETRY_INTERVALS = [1000, 2000, 5000, 10000, 30000];
 let cachedSettings = {
   idleThresholdSeconds: 60,
   wsUrl: 'ws://127.0.0.1:65432',
@@ -876,12 +881,19 @@ function updateHUDStatus(status) {
 }
 
 function updateDataHubStatus(isConnected, registeredBrowsers = []) {
+  dataHubConnected = Boolean(isConnected);
   const badge = document.getElementById('dataHubBadge');
   const badgeText = document.getElementById('dataHubBadgeText');
   const sideDot = document.getElementById('dataHubSidebarDot');
   const sideLabel = document.getElementById('dataHubSidebarLabel');
 
   if (isConnected) {
+    hubReconnectAttempts = 0;
+    if (hubReconnectTimer) {
+      clearTimeout(hubReconnectTimer);
+      hubReconnectTimer = null;
+    }
+
     if (badge) {
       badge.className = 'datahub-status-badge online';
       const bList = (registeredBrowsers && registeredBrowsers.length > 0) ? ` [${registeredBrowsers.join(', ')}]` : '';
@@ -904,7 +916,59 @@ function updateDataHubStatus(isConnected, registeredBrowsers = []) {
       sideLabel.textContent = 'Hub Offline';
       sideLabel.style.color = '#ef4444';
     }
+    scheduleDataHubAutoReconnect();
   }
+
+  // Defect 13: Multi-Browser Filter Offline Guidance & Option Annotations
+  const browserFilter = document.getElementById('browserFilterSelect');
+  if (browserFilter && browserFilter.options) {
+    for (let i = 0; i < browserFilter.options.length; i++) {
+      const opt = browserFilter.options[i];
+      const cleanText = opt.text.replace(/\s*\[Hub Offline\]/g, '').trim();
+      if (!isConnected) {
+        if (opt.value !== 'all' && opt.value !== 'chrome' && opt.value !== detectedBrowserType) {
+          opt.text = `${cleanText} [Hub Offline]`;
+        } else {
+          opt.text = cleanText;
+        }
+      } else {
+        opt.text = cleanText;
+      }
+    }
+  }
+}
+
+// Defect 12: SQLite Data Hub Auto-Reconnect Backoff Ladder Engine
+function scheduleDataHubAutoReconnect() {
+  if (dataHubConnected || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) {
+    return;
+  }
+  if (hubReconnectTimer) {
+    clearTimeout(hubReconnectTimer);
+    hubReconnectTimer = null;
+  }
+  const delay = HUB_RETRY_INTERVALS[Math.min(hubReconnectAttempts, HUB_RETRY_INTERVALS.length - 1)];
+  hubReconnectTimer = setTimeout(async () => {
+    hubReconnectTimer = null;
+    if (dataHubConnected || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) {
+      return;
+    }
+    hubReconnectAttempts++;
+    try {
+      const res = await refreshDashboard(true);
+      if (res && res.dataHubConnected) {
+        hubReconnectAttempts = 0;
+        if (hubReconnectTimer) {
+          clearTimeout(hubReconnectTimer);
+          hubReconnectTimer = null;
+        }
+      } else {
+        scheduleDataHubAutoReconnect();
+      }
+    } catch (_) {
+      scheduleDataHubAutoReconnect();
+    }
+  }, delay);
 }
 
 // =============================================================================
@@ -2367,6 +2431,63 @@ function refreshDashboard(forceRefresh = false) {
   });
 }
 
+// Standalone SQLite Data Hub Reconnect & Auto-Launch Engine
+let hubConnectInProgress = false;
+async function triggerDataHubConnectAndLaunch() {
+  if (hubConnectInProgress) return;
+  hubConnectInProgress = true;
+
+  // Reset backoff attempts and clear pending reconnect timer
+  hubReconnectAttempts = 0;
+  if (hubReconnectTimer) {
+    clearTimeout(hubReconnectTimer);
+    hubReconnectTimer = null;
+  }
+
+  const btn = document.getElementById('btnSidebarReconnectHub');
+  const badge = document.getElementById('dataHubBadge');
+  const badgeText = document.getElementById('dataHubBadgeText');
+  const sideDot = document.getElementById('dataHubSidebarDot');
+  const sideLabel = document.getElementById('dataHubSidebarLabel');
+
+  if (btn) btn.textContent = '⏳ Connecting...';
+  if (badge) badge.className = 'datahub-status-badge connecting';
+  if (badgeText) badgeText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+  if (sideDot) sideDot.className = 'hud-dot starting';
+  if (sideLabel) {
+    sideLabel.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
+    sideLabel.style.color = '#f59e0b';
+  }
+
+  showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...');
+  safeRuntimeSendMessage({ type: 'LAUNCH_DATA_HUB' });
+
+  let attempts = 0;
+  const pollInterval = setInterval(async () => {
+    attempts++;
+    const res = await refreshDashboard(true);
+    if (res && res.dataHubConnected) {
+      clearInterval(pollInterval);
+      hubConnectInProgress = false;
+      hubReconnectAttempts = 0;
+      if (hubReconnectTimer) {
+        clearTimeout(hubReconnectTimer);
+        hubReconnectTimer = null;
+      }
+      if (btn) btn.textContent = '⚡ Reconnect Hub';
+      showToast((currentLang === 'hi') ? 'SQLite Data Hub सफलतापूर्वक कनेक्ट हो गया!' : 'SQLite Data Hub connected successfully!');
+    } else if (attempts >= 10) {
+      clearInterval(pollInterval);
+      hubConnectInProgress = false;
+      if (btn) btn.textContent = '⚡ Reconnect Hub';
+      if (!res || !res.dataHubConnected) {
+        updateDataHubStatus(false);
+        showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) चालू नहीं है या कनेक्ट नहीं हुआ' : 'Could not connect to SQLite Data Hub (port 65433)', true);
+      }
+    }
+  }, 500);
+}
+
 // =============================================================================
 // Event Listeners & UI Binding
 // =============================================================================
@@ -2385,8 +2506,18 @@ function setupEventListeners() {
       selectedBrowser = e.target.value;
       await browserAPI.storage.local.set({ selected_browser_filter: selectedBrowser });
       await refreshDashboard(false);
-      const selectedText = e.target.options[e.target.selectedIndex].text;
-      showToast(`Filter: ${selectedText}`);
+      const rawText = (e.target.options && e.target.options[e.target.selectedIndex])
+        ? e.target.options[e.target.selectedIndex].text
+        : selectedBrowser;
+      const selectedText = rawText.replace(/\s*\[Hub Offline\]/g, '').trim();
+      if (selectedBrowser !== 'all' && selectedBrowser !== 'chrome' && selectedBrowser !== detectedBrowserType && !dataHubConnected) {
+        const guidanceMsg = (currentLang === 'hi')
+          ? `SQLite Data Hub ऑफलाइन है। ${selectedText} डेटा सिंक के लिए हब आवश्यक है।`
+          : `SQLite Data Hub is offline. Hub is required for ${selectedText} cross-browser data.`;
+        showToast(guidanceMsg, true);
+      } else {
+        showToast(`Filter: ${selectedText}`);
+      }
     });
   }
 
@@ -2417,58 +2548,28 @@ function setupEventListeners() {
   }
 
   // Standalone SQLite Data Hub Reconnect & Auto-Launch Button
-  let hubConnectInProgress = false;
-  async function triggerDataHubConnectAndLaunch() {
-    if (hubConnectInProgress) return;
-    hubConnectInProgress = true;
-
-    const btn = document.getElementById('btnSidebarReconnectHub');
-    const badge = document.getElementById('dataHubBadge');
-    const badgeText = document.getElementById('dataHubBadgeText');
-    const sideDot = document.getElementById('dataHubSidebarDot');
-    const sideLabel = document.getElementById('dataHubSidebarLabel');
-
-    if (btn) btn.textContent = '⏳ Connecting...';
-    if (badge) badge.className = 'datahub-status-badge connecting';
-    if (badgeText) badgeText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
-    if (sideDot) sideDot.className = 'hud-dot starting';
-    if (sideLabel) {
-      sideLabel.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
-      sideLabel.style.color = '#f59e0b';
-    }
-
-    showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...');
-    safeRuntimeSendMessage({ type: 'LAUNCH_DATA_HUB' });
-
-    let attempts = 0;
-    const pollInterval = setInterval(async () => {
-      attempts++;
-      const res = await refreshDashboard(true);
-      if (res && res.dataHubConnected) {
-        clearInterval(pollInterval);
-        hubConnectInProgress = false;
-        if (btn) btn.textContent = '⚡ Reconnect Hub';
-        showToast((currentLang === 'hi') ? 'SQLite Data Hub सफलतापूर्वक कनेक्ट हो गया!' : 'SQLite Data Hub connected successfully!');
-      } else if (attempts >= 10) {
-        clearInterval(pollInterval);
-        hubConnectInProgress = false;
-        if (btn) btn.textContent = '⚡ Reconnect Hub';
-        if (!res || !res.dataHubConnected) {
-          updateDataHubStatus(false);
-          showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) चालू नहीं है या कनेक्ट नहीं हुआ' : 'Could not connect to SQLite Data Hub (port 65433)', true);
-        }
-      }
-    }, 500);
-  }
-
   const btnReconnectHub = document.getElementById('btnSidebarReconnectHub');
   if (btnReconnectHub) {
-    btnReconnectHub.addEventListener('click', triggerDataHubConnectAndLaunch);
+    btnReconnectHub.addEventListener('click', () => {
+      hubReconnectAttempts = 0;
+      if (hubReconnectTimer) {
+        clearTimeout(hubReconnectTimer);
+        hubReconnectTimer = null;
+      }
+      triggerDataHubConnectAndLaunch();
+    });
   }
 
   const dataHubBadge = document.getElementById('dataHubBadge');
   if (dataHubBadge) {
-    dataHubBadge.addEventListener('click', triggerDataHubConnectAndLaunch);
+    dataHubBadge.addEventListener('click', () => {
+      hubReconnectAttempts = 0;
+      if (hubReconnectTimer) {
+        clearTimeout(hubReconnectTimer);
+        hubReconnectTimer = null;
+      }
+      triggerDataHubConnectAndLaunch();
+    });
   }
 
   // 1. Navigation Tab Switching
@@ -3220,79 +3321,102 @@ function setupEventListeners() {
 
   const modalConfirm = document.getElementById('modalBtnConfirm');
   if (modalConfirm) modalConfirm.addEventListener('click', executeDangerAction);
+
+  // 12. Lifecycle Visibility Listener: CPU & Battery Optimization + Auto-Resumption (Phase 3)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      refreshDashboard(true);
+      if (!dataHubConnected) {
+        scheduleDataHubAutoReconnect();
+      }
+    } else {
+      if (hubReconnectTimer) {
+        clearTimeout(hubReconnectTimer);
+        hubReconnectTimer = null;
+      }
+    }
+  });
 }
 
 // Reactively synchronize configuration changes from chrome.storage
-browserAPI.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local') {
-    if (changes.language && changes.language.newValue) {
-      applyDashboardLanguage(changes.language.newValue);
-    } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {
-      applyDashboardLanguage(changes.media_sentinel_settings.newValue.language);
-    }
-    if (changes.sentinel_sleep_settings && changes.sentinel_sleep_settings.newValue) {
-      populateSleepSettingsForm(changes.sentinel_sleep_settings.newValue);
-    }
-    refreshDashboard();
-  }
-});
-
-// Bootstrap Initialization
-document.addEventListener('DOMContentLoaded', () => {
-  startLiveClock();
-  setupEventListeners();
-
-  // Load language preference, browser filter, tracking mode, category, and sleep settings from storage
-  browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'sentinel_sleep_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
-    let lang = 'en';
-    if (res && res.language) {
-      lang = res.language;
-    } else if (res && res.media_sentinel_settings && res.media_sentinel_settings.language) {
-      lang = res.media_sentinel_settings.language;
-    }
-    if (res && res.media_sentinel_settings) {
-      populateSettingsForm(res.media_sentinel_settings);
-    }
-    if (res && res.sentinel_sleep_settings) {
-      populateSleepSettingsForm(res.sentinel_sleep_settings);
-    }
-    if (res && res.selected_browser_filter) {
-      selectedBrowser = res.selected_browser_filter;
-      const sel = document.getElementById('browserFilterSelect');
-      if (sel) sel.value = selectedBrowser;
-    }
-    if (res && res.selected_tracking_mode) {
-      selectedTrackingMode = res.selected_tracking_mode;
-      const selTm = document.getElementById('trackingModeSelect');
-      if (selTm) selTm.value = selectedTrackingMode;
-    }
-    if (res && res.selected_domain_category) {
-      selectedDomainCategory = res.selected_domain_category;
-      const selCat = document.getElementById('domainCategorySelect');
-      if (selCat) selCat.value = selectedDomainCategory;
-    }
-    applyDashboardLanguage(lang);
-    refreshDashboard();
-  });
-
-  // Periodic Auto-Refresh (every 1.5 seconds)
-  setInterval(() => {
-    if (document.visibilityState === 'visible') {
+if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+  browserAPI.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local') {
+      if (changes.language && changes.language.newValue) {
+        applyDashboardLanguage(changes.language.newValue);
+      } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {
+        applyDashboardLanguage(changes.media_sentinel_settings.newValue.language);
+      }
+      if (changes.sentinel_sleep_settings && changes.sentinel_sleep_settings.newValue) {
+        populateSleepSettingsForm(changes.sentinel_sleep_settings.newValue);
+      }
       refreshDashboard();
     }
-  }, 1500);
+  });
+}
 
-  // Instant reactive updates via IPC broadcast
-  browserAPI.runtime.onMessage.addListener((message) => {
-    if (message && message.type === 'LIVE_MEDIA_UPDATE' && message.payload) {
-      if (currentTab === 'media' && message.payload.primaryMedia) {
-        renderHeroMediaPlayer(message.payload.primaryMedia);
+// Bootstrap Initialization
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('DOMContentLoaded', () => {
+    startLiveClock();
+    setupEventListeners();
+
+    // Load language preference, browser filter, tracking mode, category, and sleep settings from storage
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.get(['language', 'media_sentinel_settings', 'sentinel_sleep_settings', 'selected_browser_filter', 'selected_tracking_mode', 'selected_domain_category'], (res) => {
+        let lang = 'en';
+        if (res && res.language) {
+          lang = res.language;
+        } else if (res && res.media_sentinel_settings && res.media_sentinel_settings.language) {
+          lang = res.media_sentinel_settings.language;
+        }
+        if (res && res.media_sentinel_settings) {
+          populateSettingsForm(res.media_sentinel_settings);
+        }
+        if (res && res.sentinel_sleep_settings) {
+          populateSleepSettingsForm(res.sentinel_sleep_settings);
+        }
+        if (res && res.selected_browser_filter) {
+          selectedBrowser = res.selected_browser_filter;
+          const sel = document.getElementById('browserFilterSelect');
+          if (sel) sel.value = selectedBrowser;
+        }
+        if (res && res.selected_tracking_mode) {
+          selectedTrackingMode = res.selected_tracking_mode;
+          const selTm = document.getElementById('trackingModeSelect');
+          if (selTm) selTm.value = selectedTrackingMode;
+        }
+        if (res && res.selected_domain_category) {
+          selectedDomainCategory = res.selected_domain_category;
+          const selCat = document.getElementById('domainCategorySelect');
+          if (selCat) selCat.value = selectedDomainCategory;
+        }
+        applyDashboardLanguage(lang);
+        refreshDashboard();
+      });
+    }
+
+    // Periodic Auto-Refresh (every 1.5 seconds)
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshDashboard();
       }
-    } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
-      refreshDashboard(true);
+    }, 1500);
+
+    // Instant reactive updates via IPC broadcast
+    if (browserAPI && browserAPI.runtime && browserAPI.runtime.onMessage) {
+      browserAPI.runtime.onMessage.addListener((message) => {
+        if (message && message.type === 'LIVE_MEDIA_UPDATE' && message.payload) {
+          if (currentTab === 'media' && message.payload.primaryMedia) {
+            renderHeroMediaPlayer(message.payload.primaryMedia);
+          }
+        } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
+          refreshDashboard(true);
+        }
+      });
     }
   });
-});
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -3303,6 +3427,17 @@ if (typeof module !== 'undefined' && module.exports) {
     cachedSettings,
     escapeCsvCell,
     exportTimeTrackingCsv,
-    exportMediaHistoryCsv
+    exportMediaHistoryCsv,
+    // Phase 3 Resilience & Hub Reconnect exports
+    HUB_RETRY_INTERVALS,
+    scheduleDataHubAutoReconnect,
+    updateDataHubStatus,
+    triggerDataHubConnectAndLaunch,
+    getHubReconnectAttempts: () => hubReconnectAttempts,
+    setHubReconnectAttempts: (val) => { hubReconnectAttempts = val; },
+    getHubReconnectTimer: () => hubReconnectTimer,
+    setHubReconnectTimer: (val) => { hubReconnectTimer = val; },
+    getDataHubConnected: () => dataHubConnected,
+    setDataHubConnected: (val) => { dataHubConnected = val; }
   };
 }

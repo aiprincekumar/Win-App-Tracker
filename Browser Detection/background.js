@@ -2844,7 +2844,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       await ensureStorageLoaded();
 
-      // Helper function to activate a tab and focus its window
+      // Helper function to activate a tab and focus its window (with minimized window un-minimization)
       const activateAndFocusTab = async (tabId, windowId) => {
         try {
           const numTabId = Number(tabId);
@@ -2855,13 +2855,30 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await browserAPI.tabs.update(numTabId, { active: true });
           const winId = windowId || targetTab.windowId;
           if (winId) {
-            await browserAPI.windows.update(winId, { focused: true }).catch(() => {});
+            try {
+              let win = null;
+              if (browserAPI.windows && typeof browserAPI.windows.get === 'function') {
+                win = await browserAPI.windows.get(winId);
+              }
+              if (win && win.state === 'minimized') {
+                await browserAPI.windows.update(winId, { state: 'normal', focused: true });
+              } else {
+                await browserAPI.windows.update(winId, { focused: true });
+              }
+            } catch (_) {
+              if (browserAPI.windows && typeof browserAPI.windows.update === 'function') {
+                await browserAPI.windows.update(winId, { state: 'normal', focused: true }).catch(() => {});
+              }
+            }
           }
           return { success: true, tabId: numTabId, windowId: winId };
         } catch (_) {
           return false;
         }
       };
+      if (typeof globalThis !== 'undefined') {
+        globalThis.activateAndFocusTab = activateAndFocusTab;
+      }
 
       // Candidate list of tabs to evaluate in sequence
       const candidateTabIds = new Set();
