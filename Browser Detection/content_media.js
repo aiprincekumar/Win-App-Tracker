@@ -1602,7 +1602,7 @@
     // 2. Perform direct HTML5 video element manipulation when bridge is inactive or as resilient fallback
     // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
     // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
-    const shouldExecuteDirect = (!forwardedToMainWorld || !isBridgeActive) && (Boolean(primaryMediaElement) || action === 'toggle_fullscreen');
+    const shouldExecuteDirect = Boolean(primaryMediaElement) || action === 'toggle_fullscreen';
 
     if (shouldExecuteDirect) {
       try {
