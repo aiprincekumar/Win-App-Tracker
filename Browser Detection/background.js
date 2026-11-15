@@ -2805,6 +2805,56 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
         updateMediaHistoryEntry(session, true);
       }
 
+      // Optimistically update tabMediaMap.get(targetTabId).primaryMedia to eliminate stale bounce-back
+      let tabMedia = tabMediaMap.get(targetTabId);
+      if (!tabMedia && globalMedia.primaryMedia && globalMedia.primaryMedia.tabId === targetTabId) {
+        tabMedia = {
+          hasMedia: true,
+          anyPlaying: Boolean(globalMedia.primaryMedia.isPlaying),
+          primaryMedia: { ...globalMedia.primaryMedia }
+        };
+        tabMediaMap.set(targetTabId, tabMedia);
+      }
+
+      if (tabMedia && tabMedia.primaryMedia) {
+        const pm = tabMedia.primaryMedia;
+        if (message.action === 'toggle_play') {
+          pm.isPlaying = !pm.isPlaying;
+          pm.state = pm.isPlaying ? 'playing' : 'paused';
+          tabMedia.anyPlaying = pm.isPlaying;
+          if (session) session.isPlaying = pm.isPlaying;
+        } else if (message.action === 'play') {
+          pm.isPlaying = true;
+          pm.state = 'playing';
+          tabMedia.anyPlaying = true;
+          if (session) session.isPlaying = true;
+        } else if (message.action === 'pause') {
+          pm.isPlaying = false;
+          pm.state = 'paused';
+          tabMedia.anyPlaying = false;
+          if (session) session.isPlaying = false;
+        } else if (message.action === 'toggle_mute') {
+          pm.isMuted = !pm.isMuted;
+        } else if (message.action === 'step_speed' || message.action === 'set_speed') {
+          if (message.action === 'step_speed') {
+            const cur = pm.playbackRate || 1.0;
+            const targetSpeed = (message.data && typeof message.data.targetSpeed === 'number' && message.data.targetSpeed >= 0.25 && message.data.targetSpeed <= 2.0)
+              ? message.data.targetSpeed
+              : calculateNextLadderSpeed(cur, (message.data && (message.data.direction || (message.data.step < 0 ? 'down' : 'up'))) || 'up');
+            pm.playbackRate = targetSpeed;
+          } else if (message.action === 'set_speed' && message.data && typeof message.data.rate === 'number') {
+            pm.playbackRate = Math.max(0.25, Math.min(2.0, Math.round(message.data.rate * 100) / 100));
+          }
+        } else if (message.action === 'seek_relative' && message.data && typeof message.data.offsetSeconds === 'number') {
+          const curTime = Number(pm.currentTime) || 0;
+          const dur = (Number(pm.duration) > 0) ? Number(pm.duration) : 999999;
+          pm.currentTime = Math.max(0, Math.min(dur, curTime + message.data.offsetSeconds));
+        }
+
+        // Broadcast optimistic update immediately
+        safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+      }
+
       safeSendTabMessage(targetTabId, {
         type: 'MEDIA_CONTROL',
         action: message.action,
