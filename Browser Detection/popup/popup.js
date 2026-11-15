@@ -1821,7 +1821,7 @@ function updateVolumeFromEvent(e) {
   // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms volume response)
   if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
     browserAPI.scripting.executeScript({
-      target: { tabId: targetTabId, allFrames: true },
+      target: { tabId: targetTabId },
       world: 'MAIN',
       func: (volPercent) => {
         const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -1881,7 +1881,7 @@ function updateProgressFromEvent(e) {
   // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms timeline seek)
   if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
     browserAPI.scripting.executeScript({
-      target: { tabId: targetTabId, allFrames: true },
+      target: { tabId: targetTabId },
       world: 'MAIN',
       func: (seekPercent, seekSeconds) => {
         const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -2425,7 +2425,7 @@ function setupEventListeners() {
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
         try {
           const results = await browserAPI.scripting.executeScript({
-            target: { tabId: targetTabId, allFrames: true },
+            target: { tabId: targetTabId },
             func: () => {
               try {
                 const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
@@ -2540,7 +2540,7 @@ function setupEventListeners() {
       if (targetTabId && browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function') {
         try {
           await browserAPI.scripting.executeScript({
-            target: { tabId: targetTabId, allFrames: true },
+            target: { tabId: targetTabId },
             func: (loop) => {
               const v = document.querySelector('video') || document.querySelector('audio');
               if (v) v.loop = loop;
@@ -3325,7 +3325,7 @@ function setupEventListeners() {
 
     if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
       browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId, allFrames: true },
+        target: { tabId: targetTabId },
         world: 'MAIN',
         func: () => {
           const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3349,14 +3349,9 @@ function setupEventListeners() {
             }
           }
         }
-      }).then(() => {
-        // Optimistic cooldown lock active: avoid premature telemetry refresh
-      }).catch(() => {
-        sendMediaControl('toggle_play');
-      });
-    } else {
-      sendMediaControl('toggle_play');
+      }).catch(() => {});
     }
+    sendMediaControl('toggle_play', {}, targetTabId);
   };
 
   const dynamicStatusBtn = document.getElementById('dynamicStatusBtn');
@@ -3378,7 +3373,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3403,14 +3398,9 @@ function setupEventListeners() {
               try { video.currentTime = clampedTarget; } catch (_) {}
             }
           }
-        }).then(() => {
-          // Optimistic cooldown lock active: avoid premature telemetry refresh
-        }).catch(() => {
-          sendMediaControl('seek_relative', { offsetSeconds: -10 });
-        });
-      } else {
-        sendMediaControl('seek_relative', { offsetSeconds: -10 });
+        }).catch(() => {});
       }
+      sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);
     });
   }
 
@@ -3427,7 +3417,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3452,14 +3442,9 @@ function setupEventListeners() {
               try { video.currentTime = clampedTarget; } catch (_) {}
             }
           }
-        }).then(() => {
-          // Optimistic cooldown lock active: avoid premature telemetry refresh
-        }).catch(() => {
-          sendMediaControl('seek_relative', { offsetSeconds: 10 });
-        });
-      } else {
-        sendMediaControl('seek_relative', { offsetSeconds: 10 });
+        }).catch(() => {});
       }
+      sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);
     });
   }
 
@@ -3474,7 +3459,7 @@ function setupEventListeners() {
 
     if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
       browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId, allFrames: true },
+        target: { tabId: targetTabId },
         world: 'MAIN',
         func: () => {
           const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3494,14 +3479,9 @@ function setupEventListeners() {
             } catch (_) {}
           }
         }
-      }).then(() => {
-        // Optimistic cooldown lock active: avoid premature telemetry refresh
-      }).catch(() => {
-        sendMediaControl('toggle_mute');
-      });
-    } else {
-      sendMediaControl('toggle_mute');
+      }).catch(() => {});
     }
+    sendMediaControl('toggle_mute', {}, targetTabId);
   };
 
   const btnCtrlToggleMute = document.getElementById('btnCtrlToggleMute');
@@ -3542,7 +3522,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: (spd) => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3558,14 +3538,9 @@ function setupEventListeners() {
             }
           },
           args: [targetSpeed]
-        }).then(() => {
-          // Optimistic cooldown lock active: avoid premature telemetry refresh
-        }).catch(() => {
-          sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
-        });
-      } else {
-        sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
+        }).catch(() => {});
       }
+      sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
     });
   }
 
@@ -3597,7 +3572,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: (spd) => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
@@ -3613,14 +3588,9 @@ function setupEventListeners() {
             }
           },
           args: [targetSpeed]
-        }).then(() => {
-          // Optimistic cooldown lock active: avoid premature telemetry refresh
-        }).catch(() => {
-          sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
-        });
-      } else {
-        sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
+        }).catch(() => {});
       }
+      sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
     });
   }
 
@@ -3648,7 +3618,7 @@ function setupEventListeners() {
       // 1. Direct Scripting Execution: Link directly to on-video overlay button or controller
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             // Priority 1: Trigger the in-page Floating Sentinel Fullscreen HUD Button
@@ -3686,13 +3656,9 @@ function setupEventListeners() {
               } catch (_) {}
             }
           }
-        }).catch(() => {
-          sendMediaControl('toggle_fullscreen', {}, targetTabId);
-        });
-      } else {
-        // Fallback only when scripting API or tabId is unavailable
-        sendMediaControl('toggle_fullscreen');
+        }).catch(() => {});
       }
+      sendMediaControl('toggle_fullscreen', {}, targetTabId);
     });
   }
 
@@ -3719,10 +3685,8 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {});
-      } else {
-        // Fallback only when scripting API or tabId is unavailable
-        sendMediaControl('toggle_pip');
       }
+      sendMediaControl('toggle_pip', {}, targetTabId);
     });
   }
 
@@ -3734,7 +3698,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             const btn = document.querySelector('.ytp-size-button');
@@ -3761,7 +3725,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             const p = document.getElementById('movie_player') || window.movie_player;
@@ -3800,7 +3764,7 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId, allFrames: true },
+          target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
             const p = document.getElementById('movie_player') || window.movie_player;
