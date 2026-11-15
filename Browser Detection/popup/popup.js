@@ -696,6 +696,7 @@ let currentTemporalTab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
 let searchQuery = '';
 let activeMediaCached = null;
+let activeTabId = null;
 
 // Standalone SQLite Data Hub state & Multi-Browser Filter
 let dataHubConnected = false;
@@ -929,24 +930,56 @@ function sendMediaControl(action, data = {}, tabId = null) {
   lastControlActionKey = actionKey;
   lastControlActionTime = now;
 
-  const resolvedTabId = tabId || (activeMediaCached && activeMediaCached.tabId) ||
-    (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+  let resolvedTabId = tabId || getActiveMediaTabId();
 
-  try {
-    const p = browserAPI.runtime.sendMessage({
-      type: 'CONTROL_MEDIA',
-      action,
-      data,
-      tabId: resolvedTabId
-    }, () => {
-      if (!isDraggingVolume && !isDraggingProgress) {
-        setTimeout(refreshDashboard, 120);
+  const dispatch = (finalTabId) => {
+    try {
+      const p = browserAPI.runtime.sendMessage({
+        type: 'CONTROL_MEDIA',
+        action,
+        data,
+        tabId: finalTabId
+      }, () => {
+        if (!isDraggingVolume && !isDraggingProgress) {
+          setTimeout(refreshDashboard, 120);
+        }
+      });
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {});
       }
-    });
-    if (p && typeof p.catch === 'function') {
-      p.catch(() => {});
-    }
-  } catch (_) {}
+    } catch (_) {}
+  };
+
+  if (!resolvedTabId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    try {
+      browserAPI.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs && tabs[0] && tabs[0].id) {
+          resolvedTabId = tabs[0].id;
+          activeTabId = resolvedTabId;
+          dispatch(resolvedTabId);
+        } else {
+          browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs2) => {
+            if (tabs2 && tabs2[0] && tabs2[0].id) {
+              resolvedTabId = tabs2[0].id;
+              activeTabId = resolvedTabId;
+              dispatch(resolvedTabId);
+            } else {
+              browserAPI.tabs.query({ audible: true }, (tabs3) => {
+                if (tabs3 && tabs3[0] && tabs3[0].id) {
+                  resolvedTabId = tabs3[0].id;
+                  activeTabId = resolvedTabId;
+                }
+                dispatch(resolvedTabId);
+              });
+            }
+          });
+        }
+      });
+      return;
+    } catch (_) {}
+  }
+
+  dispatch(resolvedTabId);
 }
 
 /**
@@ -1815,8 +1848,7 @@ function updateVolumeFromEvent(e) {
   icon.textContent = percent === 0 ? '🔇' : (percent < 40 ? '🔉' : '🔊');
   container.setAttribute('aria-valuenow', String(percent));
 
-  const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-    (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+  const targetTabId = getActiveMediaTabId();
 
   // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms volume response)
   if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
@@ -1876,7 +1908,7 @@ function updateProgressFromEvent(e) {
     timeElapsed.textContent = formatVideoTime(targetSeconds);
   }
 
-  const targetTabId = (pm && pm.tabId) || (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+  const targetTabId = (pm && pm.tabId) || getActiveMediaTabId();
 
   // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms timeline seek)
   if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
@@ -2010,6 +2042,7 @@ function playNotificationChime() {
 function getActiveMediaTabId() {
   return (activeMediaCached && activeMediaCached.tabId) ||
     (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId) ||
+    activeTabId ||
     null;
 }
 
@@ -3320,8 +3353,7 @@ function setupEventListeners() {
       activeMediaCached.state = activeMediaCached.isPlaying ? 'playing' : 'paused';
       renderMediaCard({ primaryMedia: activeMediaCached });
     }
-    const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-      (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+    const targetTabId = getActiveMediaTabId();
 
     sendMediaControl('toggle_play', {}, targetTabId);
   };
@@ -3340,8 +3372,7 @@ function setupEventListeners() {
         activeMediaCached.currentTime = Math.max(0, activeMediaCached.currentTime - 10);
         renderMediaCard({ primaryMedia: activeMediaCached });
       }
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);
     });
@@ -3355,8 +3386,7 @@ function setupEventListeners() {
         activeMediaCached.currentTime = activeMediaCached.currentTime + 10;
         renderMediaCard({ primaryMedia: activeMediaCached });
       }
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);
     });
@@ -3368,8 +3398,7 @@ function setupEventListeners() {
       activeMediaCached.isMuted = !activeMediaCached.isMuted;
       renderMediaCard({ primaryMedia: activeMediaCached });
     }
-    const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-      (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+    const targetTabId = getActiveMediaTabId();
 
     sendMediaControl('toggle_mute', {}, targetTabId);
   };
@@ -3407,8 +3436,7 @@ function setupEventListeners() {
         speedBadge.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
       }
 
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
     });
@@ -3437,8 +3465,7 @@ function setupEventListeners() {
         speedBadge.textContent = `⚡ ${targetSpeed.toFixed(2).replace(/\.00$/, '')}x`;
       }
 
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
     });
@@ -3454,8 +3481,7 @@ function setupEventListeners() {
       if (now - lastFullscreenClick < 350) return;
       lastFullscreenClick = now;
 
-      let targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      let targetTabId = getActiveMediaTabId();
 
       // Resolve active tabId reliably if not cached yet
       if (!targetTabId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
@@ -3476,8 +3502,7 @@ function setupEventListeners() {
       if (now - lastPipClick < 350) return;
       lastPipClick = now;
 
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('toggle_pip', {}, targetTabId);
     });
@@ -3486,8 +3511,7 @@ function setupEventListeners() {
   const btnTheater = document.getElementById('btnCtrlTheater');
   if (btnTheater) {
     btnTheater.addEventListener('click', () => {
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('toggle_theater', {}, targetTabId);
     });
@@ -3496,8 +3520,7 @@ function setupEventListeners() {
   const btnQualityDown = document.getElementById('btnCtrlQualityDown');
   if (btnQualityDown) {
     btnQualityDown.addEventListener('click', () => {
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('step_quality', { direction: 'down' }, targetTabId);
     });
@@ -3506,8 +3529,7 @@ function setupEventListeners() {
   const btnQualityUp = document.getElementById('btnCtrlQualityUp');
   if (btnQualityUp) {
     btnQualityUp.addEventListener('click', () => {
-      const targetTabId = (activeMediaCached && activeMediaCached.tabId) ||
-        (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia && dashboardData.globalMediaState.primaryMedia.tabId);
+      const targetTabId = getActiveMediaTabId();
 
       sendMediaControl('step_quality', { direction: 'up' }, targetTabId);
     });
@@ -3585,6 +3607,21 @@ function setupEventListeners() {
 // Bootstrap Initialization
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
+
+  // Proactively cache active tabId for instant media targeting parity with dashboard
+  if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    try {
+      browserAPI.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs && tabs[0] && tabs[0].id) {
+          activeTabId = tabs[0].id;
+        } else {
+          browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs2) => {
+            if (tabs2 && tabs2[0] && tabs2[0].id) activeTabId = tabs2[0].id;
+          });
+        }
+      });
+    } catch (_) {}
+  }
 
   // Load language preference, browser filter, tracking mode, and category from storage
   browserAPI.storage.local.get([

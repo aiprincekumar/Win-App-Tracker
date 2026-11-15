@@ -645,9 +645,7 @@
               isNowMuted = true;
             }
           } catch (_) {}
-        }
-
-        if (video) {
+        } else if (video) {
           try {
             video.muted = !video.muted;
             isNowMuted = video.muted;

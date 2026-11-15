@@ -1593,12 +1593,18 @@
 
     // 1. Forward action to Main World engine (essential for YouTube native player methods, volume slider & OSD)
     // Avoid double-toggle race for toggle_fullscreen across isolated and main worlds
+    let forwardedToMainWorld = false;
     if (isMainWorldTarget && action !== 'toggle_fullscreen') {
       forwardActionToMainWorld(action, data);
-    } else if (primaryMediaElement || action === 'toggle_fullscreen') {
-      // 2. Perform direct HTML5 video element manipulation ONLY when not handled by Main World bridge
-      // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
-      // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
+      forwardedToMainWorld = true;
+    }
+
+    // 2. Perform direct HTML5 video element manipulation when bridge is inactive or as resilient fallback
+    // Direct HTML5 execution guarantees immediate playback/seek/speed control across all browsers (including Microsoft Edge)
+    // without relying on fragile cross-world custom event bridges or suffering bounceback refresh lag.
+    const shouldExecuteDirect = (!forwardedToMainWorld || !isBridgeActive) && (Boolean(primaryMediaElement) || action === 'toggle_fullscreen');
+
+    if (shouldExecuteDirect) {
       try {
         switch (action) {
           case 'play': {
