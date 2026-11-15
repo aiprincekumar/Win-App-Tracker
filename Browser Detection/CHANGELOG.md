@@ -1,4 +1,4 @@
-## [unreleased]
+﻿## [unreleased]
 
 ### 🚀 Features
 
@@ -10,6 +10,8 @@
 - *(popup)* Add tracking method selector, category filter, and mini internal scheme badges
 
 ### 🐛 Bug Fixes
+- *(media)* Fix popup media controls (play/pause, seek +/-10s, mute, speed +/-, timeline scrubber, volume slider) and link fullscreen button directly to on-video overlay button handler, preserving universal play/pause button 100% untouched, bump version to 2.5.0
+- *(test)* Add comprehensive automated verification test suite for media controls and on-video overlay fullscreen linking (tests/test_media_controls_and_fullscreen_fix.js)
 
 - *(ui,hub,hud)* Fix header clipping, dynamic path resolution, and auto-service launch
 - *(data-hub)* Resolve 30s idle disconnect, force-reconnect hanging sockets, and add responsive polling
