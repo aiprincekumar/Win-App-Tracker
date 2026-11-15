@@ -513,13 +513,119 @@
               </div>
             </div>
             <div class="audio-lab-body">
+              <!-- Master Boost Slider (0% to 200%) -->
               <div class="audio-boost-control">
                 <div class="boost-label-row">
-                  <span id="lblAudioMasterBoost" class="boost-label" data-i18n="audiolab_master_boost">Master Volume Boost</span>
+                  <div class="boost-title-wrap">
+                    <span class="boost-icon">🔊</span>
+                    <span id="lblAudioMasterBoost" class="boost-label" data-i18n="audiolab_master_boost">Master Volume Boost</span>
+                  </div>
                   <span id="heroAudioBoostVal" class="boost-value">100%</span>
                 </div>
-                <input type="range" id="heroAudioBoostSlider" min="100" max="200" step="5" value="100" class="audio-boost-slider" aria-label="Master Volume Boost" />
+                <input type="range" id="heroAudioBoostSlider" min="0" max="200" step="5" value="100" class="audio-boost-slider" aria-label="Master Volume Boost" role="slider" aria-valuemin="0" aria-valuemax="200" aria-valuenow="100" />
+                <div class="boost-scale-marks">
+                  <span data-i18n="audiolab_boost_min">0%</span>
+                  <span>50%</span>
+                  <span class="mark-normal" data-i18n="audiolab_boost_normal">100% (Normal)</span>
+                  <span>150%</span>
+                  <span class="mark-max" data-i18n="audiolab_boost_max">200% (Max)</span>
+                </div>
               </div>
+
+              <!-- 5-Band Biquad Graphic Equalizer -->
+              <div class="audio-eq-section">
+                <div class="eq-section-header">
+                  <div class="eq-title-group">
+                    <span class="eq-icon">🎚️</span>
+                    <h4 id="lblAudioEqTitle" class="eq-heading" data-i18n="audiolab_eq_title">5-Band Graphic Equalizer</h4>
+                  </div>
+                  <div class="eq-actions-group">
+                    <select id="audioEqPresetSelect" class="eq-preset-dropdown" aria-label="Equalizer Preset">
+                      <option value="flat" data-i18n="eq_preset_flat" selected>Flat</option>
+                      <option value="bass_boost" data-i18n="eq_preset_bass_boost">Bass Boost</option>
+                      <option value="vocal_enhancer" data-i18n="eq_preset_vocal_enhancer">Vocal Enhancer</option>
+                      <option value="treble_boost" data-i18n="eq_preset_treble_boost">Treble Boost</option>
+                      <option value="electronic" data-i18n="eq_preset_electronic">Electronic</option>
+                      <option value="rock" data-i18n="eq_preset_rock">Rock</option>
+                      <option value="acoustic" data-i18n="eq_preset_acoustic">Acoustic</option>
+                      <option value="night_mode" data-i18n="eq_preset_night_mode">Night Mode</option>
+                      <option value="custom" data-i18n="eq_preset_custom">Custom</option>
+                    </select>
+                    <button type="button" id="btnResetEq" class="btn-reset-eq" aria-label="Reset Equalizer" data-i18n="audiolab_reset_eq">🔄 Reset EQ</button>
+                  </div>
+                </div>
+
+                <!-- 5-Band Sliders Grid -->
+                <div class="eq-bands-grid" role="region" aria-label="Equalizer Frequency Bands">
+                  <div class="eq-band-col">
+                    <span id="eqVal60" class="eq-db-val">0dB</span>
+                    <input type="range" id="eqBand60" min="-12" max="12" step="1" value="0" orient="vertical" class="eq-vertical-slider" aria-label="60Hz Band" role="slider" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0" />
+                    <span class="eq-freq-label">60Hz</span>
+                  </div>
+                  <div class="eq-band-col">
+                    <span id="eqVal250" class="eq-db-val">0dB</span>
+                    <input type="range" id="eqBand250" min="-12" max="12" step="1" value="0" orient="vertical" class="eq-vertical-slider" aria-label="250Hz Band" role="slider" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0" />
+                    <span class="eq-freq-label">250Hz</span>
+                  </div>
+                  <div class="eq-band-col">
+                    <span id="eqVal1000" class="eq-db-val">0dB</span>
+                    <input type="range" id="eqBand1000" min="-12" max="12" step="1" value="0" orient="vertical" class="eq-vertical-slider" aria-label="1kHz Band" role="slider" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0" />
+                    <span class="eq-freq-label">1kHz</span>
+                  </div>
+                  <div class="eq-band-col">
+                    <span id="eqVal4000" class="eq-db-val">0dB</span>
+                    <input type="range" id="eqBand4000" min="-12" max="12" step="1" value="0" orient="vertical" class="eq-vertical-slider" aria-label="4kHz Band" role="slider" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0" />
+                    <span class="eq-freq-label">4kHz</span>
+                  </div>
+                  <div class="eq-band-col">
+                    <span id="eqVal16000" class="eq-db-val">0dB</span>
+                    <input type="range" id="eqBand16000" min="-12" max="12" step="1" value="0" orient="vertical" class="eq-vertical-slider" aria-label="16kHz Band" role="slider" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="0" />
+                    <span class="eq-freq-label">16kHz</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Audio Enhancement Toggles -->
+              <div class="audio-enhancements-section">
+                <div class="enhancements-grid">
+                  <!-- Vocal Clarity -->
+                  <div class="enhancement-card">
+                    <div class="enhancement-card-header">
+                      <span id="lblAudioVocalTitle" class="enhancement-title" data-i18n="audiolab_vocal_title">🗣️ Vocal Clarity</span>
+                      <label class="switch-toggle" for="toggleVocalClarity">
+                        <input type="checkbox" id="toggleVocalClarity" role="switch" aria-label="Vocal Clarity" />
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <span id="lblAudioVocalDesc" class="enhancement-desc" data-i18n="audiolab_vocal_desc">Highlight dialogue frequencies over loud music</span>
+                  </div>
+
+                  <!-- Night Shield -->
+                  <div class="enhancement-card">
+                    <div class="enhancement-card-header">
+                      <span id="lblAudioNightTitle" class="enhancement-title" data-i18n="audiolab_night_title">🌙 Night Shield</span>
+                      <label class="switch-toggle" for="toggleNightShield">
+                        <input type="checkbox" id="toggleNightShield" role="switch" aria-label="Night Shield" />
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <span id="lblAudioNightDesc" class="enhancement-desc" data-i18n="audiolab_night_desc">Compress dynamic range & soften sudden loud sounds</span>
+                  </div>
+
+                  <!-- Audio-Only Mode -->
+                  <div class="enhancement-card">
+                    <div class="enhancement-card-header">
+                      <span id="lblAudioOnlyTitle" class="enhancement-title" data-i18n="audiolab_audio_only_title">📻 Audio-Only Mode</span>
+                      <label class="switch-toggle" for="toggleAudioOnlyMode">
+                        <input type="checkbox" id="toggleAudioOnlyMode" role="switch" aria-label="Audio-Only Mode" />
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <span id="lblAudioOnlyDesc" class="enhancement-desc" data-i18n="audiolab_audio_only_desc">Save battery and CPU by suppressing video frames</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="audio-lab-status-note">
                 <span class="status-indicator-dot online"></span>
                 <span id="audioLabStatusText" class="audio-lab-note" data-i18n="audiolab_dsp_active">Offscreen Web Audio DSP Pipeline Active</span>

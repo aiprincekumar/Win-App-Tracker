@@ -329,14 +329,34 @@ const DASHBOARD_I18N = {
     theme_btn_light: 'Light',
     theme_btn_dark: 'Dark',
 
-    // Audio Lab Telemetry (Defect 15)
+    // Audio Lab Telemetry & Deep Parity (Defect 15)
     audiolab_title: 'Audio Lab & DSP Telemetry',
     audiolab_master_boost: 'Master Volume Boost',
     audiolab_dsp_active: 'Offscreen Web Audio DSP Pipeline Active',
     audiolab_vocal_on: 'Vocal: ON',
     audiolab_vocal_off: 'Vocal: OFF',
     audiolab_night_on: 'Night: ON',
-    audiolab_night_off: 'Night: OFF'
+    audiolab_night_off: 'Night: OFF',
+    audiolab_eq_title: '5-Band Graphic Equalizer',
+    audiolab_reset_eq: '🔄 Reset EQ',
+    audiolab_vocal_title: '🗣️ Vocal Clarity',
+    audiolab_vocal_desc: 'Highlight dialogue frequencies over loud music',
+    audiolab_night_title: '🌙 Night Shield',
+    audiolab_night_desc: 'Compress dynamic range & soften sudden loud sounds',
+    audiolab_audio_only_title: '📻 Audio-Only Mode',
+    audiolab_audio_only_desc: 'Save battery and CPU by suppressing video frames',
+    audiolab_boost_min: '0%',
+    audiolab_boost_normal: '100% (Normal)',
+    audiolab_boost_max: '200% (Max)',
+    eq_preset_flat: 'Flat',
+    eq_preset_bass_boost: 'Bass Boost',
+    eq_preset_vocal_enhancer: 'Vocal Enhancer',
+    eq_preset_treble_boost: 'Treble Boost',
+    eq_preset_electronic: 'Electronic',
+    eq_preset_rock: 'Rock',
+    eq_preset_acoustic: 'Acoustic',
+    eq_preset_night_mode: 'Night Mode',
+    eq_preset_custom: 'Custom'
   },
   hi: {
     // Brand & Header
@@ -578,14 +598,34 @@ const DASHBOARD_I18N = {
     theme_btn_light: 'लाइट',
     theme_btn_dark: 'डार्क',
 
-    // Audio Lab Telemetry (Defect 15)
+    // Audio Lab Telemetry & Deep Parity (Defect 15)
     audiolab_title: 'ऑडियो लैब व DSP टेलीमेट्री',
     audiolab_master_boost: 'मास्टर वॉल्यूम बूस्ट',
     audiolab_dsp_active: 'ऑफस्क्रीन वेब ऑडियो DSP पाइपलाइन सक्रिय',
     audiolab_vocal_on: 'वोकल: चालू',
     audiolab_vocal_off: 'वोकल: बंद',
     audiolab_night_on: 'नाइट: चालू',
-    audiolab_night_off: 'नाइट: बंद'
+    audiolab_night_off: 'नाइट: बंद',
+    audiolab_eq_title: '5-बैंड ग्राफिक इक्वलाइज़र',
+    audiolab_reset_eq: '🔄 रीसेट EQ',
+    audiolab_vocal_title: '🗣️ वोकल क्लैरिटी',
+    audiolab_vocal_desc: 'तेज़ संगीत में भी संवाद व आवाज़ को स्पष्ट उभारें',
+    audiolab_night_title: '🌙 नाइट शील्ड',
+    audiolab_night_desc: 'अचानक तेज़ आवाज़ों व विस्फोटों को मंद करें',
+    audiolab_audio_only_title: '📻 केवल ऑडियो मोड',
+    audiolab_audio_only_desc: 'वीडियो फ़्रेम रोककर बैटरी व मेमोरी की बचत करें',
+    audiolab_boost_min: '0%',
+    audiolab_boost_normal: '100% (सामान्य)',
+    audiolab_boost_max: '200% (अधिकतम)',
+    eq_preset_flat: 'फ़्लैट',
+    eq_preset_bass_boost: 'बास बूस्ट',
+    eq_preset_vocal_enhancer: 'वोकल एन्हांसर',
+    eq_preset_treble_boost: 'ट्रेबल बूस्ट',
+    eq_preset_electronic: 'इलेक्ट्रॉनिक',
+    eq_preset_rock: 'रॉक',
+    eq_preset_acoustic: 'एकॉस्टिक',
+    eq_preset_night_mode: 'नाइट मोड',
+    eq_preset_custom: 'कस्टम'
   }
 };
 
@@ -754,37 +794,156 @@ async function toggleThemeMode() {
 // =============================================================================
 // Audio Lab Telemetry & DSP Controls State (Defect 15 - Web Audio Parity)
 // =============================================================================
+const DASHBOARD_EQ_PRESETS = {
+  flat: [0, 0, 0, 0, 0],
+  bass_boost: [6, 4, 1, 0, -1],
+  vocal_enhancer: [-3, 1, 4, 5, 2],
+  vocal_clarify: [-3, 1, 4, 5, 2],
+  treble_boost: [-2, 0, 1, 4, 6],
+  electronic: [5, 3, 0, 2, 4],
+  rock: [5, 3, -1, 3, 5],
+  acoustic: [3, 2, 1, 2, 3],
+  night_mode: [-4, -2, 2, 1, -3],
+  night: [-4, -2, 2, 1, -3]
+};
+
 let dashboardAudioLabSettings = {
   master_boost: 100,
+  audio_only: false,
   eq_preset: 'flat',
+  eq_bands: {
+    '60': 0,
+    '250': 0,
+    '1000': 0,
+    '4000': 0,
+    '16000': 0
+  },
   vocal_clarity: false,
   night_shield: false
 };
 
+function dispatchAudioLabSettings(settings) {
+  const api = (typeof browserAPI !== 'undefined' && browserAPI && browserAPI.runtime)
+    ? browserAPI
+    : (typeof chrome !== 'undefined' && chrome.runtime ? chrome : (typeof browser !== 'undefined' && browser.runtime ? browser : (typeof globalThis !== 'undefined' && globalThis.browserAPI ? globalThis.browserAPI : null)));
+  const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+  const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+  if (targetTabId && api && api.tabs && typeof api.tabs.sendMessage === 'function') {
+    try {
+      const p = api.tabs.sendMessage(targetTabId, {
+        type: 'APPLY_AUDIO_LAB_SETTINGS',
+        settings: settings
+      });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_) {}
+  }
+  if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+    try {
+      const p2 = api.runtime.sendMessage({
+        type: 'APPLY_AUDIO_LAB_SETTINGS',
+        settings: settings,
+        tabId: targetTabId
+      });
+      if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
+    } catch (_) {}
+  }
+}
+
+function persistDashboardAudioLabSettings(updated) {
+  if (updated) {
+    dashboardAudioLabSettings = { ...dashboardAudioLabSettings, ...updated };
+    if (updated.eq_bands) {
+      dashboardAudioLabSettings.eq_bands = {
+        ...dashboardAudioLabSettings.eq_bands,
+        ...updated.eq_bands
+      };
+    }
+  }
+  const api = (typeof browserAPI !== 'undefined' && browserAPI && browserAPI.storage)
+    ? browserAPI
+    : (typeof chrome !== 'undefined' && chrome.storage ? chrome : (typeof browser !== 'undefined' && browser.storage ? browser : (typeof globalThis !== 'undefined' && globalThis.browserAPI ? globalThis.browserAPI : null)));
+  try {
+    if (api && api.storage && api.storage.local) {
+      api.storage.local.set({ audio_lab_settings: dashboardAudioLabSettings });
+    }
+  } catch (_) {}
+  dispatchAudioLabSettings(dashboardAudioLabSettings);
+}
+
 function updateDashboardAudioLabUI(settings) {
   if (!settings) return;
   dashboardAudioLabSettings = { ...dashboardAudioLabSettings, ...settings };
+  if (settings.eq_bands) {
+    dashboardAudioLabSettings.eq_bands = {
+      ...dashboardAudioLabSettings.eq_bands,
+      ...settings.eq_bands
+    };
+  }
 
-  const boostVal = dashboardAudioLabSettings.master_boost || 100;
+  // 1. Master Volume Boost
+  const boostVal = typeof dashboardAudioLabSettings.master_boost === 'number'
+    ? dashboardAudioLabSettings.master_boost
+    : 100;
   const boostValEl = document.getElementById('heroAudioBoostVal');
   if (boostValEl) {
     boostValEl.textContent = `${boostVal}%`;
   }
 
   const slider = document.getElementById('heroAudioBoostSlider');
-  if (slider && Number(slider.value) !== Number(boostVal)) {
-    slider.value = String(boostVal);
+  if (slider) {
+    if (Number(slider.value) !== Number(boostVal)) {
+      slider.value = String(boostVal);
+    }
+    if (typeof slider.setAttribute === 'function') {
+      slider.setAttribute('aria-valuenow', String(boostVal));
+    }
   }
+
+  // 2. Preset Badge & Dropdown
+  let preset = dashboardAudioLabSettings.eq_preset || 'flat';
+  if (preset === 'vocal_clarify') preset = 'vocal_enhancer';
+  if (preset === 'night') preset = 'night_mode';
 
   const presetBadge = document.getElementById('audioLabPresetBadge');
   if (presetBadge) {
-    const preset = dashboardAudioLabSettings.eq_preset || 'flat';
     presetBadge.textContent = preset.charAt(0).toUpperCase() + preset.slice(1).replace('_', ' ');
   }
 
+  const presetSelect = document.getElementById('audioEqPresetSelect');
+  if (presetSelect && presetSelect.options && presetSelect.value !== preset) {
+    for (const opt of presetSelect.options) {
+      if (opt.value === preset) {
+        presetSelect.value = preset;
+        break;
+      }
+    }
+  }
+
+  // 3. 5-Band Equalizer Sliders & Badges
+  const eqBands = ['60', '250', '1000', '4000', '16000'];
+  eqBands.forEach((b) => {
+    const val = (dashboardAudioLabSettings.eq_bands && typeof dashboardAudioLabSettings.eq_bands[b] === 'number')
+      ? dashboardAudioLabSettings.eq_bands[b]
+      : 0;
+    const bandSlider = document.getElementById(`eqBand${b}`);
+    if (bandSlider) {
+      if (Number(bandSlider.value) !== Number(val)) {
+        bandSlider.value = String(val);
+      }
+      if (typeof bandSlider.setAttribute === 'function') {
+        bandSlider.setAttribute('aria-valuenow', String(val));
+      }
+    }
+    const valSpan = document.getElementById(`eqVal${b}`);
+    if (valSpan) {
+      valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+    }
+  });
+
+  // 4. Feature Badges & Toggles
+  const isVocal = Boolean(dashboardAudioLabSettings.vocal_clarity);
   const vocalBadge = document.getElementById('audioLabVocalBadge');
   if (vocalBadge) {
-    const isVocal = Boolean(dashboardAudioLabSettings.vocal_clarity);
     vocalBadge.textContent = isVocal ? t('audiolab_vocal_on') : t('audiolab_vocal_off');
     if (vocalBadge.classList && typeof vocalBadge.classList.add === 'function') {
       if (isVocal) {
@@ -794,10 +953,14 @@ function updateDashboardAudioLabUI(settings) {
       }
     }
   }
+  const toggleVocal = document.getElementById('toggleVocalClarity');
+  if (toggleVocal && toggleVocal.checked !== isVocal) {
+    toggleVocal.checked = isVocal;
+  }
 
+  const isNight = Boolean(dashboardAudioLabSettings.night_shield);
   const nightBadge = document.getElementById('audioLabNightBadge');
   if (nightBadge) {
-    const isNight = Boolean(dashboardAudioLabSettings.night_shield);
     nightBadge.textContent = isNight ? t('audiolab_night_on') : t('audiolab_night_off');
     if (nightBadge.classList && typeof nightBadge.classList.add === 'function') {
       if (isNight) {
@@ -806,6 +969,16 @@ function updateDashboardAudioLabUI(settings) {
         nightBadge.classList.remove('badge-active');
       }
     }
+  }
+  const toggleNight = document.getElementById('toggleNightShield');
+  if (toggleNight && toggleNight.checked !== isNight) {
+    toggleNight.checked = isNight;
+  }
+
+  const isAudioOnly = Boolean(dashboardAudioLabSettings.audio_only);
+  const toggleAudioOnly = document.getElementById('toggleAudioOnlyMode');
+  if (toggleAudioOnly && toggleAudioOnly.checked !== isAudioOnly) {
+    toggleAudioOnly.checked = isAudioOnly;
   }
 }
 
@@ -1109,6 +1282,27 @@ function applyDashboardLanguage(lang) {
   setTxt('audioLabTitle', 'audiolab_title');
   setTxt('lblAudioMasterBoost', 'audiolab_master_boost');
   setTxt('audioLabStatusText', 'audiolab_dsp_active');
+  setTxt('lblAudioEqTitle', 'audiolab_eq_title');
+  setTxt('btnResetEq', 'audiolab_reset_eq');
+  setTxt('lblAudioVocalTitle', 'audiolab_vocal_title');
+  setTxt('lblAudioVocalDesc', 'audiolab_vocal_desc');
+  setTxt('lblAudioNightTitle', 'audiolab_night_title');
+  setTxt('lblAudioNightDesc', 'audiolab_night_desc');
+  setTxt('lblAudioOnlyTitle', 'audiolab_audio_only_title');
+  setTxt('lblAudioOnlyDesc', 'audiolab_audio_only_desc');
+
+  updateSelectOptions('audioEqPresetSelect', {
+    flat: 'eq_preset_flat',
+    bass_boost: 'eq_preset_bass_boost',
+    vocal_enhancer: 'eq_preset_vocal_enhancer',
+    treble_boost: 'eq_preset_treble_boost',
+    electronic: 'eq_preset_electronic',
+    rock: 'eq_preset_rock',
+    acoustic: 'eq_preset_acoustic',
+    night_mode: 'eq_preset_night_mode',
+    custom: 'eq_preset_custom'
+  });
+
   updateDashboardAudioLabUI(dashboardAudioLabSettings);
 
   // Tab C static texts
@@ -3774,47 +3968,142 @@ function setupEventListeners() {
     });
   }
 
-  // 7b. Audio Lab Master Volume Boost Slider (Defect 15 - Web Audio Parity)
+  // 7b. Audio Lab & DSP Full Feature Parity Controls (Defect 15 Deep Parity)
+  // 1. Master Volume Boost Slider
   const boostSlider = document.getElementById('heroAudioBoostSlider');
   if (boostSlider) {
     boostSlider.addEventListener('input', (e) => {
       const val = parseInt(e.target.value, 10) || 100;
       const boostValEl = document.getElementById('heroAudioBoostVal');
       if (boostValEl) boostValEl.textContent = `${val}%`;
+      boostSlider.setAttribute('aria-valuenow', String(val));
     });
 
     boostSlider.addEventListener('change', (e) => {
       const val = parseInt(e.target.value, 10) || 100;
-      try {
-        if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
-          browserAPI.storage.local.get(['audio_lab_settings'], (res) => {
-            const cur = (res && res.audio_lab_settings) || {};
-            const updated = { ...cur, master_boost: val };
-            browserAPI.storage.local.set({ audio_lab_settings: updated });
+      persistDashboardAudioLabSettings({ master_boost: val });
+    });
+  }
 
-            // Dispatch to active media tab and background runtime
-            const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
-            const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
-            if (targetTabId && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
-              try {
-                const p = browserAPI.tabs.sendMessage(targetTabId, {
-                  type: 'APPLY_AUDIO_LAB_SETTINGS',
-                  settings: updated
-                });
-                if (p && typeof p.catch === 'function') p.catch(() => {});
-              } catch (_) {}
-            }
-            try {
-              const p2 = browserAPI.runtime.sendMessage({
-                type: 'APPLY_AUDIO_LAB_SETTINGS',
-                settings: updated,
-                tabId: targetTabId
-              });
-              if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
-            } catch (_) {}
-          });
+  // 2. EQ Presets Dropdown
+  const eqPresetSelect = document.getElementById('audioEqPresetSelect');
+  if (eqPresetSelect) {
+    eqPresetSelect.addEventListener('change', () => {
+      const presetKey = eqPresetSelect.value;
+      if (DASHBOARD_EQ_PRESETS[presetKey]) {
+        const curve = DASHBOARD_EQ_PRESETS[presetKey];
+        const bands = ['60', '250', '1000', '4000', '16000'];
+        if (!dashboardAudioLabSettings.eq_bands) dashboardAudioLabSettings.eq_bands = {};
+        bands.forEach((b, idx) => {
+          const val = curve[idx];
+          dashboardAudioLabSettings.eq_bands[b] = val;
+          const bandSlider = document.getElementById(`eqBand${b}`);
+          if (bandSlider) {
+            bandSlider.value = String(val);
+            bandSlider.setAttribute('aria-valuenow', String(val));
+          }
+          const valSpan = document.getElementById(`eqVal${b}`);
+          if (valSpan) valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        });
+        dashboardAudioLabSettings.eq_preset = presetKey;
+        const presetBadge = document.getElementById('audioLabPresetBadge');
+        if (presetBadge) {
+          presetBadge.textContent = presetKey.charAt(0).toUpperCase() + presetKey.slice(1).replace('_', ' ');
         }
-      } catch (_) {}
+        persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+      }
+    });
+  }
+
+  // 3. Reset EQ Button
+  const btnResetEq = document.getElementById('btnResetEq');
+  if (btnResetEq) {
+    btnResetEq.addEventListener('click', () => {
+      const bands = ['60', '250', '1000', '4000', '16000'];
+      if (!dashboardAudioLabSettings.eq_bands) dashboardAudioLabSettings.eq_bands = {};
+      bands.forEach((b) => {
+        dashboardAudioLabSettings.eq_bands[b] = 0;
+        const bandSlider = document.getElementById(`eqBand${b}`);
+        if (bandSlider) {
+          bandSlider.value = '0';
+          bandSlider.setAttribute('aria-valuenow', '0');
+        }
+        const valSpan = document.getElementById(`eqVal${b}`);
+        if (valSpan) valSpan.textContent = '0dB';
+      });
+      dashboardAudioLabSettings.eq_preset = 'flat';
+      if (eqPresetSelect) eqPresetSelect.value = 'flat';
+      const presetBadge = document.getElementById('audioLabPresetBadge');
+      if (presetBadge) presetBadge.textContent = 'Flat';
+      persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+    });
+  }
+
+  // 4. 5-Band Biquad Graphic Equalizer Sliders
+  const eqBandKeys = ['60', '250', '1000', '4000', '16000'];
+  eqBandKeys.forEach((b) => {
+    const bandSlider = document.getElementById(`eqBand${b}`);
+    if (bandSlider) {
+      const handleBandChange = () => {
+        const val = Number(bandSlider.value) || 0;
+        if (!dashboardAudioLabSettings.eq_bands) dashboardAudioLabSettings.eq_bands = {};
+        dashboardAudioLabSettings.eq_bands[b] = val;
+        bandSlider.setAttribute('aria-valuenow', String(val));
+        const valSpan = document.getElementById(`eqVal${b}`);
+        if (valSpan) valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
+        if (eqPresetSelect) eqPresetSelect.value = 'custom';
+        dashboardAudioLabSettings.eq_preset = 'custom';
+        const presetBadge = document.getElementById('audioLabPresetBadge');
+        if (presetBadge) presetBadge.textContent = 'Custom';
+        persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+      };
+      bandSlider.addEventListener('input', handleBandChange);
+      bandSlider.addEventListener('change', handleBandChange);
+    }
+  });
+
+  // 5. Vocal Clarity Toggle
+  const toggleVocal = document.getElementById('toggleVocalClarity');
+  if (toggleVocal) {
+    toggleVocal.addEventListener('change', () => {
+      dashboardAudioLabSettings.vocal_clarity = toggleVocal.checked;
+      const vocalBadge = document.getElementById('audioLabVocalBadge');
+      if (vocalBadge) {
+        vocalBadge.textContent = toggleVocal.checked ? t('audiolab_vocal_on') : t('audiolab_vocal_off');
+        if (toggleVocal.checked) {
+          vocalBadge.classList.add('badge-active');
+        } else {
+          vocalBadge.classList.remove('badge-active');
+        }
+      }
+      persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+    });
+  }
+
+  // 6. Night Shield Toggle
+  const toggleNight = document.getElementById('toggleNightShield');
+  if (toggleNight) {
+    toggleNight.addEventListener('change', () => {
+      dashboardAudioLabSettings.night_shield = toggleNight.checked;
+      const nightBadge = document.getElementById('audioLabNightBadge');
+      if (nightBadge) {
+        nightBadge.textContent = toggleNight.checked ? t('audiolab_night_on') : t('audiolab_night_off');
+        if (toggleNight.checked) {
+          nightBadge.classList.add('badge-active');
+        } else {
+          nightBadge.classList.remove('badge-active');
+        }
+      }
+      persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+    });
+  }
+
+  // 7. Audio-Only Mode Toggle
+  const toggleAudioOnly = document.getElementById('toggleAudioOnlyMode');
+  if (toggleAudioOnly) {
+    toggleAudioOnly.addEventListener('change', () => {
+      dashboardAudioLabSettings.audio_only = toggleAudioOnly.checked;
+      persistDashboardAudioLabSettings(dashboardAudioLabSettings);
     });
   }
 
@@ -4075,6 +4364,9 @@ if (typeof module !== 'undefined' && module.exports) {
     setCurrentTheme: (val) => { currentTheme = val; },
     updateDashboardAudioLabUI,
     getDashboardAudioLabSettings: () => dashboardAudioLabSettings,
-    setDashboardAudioLabSettings: (val) => { dashboardAudioLabSettings = val; }
+    setDashboardAudioLabSettings: (val) => { dashboardAudioLabSettings = val; },
+    DASHBOARD_EQ_PRESETS,
+    dispatchAudioLabSettings,
+    persistDashboardAudioLabSettings
   };
 }
