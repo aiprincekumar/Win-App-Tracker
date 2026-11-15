@@ -3295,8 +3295,20 @@ function setupEventListeners() {
 
     if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
       browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId },
+        target: { tabId: targetTabId, allFrames: true },
+        world: 'MAIN',
         func: () => {
+          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+          if (moviePlayer && typeof moviePlayer.getPlayerState === 'function') {
+            try {
+              if (moviePlayer.getPlayerState() === 1) {
+                moviePlayer.pauseVideo();
+              } else {
+                moviePlayer.playVideo();
+              }
+              return;
+            } catch (_) {}
+          }
           const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
           if (video) {
             if (video.paused) {
@@ -3307,9 +3319,14 @@ function setupEventListeners() {
             }
           }
         }
-      }).catch(() => {});
+      }).then(() => {
+        setTimeout(refreshDashboard, 180);
+      }).catch(() => {
+        sendMediaControl('toggle_play');
+      });
+    } else {
+      sendMediaControl('toggle_play');
     }
-    sendMediaControl('toggle_play');
   };
 
   const dynamicStatusBtn = document.getElementById('dynamicStatusBtn');
@@ -3330,16 +3347,39 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
+          target: { tabId: targetTabId, allFrames: true },
+          world: 'MAIN',
           func: () => {
+            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            let cur = 0;
+            let dur = 999999;
+            if (moviePlayer && typeof moviePlayer.getCurrentTime === 'function') {
+              try { cur = moviePlayer.getCurrentTime() || 0; } catch (_) {}
+            } else if (video && Number.isFinite(video.currentTime)) {
+              cur = video.currentTime;
+            }
+            if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+              try { dur = moviePlayer.getDuration() || 999999; } catch (_) {}
+            } else if (video && Number.isFinite(video.duration) && video.duration > 0) {
+              dur = video.duration;
+            }
+            const clampedTarget = Math.max(0, Math.min(dur, cur - 10));
+            if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+              try { moviePlayer.seekTo(clampedTarget, true); } catch (_) {}
+            }
             if (video) {
-              video.currentTime = Math.max(0, video.currentTime - 10);
+              try { video.currentTime = clampedTarget; } catch (_) {}
             }
           }
-        }).catch(() => {});
+        }).then(() => {
+          setTimeout(refreshDashboard, 180);
+        }).catch(() => {
+          sendMediaControl('seek_relative', { offsetSeconds: -10 });
+        });
+      } else {
+        sendMediaControl('seek_relative', { offsetSeconds: -10 });
       }
-      sendMediaControl('seek_relative', { offsetSeconds: -10 });
     });
   }
 
@@ -3355,17 +3395,39 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
+          target: { tabId: targetTabId, allFrames: true },
+          world: 'MAIN',
           func: () => {
+            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            let cur = 0;
+            let dur = 999999;
+            if (moviePlayer && typeof moviePlayer.getCurrentTime === 'function') {
+              try { cur = moviePlayer.getCurrentTime() || 0; } catch (_) {}
+            } else if (video && Number.isFinite(video.currentTime)) {
+              cur = video.currentTime;
+            }
+            if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+              try { dur = moviePlayer.getDuration() || 999999; } catch (_) {}
+            } else if (video && Number.isFinite(video.duration) && video.duration > 0) {
+              dur = video.duration;
+            }
+            const clampedTarget = Math.max(0, Math.min(dur, cur + 10));
+            if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+              try { moviePlayer.seekTo(clampedTarget, true); } catch (_) {}
+            }
             if (video) {
-              const maxDur = (Number.isFinite(video.duration) && video.duration > 0) ? video.duration : 999999;
-              video.currentTime = Math.min(maxDur, video.currentTime + 10);
+              try { video.currentTime = clampedTarget; } catch (_) {}
             }
           }
-        }).catch(() => {});
+        }).then(() => {
+          setTimeout(refreshDashboard, 180);
+        }).catch(() => {
+          sendMediaControl('seek_relative', { offsetSeconds: 10 });
+        });
+      } else {
+        sendMediaControl('seek_relative', { offsetSeconds: 10 });
       }
-      sendMediaControl('seek_relative', { offsetSeconds: 10 });
     });
   }
 
@@ -3379,16 +3441,34 @@ function setupEventListeners() {
 
     if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
       browserAPI.scripting.executeScript({
-        target: { tabId: targetTabId },
+        target: { tabId: targetTabId, allFrames: true },
+        world: 'MAIN',
         func: () => {
+          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+          if (moviePlayer && typeof moviePlayer.isMuted === 'function') {
+            try {
+              if (moviePlayer.isMuted()) {
+                if (typeof moviePlayer.unMute === 'function') moviePlayer.unMute();
+              } else {
+                if (typeof moviePlayer.mute === 'function') moviePlayer.mute();
+              }
+            } catch (_) {}
+          }
           const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
           if (video) {
-            video.muted = !video.muted;
+            try {
+              video.muted = !video.muted;
+            } catch (_) {}
           }
         }
-      }).catch(() => {});
+      }).then(() => {
+        setTimeout(refreshDashboard, 180);
+      }).catch(() => {
+        sendMediaControl('toggle_mute');
+      });
+    } else {
+      sendMediaControl('toggle_mute');
     }
-    sendMediaControl('toggle_mute');
   };
 
   const btnCtrlToggleMute = document.getElementById('btnCtrlToggleMute');
@@ -3431,9 +3511,9 @@ function setupEventListeners() {
           target: { tabId: targetTabId, allFrames: true },
           world: 'MAIN',
           func: (spd) => {
-            const p = document.getElementById('movie_player') || window.movie_player;
-            if (p && typeof p.setPlaybackRate === 'function') {
-              try { p.setPlaybackRate(spd); } catch (_) {}
+            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+            if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
+              try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
             }
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
             if (video) {
@@ -3441,10 +3521,14 @@ function setupEventListeners() {
             }
           },
           args: [targetSpeed]
-        }).catch(() => {});
+        }).then(() => {
+          setTimeout(refreshDashboard, 180);
+        }).catch(() => {
+          sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
+        });
+      } else {
+        sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
       }
-
-      sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);
     });
   }
 
@@ -3478,9 +3562,9 @@ function setupEventListeners() {
           target: { tabId: targetTabId, allFrames: true },
           world: 'MAIN',
           func: (spd) => {
-            const p = document.getElementById('movie_player') || window.movie_player;
-            if (p && typeof p.setPlaybackRate === 'function') {
-              try { p.setPlaybackRate(spd); } catch (_) {}
+            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+            if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
+              try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
             }
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
             if (video) {
@@ -3488,10 +3572,14 @@ function setupEventListeners() {
             }
           },
           args: [targetSpeed]
-        }).catch(() => {});
+        }).then(() => {
+          setTimeout(refreshDashboard, 180);
+        }).catch(() => {
+          sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
+        });
+      } else {
+        sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
       }
-
-      sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);
     });
   }
 
