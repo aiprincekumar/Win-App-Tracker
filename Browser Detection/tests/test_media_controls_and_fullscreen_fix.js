@@ -1,7 +1,7 @@
 /**
  * Comprehensive Verification Test Suite:
- * Media Controls Routing, Action Execution, Unconditional IPC Dispatch,
- * and On-Video Overlay Fullscreen Linking Fix
+ * Media Controls Routing, Action Execution, Single-Execution Determinism,
+ * Unconditional IPC Dispatch, and On-Video Overlay Fullscreen Linking Fix
  * 
  * Verifies:
  * 1. Content Script IPC Router parsing integrity:
@@ -22,25 +22,25 @@
  *    - Priority 1: checks and clicks document.getElementById('__sentinel_fs_floating_btn__')
  *    - Priority 2: fallback to window.__SentinelFullscreenController.toggle(null, { forceWeb: true })
  *    - Priority 3: fallback native player button / KeyF keyboard event
- *    - Verified across both content_media.js and popup/popup.js executeScript
- * 4. Bloat removal & simplification in popup/popup.js #btnCtrlFullscreen:
- *    - Removal of 124-line manual DOM class manipulation block
+ *    - Authoritative content_media.js execution with zero conflicting executeScript in popup.js
+ * 4. Bloat removal & single-execution determinism in popup/popup.js #btnCtrlFullscreen:
+ *    - Sole authoritative dispatch via sendMediaControl('toggle_fullscreen', {}, targetTabId)
+ *    - Complete absence of browserAPI.scripting.executeScript in #btnCtrlFullscreen (0 dual-dispatch)
  *    - Zero occurrences of manual CSS class toggles (sentinel-fullscreen-active, moviePlayer.classList, flexy.setAttribute)
- *    - Top-frame targeting (omission of allFrames: true, target: { tabId: targetTabId })
- *    - Unconditional dispatch of sendMediaControl('toggle_fullscreen', {}, targetTabId)
+ *    - Compact block size (<= 35 lines)
  * 5. Universal Play/Pause button (#btnGlobalMediaToggle) preservation:
- *    - Preserved 100% untouched (lines 3125-3139)
+ *    - Preserved 100% untouched (lines ~3154-3168)
  *    - Strictly bound to TOGGLE_GLOBAL_MEDIA
  *    - Not hijacked or merged with single-tab controls
- * 6. In-Popup Media Controls Wiring & Unconditional Dispatch:
- *    - #btnCtrlTogglePlay & #dynamicStatusBtn -> toggle_play
- *    - #btnCtrlRewind & #btnCtrlForward -> seek_relative (-10s, +10s)
- *    - #btnCtrlToggleMute & #btnQuickMute -> toggle_mute
- *    - #btnCtrlSpeedDown & #btnCtrlSpeedUp -> step_speed
+ * 6. In-Popup Media Controls Wiring & Single Authoritative IPC Dispatch:
+ *    - #btnCtrlTogglePlay & #dynamicStatusBtn -> toggle_play (0 conflicting executeScript)
+ *    - #btnCtrlRewind & #btnCtrlForward -> seek_relative (-10s, +10s) (0 conflicting executeScript)
+ *    - #btnCtrlToggleMute & #btnQuickMute -> toggle_mute (0 conflicting executeScript)
+ *    - #btnCtrlSpeedDown & #btnCtrlSpeedUp -> step_speed (0 conflicting executeScript)
  *    - #progressBarContainer -> seek_percent
  *    - #volumeBarContainer -> set_volume
- *    - Extended controls (PiP, Theater, Quality Steppers)
- *    - Top-frame targeting without allFrames: true across all control handlers
+ *    - Extended controls (PiP, Theater, Quality Steppers) (0 conflicting executeScript)
+ *    - Single authoritative sendMediaControl dispatch across all button handlers
  * 7. Extension Syntax & W3C Trusted Types compliance:
  *    - Zero syntax errors across all workspace scripts via `node -c` and vm.Script
  *    - Zero innerHTML assignments in content_media.js, fullscreen_controller.js, inject_main_world.js
@@ -49,7 +49,7 @@
  *    - renderMediaCard 800ms cooldown guards
  * 9. Runtime Simulated Functional Mock Test Suite:
  *    - Execution against mock DOM elements and browserAPI
- *    - Unconditional IPC sendMediaControl and top-frame executeScript verification
+ *    - Single-execution determinism: exactly 1 authoritative sendMediaControl IPC dispatch and 0 executeScript calls
  *    - Real sendMediaControl envelope construction and dispatch verification
  */
 
@@ -502,16 +502,28 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   assert(contentMediaCode.includes('window.__SentinelFullscreenController.toggle(null, { forceWeb: true });'),
     'content_media.js must fall back to __SentinelFullscreenController.toggle(null, { forceWeb: true })');
 
-  // 3.2 Verify popup.js #btnCtrlFullscreen executeScript checks __sentinel_fs_floating_btn__ as Priority 1
-  assert(popupJsCode.includes("const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');"),
-    'popup.js executeScript must check document.getElementById("__sentinel_fs_floating_btn__")');
-  assert(popupJsCode.includes('floatingBtn.click();'),
-    'popup.js executeScript must click floatingBtn when present');
-  assert(popupJsCode.includes('window.__SentinelFullscreenController.toggle(null, { forceWeb: true });'),
-    'popup.js executeScript must fall back to __SentinelFullscreenController.toggle(null, { forceWeb: true })');
+  // 3.2 Verify popup.js delegates to sendMediaControl('toggle_fullscreen') with 0 conflicting executeScript
+  assert(popupJsCode.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
+    'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId)');
 
-  // 3.3 Simulation: When Floating Button Exists in DOM
+  const btnFsIndex = popupJsCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
+  assert(btnFsIndex !== -1, 'Must find btnCtrlFullscreen in popup.js');
+  const nextBtnIndex = popupJsCode.indexOf("const btnPip = document.getElementById('btnCtrlPip');", btnFsIndex);
+  assert(nextBtnIndex !== -1, 'Must find boundary for btnCtrlPip');
+  const btnFsBlock = popupJsCode.slice(btnFsIndex, nextBtnIndex);
+  assert(!btnFsBlock.includes('browserAPI.scripting.executeScript'),
+    'popup.js #btnCtrlFullscreen must NOT contain browserAPI.scripting.executeScript (single-execution determinism)');
+  assert(!btnFsBlock.includes('executeScript'),
+    'popup.js #btnCtrlFullscreen must have 0 executeScript occurrences');
+
+  // 3.3 Simulation: When Floating Button Exists in DOM (Priority 1 in content_media.js)
   {
+    const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
+    assert(handleMediaStart !== -1, 'Must find handleMediaControl in content_media.js');
+    const handleMediaEnd = contentMediaCode.indexOf('// YouTube SPA Navigation Listeners & Visibility', handleMediaStart);
+    assert(handleMediaEnd !== -1, 'Must find handleMediaControl end boundary');
+    const handleMediaFuncCode = contentMediaCode.slice(handleMediaStart, handleMediaEnd);
+
     let floatingBtnClicked = false;
     let controllerToggleCalled = false;
 
@@ -522,42 +534,42 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
       toggle: () => { controllerToggleCalled = true; }
     };
 
-    // Extract popup.js injected script func inside btnCtrlFullscreen
-    const btnFsIndex = popupJsCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
-    assert(btnFsIndex !== -1, 'Must find btnCtrlFullscreen in popup.js');
-    const funcStartMarker = 'func: () => {';
-    const funcEndMarker = '}).catch(() => {';
-    const funcStartIndex = popupJsCode.indexOf(funcStartMarker, btnFsIndex);
-    assert(funcStartIndex !== -1, 'Must find executeScript func in popup.js');
-    const funcEndIndex = popupJsCode.indexOf(funcEndMarker, funcStartIndex);
-    assert(funcEndIndex !== -1, 'Must find executeScript func end in popup.js');
-    // Strip trailing closing brace of func
-    const fullBody = popupJsCode.slice(funcStartIndex + funcStartMarker.length, funcEndIndex).trim();
-    const lastBrace = fullBody.lastIndexOf('}');
-    const injectedFuncBody = fullBody.slice(0, lastBrace).trim();
+    const sandbox = vm.createContext({
+      evaluatePageMediaState: () => ({ primaryMediaElement: { paused: false } }),
+      isTopFrame: true,
+      forwardActionToMainWorld: () => {},
+      calculateNextLadderSpeed: () => 1.0,
+      saveDomainSpeed: () => {},
+      extractYouTubeDuration: () => 120,
+      toggleWebFullscreen: () => {},
+      toggleTheaterMode: () => {},
+      dispatchMediaTelemetry: () => {},
+      setTimeout: (fn) => fn(),
+      document: {
+        getElementById: (id) => (id === '__sentinel_fs_floating_btn__' ? mockFloatingBtn : null),
+        querySelector: () => null,
+        querySelectorAll: () => []
+      },
+      window: {
+        __SentinelFullscreenController: mockController
+      },
+      KeyboardEvent: class {}
+    });
 
-    const injectedFunc = new Function('document', 'window', 'KeyboardEvent', `
-      ${injectedFuncBody}
-    `);
+    vm.runInContext(handleMediaFuncCode, sandbox);
+    sandbox.handleMediaControl('toggle_fullscreen');
 
-    const mockDoc = {
-      getElementById: (id) => (id === '__sentinel_fs_floating_btn__' ? mockFloatingBtn : null),
-      querySelector: () => null,
-      querySelectorAll: () => [],
-      fullscreenElement: null
-    };
-    const mockWin = {
-      __SentinelFullscreenController: mockController
-    };
-
-    injectedFunc(mockDoc, mockWin, class {});
     assert.strictEqual(floatingBtnClicked, true, 'Floating button click must be triggered');
     assert.strictEqual(controllerToggleCalled, false, 'Controller toggle must NOT be called when floating button exists');
-    console.log('  ✅ Priority 1 verified: Overlay button clicked directly without controller fallback');
+    console.log('  ✅ Priority 1 verified: Overlay button clicked directly without controller fallback in content script');
   }
 
-  // 3.4 Simulation: When Floating Button is Absent but Controller Exists
+  // 3.4 Simulation: When Floating Button is Absent but Controller Exists (Priority 2 in content_media.js)
   {
+    const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
+    const handleMediaEnd = contentMediaCode.indexOf('// YouTube SPA Navigation Listeners & Visibility', handleMediaStart);
+    const handleMediaFuncCode = contentMediaCode.slice(handleMediaStart, handleMediaEnd);
+
     let controllerToggleCalled = false;
     let controllerForceWeb = false;
 
@@ -568,32 +580,34 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
       }
     };
 
-    const btnFsIndex = popupJsCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
-    const funcStartMarker = 'func: () => {';
-    const funcEndMarker = '}).catch(() => {';
-    const funcStartIndex = popupJsCode.indexOf(funcStartMarker, btnFsIndex);
-    const funcEndIndex = popupJsCode.indexOf(funcEndMarker, funcStartIndex);
-    const fullBody = popupJsCode.slice(funcStartIndex + funcStartMarker.length, funcEndIndex).trim();
-    const lastBrace = fullBody.lastIndexOf('}');
-    const injectedFuncBody = fullBody.slice(0, lastBrace).trim();
-    const injectedFunc = new Function('document', 'window', 'KeyboardEvent', `
-      ${injectedFuncBody}
-    `);
+    const sandbox = vm.createContext({
+      evaluatePageMediaState: () => ({ primaryMediaElement: { paused: false } }),
+      isTopFrame: true,
+      forwardActionToMainWorld: () => {},
+      calculateNextLadderSpeed: () => 1.0,
+      saveDomainSpeed: () => {},
+      extractYouTubeDuration: () => 120,
+      toggleWebFullscreen: () => {},
+      toggleTheaterMode: () => {},
+      dispatchMediaTelemetry: () => {},
+      setTimeout: (fn) => fn(),
+      document: {
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => []
+      },
+      window: {
+        __SentinelFullscreenController: mockController
+      },
+      KeyboardEvent: class {}
+    });
 
-    const mockDoc = {
-      getElementById: () => null,
-      querySelector: () => null,
-      querySelectorAll: () => [],
-      fullscreenElement: null
-    };
-    const mockWin = {
-      __SentinelFullscreenController: mockController
-    };
+    vm.runInContext(handleMediaFuncCode, sandbox);
+    sandbox.handleMediaControl('toggle_fullscreen');
 
-    injectedFunc(mockDoc, mockWin, class {});
     assert.strictEqual(controllerToggleCalled, true, 'Controller toggle must be called when floating button is absent');
     assert.strictEqual(controllerForceWeb, true, 'forceWeb must be true for deterministic web fullscreen');
-    console.log('  ✅ Priority 2 verified: Controller.toggle(null, { forceWeb: true }) called as clean fallback');
+    console.log('  ✅ Priority 2 verified: Controller.toggle(null, { forceWeb: true }) called as clean fallback in content script');
   }
 }
 
@@ -630,23 +644,18 @@ console.log('\nTest 4: Bloat Removal & Fullscreen Invariants in popup/popup.js #
 
   const btnFsBlock = popupJsCode.slice(btnFsIndex, nextBtnIndex);
   const lineCount = btnFsBlock.split('\n').length;
-  assert(lineCount <= 75, `#btnCtrlFullscreen block should be concise (<= 75 lines, currently ${lineCount} lines)`);
+  assert(lineCount <= 35, `#btnCtrlFullscreen block should be concise (<= 35 lines, currently ${lineCount} lines)`);
   console.log(`  ✅ #btnCtrlFullscreen block is clean and compact (${lineCount} lines, down from ~180 lines)`);
 
-  // 4.3 Verify unconditional IPC dispatch and top-frame MAIN world execution
-  assert(btnFsBlock.includes("world: 'MAIN'"), 'popup.js executeScript must target MAIN world');
-  assert(!btnFsBlock.includes("allFrames: true"), 'popup.js executeScript must NOT include allFrames: true (must target top frame only)');
-  assert(btnFsBlock.includes("target: { tabId: targetTabId }"), 'popup.js executeScript must target { tabId: targetTabId }');
+  // 4.3 Verify single authoritative IPC dispatch and 0 executeScript
+  assert(!btnFsBlock.includes('browserAPI.scripting.executeScript'),
+    'popup.js #btnCtrlFullscreen must NOT contain browserAPI.scripting.executeScript');
+  assert(!btnFsBlock.includes('executeScript'),
+    'popup.js #btnCtrlFullscreen must contain 0 executeScript calls');
   assert(btnFsBlock.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
-    'popup.js must unconditionally dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId)');
+    'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId) as sole authoritative dispatch');
 
-  // Verify sendMediaControl is unconditional outside any .catch() block
-  const fsCatchMatch = btnFsBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/);
-  if (fsCatchMatch) {
-    assert(!fsCatchMatch[1].includes('sendMediaControl'),
-      'btnCtrlFullscreen .catch must not contain sendMediaControl as it is dispatched unconditionally');
-  }
-  console.log('  ✅ Unconditional IPC dispatch and top-frame MAIN world execution verified in #btnCtrlFullscreen');
+  console.log('  ✅ Single authoritative IPC dispatch and 0 executeScript verified in #btnCtrlFullscreen');
 }
 
 // ---------------------------------------------------------------------------
@@ -683,13 +692,13 @@ console.log('\nTest 5: Universal Global Media Invariant Guard (#btnGlobalMediaTo
   assert(globalToggleBlock.includes('refreshDashboard(true)'), '#btnGlobalMediaToggle must call refreshDashboard(true)');
 
   console.log('  ✅ Universal Play/Pause button (#btnGlobalMediaToggle) is 100% UNTOUCHED and preserved');
-  console.log('  ✅ Verified lines 3125-3139 strictly isolate global multi-tab toggle from single-tab controls');
+  console.log('  ✅ Verified lines ~3154-3168 strictly isolate global multi-tab toggle from single-tab controls');
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: In-Popup Media Controls Wiring & Unconditional Dispatch Verification
+// Test 6: In-Popup Media Controls Wiring & Single Authoritative Dispatch Verification
 // ---------------------------------------------------------------------------
-console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch Verification');
+console.log('\nTest 6: In-Popup Media Controls Wiring & Single Authoritative Dispatch Verification');
 {
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
@@ -700,24 +709,18 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch V
     'btnCtrlTogglePlay must listen for click and call handleTogglePlay');
   assert(popupJsCode.includes("sendMediaControl('toggle_play', {}, targetTabId);"),
     'handleTogglePlay must call sendMediaControl("toggle_play", {}, targetTabId)');
-  
-  // Verify handleTogglePlay executes in MAIN world targeting top frame (omitting allFrames: true)
+
+  // Verify handleTogglePlay contains 0 executeScript and dispatches solely via sendMediaControl
   const playHandlerStart = popupJsCode.indexOf('const handleTogglePlay = () => {');
   const playHandlerEnd = popupJsCode.indexOf('const dynamicStatusBtn =', playHandlerStart);
   assert(playHandlerStart !== -1 && playHandlerEnd !== -1, 'Must find handleTogglePlay block');
   const playBlock = popupJsCode.slice(playHandlerStart, playHandlerEnd);
-  assert(playBlock.includes("world: 'MAIN'"), 'handleTogglePlay executeScript must use world: "MAIN"');
-  assert(!playBlock.includes('allFrames: true'), 'handleTogglePlay executeScript must NOT use allFrames: true (top-frame only)');
-  assert(playBlock.includes('target: { tabId: targetTabId }'), 'handleTogglePlay executeScript must target { tabId: targetTabId }');
-  assert(playBlock.includes('moviePlayer.getPlayerState() === 1 ? moviePlayer.pauseVideo() : moviePlayer.playVideo()') ||
-    playBlock.includes('moviePlayer.getPlayerState() === 1'), 'handleTogglePlay must check moviePlayer getPlayerState');
-  assert(playBlock.includes('video.play()'), 'handleTogglePlay must fallback to HTML5 video');
-  assert(playBlock.includes("sendMediaControl('toggle_play', {}, targetTabId);"), 'handleTogglePlay must unconditionally dispatch sendMediaControl');
-  const playCatchMatch = playBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/);
-  if (playCatchMatch) {
-    assert(!playCatchMatch[1].includes('sendMediaControl'), 'handleTogglePlay .catch must not contain fallback sendMediaControl');
-  }
-  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to unconditional IPC toggle_play with top-frame MAIN world execution');
+  assert(!playBlock.includes('browserAPI.scripting.executeScript'), 'handleTogglePlay must NOT contain browserAPI.scripting.executeScript');
+  assert(!playBlock.includes('executeScript'), 'handleTogglePlay must contain 0 executeScript occurrences');
+  assert(playBlock.includes("sendMediaControl('toggle_play', {}, targetTabId);"), 'handleTogglePlay must dispatch sendMediaControl');
+  assert(playBlock.includes('activeMediaCached.isPlaying = !activeMediaCached.isPlaying;'), 'handleTogglePlay must optimistically toggle isPlaying');
+  assert(playBlock.includes('lastPlayToggleTime = Date.now();'), 'handleTogglePlay must record lastPlayToggleTime');
+  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to single authoritative sendMediaControl toggle_play with 0 conflicting executeScript');
 
   // 6.2 Seek Relative (-10s / +10s)
   assert(popupJsCode.includes("sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);"),
@@ -725,7 +728,6 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch V
   assert(popupJsCode.includes("sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);"),
     '#btnCtrlForward must dispatch seek_relative with offsetSeconds: 10');
 
-  // Verify rewind and forward execute in MAIN world targeting top frame (omitting allFrames: true)
   const rewindStart = popupJsCode.indexOf("const btnRewind = document.getElementById('btnCtrlRewind');");
   const forwardStart = popupJsCode.indexOf("const btnForward = document.getElementById('btnCtrlForward');");
   const muteHandlerStart = popupJsCode.indexOf('const handleToggleMute = () => {');
@@ -733,28 +735,16 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch V
   const rewindBlock = popupJsCode.slice(rewindStart, forwardStart);
   const forwardBlock = popupJsCode.slice(forwardStart, muteHandlerStart);
 
-  assert(rewindBlock.includes("world: 'MAIN'"), 'Rewind must use MAIN world');
-  assert(!rewindBlock.includes('allFrames: true'), 'Rewind must NOT use allFrames: true (top-frame only)');
-  assert(rewindBlock.includes('target: { tabId: targetTabId }'), 'Rewind must target { tabId: targetTabId }');
-  assert(rewindBlock.includes('moviePlayer.seekTo(clampedTarget, true)'), 'Rewind must seek moviePlayer to clampedTarget');
-  assert(rewindBlock.includes('video.currentTime = clampedTarget'), 'Rewind must set video currentTime to clampedTarget');
-  assert(rewindBlock.includes("sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);"), 'Rewind must unconditionally dispatch sendMediaControl');
-  const rewindCatchMatch = rewindBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/);
-  if (rewindCatchMatch) {
-    assert(!rewindCatchMatch[1].includes('sendMediaControl'), 'Rewind .catch must not contain fallback sendMediaControl');
-  }
+  assert(!rewindBlock.includes('browserAPI.scripting.executeScript'), 'Rewind must NOT contain executeScript');
+  assert(!rewindBlock.includes('executeScript'), 'Rewind must contain 0 executeScript occurrences');
+  assert(rewindBlock.includes("sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);"), 'Rewind must dispatch sendMediaControl');
+  assert(rewindBlock.includes('lastProgressDragTime = Date.now();'), 'Rewind must record lastProgressDragTime');
 
-  assert(forwardBlock.includes("world: 'MAIN'"), 'Forward must use MAIN world');
-  assert(!forwardBlock.includes('allFrames: true'), 'Forward must NOT use allFrames: true (top-frame only)');
-  assert(forwardBlock.includes('target: { tabId: targetTabId }'), 'Forward must target { tabId: targetTabId }');
-  assert(forwardBlock.includes('moviePlayer.seekTo(clampedTarget, true)'), 'Forward must seek moviePlayer to clampedTarget');
-  assert(forwardBlock.includes('video.currentTime = clampedTarget'), 'Forward must set video currentTime to clampedTarget');
-  assert(forwardBlock.includes("sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);"), 'Forward must unconditionally dispatch sendMediaControl');
-  const forwardCatchMatch = forwardBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/);
-  if (forwardCatchMatch) {
-    assert(!forwardCatchMatch[1].includes('sendMediaControl'), 'Forward .catch must not contain fallback sendMediaControl');
-  }
-  console.log('  ✅ Rewind & Forward (#btnCtrlRewind & #btnCtrlForward) correctly wire to unconditional IPC seek_relative ±10s with top-frame MAIN world execution');
+  assert(!forwardBlock.includes('browserAPI.scripting.executeScript'), 'Forward must NOT contain executeScript');
+  assert(!forwardBlock.includes('executeScript'), 'Forward must contain 0 executeScript occurrences');
+  assert(forwardBlock.includes("sendMediaControl('seek_relative', { offsetSeconds: 10 }, targetTabId);"), 'Forward must dispatch sendMediaControl');
+  assert(forwardBlock.includes('lastProgressDragTime = Date.now();'), 'Forward must record lastProgressDragTime');
+  console.log('  ✅ Rewind & Forward (#btnCtrlRewind & #btnCtrlForward) correctly wire to single authoritative seek_relative ±10s with 0 conflicting executeScript');
 
   // 6.3 Mute / Unmute (#btnCtrlToggleMute & #btnQuickMute)
   assert(popupJsCode.includes("btnCtrlToggleMute.addEventListener('click', handleToggleMute);"),
@@ -764,42 +754,29 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch V
   assert(popupJsCode.includes("sendMediaControl('toggle_mute', {}, targetTabId);"),
     'handleToggleMute must call sendMediaControl("toggle_mute", {}, targetTabId)');
 
-  // Verify mute handler executes in MAIN world targeting top frame (omitting allFrames: true)
   const muteBlock = popupJsCode.slice(muteHandlerStart, popupJsCode.indexOf("const btnCtrlToggleMute =", muteHandlerStart));
-  assert(muteBlock.includes("world: 'MAIN'"), 'handleToggleMute executeScript must use world: "MAIN"');
-  assert(!muteBlock.includes('allFrames: true'), 'handleToggleMute executeScript must NOT use allFrames: true (top-frame only)');
-  assert(muteBlock.includes('target: { tabId: targetTabId }'), 'handleToggleMute executeScript must target { tabId: targetTabId }');
-  assert(muteBlock.includes('moviePlayer.isMuted()'), 'handleToggleMute must check moviePlayer.isMuted');
-  assert(muteBlock.includes('video.muted = !video.muted'), 'handleToggleMute must toggle video.muted');
-  assert(muteBlock.includes("sendMediaControl('toggle_mute', {}, targetTabId);"), 'handleToggleMute must unconditionally dispatch sendMediaControl');
-  const muteCatchMatch = muteBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/);
-  if (muteCatchMatch) {
-    assert(!muteCatchMatch[1].includes('sendMediaControl'), 'handleToggleMute .catch must not contain fallback sendMediaControl');
-  }
-  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to unconditional IPC toggle_mute with top-frame MAIN world execution');
+  assert(!muteBlock.includes('browserAPI.scripting.executeScript'), 'handleToggleMute must NOT contain executeScript');
+  assert(!muteBlock.includes('executeScript'), 'handleToggleMute must contain 0 executeScript occurrences');
+  assert(muteBlock.includes("sendMediaControl('toggle_mute', {}, targetTabId);"), 'handleToggleMute must dispatch sendMediaControl');
+  assert(muteBlock.includes('lastMuteToggleTime = Date.now();'), 'handleToggleMute must record lastMuteToggleTime');
+  assert(muteBlock.includes('activeMediaCached.isMuted = !activeMediaCached.isMuted;'), 'handleToggleMute must optimistically toggle isMuted');
+  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to single authoritative toggle_mute with 0 conflicting executeScript');
 
   // 6.4 Playback Speed Steppers
   assert(popupJsCode.includes("sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);"),
     'btnCtrlSpeedDown must dispatch step_speed down');
   assert(popupJsCode.includes("sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);"),
     'btnCtrlSpeedUp must dispatch step_speed up');
-  
-  // Verify speed steppers execute in MAIN world and target top frame
+
   const speedDownStart = popupJsCode.indexOf("const btnSpeedDown = document.getElementById('btnCtrlSpeedDown');");
   const fsStart = popupJsCode.indexOf("let lastFullscreenClick = 0;");
   const speedBlock = popupJsCode.slice(speedDownStart, fsStart);
-  assert(speedBlock.includes("world: 'MAIN'"), 'Speed controls must execute in MAIN world');
-  assert(!speedBlock.includes('allFrames: true'), 'Speed controls must NOT use allFrames: true (top-frame only)');
-  assert(speedBlock.includes('target: { tabId: targetTabId }'), 'Speed controls must target { tabId: targetTabId }');
-  assert(speedBlock.includes('moviePlayer.setPlaybackRate(spd)'), 'Speed controls must call moviePlayer.setPlaybackRate');
-  assert(speedBlock.includes('video.playbackRate = spd'), 'Speed controls must set video.playbackRate');
-  assert(speedBlock.includes("sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);"), 'Speed down must unconditionally dispatch sendMediaControl');
-  assert(speedBlock.includes("sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);"), 'Speed up must unconditionally dispatch sendMediaControl');
-  const speedCatchMatches = speedBlock.match(/\.catch\(\s*\(\)\s*=>\s*\{([\s\S]*?)\}\);/g) || [];
-  speedCatchMatches.forEach((cm) => {
-    assert(!cm.includes('sendMediaControl'), 'Speed controls .catch must not contain fallback sendMediaControl');
-  });
-  console.log('  ✅ Speed steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp) correctly wire to unconditional IPC step_speed with top-frame ladder');
+  assert(!speedBlock.includes('browserAPI.scripting.executeScript'), 'Speed controls must NOT contain executeScript');
+  assert(!speedBlock.includes('executeScript'), 'Speed controls must contain 0 executeScript occurrences');
+  assert(speedBlock.includes("sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);"), 'Speed down must dispatch sendMediaControl');
+  assert(speedBlock.includes("sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);"), 'Speed up must dispatch sendMediaControl');
+  assert(speedBlock.includes('lastSpeedChangeTime = Date.now();'), 'Speed controls must record lastSpeedChangeTime');
+  console.log('  ✅ Speed steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp) correctly wire to single authoritative step_speed with 0 conflicting executeScript');
 
   // 6.5 Timeline Scrubber (#progressBarContainer)
   assert(popupJsCode.includes("sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSeconds }, targetTabId)"),
@@ -820,7 +797,13 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Unconditional Dispatch V
     'btnCtrlQualityDown must dispatch step_quality down unconditionally');
   assert(popupJsCode.includes("sendMediaControl('step_quality', { direction: 'up' }, targetTabId);"),
     'btnCtrlQualityUp must dispatch step_quality up unconditionally');
-  console.log('  ✅ Extended controls (PiP, Theater, Quality Steppers) correctly wire to unconditional IPC');
+
+  const pipStart = popupJsCode.indexOf("const btnPip = document.getElementById('btnCtrlPip');");
+  const progressStart = popupJsCode.indexOf("const progressContainer = document.getElementById('progressBarContainer');");
+  const extBlock = popupJsCode.slice(pipStart, progressStart);
+  assert(!extBlock.includes('browserAPI.scripting.executeScript'), 'Extended controls must NOT contain executeScript');
+  assert(!extBlock.includes('executeScript'), 'Extended controls must contain 0 executeScript occurrences');
+  console.log('  ✅ Extended controls (PiP, Theater, Quality Steppers) correctly wire to single authoritative IPC with 0 conflicting executeScript');
 }
 
 // ---------------------------------------------------------------------------
@@ -1089,13 +1072,6 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
   const context = vm.createContext(sandboxScope);
   vm.runInContext(controlsCode, context);
 
-  // Helper to assert top frame executeScript
-  const assertTopFrameScripting = (scriptCall, expectedTabId) => {
-    assert(scriptCall, 'executeScript must be called');
-    assert.strictEqual(scriptCall.target.tabId, expectedTabId, `executeScript must target tabId ${expectedTabId}`);
-    assert.strictEqual(scriptCall.target.allFrames, undefined, 'executeScript must NOT target allFrames (must omit allFrames: true)');
-  };
-
   // 9.3 Test Play/Pause Toggle via #btnCtrlTogglePlay
   {
     interceptedMediaControls.length = 0;
@@ -1106,16 +1082,14 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(sandboxScope.activeMediaCached.isPlaying, true, 'activeMediaCached.isPlaying must optimistically toggle to true');
     assert(sandboxScope.lastPlayToggleTime > 0, 'lastPlayToggleTime must be set');
 
-    // Verify unconditional sendMediaControl dispatch
-    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called once');
+    // Verify single authoritative sendMediaControl dispatch
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_play', 'sendMediaControl action must be toggle_play');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42, 'sendMediaControl tabId must be 42');
 
-    // Verify top-frame executeScript
-    assert.strictEqual(interceptedExecuteScripts.length, 1, 'executeScript must be called once');
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN', 'executeScript must target MAIN world');
-    console.log('  ✅ #btnCtrlTogglePlay: Unconditional toggle_play IPC & top-frame executeScript verified');
+    // Verify zero conflicting executeScript calls (single-execution determinism)
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on play toggle');
+    console.log('  ✅ #btnCtrlTogglePlay: Single authoritative toggle_play IPC dispatch & 0 executeScript verified');
   }
 
   // 9.4 Test Play/Pause Toggle via #dynamicStatusBtn
@@ -1125,10 +1099,11 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     mockElements.dynamicStatusBtn.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.isPlaying, false, 'activeMediaCached.isPlaying must toggle back to false');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_play');
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    console.log('  ✅ #dynamicStatusBtn: Unconditional toggle_play IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on dynamic status btn');
+    console.log('  ✅ #dynamicStatusBtn: Single authoritative toggle_play IPC dispatch & 0 executeScript verified');
   }
 
   // 9.5 Test Rewind 10s via #btnCtrlRewind
@@ -1138,13 +1113,12 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     mockElements.btnCtrlRewind.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.currentTime, 40.0, 'currentTime must be reduced by 10s (50 -> 40)');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'seek_relative');
     assert.strictEqual(interceptedMediaControls[0].data.offsetSeconds, -10);
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #btnCtrlRewind: Unconditional seek_relative (-10s) IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on rewind');
+    console.log('  ✅ #btnCtrlRewind: Single authoritative seek_relative (-10s) IPC dispatch & 0 executeScript verified');
   }
 
   // 9.6 Test Forward 10s via #btnCtrlForward
@@ -1154,13 +1128,12 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     mockElements.btnCtrlForward.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.currentTime, 50.0, 'currentTime must be incremented by 10s (40 -> 50)');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'seek_relative');
     assert.strictEqual(interceptedMediaControls[0].data.offsetSeconds, 10);
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #btnCtrlForward: Unconditional seek_relative (+10s) IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on forward');
+    console.log('  ✅ #btnCtrlForward: Single authoritative seek_relative (+10s) IPC dispatch & 0 executeScript verified');
   }
 
   // 9.7 Test Mute Toggle via #btnCtrlToggleMute & #btnQuickMute
@@ -1170,11 +1143,10 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     mockElements.btnCtrlToggleMute.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.isMuted, true, 'isMuted must toggle to true');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_mute');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on mute toggle');
 
     // Quick mute click
     interceptedMediaControls.length = 0;
@@ -1182,10 +1154,11 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     mockElements.btnQuickMute.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.isMuted, false, 'isMuted must toggle back to false');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_mute');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    console.log('  ✅ #btnCtrlToggleMute & #btnQuickMute: Unconditional toggle_mute IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on quick mute');
+    console.log('  ✅ #btnCtrlToggleMute & #btnQuickMute: Single authoritative toggle_mute IPC dispatch & 0 executeScript verified');
   }
 
   // 9.8 Test Speed Steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp)
@@ -1196,28 +1169,24 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
     mockElements.btnCtrlSpeedDown.click();
     assert.strictEqual(sandboxScope.activeMediaCached.playbackRate, 0.75, 'playbackRate must step down to 0.75');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'step_speed');
     assert.strictEqual(interceptedMediaControls[0].data.direction, 'down');
     assert.strictEqual(interceptedMediaControls[0].data.targetSpeed, 0.75);
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    assert.strictEqual(interceptedExecuteScripts[0].args[0], 0.75);
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on speed down');
 
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlSpeedUp.click();
     assert.strictEqual(sandboxScope.activeMediaCached.playbackRate, 1.0, 'playbackRate must step up to 1.0');
-    assert.strictEqual(interceptedMediaControls.length, 1);
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
     assert.strictEqual(interceptedMediaControls[0].action, 'step_speed');
     assert.strictEqual(interceptedMediaControls[0].data.direction, 'up');
     assert.strictEqual(interceptedMediaControls[0].data.targetSpeed, 1.0);
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    assert.strictEqual(interceptedExecuteScripts[0].args[0], 1.0);
-    console.log('  ✅ #btnCtrlSpeedDown & #btnCtrlSpeedUp: Unconditional step_speed IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on speed up');
+    console.log('  ✅ #btnCtrlSpeedDown & #btnCtrlSpeedUp: Single authoritative step_speed IPC dispatch & 0 executeScript verified');
   }
 
   // 9.9 Test Fullscreen Toggle via #btnCtrlFullscreen
@@ -1226,12 +1195,11 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlFullscreen.click();
 
-    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called once for fullscreen');
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once for fullscreen');
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_fullscreen');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #btnCtrlFullscreen: Unconditional toggle_fullscreen IPC & top-frame executeScript verified');
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'Must NOT execute conflicting executeScript on fullscreen');
+    console.log('  ✅ #btnCtrlFullscreen: Single authoritative toggle_fullscreen IPC dispatch & 0 executeScript verified');
   }
 
   // 9.10 Test PiP, Theater, and Quality Steppers
@@ -1243,7 +1211,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(interceptedMediaControls.length, 1);
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_pip');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
+    assert.strictEqual(interceptedExecuteScripts.length, 0);
 
     // Theater
     interceptedMediaControls.length = 0;
@@ -1252,7 +1220,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(interceptedMediaControls.length, 1);
     assert.strictEqual(interceptedMediaControls[0].action, 'toggle_theater');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
+    assert.strictEqual(interceptedExecuteScripts.length, 0);
 
     // Quality Down
     interceptedMediaControls.length = 0;
@@ -1262,7 +1230,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(interceptedMediaControls[0].action, 'step_quality');
     assert.strictEqual(interceptedMediaControls[0].data.direction, 'down');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
+    assert.strictEqual(interceptedExecuteScripts.length, 0);
 
     // Quality Up
     interceptedMediaControls.length = 0;
@@ -1272,9 +1240,9 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(interceptedMediaControls[0].action, 'step_quality');
     assert.strictEqual(interceptedMediaControls[0].data.direction, 'up');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assertTopFrameScripting(interceptedExecuteScripts[0], 42);
+    assert.strictEqual(interceptedExecuteScripts.length, 0);
 
-    console.log('  ✅ #btnCtrlPip, #btnCtrlTheater, Quality controls: Unconditional IPC & top-frame executeScript verified');
+    console.log('  ✅ #btnCtrlPip, #btnCtrlTheater, Quality controls: Single authoritative IPC dispatch & 0 executeScript verified');
   }
 
   // 9.11 Test Real sendMediaControl Envelope Construction and Message Dispatch
