@@ -807,4 +807,70 @@ console.log('\nTest 7: Extension Syntax & Trusted Types Compliance');
   console.log('  ✅ 100% W3C Trusted Types safe: 0 innerHTML assignments across all injected scripts');
 }
 
+// ---------------------------------------------------------------------------
+// Test 8: Optimistic State Lock & Bounce-Back Elimination Invariant Verification
+// ---------------------------------------------------------------------------
+console.log('\nTest 8: Optimistic State Lock & Bounce-Back Elimination Invariant Verification');
+{
+  const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
+  const backgroundJsCode = fs.readFileSync(path.join(baseDir, 'background.js'), 'utf8');
+
+  // 8.1 Declaration of cooldown lock timestamps in popup/popup.js
+  assert(popupJsCode.includes('let lastPlayToggleTime = 0;'), 'popup.js must declare lastPlayToggleTime');
+  assert(popupJsCode.includes('let lastMuteToggleTime = 0;'), 'popup.js must declare lastMuteToggleTime');
+  assert(popupJsCode.includes('let lastSpeedChangeTime = 0;'), 'popup.js must declare lastSpeedChangeTime');
+  assert(popupJsCode.includes('let lastControlsRowActiveTime = 0;'), 'popup.js must declare lastControlsRowActiveTime');
+  console.log('  ✅ Cooldown lock timestamps (lastPlayToggleTime, lastMuteToggleTime, lastSpeedChangeTime, lastControlsRowActiveTime) strictly declared');
+
+  // 8.2 Optimistic Cooldown Guard in renderMediaCard
+  const renderMediaCardStart = popupJsCode.indexOf('function renderMediaCard(globalMediaState) {');
+  const renderMediaCardEnd = popupJsCode.indexOf('function renderWebSocketBadge(', renderMediaCardStart);
+  assert(renderMediaCardStart !== -1 && renderMediaCardEnd !== -1, 'Must find renderMediaCard function block');
+  const renderMediaCardBlock = popupJsCode.slice(renderMediaCardStart, renderMediaCardEnd);
+
+  assert(renderMediaCardBlock.includes('lastControlsRowActiveTime = Date.now();'),
+    'renderMediaCard must update lastControlsRowActiveTime on active media');
+  assert(renderMediaCardBlock.includes('Date.now() - lastPlayToggleTime < 800') && renderMediaCardBlock.includes('pm.isPlaying = activeMediaCached.isPlaying;'),
+    'renderMediaCard must guard pm.isPlaying against stale telemetry within 800ms cooldown window');
+  assert(renderMediaCardBlock.includes('Date.now() - lastMuteToggleTime < 800') && renderMediaCardBlock.includes('pm.isMuted = activeMediaCached.isMuted;'),
+    'renderMediaCard must guard pm.isMuted against stale telemetry within 800ms cooldown window');
+  assert(renderMediaCardBlock.includes('Date.now() - lastSpeedChangeTime < 800') && renderMediaCardBlock.includes('pm.playbackRate = activeMediaCached.playbackRate;'),
+    'renderMediaCard must guard pm.playbackRate against stale telemetry within 800ms cooldown window');
+  assert(renderMediaCardBlock.includes('Date.now() - lastControlsRowActiveTime < 1000'),
+    'renderMediaCard must suppress transient .hidden flicker on controlsRow within 1000ms grace period');
+  console.log('  ✅ renderMediaCard optimistic cooldown guard & flicker suppression verified');
+
+  // 8.3 In-handler timestamp triggers & premature setTimeout removal
+  assert(popupJsCode.includes('lastPlayToggleTime = Date.now();'), 'handleTogglePlay must set lastPlayToggleTime');
+  assert(popupJsCode.includes('lastMuteToggleTime = Date.now();'), 'handleToggleMute must set lastMuteToggleTime');
+  assert(popupJsCode.includes('lastSpeedChangeTime = Date.now();'), 'Speed steppers must set lastSpeedChangeTime');
+  assert(!popupJsCode.includes('setTimeout(refreshDashboard, 180)'),
+    'Premature setTimeout(refreshDashboard, 180) must be completely removed from popup.js');
+  console.log('  ✅ In-handler timestamps set & premature setTimeout(refreshDashboard, 180) confirmed removed');
+
+  // 8.4 Optimistic state mutation in background.js CONTROL_MEDIA
+  const controlMediaStart = backgroundJsCode.indexOf("if (message.type === 'CONTROL_MEDIA') {");
+  const controlMediaEnd = backgroundJsCode.indexOf("if (message.type === 'APPLY_AUDIO_LAB_SETTINGS') {", controlMediaStart);
+  assert(controlMediaStart !== -1 && controlMediaEnd !== -1, 'Must find CONTROL_MEDIA block in background.js');
+  const controlMediaBlock = backgroundJsCode.slice(controlMediaStart, controlMediaEnd);
+
+  assert(controlMediaBlock.includes('tabMediaMap.get(targetTabId)'),
+    'CONTROL_MEDIA must retrieve target tab state from tabMediaMap');
+  assert(controlMediaBlock.includes("message.action === 'toggle_play'") && controlMediaBlock.includes('pm.isPlaying = !pm.isPlaying;'),
+    'CONTROL_MEDIA must optimistically toggle pm.isPlaying and state');
+  assert(controlMediaBlock.includes("message.action === 'play'") && controlMediaBlock.includes('pm.isPlaying = true;'),
+    'CONTROL_MEDIA must optimistically set pm.isPlaying = true on play');
+  assert(controlMediaBlock.includes("message.action === 'pause'") && controlMediaBlock.includes('pm.isPlaying = false;'),
+    'CONTROL_MEDIA must optimistically set pm.isPlaying = false on pause');
+  assert(controlMediaBlock.includes("message.action === 'toggle_mute'") && controlMediaBlock.includes('pm.isMuted = !pm.isMuted;'),
+    'CONTROL_MEDIA must optimistically toggle pm.isMuted');
+  assert(controlMediaBlock.includes("message.action === 'step_speed'") && controlMediaBlock.includes('pm.playbackRate = targetSpeed;'),
+    'CONTROL_MEDIA must optimistically step pm.playbackRate');
+  assert(controlMediaBlock.includes("message.action === 'seek_relative'") && controlMediaBlock.includes('pm.currentTime = Math.max(0'),
+    'CONTROL_MEDIA must optimistically clamp and update pm.currentTime on seek_relative');
+  assert(controlMediaBlock.includes("safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });"),
+    'CONTROL_MEDIA must broadcast optimistic update immediately via safeSendRuntimeMessage');
+  console.log('  ✅ background.js CONTROL_MEDIA optimistic state mutation & live broadcast verified');
+}
+
 console.log('\n🎉 ALL MEDIA CONTROLS & ON-VIDEO OVERLAY FULLSCREEN TESTS PASSED WITH 100% SUCCESS!\n');
