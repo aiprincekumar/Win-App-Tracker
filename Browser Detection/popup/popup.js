@@ -626,6 +626,10 @@ let lastVolumeDragTime = 0;
 let isDraggingProgress = false;
 let lastProgressDragTime = 0;
 let isTrackingPaused = false;
+let lastPlayToggleTime = 0;
+let lastMuteToggleTime = 0;
+let lastSpeedChangeTime = 0;
+let lastControlsRowActiveTime = 0;
 
 /**
  * Updates the Tracking Pause / Resume button UI in popup footer
@@ -1402,9 +1406,23 @@ function renderMediaCard(globalMediaState) {
   if (!card || !heading || !dynamicStatusBtn || !dynamicStatusText) return;
 
   const pm = globalMediaState && globalMediaState.primaryMedia;
-  activeMediaCached = pm;
 
   if (pm) {
+    lastControlsRowActiveTime = Date.now();
+
+    // Optimistic Cooldown Lock: Suppress stale telemetry bounce-back during rapid state transitions
+    if ((Date.now() - lastPlayToggleTime < 800) && activeMediaCached) {
+      pm.isPlaying = activeMediaCached.isPlaying;
+      pm.state = activeMediaCached.isPlaying ? 'playing' : 'paused';
+    }
+    if ((Date.now() - lastMuteToggleTime < 800) && activeMediaCached) {
+      pm.isMuted = activeMediaCached.isMuted;
+    }
+    if ((Date.now() - lastSpeedChangeTime < 800) && activeMediaCached) {
+      pm.playbackRate = activeMediaCached.playbackRate;
+    }
+    activeMediaCached = pm;
+
     const isVideo = (pm.mediaType === 'video');
     const state = pm.state || (pm.isPlaying ? 'playing' : (pm.isBuffering ? 'buffering' : 'paused'));
     const isPlaying = Boolean(pm.isPlaying);
@@ -1592,7 +1610,13 @@ function renderMediaCard(globalMediaState) {
     if (progressSection) progressSection.classList.add('hidden');
     if (volumeSection) volumeSection.classList.add('hidden');
     if (metaRow) metaRow.classList.add('hidden');
-    if (controlsRow) controlsRow.classList.add('hidden');
+    if (controlsRow) {
+      if ((Date.now() - lastControlsRowActiveTime < 1000) && activeMediaCached) {
+        // Suppress adding .hidden to controlsRow to prevent transient flicker during media switching/reloading
+      } else {
+        controlsRow.classList.add('hidden');
+      }
+    }
 
     const advancedRow = document.getElementById('mediaAdvancedRow');
     if (advancedRow) advancedRow.classList.add('hidden');
@@ -1601,6 +1625,10 @@ function renderMediaCard(globalMediaState) {
     if (microActionsRow) microActionsRow.classList.add('hidden');
 
     if (mediaEmptyPrompt) mediaEmptyPrompt.classList.remove('hidden');
+
+    if (Date.now() - lastControlsRowActiveTime >= 1000) {
+      activeMediaCached = null;
+    }
   }
 }
 
