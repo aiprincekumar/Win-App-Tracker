@@ -1021,6 +1021,40 @@
     <span id="toastMessage" class="toast-msg">Settings saved successfully</span>
   </div>
 
+  <!-- Omni Command Palette Modal (Ctrl+K / Cmd+K) -->
+  <div id="omniCommandPaletteModal" class="omni-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Command Palette">
+    <div class="omni-palette-card liquid-glass-card">
+      <div class="omni-palette-header">
+        <span class="omni-palette-search-icon">🔍</span>
+        <input type="text" id="omniPaletteSearchInput" class="omni-palette-input" 
+               placeholder="Type a command or search domains... (Esc to dismiss)" 
+               autocomplete="off" spellcheck="false" />
+        <kbd class="omni-hotkey-badge">Esc</kbd>
+      </div>
+      <div id="omniPaletteResultsList" class="omni-palette-results" role="listbox">
+        <!-- Dynamic filtered command items injected here -->
+      </div>
+      <div class="omni-palette-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
+        <span><kbd>↵</kbd> to select</span>
+        <span><kbd>Esc</kbd> to dismiss</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Cheat Sheet Modal (?) -->
+  <div id="hotkeysCheatSheetModal" class="omni-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Keyboard Shortcuts" aria-labelledby="hotkeysModalTitle">
+    <div class="hotkeys-cheat-card liquid-glass-card">
+      <div class="hotkeys-header">
+        <h3 id="hotkeysModalTitle">Keyboard Shortcuts</h3>
+        <button id="btnCloseHotkeysCheat" class="btn-icon-close" aria-label="Close">✕</button>
+      </div>
+      <div id="hotkeysListContainer" class="hotkeys-grid">
+        <!-- Injected shortcuts list -->
+      </div>
+    </div>
+  </div>
+
   <script src="dashboard.js"></script>
 </body>
 </html>

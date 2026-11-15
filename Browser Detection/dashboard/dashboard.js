@@ -356,7 +356,27 @@ const DASHBOARD_I18N = {
     eq_preset_rock: 'Rock',
     eq_preset_acoustic: 'Acoustic',
     eq_preset_night_mode: 'Night Mode',
-    eq_preset_custom: 'Custom'
+    eq_preset_custom: 'Custom',
+    
+    // Phase 2: Omni Command Palette & Hotkeys Cheat Sheet
+    cmd_placeholder: 'Type a command or search domains... (Esc to dismiss)',
+    cmd_quick_actions: 'Quick Actions',
+    cmd_recent_domains: 'Recent Domains',
+    cmd_navigation: 'Direct Navigation',
+    cmd_domains: 'Domains',
+    cmd_settings: 'Settings',
+    cmd_empty: 'No matching commands or domains found',
+    hotkeys_title: 'Keyboard Shortcuts Cheat Sheet',
+    hotkeys_nav_1: 'Switch to Time Tracking Tab',
+    hotkeys_nav_2: 'Switch to Media Analytics Tab',
+    hotkeys_nav_3: 'Switch to Settings Tab',
+    hotkeys_media_play: 'Play / Pause Active Video',
+    hotkeys_media_mute: 'Mute / Unmute Audio',
+    hotkeys_media_fullscreen: 'Toggle Fullscreen Mode',
+    hotkeys_media_pip: 'Toggle Picture-in-Picture (PiP)',
+    hotkeys_cmd_palette: 'Open Omni Command Palette',
+    hotkeys_cheat_sheet: 'Open Keyboard Shortcuts Cheat Sheet',
+    hotkeys_dismiss: 'Dismiss Active Modal / Overlay'
   },
   hi: {
     // Brand & Header
@@ -625,7 +645,27 @@ const DASHBOARD_I18N = {
     eq_preset_rock: 'रॉक',
     eq_preset_acoustic: 'एकॉस्टिक',
     eq_preset_night_mode: 'नाइट मोड',
-    eq_preset_custom: 'कस्टम'
+    eq_preset_custom: 'कस्टम',
+    
+    // Phase 2: Omni Command Palette & Hotkeys Cheat Sheet
+    cmd_placeholder: 'कमांड लिखें या डोमेन खोजें... (बंद करने के लिए Esc दबाएं)',
+    cmd_quick_actions: 'त्वरित कार्रवाइयां',
+    cmd_recent_domains: 'हाल के डोमेन्स',
+    cmd_navigation: 'प्रत्यक्ष नेविगेशन',
+    cmd_domains: 'डोमेन्स',
+    cmd_settings: 'सेटिंग्स',
+    cmd_empty: 'कोई मेल खाने वाला कमांड या डोमेन नहीं मिला',
+    hotkeys_title: 'कीबोर्ड शॉर्टकट्स चीट शीट',
+    hotkeys_nav_1: 'टाइम ट्रैकिंग टैब पर जाएं',
+    hotkeys_nav_2: 'मीडिया एनालिटिक्स टैब पर जाएं',
+    hotkeys_nav_3: 'सेटिंग्स टैब पर जाएं',
+    hotkeys_media_play: 'सक्रिय वीडियो चलाएं / रोकें',
+    hotkeys_media_mute: 'ऑडियो म्यूट / अनम्यूट करें',
+    hotkeys_media_fullscreen: 'फुलस्क्रीन मोड टॉगल करें',
+    hotkeys_media_pip: 'पिक्चर-इन-पिक्चर (PiP) टॉगल करें',
+    hotkeys_cmd_palette: 'ओम्नी कमांड पैलेट खोलें',
+    hotkeys_cheat_sheet: 'कीबोर्ड शॉर्टकट्स चीट शीट खोलें',
+    hotkeys_dismiss: 'सक्रिय मॉडल / ओवरले बंद करें'
   }
 };
 
@@ -1401,6 +1441,14 @@ function applyDashboardLanguage(lang) {
   setTxt('modalTitle', 'modal_title_delete');
   setTxt('modalBtnCancel', 'modal_cancel');
   setTxt('modalBtnConfirm', 'modal_confirm');
+
+  // Phase 2: Omni Command Palette & Hotkeys Cheat Sheet
+  setTxt('hotkeysModalTitle', 'hotkeys_title');
+  const paletteInput = document.getElementById('omniPaletteSearchInput');
+  if (paletteInput) paletteInput.placeholder = t('cmd_placeholder');
+  if (typeof isHotkeysModalOpen === 'function' && isHotkeysModalOpen()) {
+    renderHotkeysList();
+  }
 
   // Re-render active views
   if (dashboardData) {
@@ -3070,6 +3118,512 @@ async function triggerDataHubConnectAndLaunch() {
 }
 
 // =============================================================================
+// Phase 2: Ergonomic Media & Action Helpers
+// =============================================================================
+
+function triggerMediaPlayPause() {
+  const btn = document.getElementById('btnHeroPlayPause');
+  if (btn) {
+    btn.click();
+  } else if (typeof sendMediaControl === 'function') {
+    sendMediaControl('toggle_play');
+  }
+}
+
+function triggerMediaMute() {
+  const btn = document.getElementById('btnHeroMute');
+  if (btn) {
+    btn.click();
+  } else if (typeof sendMediaControl === 'function') {
+    sendMediaControl('toggle_mute');
+  }
+}
+
+function triggerMediaFullscreen() {
+  const btn = document.getElementById('btnHeroFullscreen');
+  if (btn) {
+    btn.click();
+  }
+}
+
+function triggerMediaPip() {
+  const btn = document.getElementById('btnHeroPip');
+  if (btn) {
+    btn.click();
+  }
+}
+
+function exportDashboardBackup() {
+  if (typeof exportFullJson === 'function') {
+    exportFullJson();
+  } else {
+    const btn = document.getElementById('btnExportFullJson');
+    if (btn) btn.click();
+  }
+}
+
+// =============================================================================
+// Phase 2: Shortcuts Registry & Cheat Sheet Modal
+// =============================================================================
+
+const SHORTCUTS_REGISTRY = [
+  { keys: ['Ctrl', 'K'], labelKey: 'hotkeys_cmd_palette', defaultLabel: 'Open Omni Command Palette', category: 'Global' },
+  { keys: ['1'], labelKey: 'hotkeys_nav_1', defaultLabel: 'Switch to Time Tracking Tab', category: 'Navigation' },
+  { keys: ['2'], labelKey: 'hotkeys_nav_2', defaultLabel: 'Switch to Media Analytics Tab', category: 'Navigation' },
+  { keys: ['3'], labelKey: 'hotkeys_nav_3', defaultLabel: 'Switch to Settings Tab', category: 'Navigation' },
+  { keys: ['Space'], labelKey: 'hotkeys_media_play', defaultLabel: 'Play / Pause Active Video', category: 'Media' },
+  { keys: ['M'], labelKey: 'hotkeys_media_mute', defaultLabel: 'Mute / Unmute Audio', category: 'Media' },
+  { keys: ['F'], labelKey: 'hotkeys_media_fullscreen', defaultLabel: 'Toggle Fullscreen Mode', category: 'Media' },
+  { keys: ['P'], labelKey: 'hotkeys_media_pip', defaultLabel: 'Toggle Picture-in-Picture (PiP)', category: 'Media' },
+  { keys: ['?'], labelKey: 'hotkeys_cheat_sheet', defaultLabel: 'Open Keyboard Shortcuts Cheat Sheet', category: 'Help' },
+  { keys: ['Esc'], labelKey: 'hotkeys_dismiss', defaultLabel: 'Dismiss Active Modal / Overlay', category: 'Global' }
+];
+
+function renderHotkeysList() {
+  if (typeof document === 'undefined') return;
+  const container = document.getElementById('hotkeysListContainer');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+
+  SHORTCUTS_REGISTRY.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'hotkey-row';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'hotkey-label';
+    labelSpan.textContent = (typeof t === 'function' && item.labelKey) ? t(item.labelKey) : item.defaultLabel;
+
+    const keysDiv = document.createElement('div');
+    keysDiv.className = 'hotkey-keys';
+
+    item.keys.forEach((k, idx) => {
+      if (idx > 0) {
+        const plus = document.createElement('span');
+        plus.className = 'hotkey-plus';
+        plus.textContent = '+';
+        keysDiv.appendChild(plus);
+      }
+      const kbd = document.createElement('kbd');
+      kbd.className = 'omni-hotkey-badge';
+      kbd.textContent = k;
+      keysDiv.appendChild(kbd);
+    });
+
+    row.appendChild(labelSpan);
+    row.appendChild(keysDiv);
+    container.appendChild(row);
+  });
+}
+
+function openHotkeysModal() {
+  if (typeof document === 'undefined') return;
+  const modal = document.getElementById('hotkeysCheatSheetModal');
+  if (!modal) return;
+  if (modal.classList && typeof modal.classList.remove === 'function') {
+    modal.classList.remove('hidden');
+  }
+  renderHotkeysList();
+  if (typeof window !== 'undefined' && window.sentinelHaptics && typeof window.sentinelHaptics.playClick === 'function') {
+    window.sentinelHaptics.playClick();
+  }
+}
+
+function closeHotkeysModal() {
+  if (typeof document === 'undefined') return;
+  const modal = document.getElementById('hotkeysCheatSheetModal');
+  if (!modal) return;
+  if (modal.classList && typeof modal.classList.add === 'function') {
+    modal.classList.add('hidden');
+  }
+}
+
+function isHotkeysModalOpen() {
+  if (typeof document === 'undefined') return false;
+  const modal = document.getElementById('hotkeysCheatSheetModal');
+  return Boolean(modal && modal.classList && typeof modal.classList.contains === 'function' && !modal.classList.contains('hidden'));
+}
+
+// =============================================================================
+// Phase 2: Omni Command Palette Controller (System 3)
+// =============================================================================
+
+class OmniCommandPaletteController {
+  constructor() {
+    if (typeof document === 'undefined') return;
+    this.modal = document.getElementById('omniCommandPaletteModal');
+    this.input = document.getElementById('omniPaletteSearchInput');
+    this.resultsContainer = document.getElementById('omniPaletteResultsList');
+    this.commands = this.buildCommandsList();
+    this.filtered = [];
+    this.selectedIndex = 0;
+    this.initListeners();
+  }
+
+  buildCommandsList() {
+    return [
+      { id: 'nav-tracking', title: 'Go to Time Tracking Analytics', category: 'Navigation', icon: '⏱️', action: () => switchTab('tracking') },
+      { id: 'nav-media', title: 'Go to Media Analytics & Hero Player', category: 'Navigation', icon: '🎬', action: () => switchTab('media') },
+      { id: 'nav-settings', title: 'Go to Settings & Preferences', category: 'Navigation', icon: '⚙️', action: () => switchTab('settings') },
+      { id: 'media-toggle-play', title: 'Play / Pause Active Video', category: 'Quick Actions', icon: '⏯️', action: () => triggerMediaPlayPause() },
+      { id: 'media-toggle-mute', title: 'Mute / Unmute Active Audio', category: 'Quick Actions', icon: '🔇', action: () => triggerMediaMute() },
+      { id: 'media-toggle-fullscreen', title: 'Toggle Fullscreen Mode', category: 'Quick Actions', icon: '⛶', action: () => triggerMediaFullscreen() },
+      { id: 'media-toggle-pip', title: 'Toggle Picture-in-Picture (PiP)', category: 'Quick Actions', icon: '🪟', action: () => triggerMediaPip() },
+      { id: 'data-export-json', title: 'Download Master JSON Backup', category: 'Quick Actions', icon: '💾', action: () => exportDashboardBackup() },
+      { id: 'theme-toggle-light', title: 'Toggle Light / Dark Mode', category: 'Settings', icon: '🌓', action: () => toggleThemeMode() },
+      { id: 'show-hotkeys', title: 'Open Keyboard Shortcuts Sheet', category: 'Quick Actions', icon: '⌨️', action: () => openHotkeysModal() }
+    ];
+  }
+
+  getMatchedDomains(query) {
+    if (!query) return [];
+    const q = query.toLowerCase();
+    const matched = [];
+
+    if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.activityData) {
+      Object.keys(dashboardData.activityData).forEach(dom => {
+        if (dom.toLowerCase().includes(q) && !matched.includes(dom)) {
+          matched.push(dom);
+        }
+      });
+    }
+
+    if (typeof dataHubAnalytics !== 'undefined' && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
+      dataHubAnalytics.domain_distribution.forEach(d => {
+        if (d && d.domain && d.domain.toLowerCase().includes(q) && !matched.includes(d.domain)) {
+          matched.push(d.domain);
+        }
+      });
+    }
+
+    return matched.slice(0, 5).map(domain => ({
+      id: `domain-${domain}`,
+      title: `View Analytics for ${domain}`,
+      category: 'Domains',
+      icon: '🌐',
+      action: () => {
+        switchTab('tracking');
+        if (typeof document !== 'undefined') {
+          const searchInput = document.getElementById('domainSearchInput');
+          if (searchInput) {
+            searchInput.value = domain;
+            searchInput.dispatchEvent(new Event('input'));
+          }
+        }
+      }
+    }));
+  }
+
+  open() {
+    if (!this.modal) return;
+    if (this.modal.classList && typeof this.modal.classList.remove === 'function') {
+      this.modal.classList.remove('hidden');
+    }
+    if (this.input) {
+      this.input.value = '';
+      this.filter('');
+      if (typeof this.input.focus === 'function') this.input.focus();
+    }
+    if (typeof window !== 'undefined' && window.sentinelHaptics && typeof window.sentinelHaptics.playClick === 'function') {
+      window.sentinelHaptics.playClick();
+    }
+  }
+
+  close() {
+    if (!this.modal) return;
+    if (this.modal.classList && typeof this.modal.classList.add === 'function') {
+      this.modal.classList.add('hidden');
+    }
+    if (this.input && typeof this.input.blur === 'function') {
+      this.input.blur();
+    }
+  }
+
+  isOpen() {
+    return Boolean(this.modal && this.modal.classList && typeof this.modal.classList.contains === 'function' && !this.modal.classList.contains('hidden'));
+  }
+
+  toggle() {
+    if (this.isOpen()) {
+      this.close();
+    } else {
+      this.open();
+    }
+  }
+
+  filter(query) {
+    const q = (query || '').trim().toLowerCase();
+    this.commands = this.buildCommandsList();
+    const matchedCmds = q
+      ? this.commands.filter(c => c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q))
+      : this.commands;
+
+    const domainCmds = q ? this.getMatchedDomains(q) : [];
+    this.filtered = [...matchedCmds, ...domainCmds];
+    this.selectedIndex = 0;
+    this.render();
+  }
+
+  render() {
+    if (!this.resultsContainer || typeof document === 'undefined') return;
+    while (this.resultsContainer.firstChild) {
+      this.resultsContainer.removeChild(this.resultsContainer.firstChild);
+    }
+
+    if (this.filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'omni-empty-results';
+      empty.textContent = (typeof t === 'function') ? t('cmd_empty') : 'No matching commands or domains found';
+      this.resultsContainer.appendChild(empty);
+      return;
+    }
+
+    this.filtered.forEach((cmd, idx) => {
+      const item = document.createElement('div');
+      item.className = `omni-result-item ${idx === this.selectedIndex ? 'selected' : ''}`;
+      item.setAttribute('role', 'option');
+      item.setAttribute('id', `omni-item-${idx}`);
+      item.setAttribute('aria-selected', idx === this.selectedIndex ? 'true' : 'false');
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'omni-item-icon';
+      iconSpan.textContent = cmd.icon || '⚡';
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'omni-item-content';
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'omni-item-title';
+      titleSpan.textContent = cmd.title;
+
+      const catSpan = document.createElement('span');
+      catSpan.className = 'omni-item-cat';
+      catSpan.textContent = cmd.category;
+
+      contentDiv.appendChild(titleSpan);
+      contentDiv.appendChild(catSpan);
+
+      const kbd = document.createElement('kbd');
+      kbd.className = 'omni-enter-hint';
+      kbd.textContent = '↵';
+
+      item.appendChild(iconSpan);
+      item.appendChild(contentDiv);
+      item.appendChild(kbd);
+
+      item.addEventListener('click', () => {
+        this.executeCommand(cmd);
+      });
+
+      item.addEventListener('mouseenter', () => {
+        this.selectedIndex = idx;
+        this.updateSelectionClasses();
+      });
+
+      this.resultsContainer.appendChild(item);
+    });
+
+    this.scrollSelectedIntoView();
+  }
+
+  updateSelectionClasses() {
+    if (!this.resultsContainer) return;
+    const items = this.resultsContainer.querySelectorAll('.omni-result-item');
+    items.forEach((item, idx) => {
+      const isSelected = (idx === this.selectedIndex);
+      if (isSelected) {
+        item.classList.add('selected');
+        item.setAttribute('aria-selected', 'true');
+      } else {
+        item.classList.remove('selected');
+        item.setAttribute('aria-selected', 'false');
+      }
+    });
+    this.scrollSelectedIntoView();
+  }
+
+  scrollSelectedIntoView() {
+    if (!this.resultsContainer) return;
+    const selectedEl = this.resultsContainer.querySelector('.omni-result-item.selected');
+    if (selectedEl && typeof selectedEl.scrollIntoView === 'function') {
+      selectedEl.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  executeSelected() {
+    if (this.filtered && this.filtered[this.selectedIndex]) {
+      this.executeCommand(this.filtered[this.selectedIndex]);
+    }
+  }
+
+  executeCommand(cmd) {
+    if (!cmd) return;
+    if (typeof cmd.action === 'function') {
+      cmd.action();
+    }
+    this.close();
+  }
+
+  initListeners() {
+    if (this.input) {
+      this.input.addEventListener('input', (e) => {
+        this.filter(e.target.value);
+      });
+      this.input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (this.filtered.length > 0) {
+            this.selectedIndex = (this.selectedIndex + 1) % this.filtered.length;
+            this.updateSelectionClasses();
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (this.filtered.length > 0) {
+            this.selectedIndex = (this.selectedIndex - 1 + this.filtered.length) % this.filtered.length;
+            this.updateSelectionClasses();
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          this.executeSelected();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          this.close();
+        }
+      });
+    }
+
+    if (this.modal) {
+      this.modal.addEventListener('click', (e) => {
+        if (e.target === this.modal) {
+          this.close();
+        }
+      });
+    }
+  }
+}
+
+let omniPaletteController = null;
+
+// =============================================================================
+// Phase 2: Global Ergonomic Hotkey Navigation & WCAG 2.1 AAA (System 8)
+// =============================================================================
+
+let globalHotkeysInitialized = false;
+
+function initGlobalHotkeys() {
+  if (globalHotkeysInitialized || typeof window === 'undefined') return;
+  globalHotkeysInitialized = true;
+
+  // Setup close button on Cheat Sheet Modal
+  const btnCloseCheat = document.getElementById('btnCloseHotkeysCheat');
+  if (btnCloseCheat) {
+    btnCloseCheat.addEventListener('click', closeHotkeysModal);
+  }
+
+  // Setup click outside on Cheat Sheet Modal
+  const cheatModal = document.getElementById('hotkeysCheatSheetModal');
+  if (cheatModal) {
+    cheatModal.addEventListener('click', (e) => {
+      if (e.target === cheatModal) closeHotkeysModal();
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    // 1. Escape key handling - ALWAYS closes active modals
+    if (e.key === 'Escape') {
+      let modalDismissed = false;
+      if (omniPaletteController && omniPaletteController.isOpen()) {
+        omniPaletteController.close();
+        modalDismissed = true;
+      }
+      if (isHotkeysModalOpen()) {
+        closeHotkeysModal();
+        modalDismissed = true;
+      }
+      const confirmModal = document.getElementById('confirmModal');
+      if (confirmModal && confirmModal.classList && typeof confirmModal.classList.contains === 'function' && !confirmModal.classList.contains('hidden')) {
+        if (typeof confirmModal.classList.add === 'function') confirmModal.classList.add('hidden');
+        modalDismissed = true;
+      }
+      if (modalDismissed) {
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // 2. Ctrl+K / Cmd+K Command Palette Trigger
+    const isCmdOrCtrl = (e.ctrlKey || e.metaKey);
+    if (isCmdOrCtrl && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (omniPaletteController) {
+        omniPaletteController.toggle();
+      }
+      return;
+    }
+
+    // 3. Strict Input Guard
+    // Hotkeys MUST NEVER trigger when an input, textarea, select, or contentEditable element is focused
+    const activeEl = document.activeElement;
+    const tagName = activeEl ? activeEl.tagName.toUpperCase() : '';
+    const isInputActive = tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || (activeEl && Boolean(activeEl.isContentEditable));
+
+    if (isInputActive) {
+      return;
+    }
+
+    // If any modifier key (except Shift for '?') is active, ignore single-key hotkeys
+    if (e.ctrlKey || e.altKey || e.metaKey) {
+      return;
+    }
+
+    // If command palette or cheat sheet is open, do not execute background single-key shortcuts
+    if ((omniPaletteController && omniPaletteController.isOpen()) || isHotkeysModalOpen()) {
+      return;
+    }
+
+    // 4. Ergonomic Single-Key Hotkeys
+    switch (e.key) {
+      case '1':
+        e.preventDefault();
+        switchTab('tracking');
+        break;
+      case '2':
+        e.preventDefault();
+        switchTab('media');
+        break;
+      case '3':
+        e.preventDefault();
+        switchTab('settings');
+        break;
+      case ' ': // Spacebar
+        e.preventDefault();
+        triggerMediaPlayPause();
+        break;
+      case 'm':
+      case 'M':
+        e.preventDefault();
+        triggerMediaMute();
+        break;
+      case 'f':
+      case 'F':
+        e.preventDefault();
+        triggerMediaFullscreen();
+        break;
+      case 'p':
+      case 'P':
+        e.preventDefault();
+        triggerMediaPip();
+        break;
+      case '?':
+        e.preventDefault();
+        openHotkeysModal();
+        break;
+    }
+  });
+}
+
+// =============================================================================
 // Event Listeners & UI Binding
 // =============================================================================
 
@@ -4214,6 +4768,12 @@ function setupEventListeners() {
       }
     }
   });
+
+  // 13. Phase 2: Omni Command Palette & Ergonomic Hotkeys Initialization
+  if (!omniPaletteController && typeof document !== 'undefined' && document.getElementById('omniCommandPaletteModal')) {
+    omniPaletteController = new OmniCommandPaletteController();
+  }
+  initGlobalHotkeys();
 }
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -4367,6 +4927,22 @@ if (typeof module !== 'undefined' && module.exports) {
     setDashboardAudioLabSettings: (val) => { dashboardAudioLabSettings = val; },
     DASHBOARD_EQ_PRESETS,
     dispatchAudioLabSettings,
-    persistDashboardAudioLabSettings
+    persistDashboardAudioLabSettings,
+    // Phase 2: Omni Command Palette & Ergonomic Hotkey Navigation exports
+    OmniCommandPaletteController,
+    getOmniPaletteController: () => omniPaletteController,
+    setOmniPaletteController: (val) => { omniPaletteController = val; },
+    initGlobalHotkeys,
+    triggerMediaPlayPause,
+    triggerMediaMute,
+    triggerMediaFullscreen,
+    triggerMediaPip,
+    openHotkeysModal,
+    closeHotkeysModal,
+    isHotkeysModalOpen,
+    renderHotkeysList,
+    exportDashboardBackup,
+    SHORTCUTS_REGISTRY,
+    switchTab
   };
 }
