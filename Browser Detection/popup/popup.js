@@ -3512,8 +3512,11 @@ function setupEventListeners() {
           world: 'MAIN',
           func: (spd) => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+            const p = moviePlayer;
             if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
               try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
+            } else if (p && typeof p.setPlaybackRate === 'function') {
+              try { p.setPlaybackRate(spd); } catch (_) {}
             }
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
             if (video) {
@@ -3563,8 +3566,11 @@ function setupEventListeners() {
           world: 'MAIN',
           func: (spd) => {
             const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+            const p = moviePlayer;
             if (moviePlayer && typeof moviePlayer.setPlaybackRate === 'function') {
               try { moviePlayer.setPlaybackRate(spd); } catch (_) {}
+            } else if (p && typeof p.setPlaybackRate === 'function') {
+              try { p.setPlaybackRate(spd); } catch (_) {}
             }
             const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
             if (video) {
@@ -3600,30 +3606,29 @@ function setupEventListeners() {
       if (!targetTabId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
         try {
           const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-          if (tabs && tabs[0] && tabs[0].id) {
-            targetTabId = tabs[0].id;
-          }
+          if (tabs && tabs[0] && tabs[0].id) targetTabId = tabs[0].id;
         } catch (_) {}
       }
 
       // 1. Direct Scripting Execution: Link directly to on-video overlay button or controller
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
+          target: { tabId: targetTabId, allFrames: true },
           world: 'MAIN',
           func: () => {
             // Priority 1: Trigger the in-page Floating Sentinel Fullscreen HUD Button
             const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
             if (floatingBtn) {
-              try {
-                floatingBtn.click();
-                return;
-              } catch (_) {}
+              try { floatingBtn.click(); return; } catch (_) {}
             }
 
             // Priority 2: Use dedicated Sentinel Fullscreen Controller instance
-            if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+            if (window.__SentinelFullscreenController) {
               try {
+                if (typeof window.__SentinelFullscreenController.toggleWebFullscreen === 'function') {
+                  window.__SentinelFullscreenController.toggleWebFullscreen();
+                  return;
+                }
                 window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
                 return;
               } catch (_) {}
@@ -3647,15 +3652,12 @@ function setupEventListeners() {
             }
           }
         }).catch(() => {
-          sendMediaControl('toggle_fullscreen');
+          sendMediaControl('toggle_fullscreen', {}, targetTabId);
         });
       } else {
         // Fallback only when scripting API or tabId is unavailable
         sendMediaControl('toggle_fullscreen');
       }
-
-      // 2. Dispatch IPC Media Control message through background relay
-      sendMediaControl('toggle_fullscreen', {}, targetTabId);
     });
   }
 

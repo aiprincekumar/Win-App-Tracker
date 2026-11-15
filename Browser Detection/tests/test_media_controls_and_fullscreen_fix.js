@@ -622,11 +622,15 @@ console.log('\nTest 4: Bloat Removal & Simplification in popup/popup.js #btnCtrl
   assert(lineCount <= 75, `#btnCtrlFullscreen block should be concise (<= 75 lines, currently ${lineCount} lines)`);
   console.log(`  ✅ #btnCtrlFullscreen block is clean and compact (${lineCount} lines, down from ~180 lines)`);
 
-  // 4.3 Verify dual execution: Direct scripting + Background IPC relay
+  // 4.3 Verify single-dispatch determinism and MAIN world targeting
   assert(btnFsBlock.includes("world: 'MAIN'"), 'popup.js executeScript must target MAIN world');
+  assert(btnFsBlock.includes("allFrames: true"), 'popup.js executeScript must target allFrames: true');
   assert(btnFsBlock.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId)"),
-    'popup.js must dispatch sendMediaControl("toggle_fullscreen") through background relay');
-  console.log('  ✅ Dual execution verified: 0ms MAIN world overlay trigger + background IPC relay');
+    'popup.js must provide fallback to sendMediaControl on catch/unavailable');
+  // Invariant: single dispatch - sendMediaControl must only occur in fallback (.catch / else), never simultaneously outside if/else
+  const sendMediaCount = (btnFsBlock.match(/sendMediaControl\('toggle_fullscreen'/g) || []).length;
+  assert(sendMediaCount <= 2, `btnCtrlFullscreen should only dispatch sendMediaControl in catch and else fallback blocks (found ${sendMediaCount})`);
+  console.log('  ✅ Single-dispatch determinism verified: 0ms MAIN world overlay trigger with fallback-only IPC relay');
 }
 
 // ---------------------------------------------------------------------------
@@ -667,9 +671,9 @@ console.log('\nTest 5: Universal Global Media Invariant Guard (#btnGlobalMediaTo
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: In-Popup Media Controls Wiring Verification
+// Test 6: In-Popup Media Controls Wiring & Single-Dispatch Execution Verification
 // ---------------------------------------------------------------------------
-console.log('\nTest 6: In-Popup Media Controls Wiring Verification');
+console.log('\nTest 6: In-Popup Media Controls Wiring & Single-Dispatch Execution Verification');
 {
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
@@ -680,14 +684,39 @@ console.log('\nTest 6: In-Popup Media Controls Wiring Verification');
     'btnCtrlTogglePlay must listen for click and call handleTogglePlay');
   assert(popupJsCode.includes("sendMediaControl('toggle_play');"),
     'handleTogglePlay must call sendMediaControl("toggle_play")');
-  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to toggle_play');
+  
+  // Verify handleTogglePlay executes in MAIN world with allFrames: true and targets moviePlayer getPlayerState
+  const playHandlerStart = popupJsCode.indexOf('const handleTogglePlay = () => {');
+  const playHandlerEnd = popupJsCode.indexOf('const dynamicStatusBtn =', playHandlerStart);
+  assert(playHandlerStart !== -1 && playHandlerEnd !== -1, 'Must find handleTogglePlay block');
+  const playBlock = popupJsCode.slice(playHandlerStart, playHandlerEnd);
+  assert(playBlock.includes("world: 'MAIN'"), 'handleTogglePlay executeScript must use world: "MAIN"');
+  assert(playBlock.includes('allFrames: true'), 'handleTogglePlay executeScript must use allFrames: true');
+  assert(playBlock.includes('moviePlayer.getPlayerState() === 1 ? moviePlayer.pauseVideo() : moviePlayer.playVideo()') ||
+    playBlock.includes('moviePlayer.getPlayerState() === 1'), 'handleTogglePlay must check moviePlayer getPlayerState');
+  assert(playBlock.includes('video.play()'), 'handleTogglePlay must fallback to HTML5 video');
+  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to MAIN world toggle with single dispatch');
 
   // 6.2 Seek Relative (-10s / +10s)
   assert(popupJsCode.includes("sendMediaControl('seek_relative', { offsetSeconds: -10 });"),
     '#btnCtrlRewind must dispatch seek_relative with offsetSeconds: -10');
   assert(popupJsCode.includes("sendMediaControl('seek_relative', { offsetSeconds: 10 });"),
     '#btnCtrlForward must dispatch seek_relative with offsetSeconds: 10');
-  console.log('  ✅ Rewind & Forward (#btnCtrlRewind & #btnCtrlForward) correctly wire to seek_relative ±10s');
+
+  // Verify rewind and forward execute in MAIN world with allFrames: true and target both moviePlayer & video
+  const rewindStart = popupJsCode.indexOf("const btnRewind = document.getElementById('btnCtrlRewind');");
+  const forwardStart = popupJsCode.indexOf("const btnForward = document.getElementById('btnCtrlForward');");
+  const muteHandlerStart = popupJsCode.indexOf('const handleToggleMute = () => {');
+  assert(rewindStart !== -1 && forwardStart !== -1 && muteHandlerStart !== -1, 'Must find seek button blocks');
+  const rewindBlock = popupJsCode.slice(rewindStart, forwardStart);
+  const forwardBlock = popupJsCode.slice(forwardStart, muteHandlerStart);
+  assert(rewindBlock.includes("world: 'MAIN'") && rewindBlock.includes('allFrames: true'), 'Rewind must use MAIN world and allFrames: true');
+  assert(rewindBlock.includes('moviePlayer.seekTo(clampedTarget, true)'), 'Rewind must seek moviePlayer to clampedTarget');
+  assert(rewindBlock.includes('video.currentTime = clampedTarget'), 'Rewind must set video currentTime to clampedTarget');
+  assert(forwardBlock.includes("world: 'MAIN'") && forwardBlock.includes('allFrames: true'), 'Forward must use MAIN world and allFrames: true');
+  assert(forwardBlock.includes('moviePlayer.seekTo(clampedTarget, true)'), 'Forward must seek moviePlayer to clampedTarget');
+  assert(forwardBlock.includes('video.currentTime = clampedTarget'), 'Forward must set video currentTime to clampedTarget');
+  console.log('  ✅ Rewind & Forward (#btnCtrlRewind & #btnCtrlForward) correctly wire to MAIN world seek_relative ±10s with clamping');
 
   // 6.3 Mute / Unmute (#btnCtrlToggleMute & #btnQuickMute)
   assert(popupJsCode.includes("btnCtrlToggleMute.addEventListener('click', handleToggleMute);"),
@@ -696,14 +725,30 @@ console.log('\nTest 6: In-Popup Media Controls Wiring Verification');
     'btnQuickMute must listen for click and call handleToggleMute');
   assert(popupJsCode.includes("sendMediaControl('toggle_mute');"),
     'handleToggleMute must call sendMediaControl("toggle_mute")');
-  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to toggle_mute');
+
+  // Verify mute handler executes in MAIN world with allFrames: true
+  const muteBlock = popupJsCode.slice(muteHandlerStart, popupJsCode.indexOf("const btnCtrlToggleMute =", muteHandlerStart));
+  assert(muteBlock.includes("world: 'MAIN'"), 'handleToggleMute executeScript must use world: "MAIN"');
+  assert(muteBlock.includes('allFrames: true'), 'handleToggleMute executeScript must use allFrames: true');
+  assert(muteBlock.includes('moviePlayer.isMuted()'), 'handleToggleMute must check moviePlayer.isMuted');
+  assert(muteBlock.includes('video.muted = !video.muted'), 'handleToggleMute must toggle video.muted');
+  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to MAIN world toggle_mute');
 
   // 6.4 Playback Speed Steppers
   assert(popupJsCode.includes("sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);"),
     'btnCtrlSpeedDown must dispatch step_speed down');
   assert(popupJsCode.includes("sendMediaControl('step_speed', { direction: 'up', targetSpeed, step: 0.25 }, targetTabId);"),
     'btnCtrlSpeedUp must dispatch step_speed up');
-  console.log('  ✅ Speed steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp) correctly wire to step_speed with ladder');
+  
+  // Verify speed steppers execute in MAIN world and update moviePlayer & video
+  const speedDownStart = popupJsCode.indexOf("const btnSpeedDown = document.getElementById('btnCtrlSpeedDown');");
+  const fsStart = popupJsCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
+  const speedBlock = popupJsCode.slice(speedDownStart, fsStart);
+  assert(speedBlock.includes("world: 'MAIN'"), 'Speed controls must execute in MAIN world');
+  assert(speedBlock.includes('allFrames: true'), 'Speed controls must use allFrames: true');
+  assert(speedBlock.includes('moviePlayer.setPlaybackRate(spd)'), 'Speed controls must call moviePlayer.setPlaybackRate');
+  assert(speedBlock.includes('video.playbackRate = spd'), 'Speed controls must set video.playbackRate');
+  console.log('  ✅ Speed steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp) correctly wire to MAIN world step_speed with ladder');
 
   // 6.5 Timeline Scrubber (#progressBarContainer)
   assert(popupJsCode.includes("sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSeconds }, targetTabId)"),

@@ -4,8 +4,8 @@
 > **दस्तावेज़ प्रकार (Document Type):** Local Project Feature Memory & Diagnostic Matrix (Rule 20 & 23)  
 > **प्रोजेक्ट पाथ (Project Path):** [`c:\Users\Atul Verma\Desktop\Win App Tracker\Browser Detection`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection)  
 > **अंतिम सिंक्रोनाइज़ेशन (Last Synchronized):** 2026-11-15  
-> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261115-MEDIA-CONTROLS-FIX`
-> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Popup Media Controls & On-Video Overlay Fullscreen Linking Fix certified Grade A+ with 100% test pass rate across all 4 suites)
+> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE01-QA`
+> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (Dashboard Phase 1: Sleep Timer & Inactivity Sentinel UI & Storage Binding certified Grade A+ with 100% test pass rate across all 4 suites)
 > **संबंधित दस्तावेज़ (Associated Deliverables):**  
 > - काम न करने वाले फ़ंक्शन की सूची (Popup): [`popup_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_non_working_functions.md)  
 > - फेज़-वाइज़ कार्यान्वयन ब्लूप्रिंट (Popup): [`popup_phase_wise_plan.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup_phase_wise_plan.md)  
@@ -16,11 +16,11 @@
 
 ## 🚦 0. लाइव एजेंट स्थिति एवं स्टेटफुल हैंडऑफ लेजर (Decision Gate State Ledger)
 
-- **सक्रिय कार्य आईडी (Task ID):** `TASK-MEDIA-CTRL-FS-FIX-001`
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-DASHBOARD-PHASE01-QA-001`
 - **वर्तमान गेट अवस्था (Current State):** `COMPLETED`
-- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261115-MEDIA-CONTROLS-FIX` (Issued by Level 2 Manager)
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE01-QA` (Issued by Level 2 Manager, Closed by QA Agent)
 - **सब-मैनेजर हार्टबीट (Sub Manager Heartbeat):** `HEALTHY` (Zero zombie processes, zero stalled tasks)
-- **अंतिम माइलस्टोन (Active Milestone):** Popup Media Controls & On-Video Overlay Fullscreen Linking Fix certified Grade A+ with 100% test pass rate across all 4 suites.
+- **अंतिम माइलस्टोन (Active Milestone):** Dashboard Phase 1: Sleep Timer & Inactivity Sentinel UI & Storage Binding (Defects 01-08) certified Grade A+ with 100% test pass rate across all 4 suites. Commit: `10fa43c`.
 
 ---
 
@@ -53,6 +53,15 @@
 | **23** | `popup/popup.js` | Mute / Unmute buttons (`#btnCtrlToggleMute`, `#btnQuickMute`) failed due to broken IPC | Wire both buttons to dispatch `sendMediaControl('toggle_mute')` with auto-unmute and volume sync | Instant audio muting/unmuting with icon and text update | Phase 2 | `node tests/test_media_controls_and_fullscreen_fix.js` |
 | **24** | `popup/popup.js` | Playback speed stepper buttons (- / +) failed due to broken IPC | Wire `#btnCtrlSpeedDown` and `#btnCtrlSpeedUp` to step playbackRate ladder (0.25x - 4.0x) and dispatch `step_speed` | Instant speed change with UI badge reflection | Phase 2 | `node tests/test_media_controls_and_fullscreen_fix.js` |
 | **25** | `popup/popup.js` | Video timeline progress slider and volume slider scrubbing failed due to broken IPC | Wire `#progressBarContainer` to `seek_percent` and `#volumeBarContainer` to `set_volume` with pointerdown click and drag capture | Smooth dragging and instant click-to-seek/volume setting with zero bounceback | Phase 2 | `node tests/test_volume_timeline_fullscreen_controls.js` |
+| **26** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | डिफ़ॉल्ट स्लीप टाइमर चयनकर्ता (`#settingDefaultSleepDuration`) केवल HTML स्टब था, JS बाइंडिंग व स्टोरेज रिफ्लेक्शन गायब था (डैशबोर्ड दोष 01)। | `populateSleepSettingsForm()` में स्टोरेज से `defaultDurationMinutes` लोड कर सेलेक्ट एलिमेंट को सिंक किया व `cachedSettings` को अपडेट किया। | डैशबोर्ड लोड होते ही डिफ़ॉल्ट स्लीप टाइमर का मान स्टोरेज के साथ 100% सही सिंक होता है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **27** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | ऑडियो फेड-आउट टॉगल (`#settingSleepFadeToggle`) केवल HTML स्टब था (डैशबोर्ड दोष 02)। | `populateSleepSettingsForm()` में `enableAudioFadeOut` को पढ़कर टॉगल की स्थिति अपडेट की। | ग्रेजुअल ऑडियो फेड-आउट का टॉगल स्टोरेज के साथ सटीक सिंक होता है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **28** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | फेड अवधि विंडो चयनकर्ता (`#settingFadeDuration`) केवल HTML स्टब था (डैशबोर्ड दोष 03)। | `populateSleepSettingsForm()` में `fadeDurationSeconds` को पढ़कर सेलेक्ट की वैल्यू सेट की। | फेड विंडो (10s से 120s) की वैल्यू स्टोरेज के साथ पूरी तरह सिंक होती है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **29** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | इनएक्टिविटी ऑटो-स्लीप सेंटिनल टॉगल (`#settingInactivitySleepToggle`) केवल HTML स्टब था (डैशबोर्ड दोष 04)। | `populateSleepSettingsForm()` में `enableInactivityAutoSleep` को पढ़कर चेकबॉक्स सिंक किया। | इनएक्टिविटी ऑटो-स्लीप सेंटिनल की स्थिति स्टोरेज से सही लोड होती है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **30** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | इनएक्टिविटी थ्रेशोल्ड चयनकर्ता (`#settingInactivityThreshold`) केवल HTML स्टब था (डैशबोर्ड दोष 05)। | `populateSleepSettingsForm()` में `inactivityThresholdMinutes` को पढ़कर ड्रॉपडाउन सिंक किया। | आइडल डिटेक्शन विंडो (5m से 60m) स्टोरेज से सटीक सिंक होती है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **31** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | टूलबार बैज काउंटडाउन टॉगल (`#settingBadgeCountdownToggle`) केवल HTML स्टब था (डैशबोर्ड दोष 06)। | `populateSleepSettingsForm()` में `showBadgeCountdown` को पढ़कर टॉगल सिंक किया। | टूलबार बैज काउंटडाउन टॉगल की स्थिति स्टोरेज से पूरी तरह सिंक होती है। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **32** | `dashboard/dashboard.js`<br>`dashboard/dashboard.html` | स्लीप सेटिंग्स 1-क्लिक सेव बटन (`#btnSaveSleepSettings`) पर कोई इवेंट लिस्नर या सेव हैंडलर नहीं था (डैशबोर्ड दोष 07)। | `saveSleepSettings()` फंक्शन बनाकर सभी 6 कंट्रोल्स को पढ़ा, `sentinel_sleep_settings` व `media_sentinel_settings` में पर्सिस्ट किया और `UPDATE_SLEEP_SETTINGS` IPC डिस्पैच किया। | 1-क्लिक में सभी स्लीप सेटिंग्स सेव होती हैं और एक्सटेंशन बैकग्राउंड व पॉपअप से तुरंत सिंक हो जाती हैं। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **33** | `dashboard/dashboard.js` | सामान्य डैशबोर्ड सेटिंग्स सेव (`saveDashboardSettings()`) स्लीप सेटिंग्स को छोड़ देता था, जिससे डेटा लॉस होता था (डैशबोर्ड दोष 08)। | `saveDashboardSettings()` में स्लीप कंट्रोल्स को पढ़कर `media_sentinel_settings` पेलोड में शामिल किया और `sentinel_sleep_settings` को भी अपडेट किया। | सामान्य सेटिंग्स सेव करने पर स्लीप कॉन्फ़िगरेशन सुरक्षित रहता है, कोई डेटा ओमिशन नहीं होता। | डैशबोर्ड फेज़ 1 | `node tests/test_dashboard_sleep_settings_sync.js` |
+| **34** | `popup/popup.js`<br>`tests/test_media_controls_and_fullscreen_fix.js` | Popup media controls 1-5 (Play/Pause, Seek ±10s, Mute/Unmute, Speed ±0.25x, Fullscreen) failed due to double-toggle execution race (simultaneous `executeScript` + `sendMediaControl`), missing `world: 'MAIN'` and `allFrames: true`, and unlinked overlay button | Enforce single-dispatch determinism (IPC only in fallback catch/else), inject in `world: 'MAIN'` with `allFrames: true`, link YouTube `moviePlayer` methods with HTML5 `<video>` fallback, and link Fullscreen to Priority 1 `__sentinel_fs_floating_btn__` | 100% deterministic single-dispatch execution; Play/Pause, Seek, Mute, Speed, and Fullscreen work instantly without double-toggle cancellation; Global Play/Pause preserved 100% untouched | Fix | `node tests/test_media_controls_and_fullscreen_fix.js`<br>`node tests/test_volume_timeline_fullscreen_controls.js`<br>`node tests/test_syntax_and_manifest_integrity.js` |
 
 ---
 
@@ -68,33 +77,25 @@
 
 ---
 
-## 📈 3. डैशबोर्ड मोड अनुभवजन्य ऑडिट स्थिति (Dashboard Mode Audit Status - 2026-11-15)
+## 📈 3. डैशबोर्ड मोड अनुभवजन्य ऑडिट व कार्यान्वयन स्थिति (Dashboard Mode Audit & Implementation Status - 2026-11-15)
 
 - **ऑडिट टोकन (Audit Token):** `AUTH-MGR-20261115-DASHBOARD-AUDIT`
+- **फेज़ 1 कार्यान्वयन टोकन (Phase 1 Token):** `AUTH-MGR-20261115-DASHBOARD-PHASE01-QA` (Grade A+ Certified)
 - **सत्यापित दस्तावेज (Deliverables):**
   1. [`dashboard_non_working_functions.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_non_working_functions.md) (17 दोष, 44 कार्यरत फीचर्स, तुलनात्मक मैट्रिक्स)
   2. [`dashboard_phase_wise_plan.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_phase_wise_plan.md) (5-फेज़ तकनीकी ब्लूप्रिंट, कोड प्रक्रियाएं, टेस्ट गेट्स)
-- **कुल इंटरएक्टिव कंट्रोल्स:** 56 (44 कार्यरत - 78.6% पास दर, 12 नॉन-वर्किंग/स्टब्स - 21.4%)
-- **पहचाने गए मुख्य दोष (17 Defects Cataloged):**
-  1. स्लीप टाइमर डिफ़ॉल्ट अवधि चयनकर्ता स्टब (`#settingDefaultSleepDuration`)
-  2. ग्रेजुअल ऑडियो फेड-आउट टॉगल स्टब (`#settingSleepFadeToggle`)
-  3. फेड अवधि विंडो चयनकर्ता स्टब (`#settingFadeDuration`)
-  4. इनएक्टिविटी ऑटो-स्लीप सेंटिनल टॉगल स्टब (`#settingInactivitySleepToggle`)
-  5. इनएक्टिविटी डिटेक्शन थ्रेशोल्ड चयनकर्ता स्टब (`#settingInactivityThreshold`)
-  6. टूलबार बैज काउंटडाउन टॉगल स्टब (`#settingBadgeCountdownToggle`)
-  7. स्लीप सेटिंग्स 1-क्लिक सेव बटन स्टब (`#btnSaveSleepSettings`)
-  8. डैशबोर्ड सेटिंग्स सेव में स्लीप डेटा ओमिशन (`saveDashboardSettings`)
-  9. टाइम ट्रैकिंग CSV में RFC 4180 कोट्स एस्केपिंग का अभाव
-  10. मीडिया हिस्ट्री CSV में अधूरा स्ट्रिंग एस्केपिंग
-  11. हीरो "Switch to Tab" पर विंडो अन-मिनिमाइज़ का अभाव (`#btnHeroSwitchTab`)
-  12. SQLite Data Hub ऑटो-रीकनेक्ट एक्सपोनेंशियल लैडर का अभाव
-  13. मल्टी-ब्राउज़र फ़िल्टर का ऑफलाइन डिस्कनेक्ट व साइलेंट फॉलबैक
-  14. `DASHBOARD_I18N` में स्लीप सेटिंग्स की 14 कुंजियों का अभाव
-  15. डैशबोर्ड मोड में ऑडियो लैब व DSP कंट्रोल्स की पूर्ण अनुपस्थिति
-  16. `dashboard.css` में लाइट थीम नियमों व WCAG कंट्रास्ट की कमी
-  17. कस्टम स्क्रबर ट्रैक्स पर कीबोर्ड ARIA नेविगेशन का अभाव
-- **अनुशंसित 5-फेज़ कार्यान्वयन योजना:**
-  - फेज़ 1: स्लीप टाइमर व इनएक्टिविटी सेंटिनल यूआई व स्टोरेज बाइंडिंग (दोष 01-08)
+  3. [`tests/test_dashboard_sleep_settings_sync.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/tests/test_dashboard_sleep_settings_sync.js) (7 विस्तृत टेस्ट्स, 100% पास)
+- **कुल इंटरएक्टिव कंट्रोल्स:** 56 (52 कार्यरत - 92.9% पास दर, 4 नॉन-वर्किंग/स्टब्स - 7.1%)
+- **फेज़ 1 समाधान स्थिति (Phase 1 Status - Defects 01-08 RESOLVED):**
+  - ✅ **दोष 01:** डिफ़ॉल्ट स्लीप टाइमर चयनकर्ता (`#settingDefaultSleepDuration`) - `populateSleepSettingsForm()` बाउंड व सिंक।
+  - ✅ **दोष 02:** ग्रेजुअल ऑडियो फेड-आउट टॉगल (`#settingSleepFadeToggle`) - स्टोरेज लोडिंग व टॉगल बाउंड।
+  - ✅ **दोष 03:** फेड अवधि विंडो चयनकर्ता (`#settingFadeDuration`) - 10s-120s वैल्यू स्टोरेज सिंक।
+  - ✅ **दोष 04:** इनएक्टिविटी ऑटो-स्लीप सेंटिनल टॉगल (`#settingInactivitySleepToggle`) - चेकबॉक्स बाउंड व सिंक।
+  - ✅ **दोष 05:** इनएक्टिविटी डिटेक्शन थ्रेशोल्ड चयनकर्ता (`#settingInactivityThreshold`) - 5m-60m वैल्यू स्टोरेज सिंक।
+  - ✅ **दोष 06:** टूलबार बैज काउंटडाउन टॉगल (`#settingBadgeCountdownToggle`) - बैज प्रिफरेंस बाउंड व सिंक।
+  - ✅ **दोष 07:** स्लीप सेटिंग्स 1-क्लिक सेव बटन (`#btnSaveSleepSettings`) - `saveSleepSettings()` व `UPDATE_SLEEP_SETTINGS` IPC एक्टिव।
+  - ✅ **दोष 08:** डैशबोर्ड सेटिंग्स सेव में स्लीप डेटा ओमिशन (`saveDashboardSettings`) - स्लीप कंट्रोल्स पूर्णतः संरक्षित।
+- **आगामी फेज़ (Remaining 9 Defects):**
   - फेज़ 2: डेटा एक्सपोर्ट अखंडता व RFC 4180 कोट्स एस्केपिंग मानक (दोष 09-10)
   - फेज़ 3: विंडो फोकस रेस्टोरेशन व SQLite हब रीकनेक्ट रेजिलिएंस (दोष 11-13)
   - फेज़ 4: द्विभाषी i18n पैरिटी व सेंट्रलाइज्ड डिक्शनरी विस्तार (दोष 14)
