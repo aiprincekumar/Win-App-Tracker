@@ -61,9 +61,9 @@ To achieve 100% deterministic, race-free single execution:
 
 | Phase # | Phase Title & Scope | Target Files | Status | Assigned Role | Gate Verification | Quality Certification |
 | :---: | :--- | :--- | :---: | :--- | :--- | :---: |
-| **Phase 1** | Single-Execution Determinism in Popup & Content Script | `popup/popup.js`, `content_media.js` | `PENDING` | Level 4 Frontend Engineer | `node -c popup/popup.js`, `node -c content_media.js` | Grade A+ Certified |
-| **Phase 2** | Test Suite Overhaul: Assert 0 Conflicting Scripts & 1 Authoritative IPC | `tests/test_media_controls_and_fullscreen_fix.js` | `PENDING` | Level 4 QA Test Engineer | `node tests/test_media_controls_and_fullscreen_fix.js` | Grade A+ Certified |
-| **Phase 3** | Independent QA Verification, Gitleaks Audit & Autonomous Push | All Test Suites, Memory Ledger, Git | `PENDING` | Level 4 Independent QA Agent | All 28+ Test Suites + `gitleaks detect` | Grade A+ Certified |
+| **Phase 1** | Single-Execution Determinism in Popup & Content Script | `popup/popup.js`, `content_media.js` | `COMPLETED` | Level 4 Frontend Engineer | `node -c popup/popup.js`, `node -c content_media.js` | Grade A+ Certified |
+| **Phase 2** | Test Suite Overhaul: Assert 0 Conflicting Scripts & 1 Authoritative IPC | `tests/test_media_controls_and_fullscreen_fix.js` | `COMPLETED` | Level 4 QA Test Engineer | `node tests/test_media_controls_and_fullscreen_fix.js` | Grade A+ Certified |
+| **Phase 3** | Independent QA Verification, Gitleaks Audit & Autonomous Push | All Test Suites, Memory Ledger, Git | `COMPLETED` | Level 4 Independent QA Agent | All 30 Test Suites + `gitleaks detect` | Grade A+ Certified |
 
 ---
 
