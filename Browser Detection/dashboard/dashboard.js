@@ -237,6 +237,37 @@ const DASHBOARD_I18N = {
     desc_retention: 'Number of days to preserve data in local storage',
     btn_save_settings: '💾 Save & Sync Settings',
     
+    // Sleep Timer & Inactivity Sentinel
+    heading_sleep_settings: 'Sleep Timer & Inactivity Sentinel',
+    sub_sleep_settings: 'Automated playback cutoff, gentle audio fade-out, and idle power saving',
+    lbl_default_sleep: 'Default Sleep Duration',
+    desc_default_sleep: 'Default countdown interval for quick 1-click sleep presets',
+    lbl_sleep_fade: 'Gradual Audio Fade-out',
+    desc_sleep_fade: 'Linearly step down media volume before pausing to prevent sudden audio cutoffs',
+    lbl_fade_duration: 'Fade Duration Window',
+    desc_fade_duration: 'Number of seconds allocated for smooth volume attenuation',
+    lbl_inactivity_sleep: 'Inactivity Auto-Sleep Sentinel',
+    desc_inactivity_sleep: 'Automatically pause playing media when system is detected idle (AFK)',
+    lbl_inactivity_threshold: 'Inactivity Detection Threshold',
+    desc_inactivity_threshold: 'Duration of user inactivity required before auto-sleep engages',
+    lbl_badge_countdown: 'Toolbar Badge Countdown',
+    desc_badge_countdown: 'Show dynamic countdown and color indicators on the browser icon',
+    btn_save_sleep: '💾 Save Sleep Settings',
+
+    // Sleep & Inactivity Select Options
+    opt_sleep_15m: '15 Minutes',
+    opt_sleep_30m: '30 Minutes',
+    opt_sleep_45m: '45 Minutes',
+    opt_sleep_60m: '60 Minutes',
+    opt_sleep_90m: '90 Minutes',
+    opt_fade_15s: '15 Seconds',
+    opt_fade_30s: '30 Seconds (Recommended)',
+    opt_fade_60s: '60 Seconds',
+    opt_inact_10m: '10 Minutes',
+    opt_inact_15m: '15 Minutes',
+    opt_inact_30m: '30 Minutes',
+    opt_inact_60m: '60 Minutes',
+    
     // Export
     export_card_heading: 'Export Data',
     export_card_sub: 'Download tracking metrics and media history as JSON or CSV',
@@ -437,6 +468,37 @@ const DASHBOARD_I18N = {
     lbl_retention: 'डेटा संरक्षण अवधि',
     desc_retention: 'स्थानीय स्टोरेज में कितने दिनों का डेटा सुरक्षित रखना है',
     btn_save_settings: '💾 सेटिंग्स सहेजें',
+    
+    // Sleep Timer & Inactivity Sentinel
+    heading_sleep_settings: 'स्लीप टाइमर व इनएक्टिविटी सेंटिनल',
+    sub_sleep_settings: 'स्वचालित प्लेबैक कटऑफ, मंद ऑडियो फेड-आउट व आइडल पावर सेविंग',
+    lbl_default_sleep: 'डिफ़ॉल्ट स्लीप टाइमर अवधि',
+    desc_default_sleep: 'त्वरित 1-क्लिक स्लीप प्रीसेट्स के लिए डिफ़ॉल्ट काउंटडाउन समय',
+    lbl_sleep_fade: 'ग्रेजुअल ऑडियो फेड-आउट',
+    desc_sleep_fade: 'अचानक आवाज़ बंद होने से रोकने के लिए पॉज़ से पहले वॉल्यूम को धीरे-धीरे कम करें',
+    lbl_fade_duration: 'फेड अवधि विंडो',
+    desc_fade_duration: 'सुगम वॉल्यूम अवमंदन (Fade) के लिए निर्धारित सेकंड',
+    lbl_inactivity_sleep: 'इनएक्टिविटी ऑटो-स्लीप सेंटिनल',
+    desc_inactivity_sleep: 'सिस्टम के निष्क्रिय (AFK) होने पर स्वतः मीडिया पॉज़ करें',
+    lbl_inactivity_threshold: 'निष्क्रियता पहचान थ्रेशोल्ड',
+    desc_inactivity_threshold: 'ऑटो-स्लीप सक्रिय होने से पूर्व आवश्यक उपयोगकर्ता निष्क्रियता अवधि',
+    lbl_badge_countdown: 'टूलबार बैज काउंटडाउन',
+    desc_badge_countdown: 'ब्राउज़र आइकन पर लाइव काउंटडाउन और रंग संकेतक दिखाएं',
+    btn_save_sleep: '💾 स्लीप सेटिंग्स सुरक्षित करें',
+
+    // Sleep & Inactivity Select Options
+    opt_sleep_15m: '15 मिनट',
+    opt_sleep_30m: '30 मिनट',
+    opt_sleep_45m: '45 मिनट',
+    opt_sleep_60m: '60 मिनट',
+    opt_sleep_90m: '90 मिनट',
+    opt_fade_15s: '15 सेकंड',
+    opt_fade_30s: '30 सेकंड (अनुशंसित)',
+    opt_fade_60s: '60 सेकंड',
+    opt_inact_10m: '10 मिनट',
+    opt_inact_15m: '15 मिनट',
+    opt_inact_30m: '30 मिनट',
+    opt_inact_60m: '60 मिनट',
     
     // Export
     export_card_heading: 'डेटा निर्यात',
@@ -671,9 +733,23 @@ function showToast(message, isDanger = false) {
 // Language Application & Synchronization
 // =============================================================================
 
+function updateSelectOptions(selectId, optionKeyMap) {
+  if (typeof document === 'undefined') return;
+  const selectEl = document.getElementById(selectId);
+  if (!selectEl || !selectEl.options || !optionKeyMap) return;
+  for (let i = 0; i < selectEl.options.length; i++) {
+    const opt = selectEl.options[i];
+    if (opt && Object.prototype.hasOwnProperty.call(optionKeyMap, opt.value)) {
+      opt.textContent = t(optionKeyMap[opt.value]);
+    }
+  }
+}
+
 function applyDashboardLanguage(lang) {
   currentLang = (lang === 'hi') ? 'hi' : 'en';
-  document.documentElement.lang = currentLang;
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.lang = currentLang;
+  }
 
   const setTxt = (id, key, ...args) => {
     const el = document.getElementById(id);
@@ -802,6 +878,59 @@ function applyDashboardLanguage(lang) {
   setTxt('lblSettingHistoryDays', 'lbl_retention');
   setTxt('descSettingHistoryDays', 'desc_retention');
   setTxt('btnSaveGeneralSettings', 'btn_save_settings');
+
+  // Sleep Timer & Inactivity Sentinel static texts
+  setTxt('headingSleepSettings', 'heading_sleep_settings');
+  setTxt('subSleepSettings', 'sub_sleep_settings');
+  setTxt('lblDefaultSleepDuration', 'lbl_default_sleep');
+  setTxt('descDefaultSleepDuration', 'desc_default_sleep');
+  setTxt('lblSleepFadeToggle', 'lbl_sleep_fade');
+  setTxt('descSleepFadeToggle', 'desc_sleep_fade');
+  setTxt('lblFadeDuration', 'lbl_fade_duration');
+  setTxt('descFadeDuration', 'desc_fade_duration');
+  setTxt('lblInactivitySleepToggle', 'lbl_inactivity_sleep');
+  setTxt('descInactivitySleepToggle', 'desc_inactivity_sleep');
+  setTxt('lblInactivityThreshold', 'lbl_inactivity_threshold');
+  setTxt('descInactivityThreshold', 'desc_inactivity_threshold');
+  setTxt('lblBadgeCountdownToggle', 'lbl_badge_countdown');
+  setTxt('descBadgeCountdownToggle', 'desc_badge_countdown');
+  setTxt('btnSaveSleepSettings', 'btn_save_sleep');
+
+  // Dynamic select option localization (preserving select values)
+  updateSelectOptions('settingDefaultSleepDuration', {
+    '15': 'opt_sleep_15m',
+    '30': 'opt_sleep_30m',
+    '45': 'opt_sleep_45m',
+    '60': 'opt_sleep_60m',
+    '90': 'opt_sleep_90m'
+  });
+
+  updateSelectOptions('settingFadeDuration', {
+    '15': 'opt_fade_15s',
+    '30': 'opt_fade_30s',
+    '60': 'opt_fade_60s'
+  });
+
+  updateSelectOptions('settingInactivityThreshold', {
+    '10': 'opt_inact_10m',
+    '15': 'opt_inact_15m',
+    '30': 'opt_inact_30m',
+    '60': 'opt_inact_60m'
+  });
+
+  updateSelectOptions('tableSortSelect', {
+    'time_desc': 'sort_time_desc',
+    'time_asc': 'sort_time_asc',
+    'sessions_desc': 'sort_sessions_desc',
+    'name_asc': 'sort_name_asc'
+  });
+
+  updateSelectOptions('tableMediaSortSelect', {
+    'time_desc': 'sort_latest',
+    'duration_desc': 'sort_longest',
+    'vol_desc': 'sort_highest_vol',
+    'title_asc': 'sort_title_az'
+  });
 
   setTxt('headingExportCard', 'export_card_heading');
   setTxt('subExportCard', 'export_card_sub');
@@ -3438,6 +3567,13 @@ if (typeof module !== 'undefined' && module.exports) {
     getHubReconnectTimer: () => hubReconnectTimer,
     setHubReconnectTimer: (val) => { hubReconnectTimer = val; },
     getDataHubConnected: () => dataHubConnected,
-    setDataHubConnected: (val) => { dataHubConnected = val; }
+    setDataHubConnected: (val) => { dataHubConnected = val; },
+    // Phase 4 Bilingual i18n Parity exports
+    DASHBOARD_I18N,
+    t,
+    applyDashboardLanguage,
+    updateSelectOptions,
+    getCurrentLang: () => currentLang,
+    setCurrentLang: (val) => { currentLang = val; }
   };
 }
