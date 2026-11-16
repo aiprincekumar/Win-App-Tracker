@@ -23,22 +23,22 @@
  *    - Priority 2: fallback to window.__SentinelFullscreenController.toggle(null, { forceWeb: true })
  *    - Priority 3: fallback native player button / KeyF keyboard event
  *    - Authoritative content_media.js execution and fallback linking
- * 4. Bloat removal & dual actuation in popup/popup.js #btnCtrlFullscreen:
- *    - Dual actuation: direct 0ms browserAPI.scripting.executeScript in MAIN world AND sendMediaControl('toggle_fullscreen', {}, targetTabId)
+ * 4. Bloat removal & single-execution determinism in popup/popup.js #btnCtrlFullscreen:
+ *    - Single-execution fallback: direct 0ms browserAPI.scripting.executeScript in MAIN world with fallback sendMediaControl('toggle_fullscreen', {}, targetTabId)
  *    - Zero occurrences of manual CSS class toggles (sentinel-fullscreen-active, moviePlayer.classList, flexy.setAttribute)
- *    - Compact block size (<= 50 lines)
+ *    - Compact block size (<= 55 lines)
  * 5. Universal Play/Pause button (#btnGlobalMediaToggle) preservation:
  *    - Preserved 100% untouched (lines ~3154-3168)
  *    - Strictly bound to TOGGLE_GLOBAL_MEDIA
  *    - Not hijacked or merged with single-tab controls
- * 6. In-Popup Media Controls Wiring & Dual Actuation Verification:
+ * 6. In-Popup Media Controls Wiring & Verification:
  *    - #btnCtrlTogglePlay & #dynamicStatusBtn -> explicit play/pause (direct MAIN world executeScript & sendMediaControl with strict mutual exclusion)
  *    - #btnCtrlRewind & #btnCtrlForward -> seek_relative (-10s, +10s) (direct MAIN world executeScript & sendMediaControl)
  *    - #btnCtrlToggleMute & #btnQuickMute -> explicit mute/unmute (direct MAIN world executeScript & sendMediaControl with strict mutual exclusion)
  *    - #btnCtrlSpeedDown & #btnCtrlSpeedUp -> step_speed (direct MAIN world executeScript & sendMediaControl)
  *    - #progressBarContainer -> seek_percent
  *    - #volumeBarContainer -> set_volume
- *    - Extended controls (PiP, Theater, Quality Steppers) (direct MAIN world executeScript & sendMediaControl)
+ *    - Extended controls: PiP (single-execution fallback), Theater, Quality Steppers (direct MAIN world executeScript & sendMediaControl)
  * 7. Extension Syntax & W3C Trusted Types compliance:
  *    - Zero syntax errors across all workspace scripts via `node -c` and vm.Script
  *    - Zero innerHTML assignments in content_media.js, fullscreen_controller.js, inject_main_world.js
@@ -1319,17 +1319,65 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     console.log('  ✅ #btnCtrlSpeedDown & #btnCtrlSpeedUp: Dual actuation (step_speed IPC & direct MAIN world executeScript) verified');
   }
 
-  // 9.9 Test Fullscreen Toggle via #btnCtrlFullscreen (Single-Execution Determinism)
+  // 9.9 Test Fullscreen Toggle via #btnCtrlFullscreen (Single-Execution Determinism & Fallback)
   {
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlFullscreen.click();
 
+    // In single-execution determinism:
+    // Direct executeScript MUST be called exactly once
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on fullscreen');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
+
+    // sendMediaControl must NOT be called when executeScript succeeds (eliminating double-toggle!)
     assert.strictEqual(interceptedMediaControls.length, 0, 'sendMediaControl must NOT be called when direct executeScript succeeds');
     console.log('  ✅ #btnCtrlFullscreen: Single-execution determinism verified (executeScript executed, IPC suppressed)');
+
+    // Fallback Simulation 1: when executeScript rejects
+    interceptedMediaControls.length = 0;
+    interceptedExecuteScripts.length = 0;
+    const origExecuteScript = mockBrowserAPI.scripting.executeScript;
+    mockBrowserAPI.scripting.executeScript = (opts) => {
+      interceptedExecuteScripts.push(opts);
+      return {
+        catch: (cb) => {
+          cb(new Error('Scripting execution failed in mock'));
+          return Promise.resolve();
+        }
+      };
+    };
+
+    let clockOffset = 500;
+    const realDateNow = Date.now;
+    Date.now = () => realDateNow() + clockOffset;
+
+    mockElements.btnCtrlFullscreen.click();
+    assert.strictEqual(interceptedExecuteScripts.length, 1, 'executeScript attempted before failure');
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl fallback must be called when executeScript rejects');
+    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_fullscreen');
+    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
+    console.log('  ✅ #btnCtrlFullscreen: Fallback sendMediaControl verified when executeScript rejects');
+
+    // Fallback Simulation 2: when browserAPI.scripting is unavailable
+    interceptedMediaControls.length = 0;
+    interceptedExecuteScripts.length = 0;
+    const origScripting = mockBrowserAPI.scripting;
+    mockBrowserAPI.scripting = null;
+    clockOffset += 500;
+
+    mockElements.btnCtrlFullscreen.click();
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'No executeScript should be called when scripting is null');
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl fallback must be called when scripting is unavailable');
+    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_fullscreen');
+    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
+    console.log('  ✅ #btnCtrlFullscreen: Fallback sendMediaControl verified when browserAPI.scripting is unavailable');
+
+    // Restore original state
+    mockBrowserAPI.scripting = origScripting;
+    mockBrowserAPI.scripting.executeScript = origExecuteScript;
+    Date.now = realDateNow;
   }
 
   // 9.10 Test PiP, Theater, and Quality Steppers
@@ -1338,10 +1386,58 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlPip.click();
+
+    // Direct executeScript MUST be called exactly once
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on PiP');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
+
+    // sendMediaControl must NOT be called when executeScript succeeds (eliminating double-toggle!)
     assert.strictEqual(interceptedMediaControls.length, 0, 'sendMediaControl must NOT be called when direct executeScript succeeds');
     console.log('  ✅ #btnCtrlPip: Single-execution determinism verified (executeScript executed, IPC suppressed)');
+
+    // Fallback Simulation 1: PiP when executeScript rejects
+    interceptedMediaControls.length = 0;
+    interceptedExecuteScripts.length = 0;
+    const origExecuteScriptPip = mockBrowserAPI.scripting.executeScript;
+    mockBrowserAPI.scripting.executeScript = (opts) => {
+      interceptedExecuteScripts.push(opts);
+      return {
+        catch: (cb) => {
+          cb(new Error('PiP scripting execution failed in mock'));
+          return Promise.resolve();
+        }
+      };
+    };
+
+    let pipClockOffset = 500;
+    const realDateNowPip = Date.now;
+    Date.now = () => realDateNowPip() + pipClockOffset;
+
+    mockElements.btnCtrlPip.click();
+    assert.strictEqual(interceptedExecuteScripts.length, 1, 'executeScript attempted before failure for PiP');
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl fallback must be called for PiP when executeScript rejects');
+    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_pip');
+    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
+    console.log('  ✅ #btnCtrlPip: Fallback sendMediaControl verified when executeScript rejects');
+
+    // Fallback Simulation 2: PiP when browserAPI.scripting is unavailable
+    interceptedMediaControls.length = 0;
+    interceptedExecuteScripts.length = 0;
+    const origScriptingPip = mockBrowserAPI.scripting;
+    mockBrowserAPI.scripting = null;
+    pipClockOffset += 500;
+
+    mockElements.btnCtrlPip.click();
+    assert.strictEqual(interceptedExecuteScripts.length, 0, 'No executeScript should be called when scripting is null');
+    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl fallback must be called for PiP when scripting is unavailable');
+    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_pip');
+    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
+    console.log('  ✅ #btnCtrlPip: Fallback sendMediaControl verified when browserAPI.scripting is unavailable');
+
+    // Restore original state
+    mockBrowserAPI.scripting = origScriptingPip;
+    mockBrowserAPI.scripting.executeScript = origExecuteScriptPip;
+    Date.now = realDateNowPip;
 
     // Theater
     interceptedMediaControls.length = 0;
@@ -1375,7 +1471,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     assert.strictEqual(interceptedExecuteScripts.length, 1);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
 
-    console.log('  ✅ #btnCtrlPip, #btnCtrlTheater, Quality controls: Dual actuation (IPC & direct MAIN world executeScript) verified');
+    console.log('  ✅ #btnCtrlPip (single-execution fallback), #btnCtrlTheater, Quality controls: Functional mock verification passed');
   }
 
   // 9.11 Test Real sendMediaControl Envelope Construction and Message Dispatch
