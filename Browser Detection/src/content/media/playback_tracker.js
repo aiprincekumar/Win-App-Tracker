@@ -84,7 +84,7 @@
       volume: el.volume !== undefined ? el.volume : 1,
       muted: el.muted || false,
       playbackRate: el.playbackRate || 1.0,
-      resolution: resolution || (isVideo && el.videoWidth ? ${el.videoWidth}x : null),
+      resolution: resolution || (isVideo && el.videoWidth ? `${el.videoWidth}x${el.videoHeight}` : null),
       hasVideo: isVideo,
       hasAudio: true,
       timestamp: Date.now()

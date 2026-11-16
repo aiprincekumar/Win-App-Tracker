@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Safe Messaging Subsystem
  * IPC Connection Guard, restricted URL checker, and unhandled rejection suppressor.
  * 

@@ -12,7 +12,7 @@
 
   function forwardActionToMainWorld(action, data = {}) {
     try {
-      const actionId = ct___;
+      const actionId = `act_${Date.now()}_${++actionCounter}_${Math.random().toString(36).substring(2, 7)}`;
       const payload = JSON.stringify({
         action,
         data,

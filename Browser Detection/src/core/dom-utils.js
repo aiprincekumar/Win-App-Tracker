@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Core DOM Utilities
  */
 (function (global) {

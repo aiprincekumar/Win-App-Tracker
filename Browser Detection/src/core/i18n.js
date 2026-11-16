@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Core i18n Dictionary
  * Bilingual English and Hindi interface translations.
  * 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Core Math Utilities
  * Speed stepping, bounds clamping, and number formatting.
  * 

@@ -10,7 +10,7 @@
 
   const STYLE_ID = '__sentinel_fullscreen_controller_styles__';
 
-  const CSS_TEXT = 
+  const CSS_TEXT = `
     /* Guaranteed Web Fullscreen: Viewport Lock */
     html.sentinel-fullscreen-active,
     body.sentinel-fullscreen-active,
@@ -173,7 +173,7 @@
       padding: 0 16px !important;
       z-index: 2147483647 !important;
     }
-  ;
+  `;
 
   function ensureStyles() {
     if (typeof document === 'undefined') return;

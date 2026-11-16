@@ -22,7 +22,7 @@
       if (maxDim >= 854 || minDim >= 480) return '480p SD';
       if (maxDim >= 640 || minDim >= 360) return '360p Low';
       if (maxDim >= 426 || minDim >= 240) return '240p Low';
-      return ${width}x;
+      return `${width}x${height}`;
     }
 
     if (element) {
@@ -39,7 +39,7 @@
         if (dispW >= 1920 || dispH >= 1080) return '1080p FHD (Display)';
         if (dispW >= 1280 || dispH >= 720) return '720p HD (Display)';
         if (dispW >= 854 || dispH >= 480) return '480p SD (Display)';
-        if (dispW > 0 && dispH > 0) return ${Math.round(dispW)}x;
+        if (dispW > 0 && dispH > 0) return `${Math.round(dispW)}x${Math.round(dispH)}`;
       } catch (_) {}
     }
 

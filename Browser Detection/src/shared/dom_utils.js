@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Shared DOM Utilities
  * 100% W3C Trusted Types Safe DOM construction (zero innerHTML).
  * 
