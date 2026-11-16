@@ -60,6 +60,8 @@ const _TabAudio = (typeof globalThis !== 'undefined' && globalThis.TabAudio) ? g
 const _TabSettings = (typeof globalThis !== 'undefined' && globalThis.TabSettings) ? globalThis.TabSettings : _safeRequire('./src/popup/tabs/tab_settings.js', '../src/popup/tabs/tab_settings.js');
 const _HeaderBadges = (typeof globalThis !== 'undefined' && globalThis.HeaderBadges) ? globalThis.HeaderBadges : _safeRequire('./src/popup/components/header_badges.js', '../src/popup/components/header_badges.js');
 const _DataHubService = (typeof globalThis !== 'undefined' && globalThis.DataHubService) ? globalThis.DataHubService : _safeRequire('./src/popup/services/data_hub_service.js', '../src/popup/services/data_hub_service.js');
+const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
+const _PopupFeatureManager = (typeof globalThis !== 'undefined' && globalThis.PopupFeatureManager) ? globalThis.PopupFeatureManager : _safeRequire('./src/popup/features/popup_feature_manager.js', '../src/popup/features/popup_feature_manager.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelPopupModules = {
@@ -71,7 +73,9 @@ if (typeof window !== 'undefined') {
     TabAudio: _TabAudio,
     TabSettings: _TabSettings,
     HeaderBadges: _HeaderBadges,
-    DataHubService: _DataHubService
+    DataHubService: _DataHubService,
+    FeatureRegistry: _FeatureRegistry,
+    PopupFeatureManager: _PopupFeatureManager
   };
 }
 
@@ -3946,6 +3950,13 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 
+  // Initialize popup modular features
+  try {
+    if (_PopupFeatureManager && typeof _PopupFeatureManager.initPopupFeatures === 'function') {
+      _PopupFeatureManager.initPopupFeatures({ browserAPI: browserAPI, state: _PopupState });
+    }
+  } catch (_) {}
+
   // Proactively cache active tabId for instant media targeting parity with dashboard
   if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
     try {
@@ -4190,6 +4201,8 @@ if (typeof window !== 'undefined') {
     TabAudio: _TabAudio,
     TabSettings: _TabSettings,
     HeaderBadges: _HeaderBadges,
-    DataHubService: _DataHubService
+    DataHubService: _DataHubService,
+    FeatureRegistry: _FeatureRegistry,
+    PopupFeatureManager: _PopupFeatureManager
   };
 }

@@ -68,6 +68,8 @@ const _CsvExporter = (typeof globalThis !== 'undefined' && globalThis.CsvExporte
 const _AudioLabController = (typeof globalThis !== 'undefined' && globalThis.AudioLabController) ? globalThis.AudioLabController : _safeRequire('./src/dashboard/audio/audio_lab_controller.js', '../src/dashboard/audio/audio_lab_controller.js');
 const _OmniPalette = (typeof globalThis !== 'undefined' && globalThis.OmniPalette) ? globalThis.OmniPalette : _safeRequire('./src/dashboard/palette/omni_palette.js', '../src/dashboard/palette/omni_palette.js');
 const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.PrecisionTimelineScrubber) ? globalThis.PrecisionTimelineScrubber : _safeRequire('./src/dashboard/scrubber/scrubber.js', '../src/dashboard/scrubber/scrubber.js');
+const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
+const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelDashboardModules = {
@@ -79,7 +81,9 @@ if (typeof window !== 'undefined') {
     CsvExporter: _CsvExporter,
     AudioLabController: _AudioLabController,
     OmniPalette: _OmniPalette,
-    PrecisionScrubber: _PrecisionScrubber
+    PrecisionScrubber: _PrecisionScrubber,
+    FeatureRegistry: _FeatureRegistry,
+    DashboardFeatureManager: _DashboardFeatureManager
   };
 }
 
@@ -6030,6 +6034,13 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     setupEventListeners();
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
+
+    // Initialize dashboard modular features
+    try {
+      if (_DashboardFeatureManager && typeof _DashboardFeatureManager.initDashboardFeatures === 'function') {
+        _DashboardFeatureManager.initDashboardFeatures({ browserAPI: browserAPI, state: _DashboardState });
+      }
+    } catch (_) {}
 
     // Load language preference, browser filter, tracking mode, category, sleep, theme, and audio lab from storage
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {

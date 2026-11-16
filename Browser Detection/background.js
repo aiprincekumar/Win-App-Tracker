@@ -40,6 +40,8 @@ const _TabListeners = typeof TabListeners !== 'undefined' ? TabListeners : (type
 const _AlarmHandlers = typeof AlarmHandlers !== 'undefined' ? AlarmHandlers : (typeof require === 'function' ? require('./src/background/handlers/alarm_handlers.js') : null);
 const _IdleHandlers = typeof IdleHandlers !== 'undefined' ? IdleHandlers : (typeof require === 'function' ? require('./src/background/handlers/idle_handlers.js') : null);
 const _MessageRouter = typeof MessageRouter !== 'undefined' ? MessageRouter : (typeof require === 'function' ? require('./src/background/handlers/message_router.js') : null);
+const _FeatureRegistry = typeof SentinelFeatureRegistry !== 'undefined' ? SentinelFeatureRegistry : (typeof require === 'function' ? require('./src/core/feature_registry.js') : null);
+const _BackgroundFeatureManager = typeof BackgroundFeatureManager !== 'undefined' ? BackgroundFeatureManager : (typeof require === 'function' ? require('./src/background/features/background_feature_manager.js') : null);
 
 if (typeof globalThis !== 'undefined') {
   globalThis.SentinelBackgroundModules = {
@@ -60,9 +62,18 @@ if (typeof globalThis !== 'undefined') {
     TabListeners: _TabListeners,
     AlarmHandlers: _AlarmHandlers,
     IdleHandlers: _IdleHandlers,
-    MessageRouter: _MessageRouter
+    MessageRouter: _MessageRouter,
+    FeatureRegistry: _FeatureRegistry,
+    BackgroundFeatureManager: _BackgroundFeatureManager
   };
 }
+
+// Bootstrap Background Modular Features
+try {
+  if (_BackgroundFeatureManager && typeof _BackgroundFeatureManager.initBackgroundFeatures === 'function') {
+    _BackgroundFeatureManager.initBackgroundFeatures({ browserAPI: browserAPI });
+  }
+} catch (_) {}
 
 // =============================================================================
 // Manifest V3 IPC Connection Guard & Unhandled Promise Rejection Sentinel
