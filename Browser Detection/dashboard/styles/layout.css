@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Sentinel Web Activity & Media Sentinel - Dashboard Layout & Structure
  * File: dashboard/styles/layout.css
  * Reset, Grid Layout, Sidebar Navigation, Bento Container & Shimmer Loaders
@@ -297,8 +297,10 @@ button.spinning .refresh-spinner-icon,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 72px;
-  padding: 16px 28px;
+  gap: 1.25rem;
+  padding: 0.85rem 1.75rem;
+  min-height: 64px;
+  width: 100%;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -324,24 +326,26 @@ button.spinning .refresh-spinner-icon,
 }
 
 .current-page-title {
-  font-size: 18px;
+  font-size: 1.25rem;
   line-height: 1.35;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
   white-space: nowrap;
-  overflow: visible;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .current-page-subtitle {
-  font-size: 12px;
+  font-size: 0.8rem;
   line-height: 1.4;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: block;
-  margin-top: 3px;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -350,7 +354,7 @@ button.spinning .refresh-spinner-icon,
 .app-bar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.5rem;
   flex-shrink: 0;
   flex-wrap: nowrap !important;
   white-space: nowrap;
@@ -1517,4 +1521,10 @@ button.spinning .refresh-spinner-icon,
 .sidebar-hud-card:hover {
   border-color: rgba(16, 185, 129, 0.3);
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.1);
+}
+
+
+.browser-filter-container.compact-pill {
+  padding: 4px 8px;
+  gap: 4px;
 }

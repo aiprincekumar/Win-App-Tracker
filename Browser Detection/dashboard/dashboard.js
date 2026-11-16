@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Web Activity & Media Sentinel - Full-Page Dashboard Script
  * Enterprise Multi-Tab Analytics, Reactive Storage Sync, Switch to Media Tab, and Centralized Language System (EN / HI)
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
@@ -157,6 +157,7 @@ const DASHBOARD_I18N = {
     // Sidebar Tabs
     nav_tracking: 'Time Tracking',
     nav_media: 'Media Analytics',
+    nav_wellbeing: 'Focus & Wellbeing',
     nav_settings: 'Settings & Data',
     
     // App Bar Headers
@@ -164,6 +165,8 @@ const DASHBOARD_I18N = {
     sub_tracking: 'Detailed breakdown of daily browsing time and website usage',
     title_media: '🎬 Media Analytics & Playback History',
     sub_media: 'Video playback sessions, volume telemetry, resolution and live controls',
+    title_wellbeing: '🧘 Focus & Digital Wellbeing',
+    sub_wellbeing: 'Pomodoro timer, daily domain limits, starred domains, and privacy exclusion rules',
     title_settings: '⚙️ Settings & Data Management',
     sub_settings: 'Extension preferences, data export (JSON/CSV) and reset options',
     
@@ -249,6 +252,8 @@ const DASHBOARD_I18N = {
     // Feature 7: Annotations & Blacklist
     blacklist_title: 'Privacy Tracking Exclusion Blacklist',
     blacklist_desc: 'Domains matching these patterns will never be recorded in history',
+    txt_starred_title: 'Pinned Domains & Project Notes',
+    txt_starred_desc: 'Starred domains remain anchored at the top of your domain breakdown table',
     btn_purge_domain: '🗑️ Purge Historical Data for this Domain',
     notes_placeholder: 'Add project notes for this domain...',
     btn_add_pattern: 'Add Pattern',
@@ -558,6 +563,7 @@ const DASHBOARD_I18N = {
     // Sidebar Tabs
     nav_tracking: 'टाइम ट्रैकिंग',
     nav_media: 'मीडिया एनालिटिक्स',
+    nav_wellbeing: 'फोकस व वेलबीइंग',
     nav_settings: 'सेटिंग्स व डेटा',
     
     // App Bar Headers
@@ -565,6 +571,8 @@ const DASHBOARD_I18N = {
     sub_tracking: 'दैनिक ब्राउज़िंग समय व वेबसाइट उपयोग का विस्तृत विश्लेषण',
     title_media: '🎬 मीडिया एनालिटिक्स व प्लेबैक इतिहास',
     sub_media: 'वीडियो प्लेबैक सत्र, वॉल्यूम आंकड़े, रिज़ॉल्यूशन व लाइव प्लेयर कंट्रोल्स',
+    title_wellbeing: '🧘 फोकस व डिजिटल वेलबीइंग',
+    sub_wellbeing: 'पोमोडोरो टाइमर, दैनिक डोमेन सीमाएं, पसंदीदा डोमेन व गोपनीयता नियम',
     title_settings: '⚙️ सेटिंग्स व डेटा प्रबंधन',
     sub_settings: 'एक्सटेंशन प्राथमिकताएं, डेटा निर्यात (JSON/CSV) व सुरक्षित रीसेट ज़ोन',
     
@@ -650,6 +658,8 @@ const DASHBOARD_I18N = {
     // Feature 7: Annotations & Blacklist
     blacklist_title: 'गोपनीयता ट्रैकिंग एक्सक्लूज़न ब्लैकलिस्ट',
     blacklist_desc: 'इन पैटर्न्स से मेल खाने वाले डोमेन्स का डेटा कभी रिकॉर्ड नहीं किया जाएगा',
+    txt_starred_title: 'पसंदीदा डोमेन व प्रोजेक्ट नोट्स',
+    txt_starred_desc: 'पिन किए गए डोमेन आपकी एनालिटिक्स टेबल के शीर्ष पर स्थिर रहते हैं',
     btn_purge_domain: '🗑️ इस डोमेन का पुराना डेटा मिटाएं',
     notes_placeholder: 'इस डोमेन के लिए प्रोजेक्ट नोट्स लिखें...',
     btn_add_pattern: 'पैटर्न जोड़ें',
@@ -2700,6 +2710,7 @@ function applyDashboardLanguage(lang) {
   // Sidebar navigation
   setTxt('navTrackingText', 'nav_tracking');
   setTxt('navMediaText', 'nav_media');
+  setTxt('navWellbeingText', 'nav_wellbeing');
   setTxt('navSettingsText', 'nav_settings');
 
   // Settings language dropdown value sync
@@ -2938,6 +2949,8 @@ function applyDashboardLanguage(lang) {
   // Phase 4: Feature 7 & 8 Texts
   setTxt('txtBlacklistTitle', 'blacklist_title');
   setTxt('txtBlacklistDesc', 'blacklist_desc');
+  setTxt('txtStarredTitle', 'txt_starred_title');
+  setTxt('txtStarredDesc', 'txt_starred_desc');
   setTxt('btnPurgeDomainHistory', 'btn_purge_domain');
   setTxt('btnAddBlacklistPattern', 'btn_add_pattern');
   const blacklistPatternInput = document.getElementById('inputBlacklistPattern');
@@ -3008,6 +3021,52 @@ let trackingBlacklist = [];
 let domainBudgets = {};
 let pomodoroController = null;
 let activeEditingDomainNote = null;
+
+
+function renderStarredDomainsQuickList() {
+  const container = document.getElementById('starredDomainsQuickList');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  if (!starredDomains || starredDomains.length === 0) {
+    const emptyP = document.createElement('p');
+    emptyP.className = 'empty-subtext';
+    emptyP.style.cssText = 'color: var(--text-muted); font-size: 13px; font-style: italic; padding: 8px 0;';
+    emptyP.textContent = 'No domains pinned yet. Click the star icon ⭐ next to any domain in the table to pin it here.';
+    container.appendChild(emptyP);
+    return;
+  }
+  starredDomains.forEach(domain => {
+    const chip = document.createElement('div');
+    chip.className = 'starred-domain-pill';
+    const star = document.createElement('span');
+    star.textContent = '⭐ ';
+    const name = document.createElement('span');
+    name.className = 'starred-domain-name';
+    name.textContent = domain;
+    chip.appendChild(star);
+    chip.appendChild(name);
+    const note = domainAnnotations && domainAnnotations[domain.toLowerCase()];
+    if (note) {
+      const noteBadge = document.createElement('span');
+      noteBadge.className = 'starred-domain-note';
+      noteBadge.textContent = ' 📝 ' + note;
+      chip.appendChild(noteBadge);
+    }
+    const unstarBtn = document.createElement('button');
+    unstarBtn.type = 'button';
+    unstarBtn.className = 'btn-unstar-pill';
+    unstarBtn.textContent = '✕';
+    unstarBtn.title = 'Unpin ' + domain;
+    unstarBtn.addEventListener('click', () => {
+      toggleDomainPin(domain);
+      renderStarredDomainsQuickList();
+    });
+    chip.appendChild(unstarBtn);
+    container.appendChild(chip);
+  });
+}
 
 function isDomainPinned(domain) {
   if (!domain || !Array.isArray(starredDomains)) return false;
@@ -3281,6 +3340,21 @@ function initPomodoroWidget() {
       modeBadge.className = state.mode === 'focus' ? 'badge-focus' : 'badge-break';
       modeBadge.textContent = state.mode === 'focus' ? t('pomodoro_focus_badge') : t('pomodoro_break_badge');
     }
+
+    const microClock = document.getElementById('wellbeingMicroClock');
+    const microMode = document.getElementById('wellbeingMicroMode');
+    const microDot = document.getElementById('wellbeingMicroStatusDot');
+    if (microClock && state.formattedTime) {
+      microClock.textContent = state.formattedTime;
+    }
+    if (microMode) {
+      microMode.textContent = state.status === 'running'
+        ? (state.mode === 'focus' ? 'Focus Active' : 'Break Time')
+        : (state.status === 'paused' ? 'Paused' : 'Focus Idle');
+    }
+    if (microDot) {
+      microDot.className = 'hud-dot ' + (state.status === 'running' ? (state.mode === 'focus' ? 'online' : 'warn') : 'idle');
+    }
     if (startBtn) {
       if (state.status === 'running') {
         startBtn.textContent = '⏳ Running';
@@ -3512,6 +3586,7 @@ function switchTab(tabKey) {
   const panes = {
     tracking: document.getElementById('paneTracking'),
     media: document.getElementById('paneMedia'),
+    wellbeing: document.getElementById('paneWellbeing'),
     settings: document.getElementById('paneSettings')
   };
 
@@ -3535,6 +3610,9 @@ function switchTab(tabKey) {
   } else if (tabKey === 'media') {
     titleEl.textContent = t('title_media');
     subEl.textContent = t('sub_media');
+  } else if (tabKey === 'wellbeing') {
+    titleEl.textContent = t('title_wellbeing');
+    subEl.textContent = t('sub_wellbeing');
   } else if (tabKey === 'settings') {
     titleEl.textContent = t('title_settings');
     subEl.textContent = t('sub_settings');
@@ -5410,6 +5488,7 @@ class OmniCommandPaletteController {
     return [
       { id: 'nav-tracking', title: 'Go to Time Tracking Analytics', category: 'Navigation', icon: '⏱️', action: () => switchTab('tracking') },
       { id: 'nav-media', title: 'Go to Media Analytics & Hero Player', category: 'Navigation', icon: '🎬', action: () => switchTab('media') },
+      { id: 'nav-wellbeing', title: 'Go to Focus & Wellbeing Sentinel', category: 'Navigation', icon: '🧘', action: () => switchTab('wellbeing') },
       { id: 'nav-settings', title: 'Go to Settings & Preferences', category: 'Navigation', icon: '⚙️', action: () => switchTab('settings') },
       { id: 'media-toggle-play', title: 'Play / Pause Active Video', category: 'Quick Actions', icon: '⏯️', action: () => triggerMediaPlayPause() },
       { id: 'media-toggle-mute', title: 'Mute / Unmute Active Audio', category: 'Quick Actions', icon: '🔇', action: () => triggerMediaMute() },
@@ -5752,6 +5831,10 @@ function initGlobalHotkeys() {
         switchTab('media');
         break;
       case '3':
+        e.preventDefault();
+        switchTab('wellbeing');
+        break;
+      case '4':
         e.preventDefault();
         switchTab('settings');
         break;
@@ -6115,6 +6198,14 @@ function setupEventListeners() {
   // 1. Navigation Tab Switching
   document.getElementById('navTabTracking').addEventListener('click', () => switchTab('tracking'));
   document.getElementById('navTabMedia').addEventListener('click', () => switchTab('media'));
+  const navTabWellbeing = document.getElementById('navTabWellbeing');
+  if (navTabWellbeing) {
+    navTabWellbeing.addEventListener('click', () => switchTab('wellbeing'));
+  }
+  const microWidget = document.getElementById('wellbeingLiveMicroWidget');
+  if (microWidget) {
+    microWidget.addEventListener('click', () => switchTab('wellbeing'));
+  }
   document.getElementById('navTabSettings').addEventListener('click', () => switchTab('settings'));
 
   // 2. 1-Click Language Switcher (EN / HI Toggle)

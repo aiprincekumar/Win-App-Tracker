@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿﻿/**
  * Sentinel Web Activity & Media Sentinel - Shared Components Styles
  * File: dashboard/styles/components.css
  */
@@ -47,8 +47,9 @@
 }
 
 .export-menu-item:hover, .export-menu-item:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(16, 185, 129, 0.12);
   transform: translateX(2px);
+  box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.15);
 }
 
 .pomodoro-pill-container {
@@ -90,4 +91,49 @@
   align-items: center;
   gap: 4px;
   margin-left: 6px;
+}
+
+
+/* Liquid Glass Icon-Only Action Buttons */
+.btn-action-icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  background: var(--glass-surface-bg, rgba(15, 23, 42, 0.65));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.18s ease;
+}
+
+.btn-action-icon-only:hover {
+  transform: translateY(-1.5px) scale(1.05);
+  background: var(--glass-surface-hover, rgba(30, 41, 59, 0.85));
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.dropdown-chevron-micro {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

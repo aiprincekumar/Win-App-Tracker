@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Web Activity & Media Sentinel - Advanced Backup, Snapshots, SQLite Hub & Executive Digest Stylesheet
  * Features 5 & 6: Backup dropzone, Snapshot controls, Conflict Modal, and @media print Executive Digest Engine.
  * 
@@ -83,13 +83,14 @@
 .conflict-modal-card {
   max-width: 520px;
   width: 90%;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--glass-surface-bg, rgba(15, 23, 42, 0.94));
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
+  border-radius: 18px;
   padding: 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .conflict-summary-pill {
@@ -129,9 +130,22 @@
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: 8px;
+  gap: 3px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+}
+
+.conflict-choice-item button:hover {
+  transform: translateY(-2px);
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
 .choice-subtext {

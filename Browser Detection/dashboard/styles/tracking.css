@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Sentinel Web Activity & Media Sentinel - Tracking & Analytics Styles
  * File: dashboard/styles/tracking.css
  * Metrics Grid, Analytics Hero Card, Donut Charts & Modern Data Tables
@@ -840,28 +840,36 @@ body.theme-light .heatmap-cell[data-intensity="4"], body.theme-light .legend-cel
 
 .heatmap-mode-toggles {
   display: inline-flex;
-  border-radius: 8px;
-  background: var(--bg-input, rgba(15, 23, 42, 0.85));
-  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.1));
-  padding: 2px;
+  border-radius: 9999px;
+  background: var(--glass-surface-bg, rgba(15, 23, 42, 0.65));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  padding: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .btn-toggle-mode {
   background: transparent;
   border: none;
   color: var(--text-muted, #94a3b8);
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 6px;
+  font-weight: 600;
+  border-radius: 9999px;
   cursor: pointer;
-  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-toggle-mode:hover {
+  color: var(--text-primary, #ffffff);
 }
 
 .btn-toggle-mode.active {
-  background: var(--accent-emerald, #10b981);
-  color: #042f2e;
-  font-weight: 600;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.45);
 }
 
 .heatmap-wow-badge {
@@ -1245,4 +1253,30 @@ tr:hover .cell-quick-actions,
   background-color: rgba(139, 92, 246, 0.15) !important;
   color: #8b5cf6 !important;
   border-color: rgba(139, 92, 246, 0.35) !important;
+}
+
+
+/* Table Hover Quick-Actions & Stable 42px Row Height */
+.cell-quick-actions-polished {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.analytics-table tbody tr {
+  height: 42px;
+}
+
+.cell-quick-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  opacity: 0.85;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.analytics-table tbody tr:hover .cell-quick-actions {
+  opacity: 1;
+  transform: translateX(2px);
 }

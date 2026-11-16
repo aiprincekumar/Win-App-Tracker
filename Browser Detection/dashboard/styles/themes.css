@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Sentinel Web Activity & Media Sentinel - Dashboard Themes & High Contrast Styles
  * File: dashboard/styles/themes.css
  * Light Mode Overrides, High Contrast Accessibility (WCAG AAA) & Focus Rings
@@ -148,7 +148,12 @@ body.theme-light .btn-hud-reconnect:hover {
 
 body.theme-light .hero-progress-track,
 body.theme-light .hero-volume-track {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.10);
+}
+
+body.theme-light .hero-volume-track:hover,
+body.theme-light .scrubber-wrapper:hover .hero-progress-track {
+  background: rgba(0, 0, 0, 0.14);
 }
 
 body.theme-light .vol-floating-tooltip {

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -36,6 +36,10 @@
             <span class="eq-bar bar-3"></span>
           </span>
         </button>
+          <button id="navTabWellbeing" class="nav-item" data-tab="wellbeing" role="tab" aria-selected="false" aria-controls="paneWellbeing">
+            <span class="nav-icon">🧘</span>
+            <span id="navWellbeingText" class="nav-text">Focus & Wellbeing</span>
+          </button>
         <button id="navTabSettings" class="nav-item" data-tab="settings" role="tab" aria-selected="false" aria-controls="paneSettings">
           <span class="nav-icon">⚙️</span>
           <span id="navSettingsText" class="nav-text">Settings & Data</span>
@@ -43,6 +47,18 @@
       </nav>
 
 
+
+      <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
+      <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus Sentinel State" style="cursor: pointer;">
+        <div class="hud-card-header">
+          <span class="hud-card-title">🧘 Focus Sentinel</span>
+          <span id="wellbeingMicroStatusDot" class="hud-dot idle"></span>
+        </div>
+        <div class="hud-card-body">
+          <span id="wellbeingMicroClock" class="hud-status-text">25:00</span>
+          <span id="wellbeingMicroMode" class="hud-address">Focus Idle</span>
+        </div>
+      </div>
 
       <!-- Sidebar Footer Data Hub Status Widget -->
       <div class="sidebar-hud-card">
@@ -92,7 +108,7 @@
 
         <div class="app-bar-right">
           <!-- Multi-Browser Filter Selector -->
-          <div class="browser-filter-container" title="Filter analytics by browser">
+          <div class="browser-filter-container compact-pill" title="Filter analytics by browser">
             <span class="browser-filter-icon">🌐</span>
             <select id="browserFilterSelect" class="browser-filter-select" aria-label="Filter Analytics by Browser">
               <option value="all">🌐 All Browsers</option>
@@ -104,7 +120,7 @@
           </div>
 
           <!-- Dual/Triple Tracking Method Selector (Method A, B, C) -->
-          <div class="browser-filter-container tracking-filter-container" title="Select Tracking Method: Combined / Active / BG Media">
+          <div class="browser-filter-container tracking-filter-container compact-pill" title="Select Tracking Method: Combined / Active / BG Media">
             <span class="browser-filter-icon">📊</span>
             <select id="trackingModeSelect" class="browser-filter-select" aria-label="Select Tracking Method">
               <option value="all" selected>🌐 Combined</option>
@@ -124,12 +140,12 @@
             <span id="liveClockText">--:--:--</span>
           </div>
           <!-- 1-Click Language Switcher (English / हिंदी) -->
-          <button id="btnLangToggle" class="btn-action-outline btn-lang-toggle" title="Switch Language (English / हिंदी)">
+          <button id="btnLangToggle" class="btn-action-icon-only btn-lang-toggle" title="Switch Language (English / हिंदी)" aria-label="Switch Language (English / हिंदी)">
             <span class="lang-icon">🌐</span>
-            <span id="langToggleText">English</span>
+            <span id="langToggleText" class="sr-only">English</span>
           </button>
           <!-- 1-Click Theme Switcher (Dark / Light Mode) -->
-          <button id="btnThemeToggle" class="btn-action-outline topbar-btn btn-theme-toggle" title="Switch to Light Mode" aria-label="Switch to Light Mode" data-i18n-title="theme_toggle_light">
+          <button id="btnThemeToggle" class="btn-action-icon-only topbar-btn btn-theme-toggle" title="Switch to Light Mode" aria-label="Switch to Light Mode" data-i18n-title="theme_toggle_light">
             <svg class="topbar-icon theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="5"></circle>
               <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -141,46 +157,16 @@
               <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
               <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
             </svg>
-            <span id="themeToggleText">Light</span>
+            <span id="themeToggleText" class="sr-only">Light</span>
           </button>
-          
-          <!-- Restored: Compact Pomodoro Interactive Pill in Top Bar (Preserves id="widgetPomodoroSentinel") -->
-          <div id="widgetPomodoroSentinel" class="pomodoro-pill-container">
-            <button type="button" id="pomodoroNavPill" class="pomodoro-nav-pill" aria-haspopup="true" aria-expanded="false" title="Focus Sentinel & Pomodoro">
-              <span class="pomodoro-pill-icon">🧘</span>
-              <span id="pomodoroPillClock" class="pomodoro-pill-time">25:00</span>
-              <span id="pomodoroPillBadge" class="badge-focus-micro">Focus</span>
-            </button>
-
-            <!-- Floating Glassmorphism Popover Modal -->
-            <div id="pomodoroPopoverModal" class="pomodoro-popover-card liquid-glass-card hidden" role="dialog" aria-modal="false" aria-label="Pomodoro Controls">
-              <div class="pomodoro-popover-header">
-                <div class="pomodoro-popover-title-group">
-                  <span id="txtPomodoroTitle" class="pomodoro-popover-title">🧘 Focus Sentinel & Pomodoro</span>
-                  <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
-                </div>
-                <button type="button" id="btnPomodoroPopoverClose" class="btn-icon-close" aria-label="Close">✕</button>
-              </div>
-              <div class="pomodoro-popover-body">
-                <div id="pomodoroTimeDisplay" class="pomodoro-big-time">25:00</div>
-                <div class="pomodoro-progress-track">
-                  <div id="pomodoroProgressBar" class="pomodoro-progress-fill" style="width: 100%;"></div>
-                </div>
-                <div class="pomodoro-popover-actions">
-                  <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start</button>
-                  <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
-                  <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Consolidated Export Dropdown Hub -->
           <div class="export-dropdown-container">
-            <button type="button" id="btnExportMenu" class="btn-action-outline btn-export-trigger" aria-haspopup="true" aria-expanded="false" title="Export & Reports">
+            <button type="button" id="btnExportMenu" class="btn-action-icon-only btn-export-trigger" aria-haspopup="true" aria-expanded="false" title="Export & Reports" aria-label="Export & Reports">
               <span class="action-btn-icon">📥</span>
-              <span id="btnExportMenuText">Export</span>
-              <span class="dropdown-chevron">▾</span>
+              <span id="btnExportMenuText" class="sr-only">Export</span>
+              <span class="dropdown-chevron-micro">▾</span>
             </button>
             <div id="exportDropdownMenu" class="export-dropdown-menu liquid-glass-card hidden" role="menu" aria-label="Export Formats">
               <button type="button" id="btnPrintPdf" class="export-menu-item" role="menuitem">
@@ -214,9 +200,9 @@
               </button>
             </div>
           </div>
-          <button id="btnGlobalRefresh" class="btn-action-outline" title="Refresh Data">
+          <button id="btnGlobalRefresh" class="btn-action-icon-only" title="Refresh Data" aria-label="Refresh Data">
             <span class="refresh-spinner-icon">🔄</span>
-            <span id="btnGlobalRefreshText">Refresh</span>
+            <span id="btnGlobalRefreshText" class="sr-only">Refresh</span>
           </button>
         </div>
       </header>
@@ -981,6 +967,93 @@
       </section>
 
         <!-- ================================================================= -->
+        <!-- TAB D: FOCUS & DIGITAL WELLBEING (4th Tab)                        -->
+        <!-- ================================================================= -->
+        <section id="paneWellbeing" class="tab-pane" role="tabpanel" aria-labelledby="navTabWellbeing">
+          <div id="tabContentWellbeing" class="bento-grid-container wellbeing-grid bento-grid">
+            <!-- Pillar 1: Hero Pomodoro Sentinel State Machine Card (Preserves id="widgetPomodoroSentinel") -->
+            <div id="widgetPomodoroSentinel" class="bento-card liquid-glass-card bento-span-6 pomodoro-hero-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">🧘</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtPomodoroTitle" class="card-heading settings-card-title">Focus Sentinel & Pomodoro</h3>
+                  <span class="settings-card-sub">25-minute focus intervals with automated playback cutoff</span>
+                </div>
+                <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+              </div>
+              <div class="pomodoro-hero-body">
+                <div id="pomodoroTimeDisplay" class="pomodoro-hero-clock pomodoro-big-time">25:00</div>
+                <div class="pomodoro-progress-track">
+                  <div id="pomodoroProgressBar" class="pomodoro-progress-fill" style="width: 100%;"></div>
+                </div>
+                <div class="pomodoro-hero-actions pomodoro-controls">
+                  <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start Focus</button>
+                  <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
+                  <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 2: Domain Daily Time Budgets Card -->
+            <div id="cardDomainBudgets" class="bento-card liquid-glass-card bento-span-6 settings-section-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">⏱️</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtBudgetTitle" class="card-heading settings-card-title">Domain Daily Time Budgets</h3>
+                  <span id="txtBudgetDesc" class="card-subtext settings-card-sub">Configure daily minute limits per domain with 80% warning and 100% cutoff badges</span>
+                </div>
+              </div>
+              <div class="settings-form">
+                <div class="budget-input-row">
+                  <input type="text" id="inputBudgetDomain" class="styled-input" placeholder="Domain (e.g. twitter.com, youtube.com)">
+                  <input type="number" id="inputBudgetMinutes" class="styled-input" placeholder="Minutes" min="1" max="1440" value="30">
+                  <button type="button" id="btnAddBudget" class="btn-save-primary">Set Budget</button>
+                </div>
+                <div id="domainBudgetsList" class="domain-budgets-list"></div>
+              </div>
+            </div>
+
+            <!-- Pillar 3: Privacy Tracking Exclusion Blacklist Card -->
+            <div id="cardTrackingBlacklist" class="bento-card liquid-glass-card bento-span-6 settings-section-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">🛡️</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtBlacklistTitle" class="card-heading settings-card-title">Privacy Tracking Exclusion Blacklist</h3>
+                  <span id="txtBlacklistDesc" class="card-subtext settings-card-sub">Domains matching these patterns will never be recorded in history</span>
+                </div>
+              </div>
+              <div class="settings-form">
+                <div class="blacklist-input-row">
+                  <input type="text" id="inputBlacklistPattern" class="styled-input" placeholder="e.g. localhost:*, 192.168.*:*, *bank.internal*">
+                  <button type="button" id="btnAddBlacklistPattern" class="btn-save-primary">Add Pattern</button>
+                </div>
+                <div id="blacklistChipsContainer" class="blacklist-chips-grid"></div>
+                
+                <hr class="blacklist-purge-divider">
+                <div class="blacklist-purge-row">
+                  <input type="text" id="inputPurgeDomain" class="styled-input" placeholder="Domain or pattern to purge (e.g. localhost)">
+                  <button type="button" id="btnPurgeDomainHistory" class="btn-danger-outline">🗑️ Purge Historical Data</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 4: Starred & Pinned Domains Quick Access -->
+            <div id="cardPinnedDomainsQuickview" class="bento-card liquid-glass-card bento-span-6 settings-section-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">⭐</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtStarredTitle" class="card-heading settings-card-title">Pinned Domains & Project Notes</h3>
+                  <span id="txtStarredDesc" class="card-subtext settings-card-sub">Starred domains remain anchored at the top of your domain breakdown table</span>
+                </div>
+              </div>
+              <div class="settings-form">
+                <div id="starredDomainsQuickList" class="starred-quick-list"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================= -->
         <!-- TAB C: SETTINGS & DATA MANAGEMENT                                 -->
         <!-- ================================================================= -->
         <section id="paneSettings" class="tab-pane" role="tabpanel" aria-labelledby="navTabSettings">
@@ -1358,51 +1431,6 @@
                     <button id="btnRestoreFromSqliteHub" class="btn btn-secondary btn-sm">📥 Restore from Hub</button>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <!-- Card: Privacy Tracking Exclusion Blacklist (Feature 7) -->
-            <div id="cardTrackingBlacklist" class="settings-card bento-card liquid-glass-card bento-span-6 settings-section-card">
-              <div class="settings-card-header">
-                <span class="settings-card-icon">🛡️</span>
-                <div class="settings-card-title-group">
-                  <h3 id="txtBlacklistTitle" class="settings-card-title">Privacy Tracking Exclusion Blacklist</h3>
-                  <span id="txtBlacklistDesc" class="settings-card-sub">Domains matching these patterns will never be recorded in history</span>
-                </div>
-              </div>
-
-              <div class="settings-form">
-                <div class="blacklist-input-row">
-                  <input type="text" id="inputBlacklistPattern" class="styled-input" placeholder="e.g. localhost:*, 192.168.*:*, *bank.internal*">
-                  <button type="button" id="btnAddBlacklistPattern" class="btn-save-primary">Add Pattern</button>
-                </div>
-                <div id="blacklistChipsContainer" class="blacklist-chips-grid"></div>
-                
-                <hr class="blacklist-purge-divider">
-                <div class="blacklist-purge-row">
-                  <input type="text" id="inputPurgeDomain" class="styled-input" placeholder="Domain or pattern to purge (e.g. localhost)">
-                  <button type="button" id="btnPurgeDomainHistory" class="btn-danger-outline">🗑️ Purge Historical Data</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card: Domain Daily Time Budgets & Alerts (Feature 8) -->
-            <div id="cardDomainBudgets" class="settings-card bento-card liquid-glass-card bento-span-6 settings-section-card">
-              <div class="settings-card-header">
-                <span class="settings-card-icon">⏱️</span>
-                <div class="settings-card-title-group">
-                  <h3 id="txtBudgetTitle" class="settings-card-title">Domain Daily Time Budgets</h3>
-                  <span id="txtBudgetDesc" class="settings-card-sub">Configure daily minute limits per domain with 80% warning and 100% cutoff badges</span>
-                </div>
-              </div>
-
-              <div class="settings-form">
-                <div class="budget-input-row">
-                  <input type="text" id="inputBudgetDomain" class="styled-input" placeholder="Domain (e.g. twitter.com, youtube.com)">
-                  <input type="number" id="inputBudgetMinutes" class="styled-input" placeholder="Minutes" min="1" max="1440" value="30">
-                  <button type="button" id="btnAddBudget" class="btn-save-primary">Set Budget</button>
-                </div>
-                <div id="domainBudgetsList" class="domain-budgets-list"></div>
               </div>
             </div>
 
