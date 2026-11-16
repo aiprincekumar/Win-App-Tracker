@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD)
+﻿# Product Requirements Document (PRD)
 ## Web Activity & Media Sentinel - Dashboard UI/UX Enhancement
 
 > **Document Type:** Product Requirements Document (`PRD.md`)  

@@ -1,4 +1,4 @@
-# Dashboard UI/UX Enhancement & Design System Master Specification
+﻿# Dashboard UI/UX Enhancement & Design System Master Specification
 ## Live Tracking Board & Problem-Solution Dossier
 
 > **Task ID:** `TASK-DASHBOARD-UIUX-ENHANCEMENT-001`  

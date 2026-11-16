@@ -898,6 +898,85 @@
               </div>
             </div>
 
+            <!-- Card 1.8: Appearance, Theme Substrates & Audio Haptics -->
+            <div class="settings-card bento-card liquid-glass-card bento-span-6" id="cardAppearanceSettings">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">🎨</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingAppearanceSettings" class="settings-card-title">Appearance & Tactile Haptics</h3>
+                  <span id="subAppearanceSettings" class="settings-card-sub">Custom substrate materials, dynamic specular accents, and Web Audio haptics</span>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <!-- Theme Substrate Selection -->
+                <div class="form-row theme-substrate-row">
+                  <div class="form-label-group">
+                    <label id="lblThemeSubstrate" class="form-label">Theme Substrate</label>
+                    <span id="descThemeSubstrate" class="form-desc">Select zero-reload base material layer</span>
+                  </div>
+                  <div class="theme-pills-container" role="radiogroup" aria-labelledby="lblThemeSubstrate">
+                    <button type="button" class="theme-pill" id="themePillMidnightOled" data-theme="midnight-oled" role="radio" aria-checked="false">
+                      <span class="theme-dot oled"></span>
+                      <span id="txtThemeMidnightOled">Midnight OLED</span>
+                    </button>
+                    <button type="button" class="theme-pill active" id="themePillSlateNavy" data-theme="slate-navy" role="radio" aria-checked="true">
+                      <span class="theme-dot slate"></span>
+                      <span id="txtThemeSlateNavy">Deep Slate</span>
+                    </button>
+                    <button type="button" class="theme-pill" id="themePillNordicPine" data-theme="nordic-pine" role="radio" aria-checked="false">
+                      <span class="theme-dot pine"></span>
+                      <span id="txtThemeNordicPine">Nordic Pine</span>
+                    </button>
+                    <button type="button" class="theme-pill" id="themePillStudioLight" data-theme="studio-light" role="radio" aria-checked="false">
+                      <span class="theme-dot light"></span>
+                      <span id="txtThemeStudioLight">Studio Light</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dynamic Accent Palette Selection -->
+                <div class="form-row accent-palette-row">
+                  <div class="form-label-group">
+                    <label id="lblAccentPalette" class="form-label">Accent Palette</label>
+                    <span id="descAccentPalette" class="form-desc">Dynamic specular glow and interactive focal hue</span>
+                  </div>
+                  <div class="accent-swatches-container" role="radiogroup" aria-labelledby="lblAccentPalette">
+                    <button type="button" class="accent-swatch active" id="accentSwatchEmerald" data-accent="emerald" role="radio" aria-checked="true" title="Cyber Emerald" style="--swatch-color: #10b981;"></button>
+                    <button type="button" class="accent-swatch" id="accentSwatchCyan" data-accent="cyan" role="radio" aria-checked="false" title="Electric Cyan" style="--swatch-color: #06b6d4;"></button>
+                    <button type="button" class="accent-swatch" id="accentSwatchViolet" data-accent="violet" role="radio" aria-checked="false" title="Royal Violet" style="--swatch-color: #8b5cf6;"></button>
+                    <button type="button" class="accent-swatch" id="accentSwatchRose" data-accent="rose" role="radio" aria-checked="false" title="Neon Rose" style="--swatch-color: #f43f5e;"></button>
+                    <button type="button" class="accent-swatch" id="accentSwatchAmber" data-accent="amber" role="radio" aria-checked="false" title="Solar Amber" style="--swatch-color: #f59e0b;"></button>
+                  </div>
+                </div>
+
+                <!-- Tactile Audio Feedback Toggle -->
+                <div class="form-row switch-row">
+                  <div class="form-label-group">
+                    <label for="toggleAudioHaptics" id="lblAudioHaptics" class="form-label">Tactile Audio Feedback</label>
+                    <span id="descAudioHaptics" class="form-desc">Subtle procedural sound effects on sliders, clicks, and actions</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="toggleAudioHaptics" checked>
+                    <span class="slider-round"></span>
+                  </label>
+                </div>
+
+                <!-- Audio Haptics Volume Slider -->
+                <div class="form-row" id="rowAudioHapticsVolume">
+                  <div class="form-label-group">
+                    <label for="sliderAudioHapticsVolume" id="lblAudioVolume" class="form-label">Haptic Feedback Volume</label>
+                    <span id="descAudioVolume" class="form-desc">Volume level for procedural clicks and chimes (Default: 15%)</span>
+                  </div>
+                  <div class="haptic-volume-control">
+                    <input type="range" id="sliderAudioHapticsVolume" class="styled-range-slider" min="0" max="1" step="0.01" value="0.15" aria-label="Haptic Feedback Volume">
+                    <span id="lblAudioHapticsVolumeValue" class="volume-badge">15%</span>
+                    <button type="button" id="btnTestAudioHaptics" class="btn-test-chime" title="Test Chime">🔔 Test</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Card 2: Export Data Section -->
             <div class="settings-card bento-card liquid-glass-card bento-span-6">
               <div class="settings-card-header">

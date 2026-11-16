@@ -1,4 +1,4 @@
-# Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers
+﻿# Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers
 ## Standalone Executable Phase Instruction Specification
 
 > **Phase Identifier:** `PHASE-03-PRECISION-SCRUBBER-AND-KINETIC-ROLLERS`  

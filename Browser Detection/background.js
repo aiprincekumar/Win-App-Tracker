@@ -2835,6 +2835,10 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           if (session) session.isPlaying = false;
         } else if (message.action === 'toggle_mute') {
           pm.isMuted = !pm.isMuted;
+        } else if (message.action === 'mute') {
+          pm.isMuted = true;
+        } else if (message.action === 'unmute') {
+          pm.isMuted = false;
         } else if (message.action === 'step_speed' || message.action === 'set_speed') {
           if (message.action === 'step_speed') {
             const cur = pm.playbackRate || 1.0;

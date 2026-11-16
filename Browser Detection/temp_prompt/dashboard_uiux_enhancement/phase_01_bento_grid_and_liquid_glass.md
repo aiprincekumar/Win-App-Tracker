@@ -1,4 +1,4 @@
-# Phase 1: Bento Grid Layout Architecture & iOS 26 Liquid Glass Theme Tokens
+﻿# Phase 1: Bento Grid Layout Architecture & iOS 26 Liquid Glass Theme Tokens
 ## Standalone Executable Phase Instruction Specification
 
 > **Phase Identifier:** `PHASE-01-BENTO-GRID-AND-LIQUID-GLASS`  

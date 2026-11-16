@@ -1,4 +1,4 @@
-# Phase 2: Omni Command Palette & Ergonomic Hotkey Navigation
+﻿# Phase 2: Omni Command Palette & Ergonomic Hotkey Navigation
 ## Standalone Executable Phase Instruction Specification
 
 > **Phase Identifier:** `PHASE-02-OMNI-COMMAND-PALETTE-AND-HOTKEYS`  

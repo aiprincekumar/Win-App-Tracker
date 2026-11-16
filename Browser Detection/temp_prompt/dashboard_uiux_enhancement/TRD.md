@@ -1,4 +1,4 @@
-# Technical Requirements Document (TRD)
+﻿# Technical Requirements Document (TRD)
 ## Web Activity & Media Sentinel - Dashboard UI/UX Enhancement
 
 > **Document Type:** Technical Requirements Document (`TRD.md`)  

@@ -1,4 +1,4 @@
-# Phase 4: Synthesized Audio Haptics, Dynamic Multi-Theme Engine & Full Regression
+﻿# Phase 4: Synthesized Audio Haptics, Dynamic Multi-Theme Engine & Full Regression
 ## Standalone Executable Phase Instruction Specification
 
 > **Phase Identifier:** `PHASE-04-AUDIO-HAPTICS-WCAG-AND-FULL-REGRESSION`  

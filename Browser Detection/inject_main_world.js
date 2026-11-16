@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser Detection / inject_main_world.js
  * Main-World YouTube & HTML5 Media Execution Engine
  * 
@@ -656,6 +656,26 @@
         break;
       }
 
+      case 'mute': {
+        if (moviePlayer && typeof moviePlayer.mute === 'function') {
+          try { moviePlayer.mute(); } catch (_) {}
+        } else if (video) {
+          try { video.muted = true; } catch (_) {}
+        }
+        showOSD('Muted', '🔇');
+        break;
+      }
+
+      case 'unmute': {
+        if (moviePlayer && typeof moviePlayer.unMute === 'function') {
+          try { moviePlayer.unMute(); } catch (_) {}
+        } else if (video) {
+          try { video.muted = false; } catch (_) {}
+        }
+        showOSD('Unmuted', '🔊');
+        break;
+      }
+
       // -----------------------------------------------------------------------
       // 2. PLAYBACK SPEED CONTROLS (+ and - Dual Stepper, Strict 0.25x Steps, Max 2.0x)
       // -----------------------------------------------------------------------
@@ -870,7 +890,7 @@
         }
 
         // 2. DOM click fallback: YouTube's native play button
-        if (!isHandled || (video && video.paused)) {
+        if (!isHandled) {
           const ytPlayBtn = document.querySelector('.ytp-play-button');
           if (ytPlayBtn) {
             const label = (ytPlayBtn.getAttribute('data-title-no-tooltip') || ytPlayBtn.getAttribute('aria-label') || '').toLowerCase();
@@ -880,8 +900,8 @@
           }
         }
 
-        // 3. Standard HTML5 <video> fallback
-        if ((!isHandled || (video && video.paused)) && video) {
+        // 3. Standard HTML5 <video> fallback (strict mutual exclusion)
+        if (!isHandled && video) {
           try {
             const p = video.play();
             if (p && typeof p.catch === 'function') p.catch(() => {});
@@ -904,7 +924,7 @@
         }
 
         // 2. DOM click fallback: YouTube's native pause button
-        if (!isHandled || (video && !video.paused)) {
+        if (!isHandled) {
           const ytPlayBtn = document.querySelector('.ytp-play-button');
           if (ytPlayBtn) {
             const label = (ytPlayBtn.getAttribute('data-title-no-tooltip') || ytPlayBtn.getAttribute('aria-label') || '').toLowerCase();
@@ -914,8 +934,8 @@
           }
         }
 
-        // 3. Standard HTML5 <video> fallback
-        if ((!isHandled || (video && !video.paused)) && video) {
+        // 3. Standard HTML5 <video> fallback (strict mutual exclusion)
+        if (!isHandled && video) {
           try {
             video.pause();
             isHandled = true;

@@ -1,4 +1,4 @@
-# Design System Specification & Token Constitution (DESIGN.md)
+﻿# Design System Specification & Token Constitution (DESIGN.md)
 ## Web Activity & Media Sentinel - iOS 26 Liquid Glass & Bento Grid
 
 > **Design System Name:** Sentinel Liquid Glass Design System  

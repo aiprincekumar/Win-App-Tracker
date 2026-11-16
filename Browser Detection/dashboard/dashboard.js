@@ -376,7 +376,33 @@ const DASHBOARD_I18N = {
     hotkeys_media_pip: 'Toggle Picture-in-Picture (PiP)',
     hotkeys_cmd_palette: 'Open Omni Command Palette',
     hotkeys_cheat_sheet: 'Open Keyboard Shortcuts Cheat Sheet',
-    hotkeys_dismiss: 'Dismiss Active Modal / Overlay'
+    hotkeys_dismiss: 'Dismiss Active Modal / Overlay',
+
+    // Phase 4: Dynamic Multi-Theme Engine & Synthesized Tactile Haptics
+    heading_appearance_settings: 'Appearance & Tactile Haptics',
+    sub_appearance_settings: 'Custom substrate materials, dynamic specular accents, and Web Audio haptics',
+    lbl_theme_substrate: 'Theme Substrate',
+    desc_theme_substrate: 'Select zero-reload base material layer',
+    theme_midnight_oled: 'Midnight OLED',
+    theme_slate_navy: 'Deep Slate',
+    theme_nordic_pine: 'Nordic Pine',
+    theme_clean_light: 'Studio Light',
+    lbl_accent_palette: 'Accent Palette',
+    desc_accent_palette: 'Dynamic specular glow and interactive focal hue',
+    accent_emerald: 'Cyber Emerald',
+    accent_cyan: 'Electric Cyan',
+    accent_violet: 'Royal Violet',
+    accent_rose: 'Neon Rose',
+    accent_amber: 'Solar Amber',
+    setting_audio_haptics: 'Tactile Audio Feedback',
+    desc_audio_haptics: 'Subtle procedural sound effects on sliders, clicks, and actions',
+    lbl_audio_volume: 'Haptic Feedback Volume',
+    desc_audio_volume: 'Volume level for procedural clicks and chimes (Default: 15%)',
+    btn_test_audio_haptics: '🔔 Test Chime',
+    bento_customize: 'Customize Layout',
+    bento_reset_layout: 'Reset to Default Layout',
+    scrubber_chapter: 'Chapter',
+    scrubber_hover_time: 'Time'
   },
   hi: {
     // Brand & Header
@@ -665,7 +691,117 @@ const DASHBOARD_I18N = {
     hotkeys_media_pip: 'पिक्चर-इन-पिक्चर (PiP) टॉगल करें',
     hotkeys_cmd_palette: 'ओम्नी कमांड पैलेट खोलें',
     hotkeys_cheat_sheet: 'कीबोर्ड शॉर्टकट्स चीट शीट खोलें',
-    hotkeys_dismiss: 'सक्रिय मॉडल / ओवरले बंद करें'
+    hotkeys_dismiss: 'सक्रिय मॉडल / ओवरले बंद करें',
+
+    // Phase 4: Dynamic Multi-Theme Engine & Synthesized Tactile Haptics
+    heading_appearance_settings: 'दिखावट एवं स्पर्श-योग्य हैप्टिक्स',
+    sub_appearance_settings: 'कस्टम सबस्ट्रेट सामग्री, गतिशील स्पेक्युलर एक्सेंट और वेब ऑडियो हैप्टिक्स',
+    lbl_theme_substrate: 'थीम सबस्ट्रेट',
+    desc_theme_substrate: 'शून्य-रीलोड बेस सामग्री परत चुनें',
+    theme_midnight_oled: 'मिडनाइट ओएलईडी',
+    theme_slate_navy: 'डीप स्लेट',
+    theme_nordic_pine: 'नॉर्डिक पाइन',
+    theme_clean_light: 'स्टूडियो लाइट',
+    lbl_accent_palette: 'एक्सेंट पैलेट',
+    desc_accent_palette: 'गतिशील स्पेक्युलर चमक और इंटरैक्टिव फोकल रंग',
+    accent_emerald: 'साइबर एमराल्ड',
+    accent_cyan: 'इलेक्ट्रिक सियान',
+    accent_violet: 'रॉयल वॉयलेट',
+    accent_rose: 'नियॉन रोज़',
+    accent_amber: 'सोलर एम्बर',
+    setting_audio_haptics: 'स्पर्श-योग्य ऑडियो फीडबैक',
+    desc_audio_haptics: 'स्लाइडर्स, क्लिक्स व कार्रवाइयों पर सूक्ष्म प्रक्रियात्मक ध्वनि प्रभाव',
+    lbl_audio_volume: 'हैप्टिक फीडबैक वॉल्यूम',
+    desc_audio_volume: 'प्रक्रियात्मक क्लिक्स और चाइम के लिए वॉल्यूम स्तर (डिफ़ॉल्ट: 15%)',
+    btn_test_audio_haptics: '🔔 परीक्षण चाइम',
+    bento_customize: 'लेआउट अनुकूलित करें',
+    bento_reset_layout: 'डिफ़ॉल्ट लेआउट पर रीसेट करें',
+    scrubber_chapter: 'अध्याय (Chapter)',
+    scrubber_hover_time: 'समय'
+  }
+};
+
+// =============================================================================
+// Bilingual UI/UX Specification Dictionary (DASHBOARD_UIUX_I18N)
+// =============================================================================
+const DASHBOARD_UIUX_I18N = {
+  en: {
+    // Bento & Layout
+    bento_customize: "Customize Layout",
+    bento_reset_layout: "Reset to Default Layout",
+    
+    // Command Palette
+    cmd_placeholder: "Type a command or search domains... (Esc to dismiss)",
+    cmd_quick_actions: "Quick Actions",
+    cmd_recent_domains: "Recent Domains",
+    cmd_navigation: "Direct Navigation",
+    
+    // Precision Scrubber
+    scrubber_chapter: "Chapter",
+    scrubber_hover_time: "Time",
+    
+    // Themes & Accents
+    theme_midnight_oled: "Midnight OLED",
+    theme_slate_navy: "Deep Slate",
+    theme_nordic_pine: "Nordic Pine",
+    theme_clean_light: "Studio Light",
+    accent_emerald: "Cyber Emerald",
+    accent_cyan: "Electric Cyan",
+    accent_violet: "Royal Violet",
+    accent_rose: "Neon Rose",
+    accent_amber: "Solar Amber",
+    
+    // Audio Haptics
+    setting_audio_haptics: "Tactile Audio Feedback",
+    desc_audio_haptics: "Subtle procedural sound effects on sliders, clicks, and actions",
+    
+    // Hotkeys Modal
+    hotkeys_title: "Keyboard Shortcuts Cheat Sheet",
+    hotkeys_nav_1: "Switch to Time Tracking Tab",
+    hotkeys_nav_2: "Switch to Media Analytics Tab",
+    hotkeys_nav_3: "Switch to Settings Tab",
+    hotkeys_media_play: "Play / Pause Active Video",
+    hotkeys_media_mute: "Mute / Unmute Audio",
+    hotkeys_cmd_palette: "Open Omni Command Palette"
+  },
+  hi: {
+    // Bento & Layout
+    bento_customize: "लेआउट अनुकूलित करें",
+    bento_reset_layout: "डिफ़ॉल्ट लेआउट पर रीसेट करें",
+    
+    // Command Palette
+    cmd_placeholder: "कमांड लिखें या डोमेन खोजें... (बंद करने के लिए Esc दबाएं)",
+    cmd_quick_actions: "त्वरित कार्रवाइयां",
+    cmd_recent_domains: "हाल के डोमेन्स",
+    cmd_navigation: "प्रत्यक्ष नेविगेशन",
+    
+    // Precision Scrubber
+    scrubber_chapter: "अध्याय (Chapter)",
+    scrubber_hover_time: "समय",
+    
+    // Themes & Accents
+    theme_midnight_oled: "मिडनाइट ओएलईडी",
+    theme_slate_navy: "डीप स्लेट",
+    theme_nordic_pine: "नॉर्डिक पाइन",
+    theme_clean_light: "स्टूडियो लाइट",
+    accent_emerald: "साइबर एमराल्ड",
+    accent_cyan: "इलेक्ट्रिक सियान",
+    accent_violet: "रॉयल वॉयलेट",
+    accent_rose: "नियॉन रोज़",
+    accent_amber: "सोलर एम्बर",
+    
+    // Audio Haptics
+    setting_audio_haptics: "स्पर्श-योग्य ऑडियो फीडबैक",
+    desc_audio_haptics: "स्लाइडर्स, क्लिक्स व कार्रवाइयों पर सूक्ष्म प्रक्रियात्मक ध्वनि प्रभाव",
+    
+    // Hotkeys Modal
+    hotkeys_title: "कीबोर्ड शॉर्टकट्स चीट शीट",
+    hotkeys_nav_1: "टाइम ट्रैकिंग टैब पर जाएं",
+    hotkeys_nav_2: "मीडिया एनालिटिक्स टैब पर जाएं",
+    hotkeys_nav_3: "सेटिंग्स टैब पर जाएं",
+    hotkeys_media_play: "सक्रिय वीडियो प्ले / पॉज़ करें",
+    hotkeys_media_mute: "ऑडियो म्यूट / अनम्यूट करें",
+    hotkeys_cmd_palette: "ओम्नी कमांड पैलेट खोलें"
   }
 };
 
@@ -682,8 +818,78 @@ function t(key, ...args) {
 
 // =============================================================================
 // Theme Architecture State & Helpers (Defect 16 - Light & Dark Theme Sync)
+// Phase 4: Base Substrates & Dynamic Accent Palettes
 // =============================================================================
 let currentTheme = 'dark';
+let currentSubstrate = 'slate-navy';
+let currentAccent = 'emerald';
+
+const SUBSTRATE_THEMES = {
+  'midnight-oled': {
+    '--bg-primary': '#000000',
+    '--bg-secondary': '#0a0d14',
+    '--glass-surface-bg': 'rgba(10, 13, 20, 0.82)',
+    '--text-primary': '#f8fafc',
+    '--text-secondary': '#9cb2c9',
+    '--text-muted': '#9cb2c9',
+    '--border-dim': 'rgba(255, 255, 255, 0.08)'
+  },
+  'slate-navy': {
+    '--bg-primary': '#0f172a',
+    '--bg-secondary': '#1e293b',
+    '--glass-surface-bg': 'rgba(18, 24, 38, 0.72)',
+    '--text-primary': '#f8fafc',
+    '--text-secondary': '#9cb2c9',
+    '--text-muted': '#9cb2c9',
+    '--border-dim': 'rgba(255, 255, 255, 0.08)'
+  },
+  'nordic-pine': {
+    '--bg-primary': '#091811',
+    '--bg-secondary': '#122a20',
+    '--glass-surface-bg': 'rgba(18, 42, 32, 0.76)',
+    '--text-primary': '#f8fafc',
+    '--text-secondary': '#cbd5e1',
+    '--text-muted': '#a7bdae',
+    '--border-dim': 'rgba(255, 255, 255, 0.08)'
+  },
+  'studio-light': {
+    '--bg-primary': '#f8fafc',
+    '--bg-secondary': '#ffffff',
+    '--glass-surface-bg': 'rgba(255, 255, 255, 0.85)',
+    '--text-primary': '#0f172a',
+    '--text-secondary': '#334155',
+    '--text-muted': '#475569',
+    '--border-dim': 'rgba(0, 0, 0, 0.10)'
+  }
+};
+
+const ACCENT_PALETTES = {
+  'emerald': {
+    '--color-accent-primary': '#10b981',
+    '--color-accent-hover': '#059669',
+    '--shadow-specular-glow': 'rgba(16, 185, 129, 0.20)'
+  },
+  'cyan': {
+    '--color-accent-primary': '#06b6d4',
+    '--color-accent-hover': '#0891b2',
+    '--shadow-specular-glow': 'rgba(6, 182, 212, 0.20)'
+  },
+  'violet': {
+    '--color-accent-primary': '#8b5cf6',
+    '--color-accent-hover': '#7c3aed',
+    '--shadow-specular-glow': 'rgba(139, 92, 246, 0.20)'
+  },
+  'rose': {
+    '--color-accent-primary': '#f43f5e',
+    '--color-accent-hover': '#e11d48',
+    '--shadow-specular-glow': 'rgba(244, 63, 94, 0.20)'
+  },
+  'amber': {
+    '--color-accent-primary': '#f59e0b',
+    '--color-accent-hover': '#d97706',
+    '--shadow-specular-glow': 'rgba(245, 158, 11, 0.20)'
+  }
+};
 
 // Early theme restore to prevent theme flash
 try {
@@ -714,8 +920,138 @@ if (typeof document !== 'undefined') {
   }
 }
 
-function applyTheme(theme) {
-  currentTheme = (theme === 'light') ? 'light' : 'dark';
+function applyCustomTheme(themeKey, accentKey) {
+  const root = (typeof document !== 'undefined' && document.documentElement) ? document.documentElement : null;
+  const theme = themeKey || currentSubstrate || 'slate-navy';
+  const accent = accentKey || currentAccent || 'emerald';
+
+  currentSubstrate = theme;
+  currentAccent = accent;
+
+  const themeVars = SUBSTRATE_THEMES[theme] || SUBSTRATE_THEMES['slate-navy'];
+  const accentVars = ACCENT_PALETTES[accent] || ACCENT_PALETTES['emerald'];
+
+  if (root && root.style && typeof root.style.setProperty === 'function') {
+    Object.entries({ ...themeVars, ...accentVars }).forEach(([prop, val]) => {
+      root.style.setProperty(prop, val);
+    });
+    if (typeof root.setAttribute === 'function') {
+      root.setAttribute('data-substrate', theme);
+      root.setAttribute('data-accent', accent);
+    }
+  }
+
+  if (typeof document !== 'undefined' && document.body) {
+    if (theme === 'studio-light') {
+      currentTheme = 'light';
+      if (document.body.classList && typeof document.body.classList.add === 'function') {
+        document.body.classList.add('theme-light');
+        document.body.classList.remove('theme-dark');
+      }
+    } else {
+      currentTheme = 'dark';
+      if (document.body.classList && typeof document.body.classList.add === 'function') {
+        document.body.classList.add('theme-dark');
+        document.body.classList.remove('theme-light');
+      }
+    }
+    if (typeof document.body.setAttribute === 'function') {
+      document.body.setAttribute('data-theme', currentTheme);
+    }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.set({ userThemePreferences: { theme, accent } });
+  }
+
+  updateThemeSelectionUI(theme, accent);
+}
+
+function updateThemeSelectionUI(theme, accent) {
+  if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+
+  const targetTheme = theme || currentSubstrate || 'slate-navy';
+  const targetAccent = accent || currentAccent || 'emerald';
+
+  const themePills = document.querySelectorAll('.theme-pill');
+  if (themePills && themePills.forEach) {
+    themePills.forEach((pill) => {
+      const pTheme = pill.getAttribute('data-theme');
+      if (pTheme === targetTheme) {
+        pill.classList.add('active');
+        pill.setAttribute('aria-checked', 'true');
+      } else {
+        pill.classList.remove('active');
+        pill.setAttribute('aria-checked', 'false');
+      }
+    });
+  }
+
+  const accentSwatches = document.querySelectorAll('.accent-swatch');
+  if (accentSwatches && accentSwatches.forEach) {
+    accentSwatches.forEach((swatch) => {
+      const sAccent = swatch.getAttribute('data-accent');
+      if (sAccent === targetAccent) {
+        swatch.classList.add('active');
+        swatch.setAttribute('aria-checked', 'true');
+      } else {
+        swatch.classList.remove('active');
+        swatch.setAttribute('aria-checked', 'false');
+      }
+    });
+  }
+}
+
+class MultiThemeEngine {
+  constructor() {
+    this.currentTheme = 'slate-navy';
+    this.currentAccent = 'emerald';
+    this.loadPreferences();
+  }
+
+  loadPreferences(callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['userThemePreferences'], (result) => {
+        if (result && result.userThemePreferences) {
+          this.currentTheme = result.userThemePreferences.theme || 'slate-navy';
+          this.currentAccent = result.userThemePreferences.accent || 'emerald';
+        }
+        applyCustomTheme(this.currentTheme, this.currentAccent);
+        if (typeof callback === 'function') callback();
+      });
+    } else {
+      applyCustomTheme(this.currentTheme, this.currentAccent);
+      if (typeof callback === 'function') callback();
+    }
+  }
+
+  setTheme(themeKey, accentKey) {
+    if (themeKey) this.currentTheme = themeKey;
+    if (accentKey) this.currentAccent = accentKey;
+    applyCustomTheme(this.currentTheme, this.currentAccent);
+  }
+
+  getTheme() {
+    return { theme: this.currentTheme, accent: this.currentAccent };
+  }
+}
+
+const multiThemeEngine = new MultiThemeEngine();
+
+function applyTheme(theme, accent) {
+  if (theme === 'light') {
+    currentTheme = 'light';
+    applyCustomTheme('studio-light', accent || currentAccent || 'emerald');
+  } else if (theme === 'dark') {
+    currentTheme = 'dark';
+    applyCustomTheme('slate-navy', accent || currentAccent || 'emerald');
+  } else if (SUBSTRATE_THEMES[theme]) {
+    applyCustomTheme(theme, accent || currentAccent || 'emerald');
+    currentTheme = (theme === 'studio-light') ? 'light' : 'dark';
+  } else {
+    currentTheme = (theme === 'light') ? 'light' : 'dark';
+  }
+
   if (typeof document !== 'undefined') {
     if (document.body) {
       if (document.body.classList && typeof document.body.classList.add === 'function') {
@@ -736,6 +1072,177 @@ function applyTheme(theme) {
     }
   }
   updateThemeToggleUI(currentTheme);
+}
+
+// =============================================================================
+// Synthesized Tactile Audio Haptics Engine (Web Audio API - System 7)
+// =============================================================================
+class SentinelHapticAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+    this.masterGain = 0.15; // 15% subtle volume
+    this.loadPreferences();
+  }
+
+  loadPreferences(callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['audioHapticsConfig'], (result) => {
+        if (result && result.audioHapticsConfig) {
+          this.enabled = result.audioHapticsConfig.enabled ?? true;
+          this.masterGain = (typeof result.audioHapticsConfig.volume === 'number') 
+            ? result.audioHapticsConfig.volume 
+            : 0.15;
+        }
+        if (typeof callback === 'function') callback();
+      });
+    } else {
+      if (typeof callback === 'function') callback();
+    }
+  }
+
+  savePreferences() {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({
+        audioHapticsConfig: {
+          enabled: this.enabled,
+          volume: this.masterGain
+        }
+      });
+    }
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) ||
+                       (typeof globalThis !== 'undefined' && (globalThis.AudioContext || globalThis.webkitAudioContext));
+      if (AudioCtx) {
+        try {
+          this.ctx = new AudioCtx();
+        } catch (_) {}
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended' && typeof this.ctx.resume === 'function') {
+      try {
+        this.ctx.resume();
+      } catch (_) {}
+    }
+  }
+
+  setVolume(vol) {
+    const v = Math.max(0, Math.min(1, parseFloat(vol)));
+    if (!isNaN(v)) {
+      this.masterGain = v;
+      this.savePreferences();
+    }
+  }
+
+  setEnabled(enabled) {
+    this.enabled = Boolean(enabled);
+    this.savePreferences();
+  }
+
+  playTick() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime || 0;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      gain.gain.setValueAtTime(this.masterGain * 0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.006);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.007);
+    } catch (_) {}
+  }
+
+  playClick() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime || 0;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(this.masterGain * 0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.013);
+    } catch (_) {}
+  }
+
+  playSuccessChime() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime || 0;
+      [523.25, 659.25].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + (idx * 0.04));
+        gain.gain.setValueAtTime(this.masterGain, now + (idx * 0.04));
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + (idx * 0.04) + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + (idx * 0.04));
+        osc.stop(now + (idx * 0.04) + 0.23);
+      });
+    } catch (_) {}
+  }
+
+  playWarnTone() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime || 0;
+      [0, 0.08].forEach((offset) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now + offset);
+        gain.gain.setValueAtTime(this.masterGain * 0.5, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.06);
+      });
+    } catch (_) {}
+  }
+}
+
+const sentinelHaptics = new SentinelHapticAudioEngine();
+if (typeof window !== 'undefined') {
+  window.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
+  window.sentinelHaptics = sentinelHaptics;
+  window.MultiThemeEngine = MultiThemeEngine;
+  window.multiThemeEngine = multiThemeEngine;
+  window.applyCustomTheme = applyCustomTheme;
+  window.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
+  window.ACCENT_PALETTES = ACCENT_PALETTES;
+  window.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
+  globalThis.sentinelHaptics = sentinelHaptics;
+  globalThis.MultiThemeEngine = MultiThemeEngine;
+  globalThis.multiThemeEngine = multiThemeEngine;
+  globalThis.applyCustomTheme = applyCustomTheme;
+  globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
+  globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
+  globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
 }
 
 function updateThemeToggleUI(theme) {
@@ -1462,6 +1969,34 @@ function applyDashboardLanguage(lang) {
   if (typeof isHotkeysModalOpen === 'function' && isHotkeysModalOpen()) {
     renderHotkeysList();
   }
+
+  // Phase 4: Appearance, Theme Substrates & Audio Haptics static texts
+  setTxt('headingAppearanceSettings', 'heading_appearance_settings');
+  setTxt('subAppearanceSettings', 'sub_appearance_settings');
+  setTxt('lblThemeSubstrate', 'lbl_theme_substrate');
+  setTxt('descThemeSubstrate', 'desc_theme_substrate');
+  setTxt('txtThemeMidnightOled', 'theme_midnight_oled');
+  setTxt('txtThemeSlateNavy', 'theme_slate_navy');
+  setTxt('txtThemeNordicPine', 'theme_nordic_pine');
+  setTxt('txtThemeStudioLight', 'theme_clean_light');
+  setTxt('lblAccentPalette', 'lbl_accent_palette');
+  setTxt('descAccentPalette', 'desc_accent_palette');
+  setTxt('lblAudioHaptics', 'setting_audio_haptics');
+  setTxt('descAudioHaptics', 'desc_audio_haptics');
+  setTxt('lblAudioVolume', 'lbl_audio_volume');
+  setTxt('descAudioVolume', 'desc_audio_volume');
+  setTxt('btnTestAudioHaptics', 'btn_test_audio_haptics');
+
+  const swatchEmerald = document.getElementById('accentSwatchEmerald');
+  if (swatchEmerald) swatchEmerald.title = t('accent_emerald');
+  const swatchCyan = document.getElementById('accentSwatchCyan');
+  if (swatchCyan) swatchCyan.title = t('accent_cyan');
+  const swatchViolet = document.getElementById('accentSwatchViolet');
+  if (swatchViolet) swatchViolet.title = t('accent_violet');
+  const swatchRose = document.getElementById('accentSwatchRose');
+  if (swatchRose) swatchRose.title = t('accent_rose');
+  const swatchAmber = document.getElementById('accentSwatchAmber');
+  if (swatchAmber) swatchAmber.title = t('accent_amber');
 
   // Re-render active views
   if (dashboardData) {
@@ -4074,28 +4609,54 @@ function setupEventListeners() {
   // 7. Hero Media Controls
   const handleTogglePlayHero = () => {
     const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+    const willPlay = pm ? !(pm.isPlaying || pm.state === 'playing') : true;
+    const targetAction = willPlay ? 'play' : 'pause';
     if (pm) {
-      pm.isPlaying = !pm.isPlaying;
+      pm.isPlaying = willPlay;
+      pm.state = willPlay ? 'playing' : 'paused';
       renderHeroMediaPlayer(pm);
     }
     const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
     if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
       browserAPI.scripting.executeScript({
         target: { tabId: targetTabId },
-        func: () => {
-          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-          if (video) {
-            if (video.paused) {
-              const p = video.play();
-              if (p && typeof p.catch === 'function') p.catch(() => {});
-            } else {
-              video.pause();
-            }
+        world: 'MAIN',
+        args: [targetAction],
+        func: (action) => {
+          const p = document.getElementById('movie_player') || window.movie_player;
+          const v = Array.from(document.querySelectorAll('video')).find(el => !el.paused) || document.querySelector('video');
+          if (p && typeof p.playVideo === 'function' && typeof p.pauseVideo === 'function') {
+            try {
+              if (action === 'play') {
+                p.playVideo();
+              } else if (action === 'pause') {
+                p.pauseVideo();
+              } else {
+                const s = typeof p.getPlayerState === 'function' ? p.getPlayerState() : -1;
+                if (s === 1) p.pauseVideo(); else p.playVideo();
+              }
+            } catch (_) {}
+          } else if (v) {
+            try {
+              if (action === 'play') {
+                const res = v.play();
+                if (res && typeof res.catch === 'function') res.catch(() => {});
+              } else if (action === 'pause') {
+                v.pause();
+              } else {
+                if (v.paused) {
+                  const res = v.play();
+                  if (res && typeof res.catch === 'function') res.catch(() => {});
+                } else {
+                  v.pause();
+                }
+              }
+            } catch (_) {}
           }
         }
       }).catch(() => {});
     }
-    sendMediaControl('toggle_play');
+    sendMediaControl(targetAction, {}, targetTabId);
   };
 
   const btnHeroPlayPause = document.getElementById('btnHeroPlayPause');
@@ -4146,19 +4707,50 @@ function setupEventListeners() {
   if (btnHeroMute) {
     btnHeroMute.addEventListener('click', () => {
       const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
+      const willMute = pm ? !pm.isMuted : true;
+      const targetAction = willMute ? 'mute' : 'unmute';
+      if (pm) {
+        pm.isMuted = willMute;
+        renderHeroMediaPlayer(pm);
+      }
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
           target: { tabId: targetTabId },
-          func: () => {
-            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-            if (video) {
-              video.muted = !video.muted;
+          world: 'MAIN',
+          args: [targetAction],
+          func: (action) => {
+            const p = document.getElementById('movie_player') || window.movie_player;
+            const v = Array.from(document.querySelectorAll('video')).find(el => !el.paused) || document.querySelector('video');
+            if (p && typeof p.mute === 'function' && typeof p.unMute === 'function') {
+              try {
+                if (action === 'mute') {
+                  p.mute();
+                } else if (action === 'unmute') {
+                  p.unMute();
+                } else {
+                  if (typeof p.isMuted === 'function' && p.isMuted()) {
+                    p.unMute();
+                  } else {
+                    p.mute();
+                  }
+                }
+              } catch (_) {}
+            } else if (v) {
+              try {
+                if (action === 'mute') {
+                  v.muted = true;
+                } else if (action === 'unmute') {
+                  v.muted = false;
+                } else {
+                  v.muted = !v.muted;
+                }
+              } catch (_) {}
             }
           }
         }).catch(() => {});
       }
-      sendMediaControl('toggle_mute');
+      sendMediaControl(targetAction, {}, targetTabId);
     });
   }
 
@@ -5014,6 +5606,69 @@ function setupEventListeners() {
     omniPaletteController = new OmniCommandPaletteController();
   }
   initGlobalHotkeys();
+
+  // 14. Phase 4: Theme Substrate Pills, Accent Swatches & Audio Haptics Controls
+  const themePills = document.querySelectorAll('.theme-pill');
+  if (themePills && themePills.forEach) {
+    themePills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const selectedTheme = pill.getAttribute('data-theme');
+        if (selectedTheme) {
+          applyCustomTheme(selectedTheme, currentAccent);
+          if (sentinelHaptics) sentinelHaptics.playClick();
+        }
+      });
+    });
+  }
+
+  const accentSwatches = document.querySelectorAll('.accent-swatch');
+  if (accentSwatches && accentSwatches.forEach) {
+    accentSwatches.forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+        const selectedAccent = swatch.getAttribute('data-accent');
+        if (selectedAccent) {
+          applyCustomTheme(currentSubstrate, selectedAccent);
+          if (sentinelHaptics) sentinelHaptics.playClick();
+        }
+      });
+    });
+  }
+
+  const toggleAudioHaptics = document.getElementById('toggleAudioHaptics');
+  if (toggleAudioHaptics) {
+    toggleAudioHaptics.checked = sentinelHaptics.enabled;
+    toggleAudioHaptics.addEventListener('change', (e) => {
+      sentinelHaptics.setEnabled(e.target.checked);
+      if (e.target.checked) {
+        sentinelHaptics.playClick();
+      }
+    });
+  }
+
+  const sliderAudioHapticsVolume = document.getElementById('sliderAudioHapticsVolume');
+  const lblAudioHapticsVolumeValue = document.getElementById('lblAudioHapticsVolumeValue');
+  if (sliderAudioHapticsVolume) {
+    sliderAudioHapticsVolume.value = String(sentinelHaptics.masterGain);
+    if (lblAudioHapticsVolumeValue) {
+      lblAudioHapticsVolumeValue.textContent = `${Math.round(sentinelHaptics.masterGain * 100)}%`;
+    }
+    sliderAudioHapticsVolume.addEventListener('input', (e) => {
+      sentinelHaptics.setVolume(e.target.value);
+      if (lblAudioHapticsVolumeValue) {
+        lblAudioHapticsVolumeValue.textContent = `${Math.round(sentinelHaptics.masterGain * 100)}%`;
+      }
+    });
+    sliderAudioHapticsVolume.addEventListener('change', () => {
+      sentinelHaptics.playTick();
+    });
+  }
+
+  const btnTestAudioHaptics = document.getElementById('btnTestAudioHaptics');
+  if (btnTestAudioHaptics) {
+    btnTestAudioHaptics.addEventListener('click', () => {
+      sentinelHaptics.playSuccessChime();
+    });
+  }
 }
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -5032,6 +5687,21 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
         applyTheme(changes.ui_theme.newValue);
       } else if (changes.theme && changes.theme.newValue) {
         applyTheme(changes.theme.newValue);
+      }
+      if (changes.userThemePreferences && changes.userThemePreferences.newValue) {
+        const pref = changes.userThemePreferences.newValue;
+        applyCustomTheme(pref.theme, pref.accent);
+      }
+      if (changes.audioHapticsConfig && changes.audioHapticsConfig.newValue) {
+        const cfg = changes.audioHapticsConfig.newValue;
+        if (typeof cfg.enabled === 'boolean') sentinelHaptics.enabled = cfg.enabled;
+        if (typeof cfg.volume === 'number') sentinelHaptics.masterGain = cfg.volume;
+        const toggleAudio = document.getElementById('toggleAudioHaptics');
+        if (toggleAudio) toggleAudio.checked = sentinelHaptics.enabled;
+        const sliderVol = document.getElementById('sliderAudioHapticsVolume');
+        if (sliderVol) sliderVol.value = String(sentinelHaptics.masterGain);
+        const lblVol = document.getElementById('lblAudioHapticsVolumeValue');
+        if (lblVol) lblVol.textContent = `${Math.round(sentinelHaptics.masterGain * 100)}%`;
       }
       if (changes.audio_lab_settings && changes.audio_lab_settings.newValue) {
         updateDashboardAudioLabUI(changes.audio_lab_settings.newValue);
@@ -5062,7 +5732,9 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         'ui_theme',
         'theme',
         'audio_lab_settings',
-        'audioLabConfig'
+        'audioLabConfig',
+        'userThemePreferences',
+        'audioHapticsConfig'
       ], (res) => {
         let lang = 'en';
         if (res && res.language) {
@@ -5076,13 +5748,25 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         if (res && res.sentinel_sleep_settings) {
           populateSleepSettingsForm(res.sentinel_sleep_settings);
         }
-        if (res && (res.ui_theme || res.theme)) {
+        if (res && res.userThemePreferences) {
+          applyCustomTheme(res.userThemePreferences.theme, res.userThemePreferences.accent);
+        } else if (res && (res.ui_theme || res.theme)) {
           applyTheme(res.ui_theme || res.theme);
         } else {
           try {
             const localTheme = localStorage.getItem('ui_theme') || localStorage.getItem('theme');
             if (localTheme) applyTheme(localTheme);
           } catch (_) {}
+        }
+        if (res && res.audioHapticsConfig) {
+          if (typeof res.audioHapticsConfig.enabled === 'boolean') sentinelHaptics.enabled = res.audioHapticsConfig.enabled;
+          if (typeof res.audioHapticsConfig.volume === 'number') sentinelHaptics.masterGain = res.audioHapticsConfig.volume;
+          const toggleAudio = document.getElementById('toggleAudioHaptics');
+          if (toggleAudio) toggleAudio.checked = sentinelHaptics.enabled;
+          const sliderVol = document.getElementById('sliderAudioHapticsVolume');
+          if (sliderVol) sliderVol.value = String(sentinelHaptics.masterGain);
+          const lblVol = document.getElementById('lblAudioHapticsVolumeValue');
+          if (lblVol) lblVol.textContent = `${Math.round(sentinelHaptics.masterGain * 100)}%`;
         }
         if (res && (res.audio_lab_settings || res.audioLabConfig)) {
           updateDashboardAudioLabUI(res.audio_lab_settings || res.audioLabConfig);
@@ -5191,7 +5875,21 @@ if (typeof module !== 'undefined' && module.exports) {
     initPrecisionScrubber,
     animateNumberRoll,
     renderScrubberChapterTicks,
-    applyCardStaggerIndices
+    applyCardStaggerIndices,
+    // Phase 4: Synthesized Audio Haptics & Dynamic Multi-Theme Engine exports
+    SentinelHapticAudioEngine,
+    sentinelHaptics,
+    MultiThemeEngine,
+    multiThemeEngine,
+    applyCustomTheme,
+    SUBSTRATE_THEMES,
+    ACCENT_PALETTES,
+    DASHBOARD_UIUX_I18N,
+    updateThemeSelectionUI,
+    getCurrentSubstrate: () => currentSubstrate,
+    setCurrentSubstrate: (val) => { currentSubstrate = val; },
+    getCurrentAccent: () => currentAccent,
+    setCurrentAccent: (val) => { currentAccent = val; }
   };
 }
 
@@ -5202,4 +5900,23 @@ if (typeof window !== 'undefined') {
   window.animateNumberRoll = animateNumberRoll;
   window.renderScrubberChapterTicks = renderScrubberChapterTicks;
   window.applyCardStaggerIndices = applyCardStaggerIndices;
+  window.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
+  window.sentinelHaptics = sentinelHaptics;
+  window.MultiThemeEngine = MultiThemeEngine;
+  window.multiThemeEngine = multiThemeEngine;
+  window.applyCustomTheme = applyCustomTheme;
+  window.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
+  window.ACCENT_PALETTES = ACCENT_PALETTES;
+  window.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
+  globalThis.sentinelHaptics = sentinelHaptics;
+  globalThis.MultiThemeEngine = MultiThemeEngine;
+  globalThis.multiThemeEngine = multiThemeEngine;
+  globalThis.applyCustomTheme = applyCustomTheme;
+  globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
+  globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
+  globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
 }

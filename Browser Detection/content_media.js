@@ -1902,6 +1902,14 @@
             primaryMediaElement.muted = !primaryMediaElement.muted;
             break;
           }
+          case 'mute': {
+            primaryMediaElement.muted = true;
+            break;
+          }
+          case 'unmute': {
+            primaryMediaElement.muted = false;
+            break;
+          }
           case 'set_volume':
           case 'SET_VOLUME': {
             let vol = null;
@@ -2287,7 +2295,7 @@
     // 4. Direct Media Action Fallback (when action is sent directly as type or action)
     const KNOWN_MEDIA_ACTIONS = [
       'play', 'pause', 'toggle_play', 'seek_relative', 'seek_percent',
-      'toggle_mute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
+      'toggle_mute', 'mute', 'unmute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
       'cycle_speed', 'toggle_fullscreen', 'toggle_pip', 'toggle_theater',
       'step_quality', 'set_quality'
     ];

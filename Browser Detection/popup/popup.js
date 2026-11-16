@@ -3355,9 +3355,11 @@ function setupEventListeners() {
   // Media Controls
   const handleTogglePlay = () => {
     lastPlayToggleTime = Date.now();
+    const willPlay = activeMediaCached ? !(activeMediaCached.isPlaying || activeMediaCached.state === 'playing') : true;
+    const targetAction = willPlay ? 'play' : 'pause';
     if (activeMediaCached) {
-      activeMediaCached.isPlaying = !activeMediaCached.isPlaying;
-      activeMediaCached.state = activeMediaCached.isPlaying ? 'playing' : 'paused';
+      activeMediaCached.isPlaying = willPlay;
+      activeMediaCached.state = willPlay ? 'playing' : 'paused';
       renderMediaCard({ primaryMedia: activeMediaCached });
     }
     const targetTabId = getActiveMediaTabId();
@@ -3366,26 +3368,35 @@ function setupEventListeners() {
       browserAPI.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
-        func: () => {
-          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-          if (moviePlayer && typeof moviePlayer.getPlayerState === 'function') {
+        args: [targetAction],
+        func: (action) => {
+          const p = document.getElementById('movie_player') || window.movie_player;
+          const v = Array.from(document.querySelectorAll('video')).find(el => !el.paused) || document.querySelector('video');
+          if (p && typeof p.playVideo === 'function' && typeof p.pauseVideo === 'function') {
             try {
-              const state = moviePlayer.getPlayerState();
-              if (state === 1) {
-                moviePlayer.pauseVideo();
+              if (action === 'play') {
+                p.playVideo();
+              } else if (action === 'pause') {
+                p.pauseVideo();
               } else {
-                moviePlayer.playVideo();
+                const s = typeof p.getPlayerState === 'function' ? p.getPlayerState() : -1;
+                if (s === 1) p.pauseVideo(); else p.playVideo();
               }
             } catch (_) {}
-          }
-          if (video) {
+          } else if (v) {
             try {
-              if (video.paused) {
-                const p = video.play();
-                if (p && typeof p.catch === 'function') p.catch(() => {});
+              if (action === 'play') {
+                const res = v.play();
+                if (res && typeof res.catch === 'function') res.catch(() => {});
+              } else if (action === 'pause') {
+                v.pause();
               } else {
-                video.pause();
+                if (v.paused) {
+                  const res = v.play();
+                  if (res && typeof res.catch === 'function') res.catch(() => {});
+                } else {
+                  v.pause();
+                }
               }
             } catch (_) {}
           }
@@ -3393,7 +3404,7 @@ function setupEventListeners() {
       }).catch(() => {});
     }
 
-    sendMediaControl('toggle_play', {}, targetTabId);
+    sendMediaControl(targetAction, {}, targetTabId);
   };
 
   const dynamicStatusBtn = document.getElementById('dynamicStatusBtn');
@@ -3478,8 +3489,10 @@ function setupEventListeners() {
 
   const handleToggleMute = () => {
     lastMuteToggleTime = Date.now();
+    const willMute = activeMediaCached ? !activeMediaCached.isMuted : true;
+    const targetAction = willMute ? 'mute' : 'unmute';
     if (activeMediaCached) {
-      activeMediaCached.isMuted = !activeMediaCached.isMuted;
+      activeMediaCached.isMuted = willMute;
       renderMediaCard({ primaryMedia: activeMediaCached });
     }
     const targetTabId = getActiveMediaTabId();
@@ -3488,27 +3501,40 @@ function setupEventListeners() {
       browserAPI.scripting.executeScript({
         target: { tabId: targetTabId },
         world: 'MAIN',
-        func: () => {
-          const moviePlayer = document.getElementById('movie_player') || window.movie_player;
-          const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
-          if (moviePlayer && typeof moviePlayer.isMuted === 'function') {
+        args: [targetAction],
+        func: (action) => {
+          const p = document.getElementById('movie_player') || window.movie_player;
+          const v = Array.from(document.querySelectorAll('video')).find(el => !el.paused) || document.querySelector('video');
+          if (p && typeof p.mute === 'function' && typeof p.unMute === 'function') {
             try {
-              if (moviePlayer.isMuted()) {
-                if (typeof moviePlayer.unMute === 'function') moviePlayer.unMute();
+              if (action === 'mute') {
+                p.mute();
+              } else if (action === 'unmute') {
+                p.unMute();
               } else {
-                if (typeof moviePlayer.mute === 'function') moviePlayer.mute();
+                if (typeof p.isMuted === 'function' && p.isMuted()) {
+                  p.unMute();
+                } else {
+                  p.mute();
+                }
               }
             } catch (_) {}
-          } else if (video) {
+          } else if (v) {
             try {
-              video.muted = !video.muted;
+              if (action === 'mute') {
+                v.muted = true;
+              } else if (action === 'unmute') {
+                v.muted = false;
+              } else {
+                v.muted = !v.muted;
+              }
             } catch (_) {}
           }
         }
       }).catch(() => {});
     }
 
-    sendMediaControl('toggle_mute', {}, targetTabId);
+    sendMediaControl(targetAction, {}, targetTabId);
   };
 
   const btnCtrlToggleMute = document.getElementById('btnCtrlToggleMute');
