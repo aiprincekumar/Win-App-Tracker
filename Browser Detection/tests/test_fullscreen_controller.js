@@ -381,6 +381,23 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   const resolvedTarget = controller.getTargetElement(mockVideo);
   assert.strictEqual(resolvedTarget, mockMoviePlayer, 'getTargetElement must return #movie_player container even when passed video element');
 
+  // Verify Root Element Rejection & Blackout Prevention (TASK-FULLSCREEN-BLACKOUT-003):
+  // 1. getTargetElement returns null for body and documentElement
+  assert.strictEqual(controller.getTargetElement(mockDoc.body), null, 'getTargetElement(document.body) must return null');
+  assert.strictEqual(controller.getTargetElement(mockDoc.documentElement), null, 'getTargetElement(document.documentElement) must return null');
+
+  // 2. enterWebFullscreen safely aborts without applying .sentinel-web-fullscreen to body or documentElement
+  assert.strictEqual(controller.enterWebFullscreen(mockDoc.body), false, 'enterWebFullscreen(document.body) must safely return false');
+  assert.strictEqual(mockDoc.body.classList.contains('sentinel-web-fullscreen'), false, 'document.body must NOT receive .sentinel-web-fullscreen');
+  assert.strictEqual(controller.enterWebFullscreen(mockDoc.documentElement), false, 'enterWebFullscreen(document.documentElement) must safely return false');
+  assert.strictEqual(mockDoc.documentElement.classList.contains('sentinel-web-fullscreen'), false, 'document.documentElement must NOT receive .sentinel-web-fullscreen');
+
+  // 3. getTargetElement returns null when no video or video container exists in document
+  mockDoc.elementsById['movie_player'] = null;
+  assert.strictEqual(controller.getTargetElement(), null, 'getTargetElement() must return null when no video element or video container is found');
+  assert.strictEqual(controller.enterWebFullscreen(), false, 'enterWebFullscreen() must return false when no video element exists');
+  mockDoc.elementsById['movie_player'] = mockMoviePlayer; // restore mock movie player
+
   // Verify initial state: false
   assert.strictEqual(controller.isFullscreenActive(), false, 'Fullscreen must initially be inactive');
 
@@ -962,12 +979,21 @@ async function runExtendedTests() {
     assert(btnFsBlock.includes('lastFullscreenClick'), 'Must reference lastFullscreenClick');
     assert(btnFsBlock.includes('< 350'), 'Must enforce 350ms cooldown window');
 
-    // 11.3 Priority verification: controller before floating button
-    const ctrlIndex = btnFsBlock.indexOf('__SentinelFullscreenController');
-    const floatBtnIndex = btnFsBlock.indexOf('__sentinel_fs_floating_btn__');
-    assert(ctrlIndex !== -1, 'Must check __SentinelFullscreenController');
-    assert(floatBtnIndex !== -1, 'Must check __sentinel_fs_floating_btn__');
-    assert(ctrlIndex < floatBtnIndex, 'Must prioritize __SentinelFullscreenController invocation BEFORE floating button click');
+    // 11.3 Multi-frame targeting, early frame safety guard & priority chain verification
+    assert(btnFsBlock.includes('allFrames: true'), '#btnCtrlFullscreen must target allFrames: true across iframes');
+    assert(btnFsBlock.includes('if (!video) return false;'), 'func must abort early with return false in non-media frames');
+
+    const floatClickIndex = btnFsBlock.indexOf('floatingBtn.click()');
+    const ctrlToggleIndex = btnFsBlock.indexOf('ctrl.toggle');
+    const nativeFsIndex = btnFsBlock.indexOf('video.requestFullscreen');
+
+    assert(floatClickIndex !== -1, 'Must invoke floatingBtn.click()');
+    assert(ctrlToggleIndex !== -1, 'Must invoke controller toggle');
+    assert(nativeFsIndex !== -1, 'Must invoke native video.requestFullscreen fallback');
+
+    // Priority 1: floatingBtn.click() -> Priority 2: ctrl.toggle -> Priority 3: video.requestFullscreen
+    assert(floatClickIndex < ctrlToggleIndex, 'Priority 1 must be floating button click before controller toggle');
+    assert(ctrlToggleIndex < nativeFsIndex, 'Priority 2 must be controller toggle before native requestFullscreen');
 
     // Verify controller call options
     assert(btnFsBlock.includes('toggleWebFullscreen') || btnFsBlock.includes('forceWeb: true'),
@@ -995,10 +1021,15 @@ async function runExtendedTests() {
     assert(!globalToggleBlock.includes('sendMediaControl'), 'Must NOT call sendMediaControl in global toggle');
     assert(!globalToggleBlock.includes('toggle_fullscreen'), 'Must NOT touch fullscreen in global toggle');
 
-    console.log('  ✅ AST analysis confirms #btnCtrlFullscreen prioritizes controller over floating button');
+    console.log('  ✅ AST analysis confirms #btnCtrlFullscreen uses allFrames: true, early video guard, and floatingBtn -> controller -> native priority');
     assert(btnFsBlock.split('\n').length <= 55, 'Block must remain concise');
     console.log('  ✅ Single-execution determinism & 350ms cooldown verified');
     console.log('  ✅ Universal Play/Pause button (#btnGlobalMediaToggle) confirmed 100% untouched');
+
+    // 11.6 content_media.js non-media frame ignore guard for toggle_fullscreen
+    const cmCode = fs.readFileSync(path.join(baseDir, 'content_media.js'), 'utf8');
+    assert(cmCode.includes('if (!hasMedia) break;'), 'content_media.js must ignore non-media frames via !hasMedia guard');
+    console.log('  ✅ content_media.js hasMedia guard verified: non-media frames ignore toggle_fullscreen');
   }
 
   console.log('\n🎉 ALL FULLSCREEN CONTROLLER TESTS PASSED WITH 100% SUCCESS!\n');

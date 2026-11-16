@@ -408,6 +408,11 @@
   function getTargetElement(preferredTarget) {
     if (typeof document === 'undefined') return preferredTarget || null;
 
+    // Body or DocumentElement must NEVER be returned as a fullscreen target
+    if (preferredTarget && (preferredTarget === document.body || preferredTarget === document.documentElement)) {
+      return null;
+    }
+
     // 1. YouTube player container is always the primary target on YouTube
     const ytPlayer = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
     if (ytPlayer) {
@@ -416,10 +421,6 @@
 
     // 2. If a preferredTarget is supplied
     if (preferredTarget && (preferredTarget.nodeType === 1 || (typeof HTMLElement !== 'undefined' && preferredTarget instanceof HTMLElement))) {
-      // Body or DocumentElement must NEVER be returned as a fullscreen target
-      if (preferredTarget === document.body || preferredTarget === document.documentElement) {
-        return null;
-      }
       // If preferredTarget is a video element, search for player container ancestors
       if (preferredTarget.tagName === 'VIDEO' || preferredTarget.nodeName === 'VIDEO') {
         const container = (typeof preferredTarget.closest === 'function')

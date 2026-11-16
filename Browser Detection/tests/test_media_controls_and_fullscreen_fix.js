@@ -569,6 +569,24 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
     'popup.js #btnCtrlFullscreen must contain browserAPI.scripting.executeScript for 0ms actuation');
   assert(btnFsBlock.includes("world: 'MAIN'"),
     'popup.js #btnCtrlFullscreen must execute in MAIN world for direct DOM and controller access');
+  assert(btnFsBlock.includes('allFrames: true'),
+    'popup.js #btnCtrlFullscreen must target allFrames: true across iframes');
+  assert(btnFsBlock.includes('if (!video) return false;'),
+    'popup.js #btnCtrlFullscreen frame guard must return false in non-media frames');
+
+  // Verify 3-tier priority execution chain in popup.js func
+  const floatClickIdx = btnFsBlock.indexOf('floatingBtn.click()');
+  const ctrlToggleIdx = btnFsBlock.indexOf('ctrl.toggle');
+  const nativeFsIdx = btnFsBlock.indexOf('video.requestFullscreen');
+  assert(floatClickIdx !== -1, 'Must invoke floatingBtn.click()');
+  assert(ctrlToggleIdx !== -1, 'Must invoke controller toggle');
+  assert(nativeFsIdx !== -1, 'Must invoke native video.requestFullscreen fallback');
+  assert(floatClickIdx < ctrlToggleIdx, 'Priority 1 must be floating button click before controller toggle');
+  assert(ctrlToggleIdx < nativeFsIdx, 'Priority 2 must be controller toggle before native requestFullscreen');
+
+  assert(contentMediaCode.includes('if (!hasMedia) break;'),
+    'content_media.js case toggle_fullscreen must ignore non-media frames via !hasMedia guard');
+
   assert(btnFsBlock.includes('.catch('),
     'popup.js #btnCtrlFullscreen must attach .catch() handler for fallback');
   assert(btnFsBlock.includes('else {'),
@@ -702,6 +720,48 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
     assert.strictEqual(forwardedAction, 'toggle_fullscreen', 'Must forward toggle_fullscreen to main world');
     assert.strictEqual(webFullscreenTarget, mockPrimaryMedia, 'Must invoke toggleWebFullscreen on primaryMediaElement');
     console.log('  ✅ Priority 3 verified: Main world forward & toggleWebFullscreen invoked when all overlays are absent');
+  }
+
+  // 3.5 Simulation: Non-media frame ignores toggle_fullscreen
+  {
+    const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
+    const handleMediaEnd = contentMediaCode.indexOf('// YouTube SPA Navigation Listeners & Visibility', handleMediaStart);
+    const handleMediaFuncCode = contentMediaCode.slice(handleMediaStart, handleMediaEnd);
+
+    let ctrlInvoked = false;
+    let floatBtnInvoked = false;
+
+    const noMediaSandbox = vm.createContext({
+      evaluatePageMediaState: () => ({ primaryMediaElement: null }),
+      isTopFrame: false,
+      forwardActionToMainWorld: () => {},
+      calculateNextLadderSpeed: () => 1.0,
+      saveDomainSpeed: () => {},
+      extractYouTubeDuration: () => 0,
+      toggleWebFullscreen: () => {},
+      toggleTheaterMode: () => {},
+      dispatchMediaTelemetry: () => {},
+      setTimeout: (fn) => fn(),
+      safeSetTimeout: (fn) => fn(),
+      document: {
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => []
+      },
+      window: {
+        __SentinelFullscreenController: {
+          toggle: () => { ctrlInvoked = true; }
+        }
+      },
+      KeyboardEvent: class {}
+    });
+
+    vm.runInContext(handleMediaFuncCode, noMediaSandbox);
+    noMediaSandbox.handleMediaControl('toggle_fullscreen');
+
+    assert.strictEqual(ctrlInvoked, false, 'Controller must NOT be invoked in frame without media');
+    assert.strictEqual(floatBtnInvoked, false, 'Floating button must NOT be invoked in frame without media');
+    console.log('  ✅ Simulation 3.5: Non-media frame IPC toggle_fullscreen safely ignored by !hasMedia guard');
   }
 }
 
