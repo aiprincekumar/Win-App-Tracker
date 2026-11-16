@@ -2573,6 +2573,16 @@
 
   // Expose Sentinel Smart Automations hooks for testing and inspection
   if (typeof window !== 'undefined') {
+    window.__SentinelDoomScrollGuard = {
+      init: initDoomScrollGuard,
+      initDoomScrollGuard,
+      showBreathBanner,
+      dismissBreathBanner,
+      onWindowScroll,
+      isFeedHost,
+      getState: () => ({ ...doomScrollState }),
+      setState: (st) => { Object.assign(doomScrollState, st); }
+    };
     window.__SentinelAdSilencer = {
       init: initAdSilencer,
       initAdSilencer,
@@ -2609,6 +2619,196 @@
       initAudioLabSettings,
       getState: () => ({ audioOnlyModeActive })
     };
+    // =============================================================================
+    // Feature 8: Doom-Scrolling Velocity Guard & Gentle "Take a Breath" Sentinel
+    // =============================================================================
+    const doomScrollState = {
+      isMonitoring: false,
+      scrollStartTime: Date.now(),
+      lastScrollTime: Date.now(),
+      lastScrollY: 0,
+      accumulatedDeltaY: 0,
+      consecutiveScrollMinutes: 0,
+      bannerVisible: false,
+      thresholdMinutes: 20,
+      bannerDismissTimeout: null
+    };
+
+    const DOOMSCROLL_FEED_HOSTS = ['youtube.com', 'reddit.com', 'twitter.com', 'x.com', 'instagram.com', 'tiktok.com', 'facebook.com'];
+
+    function isFeedHost() {
+      try {
+        const h = (window.location && window.location.hostname ? window.location.hostname : '').toLowerCase();
+        return DOOMSCROLL_FEED_HOSTS.some(fh => h === fh || h.endsWith('.' + fh));
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function showBreathBanner(customMinutes) {
+      if (typeof document === 'undefined') return null;
+      const mins = customMinutes || doomScrollState.thresholdMinutes || 20;
+
+      const existing = document.getElementById('__sentinel_doomscroll_banner__');
+      if (existing) {
+        existing.remove();
+      }
+
+      const banner = document.createElement('div');
+      banner.id = '__sentinel_doomscroll_banner__';
+      banner.className = 'sentinel-breath-banner';
+      banner.setAttribute('role', 'alert');
+      banner.setAttribute('aria-live', 'polite');
+
+      banner.style.position = 'fixed';
+      banner.style.top = '16px';
+      banner.style.left = '50%';
+      banner.style.transform = 'translateX(-50%)';
+      banner.style.zIndex = '2147483645';
+      banner.style.backgroundColor = 'rgba(15, 23, 42, 0.92)';
+      banner.style.color = '#f8fafc';
+      banner.style.backdropFilter = 'blur(12px)';
+      banner.style.webkitBackdropFilter = 'blur(12px)';
+      banner.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+      banner.style.borderRadius = '12px';
+      banner.style.padding = '10px 18px';
+      banner.style.display = 'flex';
+      banner.style.alignItems = 'center';
+      banner.style.gap = '12px';
+      banner.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2)';
+      banner.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      banner.style.fontSize = '14px';
+      banner.style.fontWeight = '500';
+      banner.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      banner.style.pointerEvents = 'auto';
+
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '18px';
+      iconSpan.textContent = '🧘';
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = "Take a Breath — You've been scrolling for " + mins + " minutes";
+
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.textContent = '✕';
+      closeBtn.setAttribute('aria-label', 'Dismiss banner');
+      closeBtn.style.background = 'transparent';
+      closeBtn.style.border = 'none';
+      closeBtn.style.color = '#94a3b8';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.style.fontSize = '14px';
+      closeBtn.style.padding = '2px 6px';
+      closeBtn.style.borderRadius = '4px';
+
+      closeBtn.addEventListener('click', () => {
+        dismissBreathBanner();
+      });
+
+      banner.appendChild(iconSpan);
+      banner.appendChild(textSpan);
+      banner.appendChild(closeBtn);
+
+      if (document.body) {
+        document.body.appendChild(banner);
+      } else if (document.documentElement) {
+        document.documentElement.appendChild(banner);
+      }
+
+      doomScrollState.bannerVisible = true;
+
+      if (doomScrollState.bannerDismissTimeout) {
+        clearTimeout(doomScrollState.bannerDismissTimeout);
+      }
+      doomScrollState.bannerDismissTimeout = setTimeout(() => {
+        dismissBreathBanner();
+      }, 8000);
+
+      return banner;
+    }
+
+    function dismissBreathBanner() {
+      if (typeof document === 'undefined') return;
+      const banner = document.getElementById('__sentinel_doomscroll_banner__');
+      if (banner) {
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateX(-50%) translateY(-10px)';
+        setTimeout(() => {
+          if (banner.parentNode) banner.parentNode.removeChild(banner);
+        }, 400);
+      }
+      doomScrollState.bannerVisible = false;
+    }
+
+    function onWindowScroll() {
+      if (typeof window === 'undefined') return;
+      const now = Date.now();
+      const currentY = window.scrollY || window.pageYOffset || 0;
+      const delta = Math.abs(currentY - doomScrollState.lastScrollY);
+
+      doomScrollState.accumulatedDeltaY += delta;
+      doomScrollState.lastScrollY = currentY;
+
+      if (now - doomScrollState.lastScrollTime > 3 * 60 * 1000) {
+        doomScrollState.scrollStartTime = now;
+        doomScrollState.accumulatedDeltaY = 0;
+      }
+      doomScrollState.lastScrollTime = now;
+
+      const continuousMinutes = Math.floor((now - doomScrollState.scrollStartTime) / (60 * 1000));
+      doomScrollState.consecutiveScrollMinutes = continuousMinutes;
+
+      if (continuousMinutes >= doomScrollState.thresholdMinutes && !doomScrollState.bannerVisible) {
+        showBreathBanner(continuousMinutes);
+        doomScrollState.scrollStartTime = now;
+      }
+    }
+
+    function initDoomScrollGuard(options = {}) {
+      if (typeof window === 'undefined') return;
+      if (options.thresholdMinutes) {
+        doomScrollState.thresholdMinutes = options.thresholdMinutes;
+      }
+
+      if (!doomScrollState.isMonitoring) {
+        doomScrollState.isMonitoring = true;
+        doomScrollState.scrollStartTime = Date.now();
+        doomScrollState.lastScrollTime = Date.now();
+        doomScrollState.lastScrollY = window.scrollY || 0;
+
+        let scrollThrottled = false;
+        window.addEventListener('scroll', () => {
+          if (!scrollThrottled) {
+            scrollThrottled = true;
+            setTimeout(() => {
+              onWindowScroll();
+              scrollThrottled = false;
+            }, 500);
+          }
+        }, { passive: true });
+      }
+    }
+
+    const isTop = (typeof isTopFrame !== 'undefined') ? isTopFrame : (typeof window !== 'undefined' && window === window.top);
+    if (isTop && typeof window !== 'undefined') {
+      try {
+        if (isFeedHost()) {
+          initDoomScrollGuard();
+        }
+      } catch (_) {}
+    }
+
+    window.__SentinelDoomScrollGuard = {
+      init: initDoomScrollGuard,
+      initDoomScrollGuard,
+      showBreathBanner,
+      dismissBreathBanner,
+      onWindowScroll,
+      isFeedHost,
+      getState: () => ({ ...doomScrollState }),
+      setState: (st) => { Object.assign(doomScrollState, st); }
+    };
+
     window.__SentinelMediaContext = {
       isExtensionContextValid,
       isContextValid,

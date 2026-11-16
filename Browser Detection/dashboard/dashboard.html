@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Web Activity & Media Sentinel</title>
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="styles/wellbeing_blacklist.css">
   <link rel="icon" type="image/png" href="../icons/icon32.png">
 </head>
 <body class="theme-dark">
@@ -40,6 +41,20 @@
           <span id="navSettingsText" class="nav-text">Settings & Data</span>
         </button>
       </nav>
+      <!-- Sidebar Pomodoro Focus Sentinel Widget (Feature 8) -->
+      <div id="widgetPomodoroSentinel" class="sidebar-hud-card pomodoro-card">
+        <div class="pomodoro-header">
+          <span id="txtPomodoroTitle" class="pomodoro-card-title">🧘 Focus Sentinel & Pomodoro</span>
+          <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+        </div>
+        <div id="pomodoroTimeDisplay" class="pomodoro-time">25:00</div>
+        <div class="pomodoro-controls">
+          <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start</button>
+          <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
+          <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
+        </div>
+      </div>
+
 
       <!-- Sidebar Footer Data Hub Status Widget -->
       <div class="sidebar-hud-card">
@@ -1296,6 +1311,51 @@
               </div>
             </div>
 
+            <!-- Card: Privacy Tracking Exclusion Blacklist (Feature 7) -->
+            <div id="cardTrackingBlacklist" class="settings-card bento-card liquid-glass-card bento-span-6">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">🛡️</span>
+                <div class="settings-card-title-group">
+                  <h3 id="txtBlacklistTitle" class="settings-card-title">Privacy Tracking Exclusion Blacklist</h3>
+                  <span id="txtBlacklistDesc" class="settings-card-sub">Domains matching these patterns will never be recorded in history</span>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <div class="blacklist-input-row">
+                  <input type="text" id="inputBlacklistPattern" class="styled-input" placeholder="e.g. localhost:*, 192.168.*:*, *bank.internal*">
+                  <button type="button" id="btnAddBlacklistPattern" class="btn-save-primary">Add Pattern</button>
+                </div>
+                <div id="blacklistChipsContainer" class="blacklist-chips-grid"></div>
+                
+                <hr class="blacklist-purge-divider">
+                <div class="blacklist-purge-row">
+                  <input type="text" id="inputPurgeDomain" class="styled-input" placeholder="Domain or pattern to purge (e.g. localhost)">
+                  <button type="button" id="btnPurgeDomainHistory" class="btn-danger-outline">🗑️ Purge Historical Data</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Domain Daily Time Budgets & Alerts (Feature 8) -->
+            <div id="cardDomainBudgets" class="settings-card bento-card liquid-glass-card bento-span-6">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">⏱️</span>
+                <div class="settings-card-title-group">
+                  <h3 id="txtBudgetTitle" class="settings-card-title">Domain Daily Time Budgets</h3>
+                  <span id="txtBudgetDesc" class="settings-card-sub">Configure daily minute limits per domain with 80% warning and 100% cutoff badges</span>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <div class="budget-input-row">
+                  <input type="text" id="inputBudgetDomain" class="styled-input" placeholder="Domain (e.g. twitter.com, youtube.com)">
+                  <input type="number" id="inputBudgetMinutes" class="styled-input" placeholder="Minutes" min="1" max="1440" value="30">
+                  <button type="button" id="btnAddBudget" class="btn-save-primary">Set Budget</button>
+                </div>
+                <div id="domainBudgetsList" class="domain-budgets-list"></div>
+              </div>
+            </div>
+
             <!-- Card 3: Danger Zone / Clear Data -->
             <div class="settings-card danger-card bento-card liquid-glass-card bento-span-6">
               <div class="settings-card-header">
@@ -1460,6 +1520,28 @@
     <button id="miniDockPip" class="mini-dock-btn" title="Picture-in-Picture">📺</button>
     <button id="miniDockJump" class="mini-dock-btn" title="Jump to Media Player">⬆</button>
     <button id="miniDockClose" class="mini-dock-btn" title="Dismiss">✕</button>
+  </div>
+
+    <!-- Modal Dialog: Domain Note / Project Annotation (Feature 7) -->
+  <div id="modalDomainNote" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="txtNoteModalTitle">
+    <div class="modal-card liquid-glass-card note-modal-card">
+      <div class="modal-header">
+        <span class="modal-icon">📝</span>
+        <h3 id="txtNoteModalTitle" class="modal-title">Domain Note / Project Annotation</h3>
+        <button id="btnCancelDomainNoteX" class="btn-icon-close" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="txtNoteModalDesc" class="modal-message">Attach a custom project note or client context to this domain:</p>
+        <div id="noteDomainBadge" class="conflict-summary-pill">
+          <span id="noteDomainName">example.com</span>
+        </div>
+        <textarea id="inputDomainNoteText" class="note-textarea" placeholder="Add project notes for this domain..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnCancelDomainNote" class="btn-modal-secondary">Cancel</button>
+        <button type="button" id="btnSaveDomainNote" class="btn-save-primary">💾 Save Note</button>
+      </div>
+    </div>
   </div>
 
   <script src="dashboard.js"></script>

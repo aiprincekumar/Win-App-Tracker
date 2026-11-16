@@ -385,6 +385,64 @@ let isBrowserFocused = true;
 let isUserActive = true;
 let isTrackingPaused = false;
 
+// Feature 7 & 8: Privacy Tracking Exclusion Blacklist & Domain Budgets
+let trackingBlacklist = ['localhost', 'localhost:*', '127.0.0.1', '127.0.0.1:*', '192.168.*', '192.168.*:*', '10.*.*:*', 'file://*'];
+let domainBudgets = {};
+
+function compileBlacklistRegexBg(pattern) {
+  if (!pattern || typeof pattern !== 'string') return null;
+  const trimmed = pattern.trim().toLowerCase();
+  if (!trimmed || trimmed.length > 128) return null;
+  try {
+    const escaped = trimmed
+      .replace(/[.+^${}()|[\]\\/-]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    return new RegExp('^' + escaped + '$', 'i');
+  } catch (_) {
+    return null;
+  }
+}
+
+function matchesTrackingBlacklist(urlOrDomain) {
+  if (!urlOrDomain || !Array.isArray(trackingBlacklist) || trackingBlacklist.length === 0) return false;
+  const target = String(urlOrDomain).trim().toLowerCase();
+  if (!target) return false;
+
+  let host = target;
+  let hostWithPort = target;
+  try {
+    if (target.includes('://')) {
+      const parsed = new URL(target);
+      host = parsed.hostname.toLowerCase();
+      hostWithPort = parsed.host.toLowerCase();
+    } else if (target.includes(':')) {
+      host = target.split(':')[0].toLowerCase();
+    }
+  } catch (_) {}
+
+  for (let i = 0; i < trackingBlacklist.length; i++) {
+    const p = trackingBlacklist[i];
+    if (!p) continue;
+    const rawPattern = String(p).trim().toLowerCase();
+    if (!rawPattern) continue;
+    if (target === rawPattern || host === rawPattern || hostWithPort === rawPattern) {
+      return true;
+    }
+    if (rawPattern.endsWith(':*')) {
+      const base = rawPattern.slice(0, -2);
+      if (target === base || host === base) {
+        return true;
+      }
+    }
+    const rx = compileBlacklistRegexBg(rawPattern);
+    if (rx && (rx.test(target) || rx.test(host) || rx.test(hostWithPort))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Media Map: tabId -> Media State Payload
 const tabMediaMap = new Map();
 
@@ -943,11 +1001,19 @@ async function loadStorageData() {
       'language',
       'sentinel_sleep_timer',
       'sentinel_sleep_settings',
-      'sentinel_tracking_paused'
+      'sentinel_tracking_paused',
+      'tracking_blacklist',
+      'domain_budgets'
     ];
     const res = await browserAPI.storage.local.get(keys);
     if (res && res[CONFIG.CLIENT_ID_STORAGE_KEY]) {
       clientId = res[CONFIG.CLIENT_ID_STORAGE_KEY];
+    }
+    if (res && Array.isArray(res.tracking_blacklist)) {
+      trackingBlacklist = res.tracking_blacklist;
+    }
+    if (res && res.domain_budgets && typeof res.domain_budgets === 'object') {
+      domainBudgets = res.domain_budgets;
     }
     if (res && Array.isArray(res[CONFIG.OFFLINE_QUEUE_STORAGE_KEY])) {
       offlineSyncQueue = res[CONFIG.OFFLINE_QUEUE_STORAGE_KEY];
@@ -1748,7 +1814,7 @@ function commitActiveInterval() {
     return;
   }
 
-  if (!activeDomain || !isBrowserFocused || !isUserActive) {
+  if (!activeDomain || !isBrowserFocused || !isUserActive || matchesTrackingBlacklist(activeDomain)) {
     intervalStartTime = Date.now();
     return;
   }
@@ -1801,7 +1867,7 @@ function commitActiveInterval() {
  * Commits elapsed seconds for background media playback on a domain (Method B: Background Media Playback Only)
  */
 function commitBackgroundMediaDelta(domain, seconds) {
-  if (!domain || seconds <= 0) return;
+  if (!domain || seconds <= 0 || matchesTrackingBlacklist(domain)) return;
   const validSec = Math.min(seconds, 3600);
   const today = getTodayDateString();
   const now = Date.now();
@@ -1842,6 +1908,16 @@ function commitBackgroundMediaDelta(domain, seconds) {
  */
 function switchActiveDomain(newDomain, isNewSession = false) {
   commitActiveInterval();
+
+  if (newDomain && matchesTrackingBlacklist(newDomain)) {
+    if (activeDomain !== null) {
+      activeDomain = null;
+      intervalStartTime = Date.now();
+      sendActivityUpdateToHUD();
+      scheduleStorageSave(true);
+    }
+    return;
+  }
 
   if (!newDomain) {
     if (activeDomain !== null) {
@@ -2522,8 +2598,12 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
     const tab = await browserAPI.tabs.get(activeTabId);
     if (tab) {
       if (tab.windowId) activeWindowId = tab.windowId;
-      const domain = tab.url ? extractDomain(tab.url) : null;
-      switchActiveDomain(domain, true);
+      if (tab.url && matchesTrackingBlacklist(tab.url)) {
+        switchActiveDomain(null, false);
+      } else {
+        const domain = tab.url ? extractDomain(tab.url) : null;
+        switchActiveDomain(domain, true);
+      }
     } else {
       switchActiveDomain(null, false);
     }
@@ -2560,8 +2640,12 @@ if (browserAPI.tabs && browserAPI.tabs.onCreated) {
 browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   await ensureStorageLoaded();
   if (tabId === activeTabId && changeInfo.url) {
-    const domain = extractDomain(changeInfo.url);
-    switchActiveDomain(domain, false);
+    if (matchesTrackingBlacklist(changeInfo.url)) {
+      switchActiveDomain(null, false);
+    } else {
+      const domain = extractDomain(changeInfo.url);
+      switchActiveDomain(domain, false);
+    }
   }
   // Audio state change (tab.audible becomes true / false)
   if (changeInfo.audible !== undefined) {
@@ -3691,10 +3775,113 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // ---------------------------------------------------------------------------
+  // Phase 4: Wellbeing Sentinel, Annotations & Blacklist IPC Handlers
+  // ---------------------------------------------------------------------------
+  if (msgType === 'UPDATE_TRACKING_BLACKLIST' || message.action === 'UPDATE_TRACKING_BLACKLIST') {
+    (async () => {
+      await ensureStorageLoaded();
+      if (Array.isArray(message.blacklist)) {
+        trackingBlacklist = message.blacklist.map(p => String(p).trim().toLowerCase()).filter(Boolean);
+        await browserAPI.storage.local.set({ tracking_blacklist: trackingBlacklist });
+        if (activeDomain && matchesTrackingBlacklist(activeDomain)) {
+          activeDomain = null;
+          intervalStartTime = Date.now();
+          sendActivityUpdateToHUD();
+          scheduleStorageSave(true);
+        }
+      }
+      sendResponse({ success: true, count: trackingBlacklist.length, blacklist: trackingBlacklist });
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_TRACKING_BLACKLIST' || message.action === 'GET_TRACKING_BLACKLIST') {
+    (async () => {
+      await ensureStorageLoaded();
+      sendResponse({ success: true, blacklist: trackingBlacklist });
+    })();
+    return true;
+  }
+
+  if (msgType === 'PURGE_DOMAIN_HISTORY' || message.action === 'PURGE_DOMAIN_HISTORY') {
+    (async () => {
+      await ensureStorageLoaded();
+      const target = (message.domain || message.pattern || '').trim().toLowerCase();
+      let purgedCount = 0;
+      const purgedList = [];
+      if (target && activityData && activityData.domains) {
+        Object.keys(activityData.domains).forEach(dom => {
+          const lower = dom.toLowerCase();
+          let shouldPurge = false;
+          if (lower === target) {
+            shouldPurge = true;
+          } else if (matchesTrackingBlacklist(dom)) {
+            shouldPurge = true;
+          } else {
+            const rx = compileBlacklistRegexBg(target);
+            if (rx && (rx.test(dom) || rx.test(lower))) {
+              shouldPurge = true;
+            }
+          }
+
+          if (shouldPurge) {
+            delete activityData.domains[dom];
+            purgedCount++;
+            purgedList.push(dom);
+          }
+        });
+        if (activeDomain && purgedList.includes(activeDomain)) {
+          activeDomain = null;
+          intervalStartTime = Date.now();
+        }
+        await saveStorageData();
+        sendResponse({ success: true, purgedCount, purgedList });
+      } else {
+        sendResponse({ success: true, purgedCount: 0, purgedList: [] });
+      }
+    })();
+    return true;
+  }
+
+  if (msgType === 'UPDATE_DOMAIN_BUDGETS' || message.action === 'UPDATE_DOMAIN_BUDGETS') {
+    (async () => {
+      await ensureStorageLoaded();
+      if (message.budgets && typeof message.budgets === 'object') {
+        domainBudgets = Object.assign({}, message.budgets);
+        await browserAPI.storage.local.set({ domain_budgets: domainBudgets });
+      }
+      sendResponse({ success: true, budgets: domainBudgets });
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_DOMAIN_BUDGETS' || message.action === 'GET_DOMAIN_BUDGETS') {
+    (async () => {
+      await ensureStorageLoaded();
+      sendResponse({ success: true, budgets: domainBudgets });
+    })();
+    return true;
+  }
 });
 
 // Reactively synchronize configuration changes from chrome.storage
 browserAPI.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local') {
+    if (changes.tracking_blacklist && Array.isArray(changes.tracking_blacklist.newValue)) {
+      trackingBlacklist = changes.tracking_blacklist.newValue;
+      if (activeDomain && matchesTrackingBlacklist(activeDomain)) {
+        activeDomain = null;
+        intervalStartTime = Date.now();
+        sendActivityUpdateToHUD();
+        scheduleStorageSave(true);
+      }
+    }
+    if (changes.domain_budgets && typeof changes.domain_budgets.newValue === 'object') {
+      domainBudgets = changes.domain_budgets.newValue || {};
+    }
+  }
   if (areaName === 'local' && changes[CONFIG.SETTINGS_STORAGE_KEY]) {
     const newSettings = changes[CONFIG.SETTINGS_STORAGE_KEY].newValue;
     if (newSettings) {
@@ -3802,12 +3989,33 @@ if (typeof globalThis !== 'undefined') {
   globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
   globalThis.handleSoloTabExecution = handleSoloTabExecution;
   globalThis.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
+  globalThis.matchesTrackingBlacklist = matchesTrackingBlacklist;
+  globalThis.compileBlacklistRegexBg = compileBlacklistRegexBg;
+  globalThis.getTrackingBlacklist = () => trackingBlacklist;
+  globalThis.setTrackingBlacklist = (list) => { trackingBlacklist = list; };
+  globalThis.getDomainBudgets = () => domainBudgets;
+  globalThis.setDomainBudgets = (b) => { domainBudgets = b; };
+  globalThis.getActivityData = () => activityData;
+  globalThis.switchActiveDomain = switchActiveDomain;
+  globalThis.commitActiveInterval = commitActiveInterval;
+  globalThis.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
+  globalThis.getActiveDomain = () => activeDomain;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
     globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
     globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
     globalThis.SentinelBackgroundModules.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
+    globalThis.SentinelBackgroundModules.matchesTrackingBlacklist = matchesTrackingBlacklist;
+    globalThis.SentinelBackgroundModules.getTrackingBlacklist = () => trackingBlacklist;
+    globalThis.SentinelBackgroundModules.setTrackingBlacklist = (list) => { trackingBlacklist = list; };
+    globalThis.SentinelBackgroundModules.getDomainBudgets = () => domainBudgets;
+    globalThis.SentinelBackgroundModules.setDomainBudgets = (b) => { domainBudgets = b; };
+    globalThis.SentinelBackgroundModules.getActivityData = () => activityData;
+    globalThis.SentinelBackgroundModules.switchActiveDomain = switchActiveDomain;
+    globalThis.SentinelBackgroundModules.commitActiveInterval = commitActiveInterval;
+    globalThis.SentinelBackgroundModules.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
+    globalThis.SentinelBackgroundModules.getActiveDomain = () => activeDomain;
   }
 }
 

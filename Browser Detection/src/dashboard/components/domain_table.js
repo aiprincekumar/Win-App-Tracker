@@ -1,6 +1,7 @@
 ﻿/**
  * Web Activity & Media Sentinel - Dashboard Domain Table Component
  * Sortable, searchable, paginated domain analytics data table.
+ * Features 7 & 8: Starred/Pinned Domains, Inline Domain Annotations & Daily Time Budget Badges.
  * 100% W3C Trusted Types compliant (Zero innerHTML assignments).
  * 
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
@@ -9,13 +10,19 @@
 (function (global) {
   'use strict';
 
-  function filterAndPaginate(items, search = '', page = 1, pageSize = 15) {
+  function filterAndPaginate(items, search = '', page = 1, pageSize = 15, options = {}) {
     if (!Array.isArray(items)) return { rows: [], totalRows: 0, totalPages: 1 };
 
     let filtered = items;
     const q = (search || '').toLowerCase().trim();
     if (q) {
-      filtered = filtered.filter((it) => it && it.domain && it.domain.toLowerCase().includes(q));
+      filtered = filtered.filter((it) => {
+        if (!it || !it.domain) return false;
+        if (it.domain.toLowerCase().includes(q)) return true;
+        const note = (options.domainAnnotations && options.domainAnnotations[it.domain.toLowerCase()]) || it.note || '';
+        if (note && note.toLowerCase().includes(q)) return true;
+        return false;
+      });
     }
 
     const totalRows = filtered.length;
@@ -43,8 +50,24 @@
     const isInternalDomain = typeof options.isInternalDomain === 'function' ? options.isInternalDomain : () => false;
 
     const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
+    const domainLower = String(it.domain || '').toLowerCase();
+
+    // Check Star / Pin State (Feature 7)
+    const starredList = Array.isArray(options.starredDomains) ? options.starredDomains : [];
+    const isStarred = Boolean(it.isStarred || starredList.includes(domainLower));
+
+    // Check Domain Notes / Annotation (Feature 7)
+    const notesMap = (options.domainAnnotations && typeof options.domainAnnotations === 'object') ? options.domainAnnotations : {};
+    const noteText = notesMap[domainLower] || notesMap[it.domain] || it.note || '';
+    const hasNote = Boolean(noteText && noteText.trim().length > 0);
+
+    // Check Budget Status (Feature 8)
+    const budgetStatus = it.budgetStatus || (options.getBudgetStatus && options.getBudgetStatus(it.domain, it.computedSeconds)) || null;
 
     const tr = doc.createElement('tr');
+    if (isStarred) {
+      tr.classList.add('row-starred');
+    }
 
     // 1. Column Domain
     const tdDomain = doc.createElement('td');
@@ -53,6 +76,22 @@
     const cellDiv = doc.createElement('div');
     cellDiv.className = 'domain-cell';
 
+    // Star / Pin Button (Feature 7)
+    const starBtn = doc.createElement('button');
+    starBtn.type = 'button';
+    starBtn.className = 'btn-star-domain' + (isStarred ? ' starred' : '');
+    starBtn.setAttribute('data-domain', it.domain || '');
+    starBtn.setAttribute('aria-label', isStarred ? 'Unstar ' + it.domain : 'Star ' + it.domain);
+    starBtn.title = isStarred ? 'Pinned to top (Click to unpin)' : 'Click to pin to top';
+    starBtn.textContent = '⭐';
+    if (typeof options.onToggleStar === 'function') {
+      starBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.onToggleStar(it.domain);
+      });
+    }
+    cellDiv.appendChild(starBtn);
+
     const favImg = doc.createElement('img');
     favImg.src = it.favicon || '../icons/icon32.png';
     favImg.alt = '';
@@ -60,14 +99,30 @@
     favImg.addEventListener('error', () => {
       favImg.src = '../icons/icon32.png';
     }, { once: true });
+    cellDiv.appendChild(favImg);
 
     const nameSpan = doc.createElement('span');
     nameSpan.className = 'domain-name-text';
     nameSpan.textContent = it.domain || '';
-
-    cellDiv.appendChild(favImg);
     cellDiv.appendChild(nameSpan);
 
+    // Note Action Button (Feature 7)
+    const noteBtn = doc.createElement('button');
+    noteBtn.type = 'button';
+    noteBtn.className = 'btn-domain-note' + (hasNote ? ' has-note' : '');
+    noteBtn.setAttribute('data-domain', it.domain || '');
+    noteBtn.setAttribute('aria-label', hasNote ? 'Edit note for ' + it.domain : 'Add note for ' + it.domain);
+    noteBtn.title = hasNote ? `Note: ${noteText}` : 'Add project note';
+    noteBtn.textContent = '📝';
+    if (typeof options.onEditNote === 'function') {
+      noteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.onEditNote(it.domain);
+      });
+    }
+    cellDiv.appendChild(noteBtn);
+
+    // Badges: Extension, Internal
     if (it.domain === 'Dashboard' || it.domain === 'Extension') {
       const extBadge = doc.createElement('span');
       extBadge.className = 'badge-tag badge-extension';
@@ -80,6 +135,32 @@
       internalBadge.title = 'Internal Browser Scheme';
       internalBadge.textContent = '⚙️ Internal';
       cellDiv.appendChild(internalBadge);
+    }
+
+    // Daily Time Budget Status Badge (Feature 8)
+    if (budgetStatus) {
+      if (budgetStatus.reached) {
+        const reachedBadge = doc.createElement('span');
+        reachedBadge.className = 'badge-budget-reached';
+        reachedBadge.title = `Daily limit reached (${budgetStatus.budgetMinutes}m)`;
+        reachedBadge.textContent = '🛑 Limit Reached';
+        cellDiv.appendChild(reachedBadge);
+      } else if (budgetStatus.warning80) {
+        const warnBadge = doc.createElement('span');
+        warnBadge.className = 'badge-budget-warning';
+        warnBadge.title = `80% of daily limit consumed (${budgetStatus.budgetMinutes}m)`;
+        warnBadge.textContent = '⚠️ 80% Limit';
+        cellDiv.appendChild(warnBadge);
+      }
+    }
+
+    // Inline Note Preview (Feature 7)
+    if (hasNote) {
+      const notePreview = doc.createElement('span');
+      notePreview.className = 'domain-note-preview';
+      notePreview.title = noteText;
+      notePreview.textContent = `📌 ${noteText}`;
+      cellDiv.appendChild(notePreview);
     }
 
     tdDomain.appendChild(cellDiv);
@@ -157,7 +238,7 @@
     tdTime.appendChild(timeMain);
     tdTime.appendChild(dualPills);
 
-    // 3. Column Ratio
+    // 4. Column Ratio
     const tdRatio = doc.createElement('td');
     tdRatio.className = 'col-ratio';
 
@@ -180,7 +261,7 @@
     ratioWrapper.appendChild(ratioPct);
     tdRatio.appendChild(ratioWrapper);
 
-    // 4. Column Sessions
+    // 5. Column Sessions
     const tdSessions = doc.createElement('td');
     tdSessions.className = 'col-sessions';
 
@@ -189,7 +270,7 @@
     sessionsBadge.textContent = t('session_unit', it.sessions || 1);
     tdSessions.appendChild(sessionsBadge);
 
-    // 5. Column Last Active
+    // 6. Column Last Active
     const tdLast = doc.createElement('td');
     tdLast.className = 'col-last';
 
@@ -245,7 +326,23 @@
     if (emptyBox) emptyBox.classList.add('hidden');
     if (countBadge) countBadge.textContent = t('domain_count_suffix', items.length);
 
-    items.forEach((it) => {
+    // Apply Star / Pin ordering: Starred domains pinned to top (Feature 7)
+    let displayList = items;
+    if (Array.isArray(options.starredDomains) && options.starredDomains.length > 0) {
+      const starred = [];
+      const unstarred = [];
+      displayList.forEach(it => {
+        const domLower = String(it.domain || '').toLowerCase();
+        if (options.starredDomains.includes(domLower)) {
+          starred.push(it);
+        } else {
+          unstarred.push(it);
+        }
+      });
+      displayList = starred.concat(unstarred);
+    }
+
+    displayList.forEach((it) => {
       const tr = buildDomainTableRow(it, options);
       if (tr) tbody.appendChild(tr);
     });

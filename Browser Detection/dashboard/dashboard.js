@@ -73,6 +73,7 @@ const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThi
 const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
 const _MediaDeckVisualizer = (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature) ? globalThis.MediaDeckVisualizerFeature : _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
 const _BackupHubDigest = (typeof globalThis !== 'undefined' && globalThis.BackupHubDigestFeature) ? globalThis.BackupHubDigestFeature : _safeRequire('./src/dashboard/features/backup_hub_digest_feature.js', '../src/dashboard/features/backup_hub_digest_feature.js');
+const _WellbeingBlacklist = (typeof globalThis !== 'undefined' && globalThis.WellbeingBlacklistFeature) ? globalThis.WellbeingBlacklistFeature : _safeRequire('./src/dashboard/features/wellbeing_blacklist_feature.js', '../src/dashboard/features/wellbeing_blacklist_feature.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelDashboardModules = {
@@ -89,7 +90,8 @@ if (typeof window !== 'undefined') {
     DashboardFeatureManager: _DashboardFeatureManager,
     TemporalProductivity: _TemporalProductivity,
     MediaDeckVisualizer: _MediaDeckVisualizer,
-    BackupHubDigest: _BackupHubDigest
+    BackupHubDigest: _BackupHubDigest,
+    WellbeingBlacklist: _WellbeingBlacklist
   };
 }
 
@@ -243,6 +245,31 @@ const DASHBOARD_I18N = {
     digest_top_domain: 'Top Focus Domain',
     digest_productivity: 'Productivity Index',
     digest_media_time: 'Media Consumed',
+
+    // Feature 7: Annotations & Blacklist
+    blacklist_title: 'Privacy Tracking Exclusion Blacklist',
+    blacklist_desc: 'Domains matching these patterns will never be recorded in history',
+    btn_purge_domain: '🗑️ Purge Historical Data for this Domain',
+    notes_placeholder: 'Add project notes for this domain...',
+    btn_add_pattern: 'Add Pattern',
+    th_star: 'Pin',
+    modal_note_title: 'Domain Note / Project Annotation',
+    modal_note_desc: 'Attach a custom project note or client context to this domain:',
+    btn_save_note: '💾 Save Note',
+    
+    // Feature 8: Wellbeing & Pomodoro
+    pomodoro_title: 'Focus Sentinel & Pomodoro',
+    budget_alert: 'Daily limit reached for this domain',
+    btn_start_focus: '▶️ Start 25m Focus Block',
+    budget_title: 'Domain Daily Time Budgets',
+    budget_desc: 'Configure daily minute limits per domain with 80% warning and 100% cutoff badges',
+    btn_set_budget: 'Set Budget',
+    budget_warning_80: '⚠️ 80% Limit',
+    budget_reached_100: '🛑 Limit Reached',
+    pomodoro_focus_badge: 'Focus (25m)',
+    pomodoro_break_badge: 'Break (5m)',
+    btn_pomodoro_pause: '⏸️ Pause',
+    btn_pomodoro_reset: '🔄 Reset',
     donut_center_today: "Today's Total Time",
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
@@ -619,6 +646,31 @@ const DASHBOARD_I18N = {
     digest_top_domain: 'शीर्ष फोकस डोमेन',
     digest_productivity: 'उत्पादकता सूचकांक',
     digest_media_time: 'मीडिया उपभोग समय',
+
+    // Feature 7: Annotations & Blacklist
+    blacklist_title: 'गोपनीयता ट्रैकिंग एक्सक्लूज़न ब्लैकलिस्ट',
+    blacklist_desc: 'इन पैटर्न्स से मेल खाने वाले डोमेन्स का डेटा कभी रिकॉर्ड नहीं किया जाएगा',
+    btn_purge_domain: '🗑️ इस डोमेन का पुराना डेटा मिटाएं',
+    notes_placeholder: 'इस डोमेन के लिए प्रोजेक्ट नोट्स लिखें...',
+    btn_add_pattern: 'पैटर्न जोड़ें',
+    th_star: 'पिन',
+    modal_note_title: 'डोमेन नोट व प्रोजेक्ट एनोटेशन',
+    modal_note_desc: 'इस डोमेन के लिए कस्टम प्रोजेक्ट नोट या संदर्भ जोड़ें:',
+    btn_save_note: '💾 नोट सहेजें',
+    
+    // Feature 8: Wellbeing & Pomodoro
+    pomodoro_title: 'फोकस सेंटिनल व पोमोडोरो',
+    budget_alert: 'इस डोमेन की दैनिक समय सीमा समाप्त हो चुकी है',
+    btn_start_focus: '▶️ 25 मिनट का फोकस ब्लॉक शुरू करें',
+    budget_title: 'डोमेन दैनिक समय सीमा बजट',
+    budget_desc: 'प्रति-डोमेन अधिकतम दैनिक मिनट और 80% चेतावनी व 100% समाप्ति बैज सेट करें',
+    btn_set_budget: 'बजट निर्धारित करें',
+    budget_warning_80: '⚠️ 80% सीमा',
+    budget_reached_100: '🛑 सीमा समाप्त',
+    pomodoro_focus_badge: 'फोकस (25 मिनट)',
+    pomodoro_break_badge: 'विश्राम (5 मिनट)',
+    btn_pomodoro_pause: '⏸️ विराम',
+    btn_pomodoro_reset: '🔄 रीसेट',
     donut_center_today: 'आज का कुल समय',
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
@@ -2883,6 +2935,33 @@ function applyDashboardLanguage(lang) {
   }
 
   // Phase 4: Appearance, Theme Substrates & Audio Haptics static texts
+  // Phase 4: Feature 7 & 8 Texts
+  setTxt('txtBlacklistTitle', 'blacklist_title');
+  setTxt('txtBlacklistDesc', 'blacklist_desc');
+  setTxt('btnPurgeDomainHistory', 'btn_purge_domain');
+  setTxt('btnAddBlacklistPattern', 'btn_add_pattern');
+  const blacklistPatternInput = document.getElementById('inputBlacklistPattern');
+  if (blacklistPatternInput) blacklistPatternInput.placeholder = 'e.g. localhost:*, 192.168.*:*, *bank.internal*';
+
+  setTxt('txtBudgetTitle', 'budget_title');
+  setTxt('txtBudgetDesc', 'budget_desc');
+  setTxt('btnAddBudget', 'btn_set_budget');
+
+  setTxt('txtPomodoroTitle', 'pomodoro_title');
+  setTxt('txtNoteModalTitle', 'modal_note_title');
+  setTxt('txtNoteModalDesc', 'modal_note_desc');
+  setTxt('btnSaveDomainNote', 'btn_save_note');
+  const noteTextInput = document.getElementById('inputDomainNoteText');
+  if (noteTextInput) noteTextInput.placeholder = t('notes_placeholder');
+
+  if (pomodoroController) {
+    const pState = pomodoroController.getState();
+    const modeBadge = document.getElementById('pomodoroModeBadge');
+    if (modeBadge) {
+      modeBadge.textContent = pState.mode === 'focus' ? t('pomodoro_focus_badge') : t('pomodoro_break_badge');
+    }
+  }
+
   setTxt('headingAppearanceSettings', 'heading_appearance_settings');
   setTxt('subAppearanceSettings', 'sub_appearance_settings');
   setTxt('lblThemeSubstrate', 'lbl_theme_substrate');
@@ -2915,6 +2994,348 @@ function applyDashboardLanguage(lang) {
     updateHUDStatus(Boolean(dashboardData.wsConnected));
     renderTimeTrackingTab(dashboardData);
     renderMediaAnalyticsTab(dashboardData);
+  }
+}
+
+
+// =============================================================================
+// Feature 7 & 8: Wellbeing Sentinel, Annotations, Budgets & Blacklist
+// =============================================================================
+
+let starredDomains = [];
+let domainAnnotations = {};
+let trackingBlacklist = [];
+let domainBudgets = {};
+let pomodoroController = null;
+let activeEditingDomainNote = null;
+
+function isDomainPinned(domain) {
+  if (!domain || !Array.isArray(starredDomains)) return false;
+  return starredDomains.includes(String(domain).trim().toLowerCase());
+}
+
+async function toggleDomainPin(domain) {
+  if (!domain) return;
+  const domLower = String(domain).trim().toLowerCase();
+  const idx = starredDomains.indexOf(domLower);
+  if (idx >= 0) {
+    starredDomains.splice(idx, 1);
+  } else {
+    starredDomains.push(domLower);
+  }
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    await browserAPI.storage.local.set({ starred_domains: starredDomains });
+  }
+  if (dashboardData && dashboardData.domains) {
+    renderTimeTrackingTab(dashboardData);
+  }
+}
+
+function openDomainNoteModal(domain) {
+  if (!domain) return;
+  activeEditingDomainNote = domain;
+  const modal = document.getElementById('modalDomainNote');
+  const nameEl = document.getElementById('noteDomainName');
+  const inputEl = document.getElementById('inputDomainNoteText');
+  if (nameEl) nameEl.textContent = domain;
+  if (inputEl) {
+    const existing = (domainAnnotations && domainAnnotations[domain.toLowerCase()]) || '';
+    inputEl.value = existing;
+  }
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeDomainNoteModal() {
+  const modal = document.getElementById('modalDomainNote');
+  if (modal) modal.classList.add('hidden');
+  activeEditingDomainNote = null;
+}
+
+async function saveDomainNote(domain, noteText) {
+  if (!domain) return;
+  const domLower = String(domain).trim().toLowerCase();
+  const cleanNote = typeof noteText === 'string' ? noteText.trim() : '';
+  if (cleanNote) {
+    domainAnnotations[domLower] = cleanNote;
+  } else {
+    delete domainAnnotations[domLower];
+  }
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    await browserAPI.storage.local.set({ domain_annotations: domainAnnotations });
+  }
+  closeDomainNoteModal();
+  if (dashboardData && dashboardData.domains) {
+    renderTimeTrackingTab(dashboardData);
+  }
+}
+
+function renderBlacklistChips() {
+  const container = document.getElementById('blacklistChipsContainer');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+
+  trackingBlacklist.forEach(pattern => {
+    const chip = document.createElement('div');
+    chip.className = 'blacklist-chip';
+    chip.setAttribute('data-pattern', pattern);
+
+    const txt = document.createElement('span');
+    txt.className = 'chip-text';
+    txt.textContent = pattern;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-remove-chip';
+    btn.setAttribute('aria-label', 'Remove ' + pattern);
+    btn.textContent = '✕';
+    btn.addEventListener('click', () => {
+      removeBlacklistPattern(pattern);
+    });
+
+    chip.appendChild(txt);
+    chip.appendChild(btn);
+    container.appendChild(chip);
+  });
+}
+
+async function addBlacklistPattern(pattern) {
+  if (!pattern || typeof pattern !== 'string') return;
+  const clean = pattern.trim().toLowerCase();
+  if (!clean || clean.length > 128) return;
+  if (!trackingBlacklist.includes(clean)) {
+    trackingBlacklist.push(clean);
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      await browserAPI.storage.local.set({ tracking_blacklist: trackingBlacklist });
+    }
+    if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+      browserAPI.runtime.sendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist }).catch(() => {});
+    }
+    renderBlacklistChips();
+  }
+}
+
+async function removeBlacklistPattern(pattern) {
+  if (!pattern) return;
+  const clean = pattern.trim().toLowerCase();
+  trackingBlacklist = trackingBlacklist.filter(p => p !== clean);
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    await browserAPI.storage.local.set({ tracking_blacklist: trackingBlacklist });
+  }
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist }).catch(() => {});
+  }
+  renderBlacklistChips();
+}
+
+async function purgeDomainData(targetDomain) {
+  if (!targetDomain) return;
+  const clean = String(targetDomain).trim().toLowerCase();
+  if (!clean) return;
+
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    try {
+      const resp = await browserAPI.runtime.sendMessage({ action: 'PURGE_DOMAIN_HISTORY', domain: clean });
+      if (resp && resp.success) {
+        if (dashboardData && dashboardData.domains) {
+          delete dashboardData.domains[clean];
+          Object.keys(dashboardData.domains).forEach(dom => {
+            if (dom.toLowerCase() === clean) delete dashboardData.domains[dom];
+          });
+        }
+        await refreshDashboard(false);
+        showToast(currentLang === 'hi' ? `${clean} का इतिहास मिटा दिया गया` : `Historical records purged for ${clean}`, false);
+        return resp;
+      }
+    } catch (_) {}
+  }
+}
+
+function renderDomainBudgetsList() {
+  const container = document.getElementById('domainBudgetsList');
+  if (!container) return;
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+
+  const entries = Object.entries(domainBudgets);
+  entries.forEach(([dom, mins]) => {
+    let currentSec = 0;
+    if (dashboardData && dashboardData.domains && dashboardData.domains[dom]) {
+      currentSec = dashboardData.domains[dom].totalSeconds || 0;
+    }
+    const status = _WellbeingBlacklist ? _WellbeingBlacklist.checkDomainBudgetStatus(currentSec, mins) : { percent: Math.round((currentSec / (mins * 60)) * 100), reached: (currentSec >= mins * 60), warning80: (currentSec >= mins * 60 * 0.8) };
+
+    const row = document.createElement('div');
+    row.className = 'budget-item-row';
+    row.setAttribute('data-domain', dom);
+
+    const info = document.createElement('div');
+    info.className = 'budget-item-info';
+
+    const dName = document.createElement('span');
+    dName.className = 'budget-domain-name';
+    dName.textContent = dom;
+
+    const bLimit = document.createElement('span');
+    bLimit.className = 'budget-domain-limit';
+    bLimit.textContent = `Limit: ${mins}m / Spent: ${Math.floor(currentSec / 60)}m (${status.percent}%)`;
+
+    info.appendChild(dName);
+    info.appendChild(bLimit);
+
+    const badgeContainer = document.createElement('div');
+    badgeContainer.className = 'budget-badge-container';
+
+    if (status.reached) {
+      const reachedBadge = document.createElement('span');
+      reachedBadge.className = 'badge-budget-reached';
+      reachedBadge.textContent = '🛑 Limit Reached';
+      badgeContainer.appendChild(reachedBadge);
+    } else if (status.warning80) {
+      const warnBadge = document.createElement('span');
+      warnBadge.className = 'badge-budget-warning';
+      warnBadge.textContent = '⚠️ 80% Limit';
+      badgeContainer.appendChild(warnBadge);
+    }
+
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove-budget';
+    btnDel.setAttribute('aria-label', 'Remove budget for ' + dom);
+    btnDel.textContent = '🗑️';
+    btnDel.addEventListener('click', () => {
+      removeDomainBudget(dom);
+    });
+    badgeContainer.appendChild(btnDel);
+
+    row.appendChild(info);
+    row.appendChild(badgeContainer);
+    container.appendChild(row);
+  });
+}
+
+async function setDomainBudget(domain, minutes) {
+  if (!domain) return;
+  const clean = String(domain).trim().toLowerCase();
+  const mins = Number(minutes);
+  if (isNaN(mins) || mins <= 0) return;
+  domainBudgets[clean] = Math.round(mins);
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    await browserAPI.storage.local.set({ domain_budgets: domainBudgets });
+  }
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets }).catch(() => {});
+  }
+  renderDomainBudgetsList();
+  if (dashboardData && dashboardData.domains) {
+    renderTimeTrackingTab(dashboardData);
+  }
+}
+
+async function removeDomainBudget(domain) {
+  if (!domain) return;
+  const clean = String(domain).trim().toLowerCase();
+  delete domainBudgets[clean];
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    await browserAPI.storage.local.set({ domain_budgets: domainBudgets });
+  }
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets }).catch(() => {});
+  }
+  renderDomainBudgetsList();
+  if (dashboardData && dashboardData.domains) {
+    renderTimeTrackingTab(dashboardData);
+  }
+}
+
+function initPomodoroWidget() {
+  if (pomodoroController) return;
+
+  const updateUI = (state) => {
+    const timeDisplay = document.getElementById('pomodoroTimeDisplay');
+    const modeBadge = document.getElementById('pomodoroModeBadge');
+    const startBtn = document.getElementById('btnStartPomodoro');
+
+    if (timeDisplay && state.formattedTime) {
+      timeDisplay.textContent = state.formattedTime;
+    }
+    if (modeBadge) {
+      modeBadge.className = state.mode === 'focus' ? 'badge-focus' : 'badge-break';
+      modeBadge.textContent = state.mode === 'focus' ? t('pomodoro_focus_badge') : t('pomodoro_break_badge');
+    }
+    if (startBtn) {
+      if (state.status === 'running') {
+        startBtn.textContent = '⏳ Running';
+        startBtn.disabled = true;
+      } else {
+        startBtn.textContent = '▶️ Start';
+        startBtn.disabled = false;
+      }
+    }
+  };
+
+  const onBreakTrigger = (state) => {
+    try {
+      const heroVideo = document.getElementById('heroVideoPlayer');
+      if (heroVideo && !heroVideo.paused) {
+        heroVideo.pause();
+      }
+      const playBtn = document.getElementById('btnHeroPlayPause');
+      if (playBtn) playBtn.textContent = '▶';
+    } catch (_) {}
+
+    updateUI(state);
+    showToast(currentLang === 'hi' ? '🧘 फोकस ब्लॉक पूर्ण! 5 मिनट का ब्रेक लें।' : '🧘 Focus block complete! Take a 5-minute break.', false);
+  };
+
+  const onFocusTrigger = (state) => {
+    updateUI(state);
+    showToast(currentLang === 'hi' ? '⚡ ब्रेक समाप्त! नया फोकस ब्लॉक शुरू करने के लिए तैयार।' : '⚡ Break finished! Ready to begin new focus block.', false);
+  };
+
+  if (_WellbeingBlacklist && typeof _WellbeingBlacklist.createPomodoroController === 'function') {
+    pomodoroController = _WellbeingBlacklist.createPomodoroController({
+      autoPauseMedia: true,
+      soundChime: true
+    });
+  } else {
+    pomodoroController = {
+      getState: () => ({ mode: 'focus', status: 'idle', remainingSeconds: 25 * 60, formattedTime: '25:00' }),
+      start: () => {},
+      pause: () => {},
+      reset: () => {},
+      tick: () => {},
+      playSyntheticChime: () => false
+    };
+  }
+
+  const btnStart = document.getElementById('btnStartPomodoro');
+  const btnPause = document.getElementById('btnPausePomodoro');
+  const btnReset = document.getElementById('btnResetPomodoro');
+
+  if (btnStart) {
+    btnStart.addEventListener('click', () => {
+      pomodoroController.start({
+        onTick: updateUI,
+        onBreak: onBreakTrigger,
+        onFocus: onFocusTrigger
+      });
+      updateUI(pomodoroController.getState());
+    });
+  }
+  if (btnPause) {
+    btnPause.addEventListener('click', () => {
+      pomodoroController.pause({ onTick: updateUI });
+      updateUI(pomodoroController.getState());
+    });
+  }
+  if (btnReset) {
+    btnReset.addEventListener('click', () => {
+      pomodoroController.reset({ onTick: updateUI });
+      updateUI(pomodoroController.getState());
+    });
   }
 }
 
@@ -3589,7 +4010,11 @@ function renderDomainTable(items) {
     if (selectedDomainCategory === 'internal' && !isInternal) return false;
 
     if (!domainSearchQuery) return true;
-    return it.domain.toLowerCase().includes(domainSearchQuery.toLowerCase());
+    const q = domainSearchQuery.toLowerCase();
+    const domMatch = it.domain.toLowerCase().includes(q);
+    const note = (domainAnnotations && domainAnnotations[it.domain.toLowerCase()]) || '';
+    const noteMatch = note && note.toLowerCase().includes(q);
+    return domMatch || noteMatch;
   });
 
   if (domainSortMode === 'time_desc') {
@@ -3634,6 +4059,20 @@ function renderDomainTable(items) {
     tbody.removeChild(tbody.firstChild);
   }
 
+  // Starred / Pinned Domains pinned to the top of the table
+  if (starredDomains && starredDomains.length > 0) {
+    const pinned = [];
+    const unpinned = [];
+    filtered.forEach(it => {
+      if (starredDomains.includes(String(it.domain).toLowerCase())) {
+        pinned.push(it);
+      } else {
+        unpinned.push(it);
+      }
+    });
+    filtered = pinned.concat(unpinned);
+  }
+
   filtered.forEach(it => {
     if (_DomainTable && typeof _DomainTable.buildDomainTableRow === 'function') {
       const modularTr = _DomainTable.buildDomainTableRow(it, {
@@ -3641,7 +4080,16 @@ function renderDomainTable(items) {
         formatDuration,
         formatTimestamp,
         t,
-        isInternalDomain
+        isInternalDomain,
+        starredDomains,
+        domainAnnotations,
+        onToggleStar: toggleDomainPin,
+        onEditNote: openDomainNoteModal,
+        getBudgetStatus: (domain, computedSec) => {
+          const mins = domainBudgets[String(domain).toLowerCase()];
+          if (!mins) return null;
+          return _WellbeingBlacklist ? _WellbeingBlacklist.checkDomainBudgetStatus(computedSec, mins) : null;
+        }
       });
       if (modularTr) {
         tbody.appendChild(modularTr);
@@ -5509,6 +5957,70 @@ function setupEventListeners() {
   if (dashboardListenersAttached) return;
   dashboardListenersAttached = true;
 
+  // Feature 7: Blacklist & Domain Notes Event Listeners
+  const btnAddBlacklist = document.getElementById('btnAddBlacklistPattern');
+  const inputBlacklist = document.getElementById('inputBlacklistPattern');
+  if (btnAddBlacklist && inputBlacklist) {
+    btnAddBlacklist.addEventListener('click', () => {
+      const val = inputBlacklist.value.trim();
+      if (val) {
+        addBlacklistPattern(val);
+        inputBlacklist.value = '';
+      }
+    });
+    inputBlacklist.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = inputBlacklist.value.trim();
+        if (val) {
+          addBlacklistPattern(val);
+          inputBlacklist.value = '';
+        }
+      }
+    });
+  }
+
+  const btnPurge = document.getElementById('btnPurgeDomainHistory');
+  const inputPurge = document.getElementById('inputPurgeDomain');
+  if (btnPurge && inputPurge) {
+    btnPurge.addEventListener('click', async () => {
+      const val = inputPurge.value.trim();
+      if (val) {
+        await purgeDomainData(val);
+        inputPurge.value = '';
+      }
+    });
+  }
+
+  // Feature 8: Domain Daily Budgets Event Listeners
+  const btnAddBudget = document.getElementById('btnAddBudget');
+  const inputBudgetDomain = document.getElementById('inputBudgetDomain');
+  const inputBudgetMinutes = document.getElementById('inputBudgetMinutes');
+  if (btnAddBudget && inputBudgetDomain && inputBudgetMinutes) {
+    btnAddBudget.addEventListener('click', () => {
+      const dom = inputBudgetDomain.value.trim();
+      const mins = Number(inputBudgetMinutes.value);
+      if (dom && mins > 0) {
+        setDomainBudget(dom, mins);
+        inputBudgetDomain.value = '';
+      }
+    });
+  }
+
+  // Feature 7: Domain Note Modal Event Listeners
+  const btnSaveNote = document.getElementById('btnSaveDomainNote');
+  const btnCancelNote = document.getElementById('btnCancelDomainNote');
+  const btnCancelNoteX = document.getElementById('btnCancelDomainNoteX');
+  const inputNoteText = document.getElementById('inputDomainNoteText');
+  if (btnSaveNote) {
+    btnSaveNote.addEventListener('click', () => {
+      if (activeEditingDomainNote) {
+        saveDomainNote(activeEditingDomainNote, inputNoteText ? inputNoteText.value : '');
+      }
+    });
+  }
+  if (btnCancelNote) btnCancelNote.addEventListener('click', closeDomainNoteModal);
+  if (btnCancelNoteX) btnCancelNoteX.addEventListener('click', closeDomainNoteModal);
+
   // 0. Multi-Browser Dropdown Filter
   const browserFilterSelect = document.getElementById('browserFilterSelect');
   if (browserFilterSelect) {
@@ -7007,7 +7519,11 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         'audioLabConfig',
         'userThemePreferences',
         'audioHapticsConfig',
-        'domain_category_overrides'
+        'domain_category_overrides',
+        'starred_domains',
+        'domain_annotations',
+        'tracking_blacklist',
+        'domain_budgets'
       ], (res) => {
         let lang = 'en';
         if (res && res.language) {
@@ -7031,6 +7547,22 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
             if (localTheme) applyTheme(localTheme);
           } catch (_) {}
         }
+        if (res && Array.isArray(res.starred_domains)) {
+          starredDomains = res.starred_domains;
+        }
+        if (res && res.domain_annotations && typeof res.domain_annotations === 'object') {
+          domainAnnotations = res.domain_annotations;
+        }
+        if (res && Array.isArray(res.tracking_blacklist)) {
+          trackingBlacklist = res.tracking_blacklist;
+        }
+        if (res && res.domain_budgets && typeof res.domain_budgets === 'object') {
+          domainBudgets = res.domain_budgets;
+        }
+        renderBlacklistChips();
+        renderDomainBudgetsList();
+        initPomodoroWidget();
+
         if (res && res.audioHapticsConfig) {
           if (typeof res.audioHapticsConfig.enabled === 'boolean') sentinelHaptics.enabled = res.audioHapticsConfig.enabled;
           if (typeof res.audioHapticsConfig.volume === 'number') sentinelHaptics.masterGain = res.audioHapticsConfig.volume;
@@ -7087,6 +7619,24 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
       });
     }
   });
+}
+
+if (typeof window !== 'undefined') {
+  window.toggleDomainPin = toggleDomainPin;
+  window.saveDomainNote = saveDomainNote;
+  window.openDomainNoteModal = openDomainNoteModal;
+  window.closeDomainNoteModal = closeDomainNoteModal;
+  window.addBlacklistPattern = addBlacklistPattern;
+  window.removeBlacklistPattern = removeBlacklistPattern;
+  window.purgeDomainData = purgeDomainData;
+  window.setDomainBudget = setDomainBudget;
+  window.removeDomainBudget = removeDomainBudget;
+  window.initPomodoroWidget = initPomodoroWidget;
+  window.getPomodoroController = () => pomodoroController;
+  window.getStarredDomains = () => starredDomains;
+  window.getDomainAnnotations = () => domainAnnotations;
+  window.getTrackingBlacklist = () => trackingBlacklist;
+  window.getDomainBudgets = () => domainBudgets;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
