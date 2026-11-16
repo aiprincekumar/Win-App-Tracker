@@ -257,11 +257,11 @@ async function runBlackoutTests() {
   assert(btnFsBlock.includes('if (!video) return false;'), 'func must return false immediately if frame lacks video');
   console.log('  ✅ Early frame safety guard (!video) verified in func');
 
-  // 5.4 Priority chain verification: floatingBtn.click() > controller > video.requestFullscreen
+  // 5.4 Priority chain verification: floatingBtn.click() > native requestFullscreen > controller
   assert(btnFsBlock.includes('floatingBtn.click()'), 'func must invoke floatingBtn.click() when floating button is present');
-  assert(btnFsBlock.includes('ctrl.toggle'), 'func must invoke ctrl.toggle as secondary priority');
-  assert(btnFsBlock.includes('video.requestFullscreen'), 'func must invoke video.requestFullscreen as native fallback');
-  console.log('  ✅ 3-tier priority execution chain (floating button -> controller -> native) verified');
+  assert(btnFsBlock.includes('video.requestFullscreen'), 'func must invoke video.requestFullscreen as native fullscreen');
+  assert(btnFsBlock.includes('ctrl.toggle'), 'func must invoke ctrl.toggle as fallback priority');
+  console.log('  ✅ 3-tier priority execution chain (floating button -> native -> controller) verified');
 
   // 5.5 Concise line count verification
   const lineCount = btnFsBlock.split('\n').length;
@@ -303,13 +303,29 @@ async function runBlackoutTests() {
     assert.strictEqual(floatingBtnClicked, true, 'Floating button must be clicked in media frame');
     console.log('  ✅ Simulation 5.6b: Frame with floating button clicked directly and returned true');
 
-    // 5.6c Media frame with controller simulation (no floating button)
-    let controllerToggleCalled = false;
-    let controllerTarget = null;
-    const mockVid = { requestFullscreen: () => {} };
-    const mediaWithCtrlContext = vm.createContext({
+    // 5.6c Media frame with native requestFullscreen (no floating button)
+    let nativeFsCalled = false;
+    const mockVid = { requestFullscreen: () => { nativeFsCalled = true; return Promise.resolve(); } };
+    const mediaWithNativeContext = vm.createContext({
       document: {
         querySelector: (sel) => (sel === 'video' ? mockVid : null),
+        getElementById: () => null
+      },
+      window: {},
+      globalThis: {}
+    });
+    const nativeResult = vm.runInContext(funcBody, mediaWithNativeContext);
+    assert.strictEqual(nativeResult, true, 'Frame with native requestFullscreen must return true');
+    assert.strictEqual(nativeFsCalled, true, 'Direct video.requestFullscreen must be called when floating button is absent');
+    console.log('  ✅ Simulation 5.6c: Frame without floating button invoked video.requestFullscreen directly');
+
+    // 5.6d Media frame with controller simulation (no floating button, no native requestFullscreen)
+    let controllerToggleCalled = false;
+    let controllerTarget = null;
+    const mockVidNoFs = {};
+    const mediaWithCtrlContext = vm.createContext({
+      document: {
+        querySelector: (sel) => (sel === 'video' ? mockVidNoFs : null),
         getElementById: () => null
       },
       window: {
@@ -324,9 +340,9 @@ async function runBlackoutTests() {
     });
     const ctrlResult = vm.runInContext(funcBody, mediaWithCtrlContext);
     assert.strictEqual(ctrlResult, true, 'Frame with controller must return true');
-    assert.strictEqual(controllerToggleCalled, true, 'Controller.toggle must be called when floating button is absent');
-    assert.strictEqual(controllerTarget, mockVid, 'Controller must target the video element directly');
-    console.log('  ✅ Simulation 5.6c: Frame without floating button invoked controller directly on video');
+    assert.strictEqual(controllerToggleCalled, true, 'Controller.toggle must be called when floating button and native requestFullscreen are absent');
+    assert.strictEqual(controllerTarget, mockVidNoFs, 'Controller must target the video element directly');
+    console.log('  ✅ Simulation 5.6d: Frame without floating button and without native requestFullscreen invoked controller directly');
   }
 
   // ---------------------------------------------------------------------------

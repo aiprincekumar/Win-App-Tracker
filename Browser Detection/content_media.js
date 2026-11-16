@@ -2129,7 +2129,7 @@
             if (!hasMedia) break;
 
             if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
-              window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
+              window.__SentinelFullscreenController.toggle(null);
             } else {
               const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
               if (floatingBtn) {

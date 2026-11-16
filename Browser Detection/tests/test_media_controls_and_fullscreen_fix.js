@@ -546,11 +546,11 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   const contentMediaCode = fs.readFileSync(path.join(baseDir, 'content_media.js'), 'utf8');
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
-  // 3.1 Verify content_media.js prioritizes __SentinelFullscreenController.toggle(null, { forceWeb: true }) as Priority 1
+  // 3.1 Verify content_media.js prioritizes __SentinelFullscreenController.toggle(null) as Priority 1
   assert(contentMediaCode.includes("window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function'"),
     'content_media.js must check window.__SentinelFullscreenController.toggle as Priority 1');
-  assert(contentMediaCode.includes('window.__SentinelFullscreenController.toggle(null, { forceWeb: true });'),
-    'content_media.js must call __SentinelFullscreenController.toggle(null, { forceWeb: true }) as Priority 1');
+  assert(contentMediaCode.includes('window.__SentinelFullscreenController.toggle(null);'),
+    'content_media.js must call __SentinelFullscreenController.toggle(null) as Priority 1');
   assert(contentMediaCode.includes("const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');"),
     'content_media.js must check document.getElementById("__sentinel_fs_floating_btn__") as Priority 2 fallback');
   assert(contentMediaCode.includes('floatingBtn.click();'),
@@ -581,8 +581,8 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   assert(floatClickIdx !== -1, 'Must invoke floatingBtn.click()');
   assert(ctrlToggleIdx !== -1, 'Must invoke controller toggle');
   assert(nativeFsIdx !== -1, 'Must invoke native video.requestFullscreen fallback');
-  assert(floatClickIdx < ctrlToggleIdx, 'Priority 1 must be floating button click before controller toggle');
-  assert(ctrlToggleIdx < nativeFsIdx, 'Priority 2 must be controller toggle before native requestFullscreen');
+  assert(floatClickIdx < nativeFsIdx, 'Priority 1 must be floating button click before native requestFullscreen');
+  assert(nativeFsIdx < ctrlToggleIdx, 'Priority 2 must be native requestFullscreen before controller toggle');
 
   assert(contentMediaCode.includes('if (!hasMedia) break;'),
     'content_media.js case toggle_fullscreen must ignore non-media frames via !hasMedia guard');
@@ -640,9 +640,9 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
     sandbox.handleMediaControl('toggle_fullscreen');
 
     assert.strictEqual(controllerToggleCalled, true, 'Controller toggle must be called when controller exists (Priority 1)');
-    assert.strictEqual(controllerForceWeb, true, 'forceWeb must be true for deterministic web fullscreen');
+    assert.strictEqual(controllerForceWeb, false, 'forceWeb must be false to prevent web fullscreen blackout');
     assert.strictEqual(floatingBtnClicked, false, 'Floating button click must NOT be triggered when controller exists directly');
-    console.log('  ✅ Priority 1 verified: Controller.toggle(null, { forceWeb: true }) called directly in content script');
+    console.log('  ✅ Priority 1 verified: Controller.toggle(null) called directly in content script without forced web fullscreen');
   }
 
   // 3.4 Simulation: When Controller is Absent but Floating Button Exists (Priority 2 Fallback in content_media.js)

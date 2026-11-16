@@ -817,10 +817,8 @@
           (video ? ((typeof video.closest === 'function' ? video.closest('#movie_player, .html5-video-player, ytd-player, .player-container') : null) || video.parentElement) : null) ||
           video;
 
-        if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggleWebFullscreen === 'function') {
-          window.__SentinelFullscreenController.toggleWebFullscreen(targetContainer);
-        } else if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
-          window.__SentinelFullscreenController.toggle(targetContainer, { forceWeb: true });
+        if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+          window.__SentinelFullscreenController.toggle(targetContainer);
         } else {
           const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
           if (ytFsBtn) {

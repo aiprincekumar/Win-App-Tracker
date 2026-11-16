@@ -168,10 +168,13 @@
           max-width: 100vw !important;
           max-height: 100vh !important;
           z-index: 2147483647 !important;
-          background: #000000 !important;
           margin: 0 !important;
           padding: 0 !important;
           box-sizing: border-box !important;
+        }
+
+        #movie_player.sentinel-web-fullscreen {
+          background: #000000 !important;
         }
 
         /* Direct HTML5 <video> styled with sentinel-web-fullscreen */
@@ -188,7 +191,7 @@
           object-fit: contain !important;
           margin: auto !important;
           z-index: 2147483647 !important;
-          background: #000000 !important;
+          background: transparent !important;
           box-sizing: border-box !important;
         }
 
@@ -649,15 +652,12 @@
       return false;
     }
 
-    const hasUserActivation = typeof navigator !== 'undefined' &&
-      Boolean(navigator.userActivation && navigator.userActivation.isActive);
-
-    // If caller explicitly requested web fullscreen or document lacks active user gesture
-    if ((options && options.forceWeb) || !hasUserActivation) {
+    // If caller explicitly requested web fullscreen
+    if (options && options.forceWeb) {
       return enterWebFullscreen(targetEl);
     }
 
-    // Direct in-page user gesture: try native first, fall back to web
+    // Direct in-page user gesture or programmatic trigger: try native first, fall back to web
     return enterNativeFullscreen(targetEl);
   }
 
@@ -699,9 +699,7 @@
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
-
-      // Synthetic event (e.isTrusted === false) or Shift+Click: use Web Fullscreen directly
-      if (!e.isTrusted || e.shiftKey) {
+      if (e.shiftKey) {
         if (isFullscreenActive()) {
           exitFullscreen();
         } else {

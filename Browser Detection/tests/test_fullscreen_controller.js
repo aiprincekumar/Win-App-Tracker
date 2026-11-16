@@ -235,10 +235,14 @@ console.log('\nTest 6: Integration with content_media.js, inject_main_world.js &
 }
 
 // ---------------------------------------------------------------------------
-// Test 7: Simulated DOM Lifecycle & Controller API Execution
+// Extended Tests Runner (Tests 7 - 11)
 // ---------------------------------------------------------------------------
-console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
-{
+async function runExtendedTests() {
+  // ---------------------------------------------------------------------------
+  // Test 7: Simulated DOM Lifecycle & Controller API Execution
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
+  {
   // Build a lightweight mock DOM sandbox to test Controller methods
   const mockClassList = () => {
     const classes = new Set();
@@ -401,8 +405,8 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   // Verify initial state: false
   assert.strictEqual(controller.isFullscreenActive(), false, 'Fullscreen must initially be inactive');
 
-  // Trigger Web Fullscreen via controller.toggle()
-  const entered = controller.toggle(mockMoviePlayer);
+  // Trigger Fullscreen via controller.toggle() with fallback to web
+  const entered = await controller.toggle(mockMoviePlayer);
   assert.strictEqual(entered, true, 'controller.toggle must succeed and enter web fullscreen');
   assert.strictEqual(mockMoviePlayer.classList.contains('sentinel-web-fullscreen'), true, '#movie_player must receive .sentinel-web-fullscreen');
   assert.strictEqual(mockDoc.documentElement.classList.contains('sentinel-fullscreen-active'), true, 'html must receive .sentinel-fullscreen-active');
@@ -422,12 +426,8 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   assert.strictEqual(controller.isFullscreenActive(), false, 'controller.isFullscreenActive() must report false');
 
   console.log('  ✅ Simulated DOM Lifecycle: enterWebFullscreen, debounce gating, aliases, and container targeting all verified clean');
-}
+  }
 
-// ---------------------------------------------------------------------------
-// Extended Tests Runner (Tests 8 - 11)
-// ---------------------------------------------------------------------------
-async function runExtendedTests() {
   // ---------------------------------------------------------------------------
   // Test 8: Synthetic vs. Trusted Gesture Differentiation (Section A)
   // ---------------------------------------------------------------------------
@@ -574,15 +574,15 @@ async function runExtendedTests() {
     const floatingBtn8 = mockDoc8.getElementById('__sentinel_fs_floating_btn__');
     assert(floatingBtn8, 'Floating button must be attached to DOM');
 
-    // 8.1 Synthetic Click (isTrusted: false) -> invokes Web Fullscreen directly
+    // 8.1 Shift+Click -> invokes Web Fullscreen directly
     floatingBtn8.dispatchEvent({
       type: 'click',
-      isTrusted: false,
+      shiftKey: true,
       stopPropagation: () => {},
       preventDefault: () => {}
     });
 
-    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), true, 'Synthetic click must enter web fullscreen');
+    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), true, 'Shift+click must enter web fullscreen');
     assert.strictEqual(mockDoc8.documentElement.classList.contains('sentinel-fullscreen-active'), true, 'html must receive .sentinel-fullscreen-active');
     assert.strictEqual(controller8.isFullscreenActive(), true, 'isFullscreenActive must be true');
 
@@ -590,32 +590,31 @@ async function runExtendedTests() {
     assert(osdEl, 'OSD element must exist');
     const osdText = osdEl.children.map(c => c.textContent).join(' ');
     assert(osdText.includes('Web Fullscreen'), `OSD must display Web Fullscreen, got: "${osdText}"`);
-    console.log('  ✅ Synthetic click (isTrusted: false) engages Web Fullscreen with OSD "Web Fullscreen" directly');
+    console.log('  ✅ Shift+Click engages Web Fullscreen with OSD "Web Fullscreen" directly');
 
-    // 8.2 Synthetic Click toggle exit
+    // 8.2 Shift+Click toggle exit
     floatingBtn8.dispatchEvent({
       type: 'click',
-      isTrusted: false,
+      shiftKey: true,
       stopPropagation: () => {},
       preventDefault: () => {}
     });
-    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), false, 'Second synthetic click must exit web fullscreen');
+    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), false, 'Second Shift+click must exit web fullscreen');
     assert.strictEqual(controller8.isFullscreenActive(), false, 'isFullscreenActive must be false after exit');
-    console.log('  ✅ Second synthetic click cleanly exits Web Fullscreen');
+    console.log('  ✅ Second Shift+click cleanly exits Web Fullscreen');
 
-    // 8.3 Trusted Click (isTrusted: true) -> calls toggle() and routes to native fullscreen
-    sandbox8.navigator.userActivation.isActive = true;
+    // 8.3 Standard Click (without shift) -> calls toggle() and routes to native fullscreen
     ytNativeBtnClicked = false;
 
     floatingBtn8.dispatchEvent({
       type: 'click',
-      isTrusted: true,
+      shiftKey: false,
       stopPropagation: () => {},
       preventDefault: () => {}
     });
 
-    assert.strictEqual(ytNativeBtnClicked, true, 'Trusted click with user activation must attempt native fullscreen entry');
-    console.log('  ✅ Trusted click (isTrusted: true) routes to native fullscreen toggle logic');
+    assert.strictEqual(ytNativeBtnClicked, true, 'Standard click must attempt native fullscreen entry');
+    console.log('  ✅ Standard click routes to native fullscreen toggle logic');
   }
 
   // ---------------------------------------------------------------------------
@@ -984,20 +983,19 @@ async function runExtendedTests() {
     assert(btnFsBlock.includes('if (!video) return false;'), 'func must abort early with return false in non-media frames');
 
     const floatClickIndex = btnFsBlock.indexOf('floatingBtn.click()');
-    const ctrlToggleIndex = btnFsBlock.indexOf('ctrl.toggle');
     const nativeFsIndex = btnFsBlock.indexOf('video.requestFullscreen');
+    const ctrlToggleIndex = btnFsBlock.indexOf('ctrl.toggle');
 
     assert(floatClickIndex !== -1, 'Must invoke floatingBtn.click()');
-    assert(ctrlToggleIndex !== -1, 'Must invoke controller toggle');
     assert(nativeFsIndex !== -1, 'Must invoke native video.requestFullscreen fallback');
+    assert(ctrlToggleIndex !== -1, 'Must invoke controller toggle');
 
-    // Priority 1: floatingBtn.click() -> Priority 2: ctrl.toggle -> Priority 3: video.requestFullscreen
-    assert(floatClickIndex < ctrlToggleIndex, 'Priority 1 must be floating button click before controller toggle');
-    assert(ctrlToggleIndex < nativeFsIndex, 'Priority 2 must be controller toggle before native requestFullscreen');
+    // Priority 1: floatingBtn.click() -> Priority 2: video.requestFullscreen -> Priority 3: ctrl.toggle
+    assert(floatClickIndex < nativeFsIndex, 'Priority 1 must be floating button click before native requestFullscreen');
+    assert(nativeFsIndex < ctrlToggleIndex, 'Priority 2 must be native requestFullscreen before controller toggle');
 
-    // Verify controller call options
-    assert(btnFsBlock.includes('toggleWebFullscreen') || btnFsBlock.includes('forceWeb: true'),
-      'Must invoke toggleWebFullscreen() or toggle with forceWeb: true');
+    // Verify controller call options: must NOT force web fullscreen
+    assert(!btnFsBlock.includes('forceWeb: true'), 'Must NOT force web fullscreen');
 
     // 11.4 Single-execution determinism & fallback structure
     assert(btnFsBlock.includes('browserAPI.scripting.executeScript'), 'Must attempt 0ms direct execution');
