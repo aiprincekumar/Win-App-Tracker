@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - YouTube Player Context Accessor
- * Finds active #movie_player element, video tags, and triggers native buttons.
+ * Finds active #movie_player element, video tags, and triggers native buttons/APIs.
  * 
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
  */
@@ -17,17 +17,39 @@
 
   function clickYouTubeButton(selector) {
     if (typeof document === 'undefined') return false;
-    const btn = document.querySelector(selector);
-    if (btn) {
-      btn.click();
+    try {
+      const btn = document.querySelector(selector);
+      if (btn && typeof btn.click === 'function') {
+        btn.click();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function dispatchKeyboardEvent(key, code, keyCode) {
+    if (typeof document === 'undefined') return false;
+    try {
+      const target = document.getElementById('movie_player') || document.querySelector('video') || document.body;
+      if (!target) return false;
+      const evt = new KeyboardEvent('keydown', {
+        key,
+        code,
+        keyCode,
+        which: keyCode,
+        bubbles: true,
+        cancelable: true
+      });
+      target.dispatchEvent(evt);
       return true;
-    }
+    } catch (_) {}
     return false;
   }
 
   const YouTubeContext = {
     getActivePlayerContext,
-    clickYouTubeButton
+    clickYouTubeButton,
+    dispatchKeyboardEvent
   };
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Injected Speed Ladder
  * Deterministic 0.25x playback rate stepper.
  * 

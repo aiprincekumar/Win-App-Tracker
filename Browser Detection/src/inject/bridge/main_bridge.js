@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Main World Event Bridge
  * Receives __MEDIA_SENTINEL_ACTION__ CustomEvents from isolated world and executes player commands.
  * 

@@ -32,6 +32,31 @@
   }
 
   const isTopFrame = window === window.top;
+
+  // =============================================================================
+  // Content Script Modular Subsystems (src/content/)
+  // =============================================================================
+  const _ElementDetector = typeof ElementDetector !== 'undefined' ? ElementDetector : (typeof require === 'function' ? require('./src/content/media/element_detector.js') : null);
+  const _PlaybackTracker = typeof PlaybackTracker !== 'undefined' ? PlaybackTracker : (typeof require === 'function' ? require('./src/content/media/playback_tracker.js') : null);
+  const _MetadataExtractor = typeof MetadataExtractor !== 'undefined' ? MetadataExtractor : (typeof require === 'function' ? require('./src/content/media/metadata_extractor.js') : null);
+  const _FloatingHUD = typeof FloatingHUD !== 'undefined' ? FloatingHUD : (typeof require === 'function' ? require('./src/content/fullscreen/floating_hud.js') : null);
+  const _IsolatedBridge = typeof IsolatedBridge !== 'undefined' ? IsolatedBridge : (typeof require === 'function' ? require('./src/content/bridge/isolated_bridge.js') : null);
+  const _DomObserver = typeof DomObserver !== 'undefined' ? DomObserver : (typeof require === 'function' ? require('./src/content/observers/dom_observer.js') : null);
+  const _TitleObserver = typeof TitleObserver !== 'undefined' ? TitleObserver : (typeof require === 'function' ? require('./src/content/observers/title_observer.js') : null);
+  const _RuntimeClient = typeof RuntimeClient !== 'undefined' ? RuntimeClient : (typeof require === 'function' ? require('./src/content/bridge/runtime_client.js') : null);
+
+  if (typeof window !== 'undefined') {
+    window.__SentinelContentModules = {
+      ElementDetector: _ElementDetector,
+      PlaybackTracker: _PlaybackTracker,
+      MetadataExtractor: _MetadataExtractor,
+      FloatingHUD: _FloatingHUD,
+      IsolatedBridge: _IsolatedBridge,
+      DomObserver: _DomObserver,
+      TitleObserver: _TitleObserver,
+      RuntimeClient: _RuntimeClient
+    };
+  }
   const monitoredElements = new WeakSet();
   let lastReportedState = null;
   let lastActivityTimestamp = Date.now();
@@ -2599,4 +2624,7 @@
     };
   }
 
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = (typeof window !== 'undefined' ? window.__SentinelMediaContext : null);
+  }
 })();

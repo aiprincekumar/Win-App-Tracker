@@ -24,6 +24,29 @@
   }
   window.__MEDIA_SENTINEL_MAIN_INJECTED__ = true;
 
+  // =============================================================================
+  // Main-World Injected Domain Modules (src/inject/)
+  // =============================================================================
+  const _HTML5Controller = typeof HTML5Controller !== 'undefined' ? HTML5Controller : (typeof require === 'function' ? require('./src/inject/player/html5_controller.js') : null);
+  const _YouTubeContext = typeof YouTubeContext !== 'undefined' ? YouTubeContext : (typeof require === 'function' ? require('./src/inject/player/youtube_context.js') : null);
+  const _OSDManager = typeof OSDManager !== 'undefined' ? OSDManager : (typeof require === 'function' ? require('./src/inject/osd/osd_manager.js') : null);
+  const _QualityLadder = typeof QualityLadder !== 'undefined' ? QualityLadder : (typeof require === 'function' ? require('./src/inject/ladders/quality_ladder.js') : null);
+  const _SpeedLadder = typeof SpeedLadder !== 'undefined' ? SpeedLadder : (typeof require === 'function' ? require('./src/inject/ladders/speed_ladder.js') : null);
+  const _MainBridge = typeof MainBridge !== 'undefined' ? MainBridge : (typeof require === 'function' ? require('./src/inject/bridge/main_bridge.js') : null);
+  const _WebAudioDSP = typeof WebAudioDSP !== 'undefined' ? WebAudioDSP : (typeof require === 'function' ? require('./src/inject/audio/web_audio_dsp.js') : null);
+
+  if (typeof window !== 'undefined') {
+    window.__SentinelInjectModules = {
+      HTML5Controller: _HTML5Controller,
+      YouTubeContext: _YouTubeContext,
+      OSDManager: _OSDManager,
+      QualityLadder: _QualityLadder,
+      SpeedLadder: _SpeedLadder,
+      MainBridge: _MainBridge,
+      WebAudioDSP: _WebAudioDSP
+    };
+  }
+
   // ---------------------------------------------------------------------------
   // Embedded Iframe Fullscreen Support & Policy Enforcement
   // ---------------------------------------------------------------------------
@@ -1399,4 +1422,15 @@
     syncStateToBridge();
   }, 1000);
 
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      HTML5Controller: _HTML5Controller,
+      YouTubeContext: _YouTubeContext,
+      OSDManager: _OSDManager,
+      QualityLadder: _QualityLadder,
+      SpeedLadder: _SpeedLadder,
+      MainBridge: _MainBridge,
+      WebAudioDSP: _WebAudioDSP
+    };
+  }
 })();

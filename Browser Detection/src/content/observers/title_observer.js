@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Document Title Observer
  * Observes document.title modifications during client-side navigation.
  * 
@@ -10,18 +10,22 @@
 
   function observeTitleChanges(callback) {
     if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return null;
-    const titleEl = document.querySelector('title');
-    if (!titleEl) return null;
+    try {
+      const titleEl = document.querySelector('title');
+      if (!titleEl) return null;
 
-    const observer = new MutationObserver(() => {
-      callback(document.title);
-    });
-    observer.observe(titleEl, {
-      characterData: true,
-      childList: true,
-      subtree: true
-    });
-    return observer;
+      const observer = new MutationObserver(() => {
+        callback(document.title);
+      });
+      observer.observe(titleEl, {
+        characterData: true,
+        childList: true,
+        subtree: true
+      });
+      return observer;
+    } catch (_) {
+      return null;
+    }
   }
 
   const TitleObserver = {

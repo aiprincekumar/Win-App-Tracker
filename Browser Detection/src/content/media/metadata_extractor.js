@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Content Metadata Extractor
  * Platform-specific media title, channel, and resolution detection.
  * 

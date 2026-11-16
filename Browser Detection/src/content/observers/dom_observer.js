@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - DOM Observer Subsystem
  * Observes dynamic SPA transitions and player mount/unmount.
  * 
@@ -8,16 +8,20 @@
 (function (global) {
   'use strict';
 
-  function observeDOMChanges(callback, target = document.body) {
+  function observeDOMChanges(callback, target = (typeof document !== 'undefined' ? document.body : null)) {
     if (typeof MutationObserver === 'undefined' || !target) return null;
-    const observer = new MutationObserver((mutations) => {
-      callback(mutations);
-    });
-    observer.observe(target, {
-      childList: true,
-      subtree: true
-    });
-    return observer;
+    try {
+      const observer = new MutationObserver((mutations) => {
+        callback(mutations);
+      });
+      observer.observe(target, {
+        childList: true,
+        subtree: true
+      });
+      return observer;
+    } catch (_) {
+      return null;
+    }
   }
 
   const DomObserver = {

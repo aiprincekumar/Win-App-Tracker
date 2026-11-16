@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Injected OSD Manager
  * On-Screen Display banner renderer with 100% W3C Trusted Types compliance (zero innerHTML).
  * 

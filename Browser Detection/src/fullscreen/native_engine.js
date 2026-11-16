@@ -1,19 +1,48 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Native Fullscreen Engine
- * Manages W3C requestFullscreen user gestures and exitFullscreen.
+ * Manages W3C requestFullscreen user gestures, user activation, and exitFullscreen.
+ * 
+ * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
  */
 
 (function (global) {
   'use strict';
 
+  function isUserActivationActive() {
+    try {
+      return !!(typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isNativeFullscreenActive() {
+    if (typeof document === 'undefined') return false;
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
   function requestNativeFullscreen(element) {
     if (!element) return false;
     try {
       if (typeof element.requestFullscreen === 'function') {
-        element.requestFullscreen().catch(() => {});
+        const p = element.requestFullscreen();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
         return true;
       } else if (typeof element.webkitRequestFullscreen === 'function') {
         element.webkitRequestFullscreen();
+        return true;
+      } else if (typeof element.mozRequestFullScreen === 'function') {
+        element.mozRequestFullScreen();
+        return true;
+      } else if (typeof element.msRequestFullscreen === 'function') {
+        element.msRequestFullscreen();
         return true;
       }
     } catch (_) {}
@@ -24,10 +53,19 @@
     if (typeof document === 'undefined') return false;
     try {
       if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
-        document.exitFullscreen().catch(() => {});
+        const p = document.exitFullscreen();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
         return true;
       } else if (document.webkitFullscreenElement && typeof document.webkitExitFullscreen === 'function') {
         document.webkitExitFullscreen();
+        return true;
+      } else if (document.mozCancelFullScreen && typeof document.mozCancelFullScreen === 'function') {
+        document.mozCancelFullScreen();
+        return true;
+      } else if (document.msExitFullscreen && typeof document.msExitFullscreen === 'function') {
+        document.msExitFullscreen();
         return true;
       }
     } catch (_) {}
@@ -35,6 +73,8 @@
   }
 
   const NativeEngine = {
+    isUserActivationActive,
+    isNativeFullscreenActive,
     requestNativeFullscreen,
     exitNativeFullscreen
   };

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Fullscreen Debounce Lock
  * Eliminates cross-world double-toggle race conditions via DOM timestamp attribute.
  * 
@@ -11,17 +11,21 @@
   const LOCK_ATTR = 'data-sentinel-fs-ts';
   const DEBOUNCE_MS = 350;
 
-  function acquireLock(target = document.documentElement) {
+  function acquireLock(target = (typeof document !== 'undefined' ? document.documentElement : null)) {
     if (!target) return true;
     const now = Date.now();
-    const lastStr = target.getAttribute(LOCK_ATTR);
-    if (lastStr) {
-      const last = Number(lastStr);
-      if (!isNaN(last) && now - last < DEBOUNCE_MS) {
-        return false;
+    try {
+      const lastStr = typeof target.getAttribute === 'function' ? target.getAttribute(LOCK_ATTR) : null;
+      if (lastStr) {
+        const last = Number(lastStr);
+        if (!isNaN(last) && now - last < DEBOUNCE_MS) {
+          return false;
+        }
       }
-    }
-    target.setAttribute(LOCK_ATTR, String(now));
+      if (typeof target.setAttribute === 'function') {
+        target.setAttribute(LOCK_ATTR, String(now));
+      }
+    } catch (_) {}
     return true;
   }
 

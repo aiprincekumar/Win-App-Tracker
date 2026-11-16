@@ -30,6 +30,25 @@
     return;
   }
 
+  // =============================================================================
+  // Modular Fullscreen Subsystems (src/fullscreen/ & src/content/fullscreen/)
+  // =============================================================================
+  const _NativeEngine = typeof NativeEngine !== 'undefined' ? NativeEngine : (typeof require === 'function' ? require('./src/fullscreen/native_engine.js') : null);
+  const _WebFullscreenEngine = typeof WebFullscreenEngine !== 'undefined' ? WebFullscreenEngine : (typeof require === 'function' ? require('./src/fullscreen/web_fullscreen_engine.js') : null);
+  const _FloatingButton = typeof FloatingButton !== 'undefined' ? FloatingButton : (typeof require === 'function' ? require('./src/fullscreen/floating_button.js') : null);
+  const _DebounceLock = typeof DebounceLock !== 'undefined' ? DebounceLock : (typeof require === 'function' ? require('./src/content/fullscreen/debounce_lock.js') : null);
+  const _CSSEngine = typeof CSSEngine !== 'undefined' ? CSSEngine : (typeof require === 'function' ? require('./src/content/fullscreen/css_engine.js') : null);
+
+  if (typeof window !== 'undefined') {
+    window.__SentinelFullscreenModules = {
+      NativeEngine: _NativeEngine,
+      WebFullscreenEngine: _WebFullscreenEngine,
+      FloatingButton: _FloatingButton,
+      DebounceLock: _DebounceLock,
+      CSSEngine: _CSSEngine
+    };
+  }
+
   const STYLE_ID = '__sentinel_fullscreen_controller_styles__';
   const FLOATING_BTN_ID = '__sentinel_fs_floating_btn__';
   const LOCK_ATTR = 'data-sentinel-fs-ts';

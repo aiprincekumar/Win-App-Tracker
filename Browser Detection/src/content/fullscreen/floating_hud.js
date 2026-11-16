@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Floating Fullscreen HUD Button
  * Injects a glassmorphism floating button with SVG icons onto active videos.
  * 
@@ -29,24 +29,36 @@
     return svg;
   }
 
-  function createFloatingButton(onToggle) {
+  function setSvgIcon(btn, isExit) {
+    if (!btn || typeof document === 'undefined') return;
+    while (btn.firstChild) {
+      btn.removeChild(btn.firstChild);
+    }
+    const pathData = isExit
+      ? 'M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3'
+      : 'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3';
+    const icon = createSvgIcon(pathData);
+    if (icon) btn.appendChild(icon);
+  }
+
+  function createFloatingButton(onToggle, isExit = false) {
     if (typeof document === 'undefined') return null;
     let btn = document.getElementById(FLOATING_BTN_ID);
     if (!btn) {
       btn = document.createElement('button');
       btn.id = FLOATING_BTN_ID;
-      btn.className = '__sentinel_fs_floating_btn__';
-      btn.title = 'Toggle Sentinel Fullscreen';
+      btn.className = 'sentinel-fs-floating-btn';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Toggle Fullscreen');
+      btn.title = 'Antigravity Sentinel Fullscreen (Click for Native, Shift+Click for Web)';
 
-      const icon = createSvgIcon('M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3');
-      if (icon) btn.appendChild(icon);
+      setSvgIcon(btn, isExit);
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (typeof onToggle === 'function') onToggle();
+        e.preventDefault();
+        if (typeof onToggle === 'function') onToggle(e);
       });
-
-      document.body.appendChild(btn);
     }
     return btn;
   }
@@ -55,6 +67,7 @@
     SVG_NS,
     FLOATING_BTN_ID,
     createSvgIcon,
+    setSvgIcon,
     createFloatingButton
   };
 

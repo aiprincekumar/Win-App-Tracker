@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - HTML5 Player Controller
  * Direct manipulation of standard HTML5 video elements.
  * 
@@ -10,24 +10,28 @@
 
   function play(video) {
     if (!video) return false;
-    video.play().catch(() => {});
+    try {
+      const p = video.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_) {}
     return true;
   }
 
   function pause(video) {
     if (!video) return false;
-    video.pause();
+    try {
+      video.pause();
+    } catch (_) {}
     return true;
   }
 
   function togglePlayPause(video) {
     if (!video) return false;
     if (video.paused) {
-      video.play().catch(() => {});
+      return play(video);
     } else {
-      video.pause();
+      return pause(video);
     }
-    return true;
   }
 
   function seekRelative(video, seconds) {
@@ -60,10 +64,33 @@
     return true;
   }
 
+  function setMuted(video, muted) {
+    if (!video) return false;
+    video.muted = !!muted;
+    return true;
+  }
+
+  function toggleMute(video) {
+    if (!video) return false;
+    video.muted = !video.muted;
+    return true;
+  }
+
   function setPlaybackRate(video, rate) {
     if (!video) return false;
     video.playbackRate = Math.max(0.25, Math.min(16.0, rate));
     return true;
+  }
+
+  function stepSpeed(video, direction) {
+    if (!video) return 1.0;
+    const SpeedLadder = (typeof module !== 'undefined' && module.exports)
+      ? require('../ladders/speed_ladder.js')
+      : (global.SpeedLadder || {});
+    const calc = SpeedLadder.calculateNextLadderSpeed || ((cur, dir) => Math.max(0.25, Math.min(2.0, cur + (dir === 'down' ? -0.25 : 0.25))));
+    const nextSpeed = calc(video.playbackRate || 1.0, direction);
+    video.playbackRate = nextSpeed;
+    return nextSpeed;
   }
 
   const HTML5Controller = {
@@ -73,7 +100,10 @@
     seekRelative,
     seekPercent,
     setVolume,
-    setPlaybackRate
+    setMuted,
+    toggleMute,
+    setPlaybackRate,
+    stepSpeed
   };
 
   if (typeof module !== 'undefined' && module.exports) {
