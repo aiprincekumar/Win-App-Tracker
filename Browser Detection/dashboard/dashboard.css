@@ -4904,3 +4904,366 @@ body.theme-light .btn-test-chime:hover {
   background: rgba(0, 0, 0, 0.10);
   border-color: var(--color-accent-primary, #10b981);
 }
+
+
+/* ========================================================================= */
+/* Phase 2: Feature 3 - Multi-Tab Live Media Deck                            */
+/* ========================================================================= */
+.media-deck-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.media-deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.media-deck-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.media-deck-icon {
+  font-size: 1.25rem;
+}
+
+.media-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.media-deck-card {
+  background: rgba(22, 30, 49, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  backdrop-filter: blur(12px);
+  position: relative;
+}
+
+.media-deck-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.deck-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deck-card-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.deck-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f8fafc;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.deck-status-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deck-status-pill.playing {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.deck-status-pill.paused {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.deck-status-pill.muted {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.deck-scrubber-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deck-mini-scrubber {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.deck-scrubber-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+
+.deck-time-display {
+  font-size: 0.7rem;
+  font-family: var(--font-mono, monospace);
+  color: #94a3b8;
+  align-self: flex-end;
+}
+
+.deck-card-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-deck-ctrl {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-deck-ctrl:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.deck-volume-slider {
+  width: 55px;
+  height: 4px;
+  accent-color: #10b981;
+  cursor: pointer;
+}
+
+.btn-deck-solo {
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #c084fc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-deck-solo:hover {
+  background: rgba(139, 92, 246, 0.28);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+.btn-deck-solo.solo-active {
+  background: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.deck-empty-state {
+  grid-column: 1 / -1;
+  padding: 32px 16px;
+  text-align: center;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.deck-empty-icon {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+
+/* ========================================================================= */
+/* Phase 2: Feature 4 - 60fps Canvas Audio Visualizer & VU Level Meters      */
+/* ========================================================================= */
+.visualizer-panel {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.visualizer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.visualizer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.visualizer-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.visualizer-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.visualizer-canvas-container {
+  width: 100%;
+  height: 120px;
+  background: #080b11;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+#canvasAudioVisualizer {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.vu-meters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.vu-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.vu-label {
+  width: 14px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.vu-meter {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vu-level {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #10b981 0%, #10b981 65%, #f59e0b 82%, #f43f5e 100%);
+  border-radius: 3px;
+  transition: width 0.06s ease-out;
+}
+
+.vu-db-text {
+  width: 48px;
+  text-align: right;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.vu-clip-badge {
+  align-self: flex-end;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  transition: all 0.15s ease;
+}
+
+.vu-clip-badge.clipping {
+  background: rgba(244, 63, 94, 0.25);
+  color: #f43f5e;
+  border-color: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
+}
+
+/* Light Theme Overrides */
+body.theme-light .media-deck-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .deck-card-title {
+  color: #0f172a;
+}
+
+body.theme-light .visualizer-panel {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .visualizer-title {
+  color: #0f172a;
+}
+
+body.theme-light .visualizer-canvas-container {
+  background: #0f172a;
+}

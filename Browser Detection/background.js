@@ -2006,6 +2006,255 @@ function synthesizeGlobalMediaState() {
 }
 
 /**
+ * Phase 2: Feature 3 - Multi-Tab Live Media Stream Discovery
+ * Discovers and aggregates all active, playing, and audible tabs across the browser.
+ * @returns {Promise<Array<Object>>}
+ */
+async function getAllActiveMediaStreams() {
+  const streamMap = new Map();
+
+  // 1. Ingest all media states tracked in tabMediaMap
+  for (const [tabId, mediaState] of tabMediaMap.entries()) {
+    if (!tabId || !mediaState) continue;
+    const pm = mediaState.primaryMedia || {};
+    const isPlaying = Boolean(mediaState.anyPlaying || pm.isPlaying || pm.state === 'playing');
+    const isBuffering = Boolean(pm.isBuffering || pm.state === 'buffering');
+    const isMuted = Boolean(pm.isMuted);
+    const domain = pm.domain || mediaState.domain || (mediaState.url ? extractDomain(mediaState.url) : '');
+    const title = pm.title || mediaState.title || (domain ? domain : `Tab ${tabId}`);
+    const url = pm.src || mediaState.url || '';
+    const favIconUrl = mediaState.favIconUrl || '';
+    const currentTime = Number.isFinite(pm.currentTime) ? Number(pm.currentTime) : 0;
+    const duration = Number.isFinite(pm.duration) ? Number(pm.duration) : 0;
+    const volume = (typeof pm.volume === 'number' && Number.isFinite(pm.volume)) ? pm.volume : 1.0;
+
+    streamMap.set(Number(tabId), {
+      tabId: Number(tabId),
+      windowId: mediaState.windowId || (pm && pm.windowId) || 0,
+      url: url,
+      domain: domain,
+      title: title,
+      favIconUrl: favIconUrl,
+      isAudible: Boolean(mediaState.isAudible || isPlaying),
+      isMuted: isMuted,
+      playbackState: isPlaying ? 'playing' : (isBuffering ? 'buffering' : 'paused'),
+      currentTime: currentTime,
+      duration: duration,
+      volume: volume
+    });
+  }
+
+  // 2. Discover audible tabs via chrome.tabs.query({ audible: true })
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const audibleTabs = await browserAPI.tabs.query({ audible: true });
+      if (Array.isArray(audibleTabs)) {
+        for (const t of audibleTabs) {
+          if (!t || !t.id) continue;
+          const numId = Number(t.id);
+          const domain = t.url ? extractDomain(t.url) : 'web';
+          const isMuted = Boolean(t.mutedInfo && t.mutedInfo.muted);
+          const existing = streamMap.get(numId);
+          if (existing) {
+            existing.isAudible = true;
+            if (t.windowId) existing.windowId = t.windowId;
+            if (t.title && (!existing.title || existing.title === 'Web Media')) existing.title = t.title;
+            if (t.favIconUrl) existing.favIconUrl = t.favIconUrl;
+            if (t.url) existing.url = t.url;
+            existing.isMuted = isMuted || existing.isMuted;
+          } else {
+            streamMap.set(numId, {
+              tabId: numId,
+              windowId: t.windowId || 0,
+              url: t.url || '',
+              domain: domain,
+              title: t.title || domain || `Tab ${numId}`,
+              favIconUrl: t.favIconUrl || '',
+              isAudible: true,
+              isMuted: isMuted,
+              playbackState: isMuted ? 'paused' : 'playing',
+              currentTime: 0,
+              duration: 0,
+              volume: isMuted ? 0 : 1.0
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[SentinelBackground] Error querying audible tabs:', err);
+  }
+
+  // 3. Enrich tab metadata (title, favicon, url, mute state) and remove closed tabs
+  const result = [];
+  for (const [tId, streamInfo] of streamMap.entries()) {
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
+        const liveTab = await browserAPI.tabs.get(tId).catch(() => null);
+        if (!liveTab) {
+          tabMediaMap.delete(tId);
+          continue;
+        }
+        if (liveTab.title && (!streamInfo.title || streamInfo.title === `Tab ${tId}`)) {
+          streamInfo.title = liveTab.title;
+        }
+        if (liveTab.favIconUrl && !streamInfo.favIconUrl) {
+          streamInfo.favIconUrl = liveTab.favIconUrl;
+        }
+        if (liveTab.url && (!streamInfo.url || !streamInfo.domain)) {
+          streamInfo.url = liveTab.url;
+          streamInfo.domain = extractDomain(liveTab.url);
+        }
+        if (liveTab.mutedInfo) {
+          streamInfo.isMuted = Boolean(liveTab.mutedInfo.muted);
+        }
+        if (typeof liveTab.audible === 'boolean') {
+          streamInfo.isAudible = liveTab.audible;
+        }
+      }
+    } catch (_) {}
+    result.push(streamInfo);
+  }
+
+  return result;
+}
+
+/**
+ * Phase 2: Feature 3 - Solo Tab Mode Execution
+ * Unmutes target tab while muting all other tabs in the browser.
+ * @param {number} soloTabId
+ * @returns {Promise<{success: boolean, soloTabId: number, mutedCount: number}>}
+ */
+async function handleSoloTabExecution(soloTabId) {
+  const targetId = Number(soloTabId);
+  if (!targetId) return { success: false, error: 'Invalid soloTabId' };
+
+  let mutedCount = 0;
+
+  // 1. Unmute target tab
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+      await browserAPI.tabs.update(targetId, { muted: false }).catch(() => {});
+    }
+  } catch (_) {}
+  safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'unmute' });
+  const targetMedia = tabMediaMap.get(targetId);
+  if (targetMedia && targetMedia.primaryMedia) {
+    targetMedia.primaryMedia.isMuted = false;
+  }
+
+  // 2. Query all other audible tabs and active tabs to mute them
+  const tabsToMute = new Set();
+
+  for (const [tId] of tabMediaMap.entries()) {
+    const numId = Number(tId);
+    if (numId && numId !== targetId) {
+      tabsToMute.add(numId);
+    }
+  }
+
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const allTabs = await browserAPI.tabs.query({});
+      if (Array.isArray(allTabs)) {
+        for (const t of allTabs) {
+          if (t && t.id && t.id !== targetId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
+            tabsToMute.add(t.id);
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 3. Mute all other candidate tabs
+  for (const muteId of tabsToMute) {
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(muteId, { muted: true }).catch(() => {});
+      }
+    } catch (_) {}
+    safeSendTabMessage(muteId, { type: 'MEDIA_CONTROL', action: 'mute' });
+    const m = tabMediaMap.get(muteId);
+    if (m && m.primaryMedia) {
+      m.primaryMedia.isMuted = true;
+    }
+    mutedCount++;
+  }
+
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, soloTabId: targetId, mutedCount };
+}
+
+/**
+ * Phase 2: Feature 3 - Remote Media Command Execution
+ * Dispatches remote media command to a specific tab.
+ * @param {number} tabId
+ * @param {string} command - 'play' | 'pause' | 'toggle' | 'seek' | 'set_volume' | 'mute' | 'unmute' | 'solo'
+ * @param {number} [value]
+ */
+async function handleRemoteMediaCommandExecution(tabId, command, value) {
+  const targetId = Number(tabId);
+  if (!targetId) return { success: false, error: 'Invalid tabId' };
+
+  if (command === 'solo') {
+    return await handleSoloTabExecution(targetId);
+  }
+
+  const tabMedia = tabMediaMap.get(targetId);
+  const pm = tabMedia ? tabMedia.primaryMedia : null;
+
+  switch (command) {
+    case 'play':
+      if (pm) { pm.isPlaying = true; pm.state = 'playing'; }
+      safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'play' });
+      break;
+    case 'pause':
+      if (pm) { pm.isPlaying = false; pm.state = 'paused'; }
+      safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'pause' });
+      break;
+    case 'toggle':
+      if (pm) { pm.isPlaying = !pm.isPlaying; pm.state = pm.isPlaying ? 'playing' : 'paused'; }
+      safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'toggle_play' });
+      break;
+    case 'mute':
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(targetId, { muted: true }).catch(() => {});
+      }
+      if (pm) pm.isMuted = true;
+      safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'mute' });
+      break;
+    case 'unmute':
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(targetId, { muted: false }).catch(() => {});
+      }
+      if (pm) pm.isMuted = false;
+      safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'unmute' });
+      break;
+    case 'seek':
+      safeSendTabMessage(targetId, {
+        type: 'MEDIA_CONTROL',
+        action: 'seek_relative',
+        data: { offsetSeconds: Number(value) || 0 }
+      });
+      break;
+    case 'set_volume':
+      const vol = Math.max(0, Math.min(1, Number(value) || 0));
+      if (pm) pm.volume = vol;
+      safeSendTabMessage(targetId, {
+        type: 'MEDIA_CONTROL',
+        action: 'set_volume',
+        data: { volume: vol, percent: Math.round(vol * 100) }
+      });
+      break;
+    default:
+      return { success: false, error: `Unknown command: ${command}` };
+  }
+
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, tabId: targetId, command, value };
+}
+
+/**
  * Transmits media telemetry payload to Video Detector HUD via WebSocket
  */
 function sendMediaTelemetryToHUD() {
@@ -3345,6 +3594,41 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // ---------------------------------------------------------------------------
+  // Phase 2: Multi-Tab Live Media Deck & Audio Visualizer (Features 3 & 4)
+  // ---------------------------------------------------------------------------
+  if (msgType === 'DASHBOARD_GET_ALL_MEDIA_STREAMS') {
+    (async () => {
+      await ensureStorageLoaded();
+      cleanStaleTabMedia();
+      const streams = await getAllActiveMediaStreams();
+      sendResponse({ success: true, streams });
+    })();
+    return true;
+  }
+
+  if (msgType === 'MEDIA_STREAM_SOLO') {
+    (async () => {
+      await ensureStorageLoaded();
+      const soloTabId = Number(message.soloTabId);
+      const result = await handleSoloTabExecution(soloTabId);
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'DASHBOARD_REMOTE_MEDIA_CMD') {
+    (async () => {
+      await ensureStorageLoaded();
+      const tabId = Number(message.tabId);
+      const command = message.command;
+      const value = message.value;
+      const result = await handleRemoteMediaCommandExecution(tabId, command, value);
+      sendResponse(result);
+    })();
+    return true;
+  }
 });
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -3453,9 +3737,15 @@ if (typeof globalThis !== 'undefined') {
   globalThis.handleDoomscrollCheck = handleDoomscrollCheck;
   globalThis.getDoomscrollConsecutiveMinutes = () => doomscrollConsecutiveMinutes;
   globalThis.setDoomscrollConsecutiveMinutes = (val) => { doomscrollConsecutiveMinutes = val; };
+  globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
+  globalThis.handleSoloTabExecution = handleSoloTabExecution;
+  globalThis.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
+    globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
+    globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
+    globalThis.SentinelBackgroundModules.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
   }
 }
 

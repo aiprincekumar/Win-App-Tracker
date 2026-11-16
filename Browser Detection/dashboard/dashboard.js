@@ -71,6 +71,7 @@ const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.Prec
 const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
 const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
 const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
+const _MediaDeckVisualizer = (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature) ? globalThis.MediaDeckVisualizerFeature : _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelDashboardModules = {
@@ -85,7 +86,8 @@ if (typeof window !== 'undefined') {
     PrecisionScrubber: _PrecisionScrubber,
     FeatureRegistry: _FeatureRegistry,
     DashboardFeatureManager: _DashboardFeatureManager,
-    TemporalProductivity: _TemporalProductivity
+    TemporalProductivity: _TemporalProductivity,
+    MediaDeckVisualizer: _MediaDeckVisualizer
   };
 }
 
@@ -196,6 +198,18 @@ const DASHBOARD_I18N = {
     cat_social: 'Social & Communication',
     cat_utility: 'Utilities & Tools',
     th_category: 'Category',
+    media_deck_title: '🎬 Multi-Tab Live Media Deck',
+    btn_solo_tab: '🎧 Solo Tab',
+    btn_mute_all_others: '🔇 Mute All Others',
+    status_audible: '🟢 Audible',
+    status_playing: '🟢 Playing',
+    status_paused: '⏸️ Paused',
+    status_muted: '🔇 Muted',
+    visualizer_title: '🎛️ Real-Time Audio Spectrum Visualizer',
+    visualizer_mode_bars: '32-Band FFT',
+    visualizer_mode_wave: 'Waveform',
+    active_streams_count: (count) => `${count} active stream${count === 1 ? '' : 's'}`,
+    no_media_streams: 'No active media streams detected across open tabs',
     donut_center_today: "Today's Total Time",
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
@@ -529,6 +543,18 @@ const DASHBOARD_I18N = {
     cat_social: 'सामाजिक संवाद',
     cat_utility: 'यूटिलिटी व टूल्स',
     th_category: 'श्रेणी',
+    media_deck_title: '🎬 मल्टी-टैब लाइव मीडिया डेक',
+    btn_solo_tab: '🎧 सोलो टैब',
+    btn_mute_all_others: '🔇 अन्य सभी को म्यूट करें',
+    status_audible: '🟢 ध्वनि चालू',
+    status_playing: '🟢 चल रहा है',
+    status_paused: '⏸️ रुका हुआ',
+    status_muted: '🔇 म्यूटेड',
+    visualizer_title: '🎛️ रियल-टाइम ऑडियो स्पेक्ट्रम विज़ुअलाइज़र',
+    visualizer_mode_bars: '32-बैंड FFT',
+    visualizer_mode_wave: 'वेवफॉर्म',
+    active_streams_count: (count) => `${count} सक्रिय स्ट्रीम`,
+    no_media_streams: 'खुले टैब्स में कोई सक्रिय मीडिया स्ट्रीम नहीं मिली',
     donut_center_today: 'आज का कुल समय',
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
@@ -1935,6 +1961,109 @@ function updateChronoHeatmap(data) {
   currentHeatmapMatrix = aggregateChronoHeatmap(rawHistory, range);
   renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
   return currentHeatmapMatrix;
+}
+
+// =============================================================================
+// Phase 2: Feature 3 & 4 Facade Functions (Media Deck & Audio Visualizer)
+// =============================================================================
+let activeMediaStreams = [];
+
+function pollMultiTabMediaStreams(options = {}) {
+  const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.pollMultiTabMediaStreams === 'function') {
+    return _MediaDeckVisualizer.pollMultiTabMediaStreams(opt).then(streams => {
+      activeMediaStreams = streams || [];
+      return activeMediaStreams;
+    });
+  }
+  return Promise.resolve(activeMediaStreams);
+}
+
+function renderMultiTabMediaDeck(streamsList, containerEl, options = {}) {
+  const container = containerEl || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.renderMultiTabMediaDeck === 'function') {
+    return _MediaDeckVisualizer.renderMultiTabMediaDeck(streamsList, container, opt);
+  }
+}
+
+function handleRemoteMediaCommand(tabId, command, value, options = {}) {
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleRemoteMediaCommand === 'function') {
+    return _MediaDeckVisualizer.handleRemoteMediaCommand(tabId, command, value, opt);
+  }
+  return Promise.resolve({ success: true, tabId, command });
+}
+
+function handleSoloTab(soloTabId, options = {}) {
+  const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleSoloTab === 'function') {
+    return _MediaDeckVisualizer.handleSoloTab(soloTabId, opt);
+  }
+  return Promise.resolve({ success: true, soloTabId });
+}
+
+function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
+  const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleMuteAllOthers === 'function') {
+    return _MediaDeckVisualizer.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
+  }
+  return Promise.resolve([]);
+}
+
+function initAudioVisualizer(canvasEl, options = {}) {
+  const canvas = canvasEl || (typeof document !== 'undefined' ? document.getElementById('canvasAudioVisualizer') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.initAudioVisualizer === 'function') {
+    return _MediaDeckVisualizer.initAudioVisualizer(canvas, opt);
+  }
+  return null;
+}
+
+function setVisualizerMode(mode, options = {}) {
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.setVisualizerMode === 'function') {
+    return _MediaDeckVisualizer.setVisualizerMode(mode, opt);
+  }
+  return mode;
+}
+
+function renderVisualizerFrame(timestamp, options = {}) {
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.renderVisualizerFrame === 'function') {
+    return _MediaDeckVisualizer.renderVisualizerFrame(timestamp, opt);
+  }
+  return { rendered: false };
+}
+
+function startVisualizerLoop(options = {}) {
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.startVisualizerLoop === 'function') {
+    return _MediaDeckVisualizer.startVisualizerLoop(opt);
+  }
+}
+
+function stopVisualizerLoop() {
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.stopVisualizerLoop === 'function') {
+    return _MediaDeckVisualizer.stopVisualizerLoop();
+  }
+}
+
+function setAudioPlayingState(isPlaying, options = {}) {
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.setAudioPlayingState === 'function') {
+    return _MediaDeckVisualizer.setAudioPlayingState(isPlaying, opt);
+  }
+}
+
+function getVisualizerState() {
+  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.getVisualizerState === 'function') {
+    return _MediaDeckVisualizer.getVisualizerState();
+  }
+  return null;
 }
 
 function isInternalDomain(domain) {
@@ -3462,6 +3591,15 @@ function renderHeroMediaPlayer(pm) {
       heroVol.setAttribute('aria-valuetext', isMuted ? 'Muted' : `${volPct}%`);
     }
   }
+
+  // 4. Phase 2: Feature 3 Multi-Tab Media Deck Poll & Render
+  if (typeof document !== 'undefined') {
+    pollMultiTabMediaStreams({ containerEl: document.getElementById('mediaDeckGrid'), doc: document, t });
+  }
+
+  // 5. Phase 2: Feature 4 Audio Visualizer Playing State
+  const isAudioPlaying = Boolean(pm && pm.isPlaying);
+  setAudioPlayingState(isAudioPlaying);
 }
 
 function renderMediaHistoryTable(history) {
@@ -6421,6 +6559,19 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       refreshDashboard();
     }
   });
+
+  // 15. Phase 2: Feature 3 Multi-Tab Media Deck & Audio Visualizer Handlers
+  const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
+  if (btnMuteAllOthers) {
+    btnMuteAllOthers.addEventListener('click', () => {
+      handleMuteAllOthers();
+    });
+  }
+
+  const canvasViz = document.getElementById('canvasAudioVisualizer');
+  if (canvasViz) {
+    initAudioVisualizer(canvasViz);
+  }
 }
 
 // Bootstrap Initialization
@@ -6430,6 +6581,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     setupEventListeners();
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
+    initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
 
     // Initialize dashboard modular features
     try {
@@ -6642,7 +6794,23 @@ if (typeof module !== 'undefined' && module.exports) {
     getCustomStartDate: () => customStartDate,
     setCustomStartDate: (val) => { customStartDate = val; },
     getCustomEndDate: () => customEndDate,
-    setCustomEndDate: (val) => { customEndDate = val; }
+    setCustomEndDate: (val) => { customEndDate = val; },
+    // Phase 2 Multi-Tab Media Deck & Audio Visualizer exports
+    pollMultiTabMediaStreams,
+    renderMultiTabMediaDeck,
+    handleRemoteMediaCommand,
+    handleSoloTab,
+    handleMuteAllOthers,
+    initAudioVisualizer,
+    setVisualizerMode,
+    renderVisualizerFrame,
+    startVisualizerLoop,
+    stopVisualizerLoop,
+    setAudioPlayingState,
+    getVisualizerState,
+    MediaDeckVisualizerFeature: _MediaDeckVisualizer,
+    getActiveMediaStreams: () => activeMediaStreams,
+    setActiveMediaStreams: (val) => { activeMediaStreams = val; }
   };
 }
 
@@ -6669,6 +6837,18 @@ if (typeof window !== 'undefined') {
   window.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
   window.ACCENT_PALETTES = ACCENT_PALETTES;
   window.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+  window.pollMultiTabMediaStreams = pollMultiTabMediaStreams;
+  window.renderMultiTabMediaDeck = renderMultiTabMediaDeck;
+  window.handleRemoteMediaCommand = handleRemoteMediaCommand;
+  window.handleSoloTab = handleSoloTab;
+  window.handleMuteAllOthers = handleMuteAllOthers;
+  window.initAudioVisualizer = initAudioVisualizer;
+  window.setVisualizerMode = setVisualizerMode;
+  window.renderVisualizerFrame = renderVisualizerFrame;
+  window.startVisualizerLoop = startVisualizerLoop;
+  window.stopVisualizerLoop = stopVisualizerLoop;
+  window.setAudioPlayingState = setAudioPlayingState;
+  window.getVisualizerState = getVisualizerState;
 }
 
 if (typeof globalThis !== 'undefined') {

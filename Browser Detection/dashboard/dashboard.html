@@ -485,6 +485,23 @@
               </div>
             </div>
 
+          <!-- Feature 3: Multi-Tab Live Media Deck (Multi-Stream Audio/Video Control) -->
+          <div id="multiTabMediaDeckContainer" class="card media-deck-container bento-card liquid-glass-card bento-span-12">
+            <div class="card-header media-deck-header">
+              <div class="media-deck-title-group">
+                <span class="media-deck-icon">🎬</span>
+                <h3 id="txtMediaDeckTitle" class="card-heading" data-i18n="media_deck_title">🎬 Multi-Tab Live Media Deck</h3>
+                <span id="badgeActiveStreamsCount" class="badge-dim">0 active streams</span>
+              </div>
+              <div class="media-deck-header-actions">
+                <button id="btnMuteAllOthers" class="btn btn-sm btn-secondary" data-i18n="btn_mute_all_others">🔇 Mute All Others</button>
+              </div>
+            </div>
+            <div id="mediaDeckGrid" class="media-deck-grid">
+              <!-- Dynamically populated via renderMultiTabMediaDeck (Zero innerHTML safe DOM) -->
+            </div>
+          </div>
+
           <!-- Hero Widget: Live Media Player Sentinel Card -->
           <div id="heroMediaPlayerCard" class="live-player-hero-card bento-card liquid-glass-card bento-span-8 bento-row-span-2">
             <div class="player-hero-header">
@@ -671,6 +688,36 @@
               <div class="audio-lab-status-note">
                 <span class="status-indicator-dot online"></span>
                 <span id="audioLabStatusText" class="audio-lab-note" data-i18n="audiolab_dsp_active">Offscreen Web Audio DSP Pipeline Active</span>
+              </div>
+
+              <!-- Feature 4: Real-Time Audio Spectrum Visualizer & Frequency Analyzer -->
+              <div id="visualizerPanel" class="visualizer-panel">
+                <div class="visualizer-header">
+                  <div class="visualizer-title-wrap">
+                    <span class="visualizer-icon">🎛️</span>
+                    <span id="txtVisualizerTitle" class="visualizer-title" data-i18n="visualizer_title">🎛️ Real-Time Spectrum Visualizer</span>
+                  </div>
+                  <div class="visualizer-controls">
+                    <button id="btnVizModeBars" class="btn btn-xs btn-active" data-viz-mode="bars" data-i18n="visualizer_mode_bars">32-Band FFT</button>
+                    <button id="btnVizModeWave" class="btn btn-xs" data-viz-mode="wave" data-i18n="visualizer_mode_wave">Waveform</button>
+                  </div>
+                </div>
+                <div class="visualizer-canvas-container">
+                  <canvas id="canvasAudioVisualizer" width="600" height="120" role="img" aria-label="Audio frequency visualizer"></canvas>
+                </div>
+                <div class="vu-meters-container">
+                  <div class="vu-bar-wrapper">
+                    <span class="vu-label">L</span>
+                    <div class="vu-meter"><div id="vuBarLeft" class="vu-level" style="width: 0%;"></div></div>
+                    <span id="vuValLeft" class="vu-db-text">-∞dB</span>
+                  </div>
+                  <div class="vu-bar-wrapper">
+                    <span class="vu-label">R</span>
+                    <div class="vu-meter"><div id="vuBarRight" class="vu-level" style="width: 0%;"></div></div>
+                    <span id="vuValRight" class="vu-db-text">-∞dB</span>
+                  </div>
+                  <span id="vuClipIndicator" class="vu-clip-badge">0dB OK</span>
+                </div>
               </div>
             </div>
           </div>
