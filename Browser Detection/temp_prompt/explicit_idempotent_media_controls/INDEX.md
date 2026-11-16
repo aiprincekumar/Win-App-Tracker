@@ -50,9 +50,9 @@ While the recent restoration of direct 0ms MAIN-world scripting brought instant 
 
 | Phase # | Phase Title & Scope | Target Files | Status | Assigned Role | Gate Verification | Quality Certification |
 | :---: | :--- | :--- | :---: | :--- | :--- | :---: |
-| **Phase 1** | Explicit Media Controls & Mutual Exclusion Implementation | `popup/popup.js`, `dashboard/dashboard.js`, `background.js`, `content_media.js`, `inject_main_world.js` | `PENDING` | Level 4 Frontend Engineer | `node -c` on all 5 files + `node tests/test_syntax_and_manifest_integrity.js` | Pending |
-| **Phase 2** | Test Suite Overhaul & Mock Execution Verification | `tests/test_media_controls_and_fullscreen_fix.js` | `PENDING` | Level 4 QA Test Engineer | `node tests/test_media_controls_and_fullscreen_fix.js` | Pending |
-| **Phase 3** | Full Regression Verification, Gitleaks, Git & Sync | All 34 Test Suites, `memory.md`, Git | `PENDING` | Level 4 Independent QA Agent | All 34 Test Suites + `gitleaks detect` | Pending |
+| **Phase 1** | Explicit Media Controls & Mutual Exclusion Implementation | `popup/popup.js`, `dashboard/dashboard.js`, `background.js`, `content_media.js`, `inject_main_world.js` | `COMPLETED` | Level 4 Frontend Engineer | `node -c` on all 5 files + `node tests/test_syntax_and_manifest_integrity.js` | Certified Clean (Grade A+) |
+| **Phase 2** | Test Suite Overhaul & Mock Execution Verification | `tests/test_media_controls_and_fullscreen_fix.js` | `COMPLETED` | Level 4 QA Test Engineer | `node tests/test_media_controls_and_fullscreen_fix.js` | Certified Clean (Grade A+) |
+| **Phase 3** | Full Regression Verification, Gitleaks, Git & Sync | All 34 Test Suites, `memory.md`, Git | `COMPLETED` | Level 4 Independent QA Agent | All 34 Test Suites + `gitleaks detect` | Certified Clean (Grade A+) |
 
 ---
 
