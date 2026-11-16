@@ -3531,6 +3531,7 @@ body.theme-light kbd {
   appearance: none;
   width: 14px;
   height: 14px;
+  margin-top: 5px;
   border-radius: 50%;
   background: var(--color-accent-primary, #10b981);
   box-shadow: 0 0 10px var(--color-accent-primary, #10b981);

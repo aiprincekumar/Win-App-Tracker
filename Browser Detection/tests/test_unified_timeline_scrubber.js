@@ -101,8 +101,9 @@ console.log('\nBattery 2: CSS Architecture & Single-Track / Single-Thumb Visual 
   assert(css.includes('background: transparent;'), '.hero-seek-slider must have transparent background');
   assert(css.includes('z-index: 5;'), '.hero-seek-slider must sit on top at z-index: 5');
 
-  // Elastic single range thumb physics
+  // Elastic single range thumb physics & concentric vertical centering
   assert(css.includes('.hero-seek-slider::-webkit-slider-thumb {'), 'CSS must define .hero-seek-slider::-webkit-slider-thumb');
+  assert(css.includes('margin-top: 5px;'), '.hero-seek-slider::-webkit-slider-thumb must declare margin-top: 5px for concentric vertical centering');
   assert(css.includes('cubic-bezier(0.34, 1.56, 0.64, 1)'), 'Slider thumb must have elastic cubic-bezier curve');
   assert(css.includes('transform: scale(1.45);'), 'Slider thumb must scale to 1.45 on active');
   assert(css.includes('transform: scale(1.15);'), 'Slider thumb must scale to 1.15 on hover');
