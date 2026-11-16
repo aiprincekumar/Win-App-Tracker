@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite:
  * Dedicated Modular Fullscreen Controller, Web Fullscreen CSS Engine, and In-Page Native Gesture Button
  * 
@@ -407,4 +407,604 @@ console.log('\nTest 7: Simulated DOM Lifecycle & Controller API Execution');
   console.log('  ✅ Simulated DOM Lifecycle: enterWebFullscreen, debounce gating, aliases, and container targeting all verified clean');
 }
 
-console.log('\n🎉 ALL FULLSCREEN CONTROLLER TESTS PASSED WITH 100% SUCCESS!\n');
+// ---------------------------------------------------------------------------
+// Extended Tests Runner (Tests 8 - 11)
+// ---------------------------------------------------------------------------
+async function runExtendedTests() {
+  // ---------------------------------------------------------------------------
+  // Test 8: Synthetic vs. Trusted Gesture Differentiation (Section A)
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 8: Synthetic vs. Trusted Gesture Differentiation on Floating HUD Button');
+  {
+    const allElements = [];
+    const mockClassList = () => {
+      const classes = new Set();
+      return {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        contains: (c) => classes.has(c),
+        forEach: (fn) => classes.forEach(fn),
+        get size() { return classes.size; }
+      };
+    };
+
+    const createMockElem = (tag, id = '') => {
+      return {
+        tagName: tag.toUpperCase(),
+        nodeType: 1,
+        id,
+        classList: mockClassList(),
+        dataset: {},
+        attrs: {},
+        children: [],
+        firstChild: null,
+        parentElement: null,
+        isConnected: true,
+        listeners: {},
+        getAttribute(name) { return this.attrs[name] || null; },
+        setAttribute(name, val) { this.attrs[name] = String(val); },
+        removeAttribute(name) { delete this.attrs[name]; },
+        appendChild(child) {
+          this.children.push(child);
+          this.firstChild = this.children[0];
+          child.parentElement = this;
+          return child;
+        },
+        removeChild(child) {
+          const idx = this.children.indexOf(child);
+          if (idx !== -1) this.children.splice(idx, 1);
+          this.firstChild = this.children[0] || null;
+          child.parentElement = null;
+          return child;
+        },
+        contains(child) {
+          if (this.children.includes(child)) return true;
+          return this.children.some(c => c.contains && c.contains(child));
+        },
+        addEventListener(evt, fn) {
+          if (!this.listeners[evt]) this.listeners[evt] = [];
+          this.listeners[evt].push(fn);
+        },
+        removeEventListener(evt, fn) {
+          if (this.listeners[evt]) this.listeners[evt] = this.listeners[evt].filter(h => h !== fn);
+        },
+        dispatchEvent(e) {
+          if (this.listeners[e.type]) this.listeners[e.type].forEach(h => h(e));
+        },
+        matches(sel) {
+          if (sel === ':hover') return false;
+          if (sel.includes('#movie_player') && this.id === 'movie_player') return true;
+          if (sel.includes('.html5-video-player') && this.classList.contains('html5-video-player')) return true;
+          return false;
+        },
+        closest(sel) {
+          let cur = this;
+          while (cur) {
+            if (cur.matches && cur.matches(sel)) return cur;
+            cur = cur.parentElement;
+          }
+          return null;
+        },
+        click() {
+          if (this.listeners['click']) {
+            const e = { type: 'click', target: this, stopPropagation: () => {}, preventDefault: () => {}, isTrusted: false };
+            this.listeners['click'].forEach(h => h(e));
+          }
+        }
+      };
+    };
+
+    let ytNativeBtnClicked = false;
+    const mockYtBtn = createMockElem('button');
+    mockYtBtn.classList.add('ytp-fullscreen-button');
+    mockYtBtn.click = () => { ytNativeBtnClicked = true; };
+
+    const mockDoc8 = {
+      documentElement: createMockElem('html'),
+      body: createMockElem('body'),
+      fullscreenElement: null,
+      getElementById(id) {
+        if (id === 'movie_player') return mockMoviePlayer8;
+        return allElements.find(e => e.id === id) || null;
+      },
+      querySelector(sel) {
+        if (sel && sel.includes('.ytp-fullscreen-button')) return mockYtBtn;
+        if (sel === '#movie_player') return mockMoviePlayer8;
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer8.classList.contains('sentinel-web-fullscreen') ? mockMoviePlayer8 : null;
+        if (sel && sel.includes('__sentinel_fullscreen_osd__')) return allElements.find(e => e.id === '__sentinel_fullscreen_osd__') || null;
+        return null;
+      },
+      querySelectorAll(sel) {
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer8.classList.contains('sentinel-web-fullscreen') ? [mockMoviePlayer8] : [];
+        return [];
+      },
+      createElement(tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      createElementNS(ns, tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      addEventListener() {}
+    };
+
+    const mockMoviePlayer8 = createMockElem('div', 'movie_player');
+    mockMoviePlayer8.appendChild(mockYtBtn);
+    mockDoc8.body.appendChild(mockMoviePlayer8);
+
+    const sandbox8 = {
+      window: { document: mockDoc8, addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
+      document: mockDoc8,
+      globalThis: {},
+      HTMLElement: class {},
+      HTMLVideoElement: class {},
+      navigator: { userActivation: { isActive: false } },
+      Date, parseInt, String, Boolean, clearTimeout, setTimeout,
+      MutationObserver: class { observe() {} disconnect() {} },
+      Event: class { constructor(type) { this.type = type; } },
+      CustomEvent: class { constructor(type, init) { this.type = type; Object.assign(this, init); } }
+    };
+    sandbox8.globalThis = sandbox8.window;
+
+    vm.createContext(sandbox8);
+    const fsCode = fs.readFileSync(path.join(baseDir, 'fullscreen_controller.js'), 'utf8');
+    vm.runInContext(fsCode, sandbox8);
+
+    const controller8 = sandbox8.window.__SentinelFullscreenController;
+    const floatingBtn8 = mockDoc8.getElementById('__sentinel_fs_floating_btn__');
+    assert(floatingBtn8, 'Floating button must be attached to DOM');
+
+    // 8.1 Synthetic Click (isTrusted: false) -> invokes Web Fullscreen directly
+    floatingBtn8.dispatchEvent({
+      type: 'click',
+      isTrusted: false,
+      stopPropagation: () => {},
+      preventDefault: () => {}
+    });
+
+    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), true, 'Synthetic click must enter web fullscreen');
+    assert.strictEqual(mockDoc8.documentElement.classList.contains('sentinel-fullscreen-active'), true, 'html must receive .sentinel-fullscreen-active');
+    assert.strictEqual(controller8.isFullscreenActive(), true, 'isFullscreenActive must be true');
+
+    const osdEl = mockDoc8.getElementById('__sentinel_fullscreen_osd__');
+    assert(osdEl, 'OSD element must exist');
+    const osdText = osdEl.children.map(c => c.textContent).join(' ');
+    assert(osdText.includes('Web Fullscreen'), `OSD must display Web Fullscreen, got: "${osdText}"`);
+    console.log('  ✅ Synthetic click (isTrusted: false) engages Web Fullscreen with OSD "Web Fullscreen" directly');
+
+    // 8.2 Synthetic Click toggle exit
+    floatingBtn8.dispatchEvent({
+      type: 'click',
+      isTrusted: false,
+      stopPropagation: () => {},
+      preventDefault: () => {}
+    });
+    assert.strictEqual(mockMoviePlayer8.classList.contains('sentinel-web-fullscreen'), false, 'Second synthetic click must exit web fullscreen');
+    assert.strictEqual(controller8.isFullscreenActive(), false, 'isFullscreenActive must be false after exit');
+    console.log('  ✅ Second synthetic click cleanly exits Web Fullscreen');
+
+    // 8.3 Trusted Click (isTrusted: true) -> calls toggle() and routes to native fullscreen
+    sandbox8.navigator.userActivation.isActive = true;
+    ytNativeBtnClicked = false;
+
+    floatingBtn8.dispatchEvent({
+      type: 'click',
+      isTrusted: true,
+      stopPropagation: () => {},
+      preventDefault: () => {}
+    });
+
+    assert.strictEqual(ytNativeBtnClicked, true, 'Trusted click with user activation must attempt native fullscreen entry');
+    console.log('  ✅ Trusted click (isTrusted: true) routes to native fullscreen toggle logic');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 9: False-Positive Native Success Prevention & Fallback Suite (Section B)
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 9: False-Positive Native Success Prevention & Fallback Suite');
+  {
+    const allElements = [];
+    const mockClassList = () => {
+      const classes = new Set();
+      return {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        contains: (c) => classes.has(c),
+        forEach: (fn) => classes.forEach(fn),
+        get size() { return classes.size; }
+      };
+    };
+
+    const createMockElem = (tag, id = '') => {
+      return {
+        tagName: tag.toUpperCase(),
+        nodeType: 1,
+        id,
+        classList: mockClassList(),
+        dataset: {},
+        attrs: {},
+        children: [],
+        firstChild: null,
+        parentElement: null,
+        isConnected: true,
+        listeners: {},
+        getAttribute(name) { return this.attrs[name] || null; },
+        setAttribute(name, val) { this.attrs[name] = String(val); },
+        removeAttribute(name) { delete this.attrs[name]; },
+        appendChild(child) {
+          this.children.push(child);
+          this.firstChild = this.children[0];
+          child.parentElement = this;
+          return child;
+        },
+        removeChild(child) {
+          const idx = this.children.indexOf(child);
+          if (idx !== -1) this.children.splice(idx, 1);
+          this.firstChild = this.children[0] || null;
+          child.parentElement = null;
+          return child;
+        },
+        contains(child) {
+          if (this.children.includes(child)) return true;
+          return this.children.some(c => c.contains && c.contains(child));
+        },
+        addEventListener(evt, fn) {
+          if (!this.listeners[evt]) this.listeners[evt] = [];
+          this.listeners[evt].push(fn);
+        },
+        removeEventListener(evt, fn) {
+          if (this.listeners[evt]) this.listeners[evt] = this.listeners[evt].filter(h => h !== fn);
+        },
+        dispatchEvent(e) {
+          if (this.listeners[e.type]) this.listeners[e.type].forEach(h => h(e));
+        },
+        matches(sel) {
+          if (sel === ':hover') return false;
+          if (sel.includes('#movie_player') && this.id === 'movie_player') return true;
+          return false;
+        },
+        closest(sel) {
+          let cur = this;
+          while (cur) {
+            if (cur.matches && cur.matches(sel)) return cur;
+            cur = cur.parentElement;
+          }
+          return null;
+        },
+        click() {
+          if (this.listeners['click']) {
+            const e = { type: 'click', target: this, stopPropagation: () => {}, preventDefault: () => {}, isTrusted: false };
+            this.listeners['click'].forEach(h => h(e));
+          }
+        }
+      };
+    };
+
+    let ytNativeBtnClicked = false;
+    const mockYtBtn = createMockElem('button');
+    mockYtBtn.classList.add('ytp-fullscreen-button');
+    // Simulate YouTube rejecting click - does NOT set document.fullscreenElement
+    mockYtBtn.click = () => {
+      ytNativeBtnClicked = true;
+    };
+
+    const mockDoc9 = {
+      documentElement: createMockElem('html'),
+      body: createMockElem('body'),
+      fullscreenElement: null,
+      getElementById(id) {
+        if (id === 'movie_player') return mockMoviePlayer9;
+        return allElements.find(e => e.id === id) || null;
+      },
+      querySelector(sel) {
+        if (sel && sel.includes('.ytp-fullscreen-button')) return mockYtBtn;
+        if (sel === '#movie_player') return mockMoviePlayer9;
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer9.classList.contains('sentinel-web-fullscreen') ? mockMoviePlayer9 : null;
+        if (sel && sel.includes('__sentinel_fullscreen_osd__')) return allElements.find(e => e.id === '__sentinel_fullscreen_osd__') || null;
+        return null;
+      },
+      querySelectorAll(sel) {
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer9.classList.contains('sentinel-web-fullscreen') ? [mockMoviePlayer9] : [];
+        return [];
+      },
+      createElement(tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      createElementNS(ns, tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      addEventListener() {}
+    };
+
+    const mockMoviePlayer9 = createMockElem('div', 'movie_player');
+    mockMoviePlayer9.appendChild(mockYtBtn);
+    mockDoc9.body.appendChild(mockMoviePlayer9);
+
+    const sandbox9 = {
+      window: { document: mockDoc9, addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
+      document: mockDoc9,
+      globalThis: {},
+      HTMLElement: class {},
+      HTMLVideoElement: class {},
+      navigator: { userActivation: { isActive: true } },
+      Date, parseInt, String, Boolean, clearTimeout, setTimeout,
+      MutationObserver: class { observe() {} disconnect() {} },
+      Event: class { constructor(type) { this.type = type; } },
+      CustomEvent: class { constructor(type, init) { this.type = type; Object.assign(this, init); } }
+    };
+    sandbox9.globalThis = sandbox9.window;
+
+    vm.createContext(sandbox9);
+    const fsCode = fs.readFileSync(path.join(baseDir, 'fullscreen_controller.js'), 'utf8');
+    vm.runInContext(fsCode, sandbox9);
+
+    const controller9 = sandbox9.window.__SentinelFullscreenController;
+
+    // Track showOSD invocations
+    const osdNotifications = [];
+    const origShowOSD = controller9.showOSD;
+    controller9.showOSD = (text, icon) => {
+      osdNotifications.push({ text, icon });
+      return origShowOSD(text, icon);
+    };
+
+    // Call enterNativeFullscreen directly
+    const enterResult = await controller9.enterNativeFullscreen(mockMoviePlayer9);
+
+    assert.strictEqual(ytNativeBtnClicked, true, 'Native YouTube button click was attempted');
+    assert.strictEqual(mockDoc9.fullscreenElement, null, 'Native fullscreenElement remains null');
+
+    // Verify false-positive "Fullscreen ⛶" OSD was NEVER called
+    const hasFalsePositiveOSD = osdNotifications.some(n => n.text === 'Fullscreen');
+    assert.strictEqual(hasFalsePositiveOSD, false, 'enterNativeFullscreen must NEVER emit false-positive "Fullscreen" OSD on failure');
+
+    // Verify graceful fallback to Web Fullscreen
+    assert.strictEqual(enterResult, true, 'enterNativeFullscreen must return true on successful Web Fullscreen fallback');
+    assert.strictEqual(mockMoviePlayer9.classList.contains('sentinel-web-fullscreen'), true, 'Player must receive .sentinel-web-fullscreen fallback');
+    assert.strictEqual(mockDoc9.documentElement.classList.contains('sentinel-fullscreen-active'), true, 'html must receive .sentinel-fullscreen-active');
+    assert.strictEqual(controller9.isFullscreenActive(), true, 'isFullscreenActive must report true');
+
+    // Verify OSD displays "Web Fullscreen"
+    const osdEl9 = mockDoc9.getElementById('__sentinel_fullscreen_osd__');
+    const osdContent = osdEl9 ? osdEl9.children.map(c => c.textContent).join(' ') : '';
+    assert(osdContent.includes('Web Fullscreen'), `OSD must display Web Fullscreen, got: "${osdContent}"`);
+
+    console.log('  ✅ Native failure safely prevented false-positive "Fullscreen ⛶" OSD');
+    console.log('  ✅ Controller automatically fell back to Web Fullscreen with OSD "Web Fullscreen"');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 10: Web Fullscreen Determinism & Viewport Fill Suite
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 10: Web Fullscreen Determinism & Viewport Fill Suite');
+  {
+    const allElements = [];
+    const mockClassList = () => {
+      const classes = new Set();
+      return {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        contains: (c) => classes.has(c),
+        forEach: (fn) => classes.forEach(fn),
+        get size() { return classes.size; }
+      };
+    };
+
+    const createMockElem = (tag, id = '') => {
+      return {
+        tagName: tag.toUpperCase(),
+        nodeType: 1,
+        id,
+        classList: mockClassList(),
+        dataset: {},
+        attrs: {},
+        children: [],
+        firstChild: null,
+        parentElement: null,
+        isConnected: true,
+        listeners: {},
+        getAttribute(name) { return this.attrs[name] || null; },
+        setAttribute(name, val) { this.attrs[name] = String(val); },
+        removeAttribute(name) { delete this.attrs[name]; },
+        appendChild(child) {
+          this.children.push(child);
+          this.firstChild = this.children[0];
+          child.parentElement = this;
+          return child;
+        },
+        removeChild(child) {
+          const idx = this.children.indexOf(child);
+          if (idx !== -1) this.children.splice(idx, 1);
+          this.firstChild = this.children[0] || null;
+          child.parentElement = null;
+          return child;
+        },
+        contains(child) {
+          if (this.children.includes(child)) return true;
+          return this.children.some(c => c.contains && c.contains(child));
+        },
+        addEventListener(evt, fn) {
+          if (!this.listeners[evt]) this.listeners[evt] = [];
+          this.listeners[evt].push(fn);
+        },
+        removeEventListener(evt, fn) {
+          if (this.listeners[evt]) this.listeners[evt] = this.listeners[evt].filter(h => h !== fn);
+        },
+        dispatchEvent(e) {
+          if (this.listeners[e.type]) this.listeners[e.type].forEach(h => h(e));
+        },
+        matches(sel) {
+          if (sel === ':hover') return false;
+          if (sel.includes('#movie_player') && this.id === 'movie_player') return true;
+          return false;
+        },
+        closest(sel) {
+          let cur = this;
+          while (cur) {
+            if (cur.matches && cur.matches(sel)) return cur;
+            cur = cur.parentElement;
+          }
+          return null;
+        },
+        click() {}
+      };
+    };
+
+    const mockDoc10 = {
+      documentElement: createMockElem('html'),
+      body: createMockElem('body'),
+      fullscreenElement: null,
+      getElementById(id) {
+        if (id === 'movie_player') return mockMoviePlayer10;
+        return allElements.find(e => e.id === id) || null;
+      },
+      querySelector(sel) {
+        if (sel === '#movie_player') return mockMoviePlayer10;
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer10.classList.contains('sentinel-web-fullscreen') ? mockMoviePlayer10 : null;
+        if (sel && sel.includes('__sentinel_fullscreen_osd__')) return allElements.find(e => e.id === '__sentinel_fullscreen_osd__') || null;
+        return null;
+      },
+      querySelectorAll(sel) {
+        if (sel === '.sentinel-web-fullscreen') return mockMoviePlayer10.classList.contains('sentinel-web-fullscreen') ? [mockMoviePlayer10] : [];
+        return [];
+      },
+      createElement(tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      createElementNS(ns, tag) {
+        const el = createMockElem(tag);
+        allElements.push(el);
+        return el;
+      },
+      addEventListener() {}
+    };
+
+    const mockMoviePlayer10 = createMockElem('div', 'movie_player');
+    mockDoc10.body.appendChild(mockMoviePlayer10);
+
+    const sandbox10 = {
+      window: { document: mockDoc10, addEventListener() {}, removeEventListener() {}, dispatchEvent() {} },
+      document: mockDoc10,
+      globalThis: {},
+      HTMLElement: class {},
+      HTMLVideoElement: class {},
+      navigator: { userActivation: { isActive: true } }, // even with active gesture
+      Date, parseInt, String, Boolean, clearTimeout, setTimeout,
+      MutationObserver: class { observe() {} disconnect() {} },
+      Event: class { constructor(type) { this.type = type; } },
+      CustomEvent: class { constructor(type, init) { this.type = type; Object.assign(this, init); } }
+    };
+    sandbox10.globalThis = sandbox10.window;
+
+    vm.createContext(sandbox10);
+    const fsCode = fs.readFileSync(path.join(baseDir, 'fullscreen_controller.js'), 'utf8');
+    vm.runInContext(fsCode, sandbox10);
+
+    const controller10 = sandbox10.window.__SentinelFullscreenController;
+
+    // 10.1 controller.toggle(null, { forceWeb: true }) deterministically enters Web Fullscreen
+    const forceResult = controller10.toggle(null, { forceWeb: true });
+    assert.strictEqual(forceResult, true, 'toggle with forceWeb: true must succeed');
+    assert.strictEqual(mockMoviePlayer10.classList.contains('sentinel-web-fullscreen'), true);
+    assert.strictEqual(mockDoc10.documentElement.classList.contains('sentinel-fullscreen-active'), true);
+    assert.strictEqual(mockDoc10.body.classList.contains('sentinel-fullscreen-active'), true);
+    assert.strictEqual(controller10.isFullscreenActive(), true);
+
+    // 10.2 controller.toggleWebFullscreen() alias
+    controller10.exitWebFullscreen();
+    assert.strictEqual(controller10.isFullscreenActive(), false);
+
+    // Advance time beyond debounce window for next toggle
+    let timeOffset = 500;
+    const origNow = sandbox10.Date.now;
+    sandbox10.Date.now = () => origNow() + timeOffset;
+
+    const aliasResult = controller10.toggleWebFullscreen(mockMoviePlayer10);
+    assert.strictEqual(aliasResult, true, 'toggleWebFullscreen alias must succeed');
+    assert.strictEqual(mockMoviePlayer10.classList.contains('sentinel-web-fullscreen'), true);
+    assert.strictEqual(controller10.isFullscreenActive(), true);
+
+    // Clean exit
+    timeOffset += 500;
+    controller10.toggleWebFullscreen(mockMoviePlayer10);
+    assert.strictEqual(mockMoviePlayer10.classList.contains('sentinel-web-fullscreen'), false);
+    assert.strictEqual(controller10.isFullscreenActive(), false);
+
+    sandbox10.Date.now = origNow;
+    console.log('  ✅ window.__SentinelFullscreenController.toggle(null, { forceWeb: true }) and toggleWebFullscreen() verified');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 11: Popup Direct Scripting AST & Single-Execution Cooldown Integrity (Section C)
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 11: Popup Direct Scripting AST & Single-Execution Cooldown Integrity');
+  {
+    const popupCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
+
+    // 11.1 Extract #btnCtrlFullscreen block
+    const btnFsStart = popupCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
+    assert(btnFsStart !== -1, 'Must find btnCtrlFullscreen in popup/popup.js');
+    const btnPipStart = popupCode.indexOf("const btnPip = document.getElementById('btnCtrlPip');", btnFsStart);
+    assert(btnPipStart !== -1, 'Must find btnCtrlPip boundary in popup/popup.js');
+    const btnFsBlock = popupCode.slice(btnFsStart, btnPipStart);
+
+    // 11.2 Cooldown timestamp check
+    assert(btnFsBlock.includes('Date.now()'), 'Must check current time');
+    assert(btnFsBlock.includes('lastFullscreenClick'), 'Must reference lastFullscreenClick');
+    assert(btnFsBlock.includes('< 350'), 'Must enforce 350ms cooldown window');
+
+    // 11.3 Priority verification: controller before floating button
+    const ctrlIndex = btnFsBlock.indexOf('__SentinelFullscreenController');
+    const floatBtnIndex = btnFsBlock.indexOf('__sentinel_fs_floating_btn__');
+    assert(ctrlIndex !== -1, 'Must check __SentinelFullscreenController');
+    assert(floatBtnIndex !== -1, 'Must check __sentinel_fs_floating_btn__');
+    assert(ctrlIndex < floatBtnIndex, 'Must prioritize __SentinelFullscreenController invocation BEFORE floating button click');
+
+    // Verify controller call options
+    assert(btnFsBlock.includes('toggleWebFullscreen') || btnFsBlock.includes('forceWeb: true'),
+      'Must invoke toggleWebFullscreen() or toggle with forceWeb: true');
+
+    // 11.4 Single-execution determinism & fallback structure
+    assert(btnFsBlock.includes('browserAPI.scripting.executeScript'), 'Must attempt 0ms direct execution');
+    assert(btnFsBlock.includes("world: 'MAIN'"), 'Must execute in MAIN world');
+    assert(btnFsBlock.includes('.catch('), 'Must catch scripting errors');
+    assert(btnFsBlock.includes("sendMediaControl('toggle_fullscreen'"), 'Must fall back to sendMediaControl');
+    assert(btnFsBlock.includes('else {'), 'Must have else branch when scripting unavailable');
+
+    // Verify no manual styling bloat
+    assert(!btnFsBlock.includes('.classList.add('), 'Must NOT manually toggle classes in popup.js');
+    assert(!btnFsBlock.includes('.setAttribute('), 'Must NOT manually set attributes in popup.js');
+
+    // 11.5 Universal Global Media Toggle Invariant
+    const globalToggleStart = popupCode.indexOf("const btnGlobalMediaToggle = document.getElementById('btnGlobalMediaToggle');");
+    assert(globalToggleStart !== -1, 'Must find btnGlobalMediaToggle in popup/popup.js');
+    const globalToggleEnd = popupCode.indexOf("const btnToggleTrackingPause =", globalToggleStart);
+    assert(globalToggleEnd !== -1, 'Must find btnGlobalMediaToggle boundary');
+    const globalToggleBlock = popupCode.slice(globalToggleStart, globalToggleEnd);
+
+    assert(globalToggleBlock.includes("type: 'TOGGLE_GLOBAL_MEDIA'"), 'Must dispatch TOGGLE_GLOBAL_MEDIA');
+    assert(!globalToggleBlock.includes('sendMediaControl'), 'Must NOT call sendMediaControl in global toggle');
+    assert(!globalToggleBlock.includes('toggle_fullscreen'), 'Must NOT touch fullscreen in global toggle');
+
+    console.log('  ✅ AST analysis confirms #btnCtrlFullscreen prioritizes controller over floating button');
+    assert(btnFsBlock.split('\n').length <= 55, 'Block must remain concise');
+    console.log('  ✅ Single-execution determinism & 350ms cooldown verified');
+    console.log('  ✅ Universal Play/Pause button (#btnGlobalMediaToggle) confirmed 100% untouched');
+  }
+
+  console.log('\n🎉 ALL FULLSCREEN CONTROLLER TESTS PASSED WITH 100% SUCCESS!\n');
+}
+
+runExtendedTests().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

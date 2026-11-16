@@ -3666,11 +3666,6 @@ function setupEventListeners() {
           target: { tabId: targetTabId },
           world: 'MAIN',
           func: () => {
-            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
-            if (floatingBtn) {
-              floatingBtn.click();
-              return;
-            }
             const ctrl = window.__SentinelFullscreenController || globalThis.__SentinelFullscreenController;
             if (ctrl && typeof ctrl.toggleWebFullscreen === 'function') {
               ctrl.toggleWebFullscreen();
@@ -3678,6 +3673,11 @@ function setupEventListeners() {
             }
             if (ctrl && typeof ctrl.toggle === 'function') {
               ctrl.toggle(null, { forceWeb: true });
+              return;
+            }
+            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
+            if (floatingBtn) {
+              floatingBtn.click();
               return;
             }
             try {

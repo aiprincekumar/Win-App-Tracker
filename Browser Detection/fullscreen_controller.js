@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Dedicated Modular Fullscreen Controller
  * 
  * Solves the W3C Transient User Gesture & Double-Toggle Browser Restrictions:
@@ -528,8 +528,15 @@
     if (ytFsBtn) {
       try {
         ytFsBtn.click();
-        showOSD('Fullscreen', '⛶');
-        return true;
+        if (isFullscreenActive()) {
+          showOSD('Fullscreen', '⛶');
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 60));
+        if (isFullscreenActive()) {
+          showOSD('Fullscreen', '⛶');
+          return true;
+        }
       } catch (_) {}
     }
 
@@ -538,8 +545,15 @@
     if (moviePlayer && typeof moviePlayer.toggleFullscreen === 'function') {
       try {
         moviePlayer.toggleFullscreen();
-        showOSD('Fullscreen', '⛶');
-        return true;
+        if (isFullscreenActive()) {
+          showOSD('Fullscreen', '⛶');
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 60));
+        if (isFullscreenActive()) {
+          showOSD('Fullscreen', '⛶');
+          return true;
+        }
       } catch (_) {}
     }
 
@@ -549,23 +563,32 @@
       if (typeof target.requestFullscreen === 'function') {
         try {
           await target.requestFullscreen();
-          showOSD('Fullscreen', '⛶');
-          return true;
+          if (isFullscreenActive()) {
+            showOSD('Fullscreen', '⛶');
+            return true;
+          }
         } catch (_) {
           return enterWebFullscreen(target);
         }
       } else if (typeof target.webkitRequestFullscreen === 'function') {
         try {
           target.webkitRequestFullscreen();
-          showOSD('Fullscreen', '⛶');
-          return true;
+          if (isFullscreenActive()) {
+            showOSD('Fullscreen', '⛶');
+            return true;
+          }
+          await new Promise((r) => setTimeout(r, 60));
+          if (isFullscreenActive()) {
+            showOSD('Fullscreen', '⛶');
+            return true;
+          }
         } catch (_) {
           return enterWebFullscreen(target);
         }
       }
     }
 
-    return enterWebFullscreen(el);
+    return enterWebFullscreen(targetEl || el);
   }
 
   /**
@@ -610,10 +633,7 @@
     }
 
     // Direct in-page user gesture: try native first, fall back to web
-    enterNativeFullscreen(targetEl).catch(() => {
-      enterWebFullscreen(targetEl);
-    });
-    return true;
+    return enterNativeFullscreen(targetEl);
   }
 
   /**
@@ -654,7 +674,9 @@
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      if (e.shiftKey) {
+
+      // Synthetic event (e.isTrusted === false) or Shift+Click: use Web Fullscreen directly
+      if (!e.isTrusted || e.shiftKey) {
         if (isFullscreenActive()) {
           exitFullscreen();
         } else {

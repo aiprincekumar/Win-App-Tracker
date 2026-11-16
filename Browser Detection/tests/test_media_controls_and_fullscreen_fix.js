@@ -546,13 +546,15 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   const contentMediaCode = fs.readFileSync(path.join(baseDir, 'content_media.js'), 'utf8');
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
-  // 3.1 Verify content_media.js checks __sentinel_fs_floating_btn__ as Priority 1
-  assert(contentMediaCode.includes("const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');"),
-    'content_media.js must check document.getElementById("__sentinel_fs_floating_btn__")');
-  assert(contentMediaCode.includes('floatingBtn.click();'),
-    'content_media.js must click floatingBtn when present');
+  // 3.1 Verify content_media.js prioritizes __SentinelFullscreenController.toggle(null, { forceWeb: true }) as Priority 1
+  assert(contentMediaCode.includes("window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function'"),
+    'content_media.js must check window.__SentinelFullscreenController.toggle as Priority 1');
   assert(contentMediaCode.includes('window.__SentinelFullscreenController.toggle(null, { forceWeb: true });'),
-    'content_media.js must fall back to __SentinelFullscreenController.toggle(null, { forceWeb: true })');
+    'content_media.js must call __SentinelFullscreenController.toggle(null, { forceWeb: true }) as Priority 1');
+  assert(contentMediaCode.includes("const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');"),
+    'content_media.js must check document.getElementById("__sentinel_fs_floating_btn__") as Priority 2 fallback');
+  assert(contentMediaCode.includes('floatingBtn.click();'),
+    'content_media.js must click floatingBtn in fallback branch when present');
 
   // 3.2 Verify popup.js delegates to single-execution fallback: executeScript (world: 'MAIN') with fallback sendMediaControl('toggle_fullscreen')
   assert(popupJsCode.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
@@ -572,7 +574,7 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   assert(btnFsBlock.includes('else {'),
     'popup.js #btnCtrlFullscreen must contain else fallback branch');
 
-  // 3.3 Simulation: When Floating Button Exists in DOM (Priority 1 in content_media.js)
+  // 3.3 Simulation: When Controller Exists on Window (Priority 1 in content_media.js)
   {
     const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
     assert(handleMediaStart !== -1, 'Must find handleMediaControl in content_media.js');
@@ -582,12 +584,16 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
 
     let floatingBtnClicked = false;
     let controllerToggleCalled = false;
+    let controllerForceWeb = false;
 
     const mockFloatingBtn = {
       click: () => { floatingBtnClicked = true; }
     };
     const mockController = {
-      toggle: () => { controllerToggleCalled = true; }
+      toggle: (el, opts) => {
+        controllerToggleCalled = true;
+        controllerForceWeb = Boolean(opts && opts.forceWeb);
+      }
     };
 
     const sandbox = vm.createContext({
@@ -615,25 +621,22 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
     vm.runInContext(handleMediaFuncCode, sandbox);
     sandbox.handleMediaControl('toggle_fullscreen');
 
-    assert.strictEqual(floatingBtnClicked, true, 'Floating button click must be triggered');
-    assert.strictEqual(controllerToggleCalled, false, 'Controller toggle must NOT be called when floating button exists');
-    console.log('  ✅ Priority 1 verified: Overlay button clicked directly without controller fallback in content script');
+    assert.strictEqual(controllerToggleCalled, true, 'Controller toggle must be called when controller exists (Priority 1)');
+    assert.strictEqual(controllerForceWeb, true, 'forceWeb must be true for deterministic web fullscreen');
+    assert.strictEqual(floatingBtnClicked, false, 'Floating button click must NOT be triggered when controller exists directly');
+    console.log('  ✅ Priority 1 verified: Controller.toggle(null, { forceWeb: true }) called directly in content script');
   }
 
-  // 3.4 Simulation: When Floating Button is Absent but Controller Exists (Priority 2 in content_media.js)
+  // 3.4 Simulation: When Controller is Absent but Floating Button Exists (Priority 2 Fallback in content_media.js)
   {
     const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
     const handleMediaEnd = contentMediaCode.indexOf('// YouTube SPA Navigation Listeners & Visibility', handleMediaStart);
     const handleMediaFuncCode = contentMediaCode.slice(handleMediaStart, handleMediaEnd);
 
-    let controllerToggleCalled = false;
-    let controllerForceWeb = false;
+    let floatingBtnClicked = false;
 
-    const mockController = {
-      toggle: (el, opts) => {
-        controllerToggleCalled = true;
-        controllerForceWeb = Boolean(opts && opts.forceWeb);
-      }
+    const mockFloatingBtn = {
+      click: () => { floatingBtnClicked = true; }
     };
 
     const sandbox = vm.createContext({
@@ -648,22 +651,57 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
       dispatchMediaTelemetry: () => {},
       setTimeout: (fn) => fn(),
       document: {
-        getElementById: () => null,
+        getElementById: (id) => (id === '__sentinel_fs_floating_btn__' ? mockFloatingBtn : null),
         querySelector: () => null,
         querySelectorAll: () => []
       },
-      window: {
-        __SentinelFullscreenController: mockController
-      },
+      window: {},
       KeyboardEvent: class {}
     });
 
     vm.runInContext(handleMediaFuncCode, sandbox);
     sandbox.handleMediaControl('toggle_fullscreen');
 
-    assert.strictEqual(controllerToggleCalled, true, 'Controller toggle must be called when floating button is absent');
-    assert.strictEqual(controllerForceWeb, true, 'forceWeb must be true for deterministic web fullscreen');
-    console.log('  ✅ Priority 2 verified: Controller.toggle(null, { forceWeb: true }) called as clean fallback in content script');
+    assert.strictEqual(floatingBtnClicked, true, 'Floating button click must be triggered as Priority 2 fallback when controller is absent');
+    console.log('  ✅ Priority 2 verified: Overlay button clicked in fallback branch when controller is absent');
+  }
+
+  // 3.5 Simulation: When Both Controller and Floating Button are Absent (Priority 3 Fallback in content_media.js)
+  {
+    const handleMediaStart = contentMediaCode.indexOf('function handleMediaControl(action, data = {}) {');
+    const handleMediaEnd = contentMediaCode.indexOf('// YouTube SPA Navigation Listeners & Visibility', handleMediaStart);
+    const handleMediaFuncCode = contentMediaCode.slice(handleMediaStart, handleMediaEnd);
+
+    let forwardedAction = null;
+    let webFullscreenTarget = null;
+    const mockPrimaryMedia = { paused: false };
+
+    const sandbox = vm.createContext({
+      evaluatePageMediaState: () => ({ primaryMediaElement: mockPrimaryMedia }),
+      isTopFrame: true,
+      forwardActionToMainWorld: (act) => { forwardedAction = act; },
+      calculateNextLadderSpeed: () => 1.0,
+      saveDomainSpeed: () => {},
+      extractYouTubeDuration: () => 120,
+      toggleWebFullscreen: (target) => { webFullscreenTarget = target; },
+      toggleTheaterMode: () => {},
+      dispatchMediaTelemetry: () => {},
+      setTimeout: (fn) => fn(),
+      document: {
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => []
+      },
+      window: {},
+      KeyboardEvent: class {}
+    });
+
+    vm.runInContext(handleMediaFuncCode, sandbox);
+    sandbox.handleMediaControl('toggle_fullscreen');
+
+    assert.strictEqual(forwardedAction, 'toggle_fullscreen', 'Must forward toggle_fullscreen to main world');
+    assert.strictEqual(webFullscreenTarget, mockPrimaryMedia, 'Must invoke toggleWebFullscreen on primaryMediaElement');
+    console.log('  ✅ Priority 3 verified: Main world forward & toggleWebFullscreen invoked when all overlays are absent');
   }
 }
 

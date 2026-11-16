@@ -1968,29 +1968,25 @@
             break;
           }
           case 'toggle_fullscreen': {
-            const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
-            if (floatingBtn) {
-              try {
-                floatingBtn.click();
-              } catch (_) {
-                if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
-                  window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
-                }
-              }
-            } else if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
+            if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
               window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
             } else {
-              forwardActionToMainWorld('toggle_fullscreen', data);
-              const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
-              if (ytFsBtn) {
-                try { ytFsBtn.click(); } catch (_) {}
+              const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
+              if (floatingBtn) {
+                try { floatingBtn.click(); } catch (_) {}
               } else {
-                try {
-                  const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
-                  (document.getElementById('movie_player') || document).dispatchEvent(ev);
-                } catch (_) {}
+                forwardActionToMainWorld('toggle_fullscreen', data);
+                const ytFsBtn = document.querySelector('#movie_player .ytp-fullscreen-button') || document.querySelector('.ytp-fullscreen-button');
+                if (ytFsBtn) {
+                  try { ytFsBtn.click(); } catch (_) {}
+                } else {
+                  try {
+                    const ev = new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', keyCode: 70, which: 70, bubbles: true });
+                    (document.getElementById('movie_player') || document).dispatchEvent(ev);
+                  } catch (_) {}
+                }
+                toggleWebFullscreen(primaryMediaElement);
               }
-              toggleWebFullscreen(primaryMediaElement);
             }
             break;
           }
