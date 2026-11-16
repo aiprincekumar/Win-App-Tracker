@@ -90,7 +90,6 @@
         options.onToggleStar(it.domain);
       });
     }
-    cellDiv.appendChild(starBtn);
 
     const favImg = doc.createElement('img');
     favImg.src = it.favicon || '../icons/icon32.png';
@@ -120,7 +119,13 @@
         options.onEditNote(it.domain);
       });
     }
-    cellDiv.appendChild(noteBtn);
+
+    // Restored: Sleek Hover Action Cluster for Star & Notes
+    const quickActions = doc.createElement('div');
+    quickActions.className = 'cell-quick-actions';
+    quickActions.appendChild(starBtn);
+    quickActions.appendChild(noteBtn);
+    cellDiv.appendChild(quickActions);
 
     // Badges: Extension, Internal
     if (it.domain === 'Dashboard' || it.domain === 'Extension') {
@@ -170,7 +175,7 @@
     tdCategory.className = 'col-category';
 
     const catSelect = doc.createElement('select');
-    catSelect.className = 'domain-cat-select styled-select';
+    catSelect.className = 'domain-cat-select styled-select badge-productivity';
     catSelect.setAttribute('data-domain', it.domain || '');
     catSelect.setAttribute('aria-label', `Category for ${it.domain}`);
 
@@ -181,6 +186,11 @@
         : () => 'work');
 
     const assignedCat = it.category || getCategoryFn(it.domain, options.domainCategoryOverrides);
+    if (catSelect.classList && typeof catSelect.classList.add === 'function') {
+      catSelect.classList.add(`badge-cat-${assignedCat || 'work'}`);
+    } else {
+      catSelect.className += ` badge-cat-${assignedCat || 'work'}`;
+    }
 
     const catList = [
       { id: 'work', key: 'cat_work', label: '💼 Work & Dev' },
@@ -202,6 +212,7 @@
 
     if (typeof options.onCategoryChange === 'function') {
       catSelect.addEventListener('change', (e) => {
+        catSelect.className = `domain-cat-select styled-select badge-productivity badge-cat-${e.target.value}`;
         options.onCategoryChange(it.domain, e.target.value);
       });
     } else if (typeof globalThis !== 'undefined' && typeof globalThis.handleCategoryOverride === 'function') {
