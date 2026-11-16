@@ -7,7 +7,7 @@
  * 1. Content Script IPC Router parsing integrity:
  *    - Standard MEDIA_CONTROL envelope ({ type: 'MEDIA_CONTROL', action: 'toggle_play' })
  *    - Relative seek envelope ({ type: 'MEDIA_CONTROL', action: 'seek_relative', data: { offsetSeconds: -10 } })
- *    - Direct actions in KNOWN_MEDIA_ACTIONS (play, pause, toggle_play, seek_relative, seek_percent, toggle_mute, set_volume, step_speed, set_speed, cycle_speed, toggle_fullscreen, toggle_pip, toggle_theater, step_quality, set_quality)
+ *    - Direct actions in KNOWN_MEDIA_ACTIONS (play, pause, toggle_play, seek_relative, seek_percent, toggle_mute, mute, unmute, set_volume, SET_VOLUME, step_speed, set_speed, cycle_speed, toggle_fullscreen, toggle_pip, toggle_theater, step_quality, set_quality)
  *    - Dedicated SET_VOLUME envelope ({ type: 'SET_VOLUME', volume: 0.5, percent: 50 })
  *    - Telemetry Query envelope ({ type: 'QUERY_PAGE_MEDIA' })
  *    - Guaranteed response: messages are never silently dropped; sendResponse is invoked and listener returns true
@@ -15,7 +15,7 @@
  *    - play, pause, toggle_play
  *    - seek_relative (+10s, -10s) with boundary clamping (>= 0 and <= duration)
  *    - seek_percent (positionSeconds & percent calculation against duration)
- *    - toggle_mute & set_volume (clamped [0, 1] with auto-mute at volume 0)
+ *    - toggle_mute, explicit mute, explicit unmute & set_volume (clamped [0, 1] with auto-mute at volume 0)
  *    - step_speed, set_speed, cycle_speed (ladder 0.25x - 4.0x)
  *    - toggle_fullscreen
  * 3. On-Video Overlay Fullscreen Button Linking:
@@ -32,9 +32,9 @@
  *    - Strictly bound to TOGGLE_GLOBAL_MEDIA
  *    - Not hijacked or merged with single-tab controls
  * 6. In-Popup Media Controls Wiring & Dual Actuation Verification:
- *    - #btnCtrlTogglePlay & #dynamicStatusBtn -> toggle_play (direct MAIN world executeScript & sendMediaControl)
+ *    - #btnCtrlTogglePlay & #dynamicStatusBtn -> explicit play/pause (direct MAIN world executeScript & sendMediaControl with strict mutual exclusion)
  *    - #btnCtrlRewind & #btnCtrlForward -> seek_relative (-10s, +10s) (direct MAIN world executeScript & sendMediaControl)
- *    - #btnCtrlToggleMute & #btnQuickMute -> toggle_mute (direct MAIN world executeScript & sendMediaControl)
+ *    - #btnCtrlToggleMute & #btnQuickMute -> explicit mute/unmute (direct MAIN world executeScript & sendMediaControl with strict mutual exclusion)
  *    - #btnCtrlSpeedDown & #btnCtrlSpeedUp -> step_speed (direct MAIN world executeScript & sendMediaControl)
  *    - #progressBarContainer -> seek_percent
  *    - #volumeBarContainer -> set_volume
@@ -42,16 +42,19 @@
  * 7. Extension Syntax & W3C Trusted Types compliance:
  *    - Zero syntax errors across all workspace scripts via `node -c` and vm.Script
  *    - Zero innerHTML assignments in content_media.js, fullscreen_controller.js, inject_main_world.js
+ *    - Zero syntax errors in test files
  * 8. Optimistic State Lock & Bounce-Back Elimination Invariants:
  *    - Timestamp declarations (lastPlayToggleTime, lastMuteToggleTime, etc.)
  *    - renderMediaCard 800ms cooldown guards
  * 9. Runtime Simulated Functional Mock Test Suite:
  *    - Execution against mock DOM elements and browserAPI
- *    - Dual actuation: exactly 1 direct MAIN world executeScript and exactly 1 sendMediaControl IPC dispatch
+ *    - Dual actuation: exactly 1 direct MAIN world executeScript and exactly 1 sendMediaControl IPC dispatch with explicit actions
+ *    - Direct executeScript simulation asserting strict mutual exclusion (moviePlayer vs video)
  *    - Real sendMediaControl envelope construction and dispatch verification
  * 10. Parity Resilience, Mute Single Inversion, and targetTabId Fallback Verification:
- *    - inject_main_world.js toggle_mute single-inversion determinism
- *    - content_media.js resilient fallback to primaryMediaElement
+ *    - inject_main_world.js toggle_mute and explicit mute/unmute determinism with strict mutual exclusion
+ *    - content_media.js resilient fallback to primaryMediaElement and explicit mute/unmute
+ *    - background.js explicit mute/unmute optimistic mutation and broadcast
  *    - popup/popup.js targetTabId multi-tier resolution parity with dashboard
  *    - Strict invariant guards: #btnGlobalMediaToggle and cooldown timestamps
  *    - Runtime functional simulation of multi-tier tab resolution and main world mute determinism
@@ -85,7 +88,7 @@ console.log('Test 1: Content Script IPC Router Parsing Integrity');
   // Verify KNOWN_MEDIA_ACTIONS contains all required actions
   const requiredKnownActions = [
     'play', 'pause', 'toggle_play', 'seek_relative', 'seek_percent',
-    'toggle_mute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
+    'toggle_mute', 'mute', 'unmute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
     'cycle_speed', 'toggle_fullscreen', 'toggle_pip', 'toggle_theater',
     'step_quality', 'set_quality'
   ];
@@ -247,7 +250,36 @@ console.log('Test 1: Content Script IPC Router Parsing Integrity');
     console.log('  ✅ Envelope E: { type: "QUERY_PAGE_MEDIA" } returned currentState telemetry cleanly');
   }
 
-  // Test Envelope F: Full KNOWN_MEDIA_ACTIONS suite verification
+  // Test Envelope F & G: Explicit mute and unmute
+  {
+    lastHandledAction = null;
+    const resMute = dispatchIPC({ type: 'MEDIA_CONTROL', action: 'mute' });
+    assert.strictEqual(resMute.retVal, true);
+    assert.strictEqual(resMute.responseCalled, true);
+    assert.strictEqual(lastHandledAction, 'mute');
+
+    lastHandledAction = null;
+    const resUnmute = dispatchIPC({ type: 'MEDIA_CONTROL', action: 'unmute' });
+    assert.strictEqual(resUnmute.retVal, true);
+    assert.strictEqual(resUnmute.responseCalled, true);
+    assert.strictEqual(lastHandledAction, 'unmute');
+
+    // Direct action envelopes without MEDIA_CONTROL wrapper
+    lastHandledAction = null;
+    const resDirMute = dispatchIPC({ action: 'mute' });
+    assert.strictEqual(resDirMute.retVal, true);
+    assert.strictEqual(resDirMute.responseCalled, true);
+    assert.strictEqual(lastHandledAction, 'mute');
+
+    lastHandledAction = null;
+    const resDirUnmute = dispatchIPC({ type: 'unmute' });
+    assert.strictEqual(resDirUnmute.retVal, true);
+    assert.strictEqual(resDirUnmute.responseCalled, true);
+    assert.strictEqual(lastHandledAction, 'unmute');
+    console.log('  ✅ Envelopes F & G: Explicit "mute" and "unmute" routed cleanly to handleMediaControl');
+  }
+
+  // Test Envelope H: Full KNOWN_MEDIA_ACTIONS suite verification
   requiredKnownActions.forEach((action) => {
     lastHandledAction = null;
     const res = dispatchIPC({ type: 'MEDIA_CONTROL', action: action, data: {} });
@@ -277,6 +309,8 @@ console.log('\nTest 2: `handleMediaControl` Action Execution Suite');
   assert(contentMediaCode.includes("case 'pause':"), 'handleMediaControl must handle pause');
   assert(contentMediaCode.includes("case 'toggle_play':"), 'handleMediaControl must handle toggle_play');
   assert(contentMediaCode.includes("case 'toggle_mute':"), 'handleMediaControl must handle toggle_mute');
+  assert(contentMediaCode.includes("case 'mute':"), 'handleMediaControl must handle explicit mute');
+  assert(contentMediaCode.includes("case 'unmute':"), 'handleMediaControl must handle explicit unmute');
   assert(contentMediaCode.includes("case 'set_volume':"), 'handleMediaControl must handle set_volume');
   assert(contentMediaCode.includes("case 'seek_relative':"), 'handleMediaControl must handle seek_relative');
   assert(contentMediaCode.includes("case 'seek_percent':"), 'handleMediaControl must handle seek_percent');
@@ -434,6 +468,18 @@ console.log('\nTest 2: `handleMediaControl` Action Execution Suite');
     assert.strictEqual(mockVideo.muted, true, 'toggle_mute must invert muted state');
     handleMediaControl('toggle_mute');
     assert.strictEqual(mockVideo.muted, false, 'toggle_mute must invert muted state back');
+
+    // Explicit Mute
+    handleMediaControl('mute');
+    assert.strictEqual(mockVideo.muted, true, 'explicit mute must set muted = true');
+    handleMediaControl('mute'); // Idempotency
+    assert.strictEqual(mockVideo.muted, true, 'explicit mute must be idempotent (remain true)');
+
+    // Explicit Unmute
+    handleMediaControl('unmute');
+    assert.strictEqual(mockVideo.muted, false, 'explicit unmute must set muted = false');
+    handleMediaControl('unmute'); // Idempotency
+    assert.strictEqual(mockVideo.muted, false, 'explicit unmute must be idempotent (remain false)');
 
     // Set volume by float
     handleMediaControl('set_volume', { volume: 0.45 });
@@ -708,13 +754,13 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Dual Actuation Verificat
 {
   const popupJsCode = fs.readFileSync(path.join(baseDir, 'popup/popup.js'), 'utf8');
 
-  // 6.1 #btnCtrlTogglePlay & #dynamicStatusBtn -> handleTogglePlay -> toggle_play
+  // 6.1 #btnCtrlTogglePlay & #dynamicStatusBtn -> handleTogglePlay -> explicit play/pause
   assert(popupJsCode.includes("dynamicStatusBtn.addEventListener('click', handleTogglePlay);"),
     'dynamicStatusBtn must listen for click and call handleTogglePlay');
   assert(popupJsCode.includes("btnCtrlTogglePlay.addEventListener('click', handleTogglePlay);"),
     'btnCtrlTogglePlay must listen for click and call handleTogglePlay');
-  assert(popupJsCode.includes("sendMediaControl('toggle_play', {}, targetTabId);"),
-    'handleTogglePlay must call sendMediaControl("toggle_play", {}, targetTabId)');
+  assert(popupJsCode.includes("sendMediaControl(targetAction, {}, targetTabId);"),
+    'handleTogglePlay must call sendMediaControl(targetAction, {}, targetTabId)');
 
   // Verify handleTogglePlay contains executeScript (world: 'MAIN') and dispatches via sendMediaControl
   const playHandlerStart = popupJsCode.indexOf('const handleTogglePlay = () => {');
@@ -723,10 +769,13 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Dual Actuation Verificat
   const playBlock = popupJsCode.slice(playHandlerStart, playHandlerEnd);
   assert(playBlock.includes('browserAPI.scripting.executeScript'), 'handleTogglePlay must contain browserAPI.scripting.executeScript');
   assert(playBlock.includes("world: 'MAIN'"), 'handleTogglePlay must execute in MAIN world');
-  assert(playBlock.includes("sendMediaControl('toggle_play', {}, targetTabId);"), 'handleTogglePlay must dispatch sendMediaControl');
-  assert(playBlock.includes('activeMediaCached.isPlaying = !activeMediaCached.isPlaying;'), 'handleTogglePlay must optimistically toggle isPlaying');
+  assert(playBlock.includes("args: [targetAction]"), 'handleTogglePlay must pass args: [targetAction]');
+  assert(playBlock.includes("const targetAction = willPlay ? 'play' : 'pause';"), 'handleTogglePlay must compute targetAction explicitly');
+  assert(playBlock.includes("else if (v)"), 'handleTogglePlay must use strict else if mutual exclusion');
+  assert(playBlock.includes("sendMediaControl(targetAction, {}, targetTabId);"), 'handleTogglePlay must dispatch sendMediaControl with targetAction');
+  assert(playBlock.includes('activeMediaCached.isPlaying = willPlay;'), 'handleTogglePlay must optimistically set isPlaying to willPlay');
   assert(playBlock.includes('lastPlayToggleTime = Date.now();'), 'handleTogglePlay must record lastPlayToggleTime');
-  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to dual actuation (0ms executeScript MAIN world & sendMediaControl toggle_play)');
+  console.log('  ✅ In-card Play/Pause (#btnCtrlTogglePlay & #dynamicStatusBtn) correctly wires to dual actuation (0ms executeScript MAIN world & explicit sendMediaControl)');
 
   // 6.2 Seek Relative (-10s / +10s)
   assert(popupJsCode.includes("sendMediaControl('seek_relative', { offsetSeconds: -10 }, targetTabId);"),
@@ -757,16 +806,19 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Dual Actuation Verificat
     'btnCtrlToggleMute must listen for click and call handleToggleMute');
   assert(popupJsCode.includes("btnQuickMute.addEventListener('click', handleToggleMute);"),
     'btnQuickMute must listen for click and call handleToggleMute');
-  assert(popupJsCode.includes("sendMediaControl('toggle_mute', {}, targetTabId);"),
-    'handleToggleMute must call sendMediaControl("toggle_mute", {}, targetTabId)');
+  assert(popupJsCode.includes("sendMediaControl(targetAction, {}, targetTabId);"),
+    'handleToggleMute must call sendMediaControl(targetAction, {}, targetTabId)');
 
   const muteBlock = popupJsCode.slice(muteHandlerStart, popupJsCode.indexOf("const btnCtrlToggleMute =", muteHandlerStart));
   assert(muteBlock.includes('browserAPI.scripting.executeScript'), 'handleToggleMute must contain executeScript');
   assert(muteBlock.includes("world: 'MAIN'"), 'handleToggleMute must execute in MAIN world');
-  assert(muteBlock.includes("sendMediaControl('toggle_mute', {}, targetTabId);"), 'handleToggleMute must dispatch sendMediaControl');
+  assert(muteBlock.includes("args: [targetAction]"), 'handleToggleMute must pass args: [targetAction]');
+  assert(muteBlock.includes("const targetAction = willMute ? 'mute' : 'unmute';"), 'handleToggleMute must compute targetAction explicitly');
+  assert(muteBlock.includes("else if (v)"), 'handleToggleMute must use strict else if mutual exclusion');
+  assert(muteBlock.includes("sendMediaControl(targetAction, {}, targetTabId);"), 'handleToggleMute must dispatch sendMediaControl with targetAction');
   assert(muteBlock.includes('lastMuteToggleTime = Date.now();'), 'handleToggleMute must record lastMuteToggleTime');
-  assert(muteBlock.includes('activeMediaCached.isMuted = !activeMediaCached.isMuted;'), 'handleToggleMute must optimistically toggle isMuted');
-  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to dual actuation (0ms executeScript MAIN world & toggle_mute)');
+  assert(muteBlock.includes('activeMediaCached.isMuted = willMute;'), 'handleToggleMute must optimistically set isMuted to willMute');
+  console.log('  ✅ Mute buttons (#btnCtrlToggleMute & #btnQuickMute) correctly wire to dual actuation (0ms executeScript MAIN world & explicit sendMediaControl)');
 
   // 6.4 Playback Speed Steppers
   assert(popupJsCode.includes("sendMediaControl('step_speed', { direction: 'down', targetSpeed, step: -0.25 }, targetTabId);"),
@@ -915,6 +967,10 @@ console.log('\nTest 8: Optimistic State Lock & Bounce-Back Elimination Invariant
     'CONTROL_MEDIA must optimistically set pm.isPlaying = false on pause');
   assert(controlMediaBlock.includes("message.action === 'toggle_mute'") && controlMediaBlock.includes('pm.isMuted = !pm.isMuted;'),
     'CONTROL_MEDIA must optimistically toggle pm.isMuted');
+  assert(controlMediaBlock.includes("message.action === 'mute'") && controlMediaBlock.includes('pm.isMuted = true;'),
+    'CONTROL_MEDIA must optimistically set pm.isMuted = true on mute');
+  assert(controlMediaBlock.includes("message.action === 'unmute'") && controlMediaBlock.includes('pm.isMuted = false;'),
+    'CONTROL_MEDIA must optimistically set pm.isMuted = false on unmute');
   assert(controlMediaBlock.includes("message.action === 'step_speed'") && controlMediaBlock.includes('pm.playbackRate = targetSpeed;'),
     'CONTROL_MEDIA must optimistically step pm.playbackRate');
   assert(controlMediaBlock.includes("message.action === 'seek_relative'") && controlMediaBlock.includes('pm.currentTime = Math.max(0'),
@@ -1098,14 +1154,16 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
     // Verify single authoritative sendMediaControl dispatch
     assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_play', 'sendMediaControl action must be toggle_play');
+    assert.strictEqual(interceptedMediaControls[0].action, 'play', 'sendMediaControl action must be explicit "play"');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42, 'sendMediaControl tabId must be 42');
 
     // Verify dual direct scripting execution in MAIN world
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on play toggle');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42, 'executeScript target tabId must be 42');
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN', 'executeScript world must be MAIN');
-    console.log('  ✅ #btnCtrlTogglePlay: Dual actuation (toggle_play IPC & direct MAIN world executeScript) verified');
+    assert.strictEqual(interceptedExecuteScripts[0].args[0], 'play', 'executeScript args must pass "play"');
+    assert.strictEqual(interceptedExecuteScripts[0].args.length, 1);
+    console.log('  ✅ #btnCtrlTogglePlay: Dual actuation (explicit "play" IPC & direct MAIN world executeScript) verified');
   }
 
   // 9.4 Test Play/Pause Toggle via #dynamicStatusBtn
@@ -1116,12 +1174,14 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
     assert.strictEqual(sandboxScope.activeMediaCached.isPlaying, false, 'activeMediaCached.isPlaying must toggle back to false');
     assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_play');
+    assert.strictEqual(interceptedMediaControls[0].action, 'pause', 'sendMediaControl action must be explicit "pause"');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on dynamic status btn');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #dynamicStatusBtn: Dual actuation (toggle_play IPC & direct MAIN world executeScript) verified');
+    assert.strictEqual(interceptedExecuteScripts[0].args[0], 'pause', 'executeScript args must pass "pause"');
+    assert.strictEqual(interceptedExecuteScripts[0].args.length, 1);
+    console.log('  ✅ #dynamicStatusBtn: Dual actuation (explicit "pause" IPC & direct MAIN world executeScript) verified');
   }
 
   // 9.5 Test Rewind 10s via #btnCtrlRewind
@@ -1162,15 +1222,18 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
   {
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
+    sandboxScope.activeMediaCached.isMuted = false;
     mockElements.btnCtrlToggleMute.click();
 
     assert.strictEqual(sandboxScope.activeMediaCached.isMuted, true, 'isMuted must toggle to true');
     assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_mute');
+    assert.strictEqual(interceptedMediaControls[0].action, 'mute', 'sendMediaControl action must be explicit "mute"');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on mute toggle');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
+    assert.strictEqual(interceptedExecuteScripts[0].args[0], 'mute', 'executeScript args must pass "mute"');
+    assert.strictEqual(interceptedExecuteScripts[0].args.length, 1);
 
     // Quick mute click
     interceptedMediaControls.length = 0;
@@ -1179,12 +1242,14 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
     assert.strictEqual(sandboxScope.activeMediaCached.isMuted, false, 'isMuted must toggle back to false');
     assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once');
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_mute');
+    assert.strictEqual(interceptedMediaControls[0].action, 'unmute', 'sendMediaControl action must be explicit "unmute"');
     assert.strictEqual(interceptedMediaControls[0].tabId, 42);
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on quick mute');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #btnCtrlToggleMute & #btnQuickMute: Dual actuation (toggle_mute IPC & direct MAIN world executeScript) verified');
+    assert.strictEqual(interceptedExecuteScripts[0].args[0], 'unmute', 'executeScript args must pass "unmute"');
+    assert.strictEqual(interceptedExecuteScripts[0].args.length, 1);
+    console.log('  ✅ #btnCtrlToggleMute & #btnQuickMute: Dual actuation (explicit "mute"/"unmute" IPC & direct MAIN world executeScript) verified');
   }
 
   // 9.8 Test Speed Steppers (#btnCtrlSpeedDown & #btnCtrlSpeedUp)
@@ -1334,6 +1399,79 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
     console.log('  ✅ Real sendMediaControl implementation: Correct CONTROL_MEDIA envelope & tabId routing verified');
   }
+
+  // 9.12 Direct Scripting Execution Simulation with Strict Mutual Exclusion
+  {
+    interceptedExecuteScripts.length = 0;
+    mockElements.btnCtrlTogglePlay.click();
+    const playExecOptions = interceptedExecuteScripts[0];
+    assert(playExecOptions && typeof playExecOptions.func === 'function', 'Must have captured play executeScript func');
+
+    let moviePlayerPlayCalls = 0;
+    let videoPlayCalls = 0;
+    const mockP = {
+      playVideo: () => { moviePlayerPlayCalls++; },
+      pauseVideo: () => {},
+      getPlayerState: () => 2
+    };
+    const mockV = {
+      paused: true,
+      play: () => { videoPlayCalls++; return Promise.resolve(); },
+      pause: () => {}
+    };
+
+    const execPlayContext = vm.createContext({
+      document: {
+        getElementById: (id) => (id === 'movie_player' ? mockP : null),
+        querySelectorAll: () => [mockV],
+        querySelector: () => mockV
+      },
+      window: {},
+      Array
+    });
+
+    const runnerPlayCode = `(${playExecOptions.func.toString()})('play');`;
+    vm.runInContext(runnerPlayCode, execPlayContext);
+
+    assert.strictEqual(moviePlayerPlayCalls, 1, 'moviePlayer.playVideo must be called');
+    assert.strictEqual(videoPlayCalls, 0, 'video.play must NOT be called when moviePlayer handles play (strict mutual exclusion)');
+
+    interceptedExecuteScripts.length = 0;
+    mockElements.btnCtrlToggleMute.click();
+    const muteExecOptions = interceptedExecuteScripts[0];
+    assert(muteExecOptions && typeof muteExecOptions.func === 'function', 'Must have captured mute executeScript func');
+
+    let moviePlayerMuteCalls = 0;
+    let videoMuteSetCount = 0;
+    const mockPMute = {
+      mute: () => { moviePlayerMuteCalls++; },
+      unMute: () => {},
+      isMuted: () => false
+    };
+    const mockVMute = {
+      paused: false,
+      _muted: false,
+      get muted() { return this._muted; },
+      set muted(val) { videoMuteSetCount++; this._muted = val; }
+    };
+
+    const execMuteContext = vm.createContext({
+      document: {
+        getElementById: (id) => (id === 'movie_player' ? mockPMute : null),
+        querySelectorAll: () => [mockVMute],
+        querySelector: () => mockVMute
+      },
+      window: {},
+      Array
+    });
+
+    const runnerMuteCode = `(${muteExecOptions.func.toString()})('mute');`;
+    vm.runInContext(runnerMuteCode, execMuteContext);
+
+    assert.strictEqual(moviePlayerMuteCalls, 1, 'moviePlayer.mute must be called');
+    assert.strictEqual(videoMuteSetCount, 0, 'video.muted must NOT be touched when moviePlayer handles mute (strict mutual exclusion)');
+    console.log('  ✅ 9.12: Direct executeScript functions enforce strict else if mutual exclusion between movie_player and video');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1344,13 +1482,31 @@ console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabI
   const injectCode = fs.readFileSync(path.join(baseDir, 'inject_main_world.js'), 'utf8');
   const contentCode = fs.readFileSync(path.join(baseDir, 'content_media.js'), 'utf8');
   const popupCode = fs.readFileSync(path.join(baseDir, 'popup', 'popup.js'), 'utf8');
+  const backgroundCode = fs.readFileSync(path.join(baseDir, 'background.js'), 'utf8');
 
-  // 10.1 inject_main_world.js: Mute Determinism (Single-Inversion)
+  // 10.1 inject_main_world.js, background.js & content_media.js: Mute Determinism & Explicit Action Invariants
   const muteHandlerMatch = injectCode.match(/case 'toggle_mute':\s*\{([\s\S]*?)break;/);
   assert(muteHandlerMatch, 'inject_main_world.js must have case toggle_mute: block');
   const muteBody = muteHandlerMatch[1];
   assert(muteBody.includes('else if (video)'), 'inject_main_world.js toggle_mute must use mutually exclusive "else if (video)" to prevent double inversion');
-  console.log('  ✅ 10.1: inject_main_world.js toggle_mute single-inversion determinism verified');
+
+  // Explicit mute and unmute cases in inject_main_world.js
+  assert(injectCode.includes("case 'mute':"), 'inject_main_world.js must have case "mute": block');
+  assert(injectCode.includes("case 'unmute':"), 'inject_main_world.js must have case "unmute": block');
+  assert(injectCode.includes("showOSD('Muted', '🔇')"), 'inject_main_world.js must show OSD for Muted');
+  assert(injectCode.includes("showOSD('Unmuted', '🔊')"), 'inject_main_world.js must show OSD for Unmuted');
+
+  // Explicit mute and unmute handlers in background.js
+  assert(backgroundCode.includes("message.action === 'mute'") && backgroundCode.includes('pm.isMuted = true;'),
+    'background.js must handle explicit mute action with pm.isMuted = true');
+  assert(backgroundCode.includes("message.action === 'unmute'") && backgroundCode.includes('pm.isMuted = false;'),
+    'background.js must handle explicit unmute action with pm.isMuted = false');
+
+  // Explicit mute and unmute handlers in content_media.js
+  assert(contentCode.includes("case 'mute':"), 'content_media.js must have case "mute": in handleMediaControl');
+  assert(contentCode.includes("case 'unmute':"), 'content_media.js must have case "unmute": in handleMediaControl');
+  assert(contentCode.includes("'mute'") && contentCode.includes("'unmute'"), 'content_media.js KNOWN_MEDIA_ACTIONS must include mute and unmute');
+  console.log('  ✅ 10.1: inject_main_world.js, background.js, and content_media.js explicit mute/unmute parity verified');
 
   // 10.2 content_media.js: Resilient Fallback to primaryMediaElement
   assert(contentCode.includes('shouldExecuteDirect') || contentCode.includes('!isBridgeActive'), 
