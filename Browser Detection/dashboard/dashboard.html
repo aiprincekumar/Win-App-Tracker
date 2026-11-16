@@ -140,12 +140,52 @@
             </svg>
             <span id="themeToggleText">Light</span>
           </button>
+          <!-- Feature 6: Executive Digest Print & Offline Export -->
+          <button id="btnPrintPdf" class="btn-action-outline btn-print-pdf" title="Print / Save PDF (window.print)">
+            <span class="action-btn-icon">🖨️</span>
+            <span id="btnPrintPdfText">PDF</span>
+          </button>
+          <button id="btnDownloadHtmlDigest" class="btn-action-outline btn-html-digest" title="Download Standalone Offline HTML Report">
+            <span class="action-btn-icon">📄</span>
+            <span id="btnDownloadHtmlDigestText">Report</span>
+          </button>
           <button id="btnGlobalRefresh" class="btn-action-outline" title="Refresh Data">
             <span class="refresh-spinner-icon">🔄</span>
             <span id="btnGlobalRefreshText">Refresh</span>
           </button>
         </div>
       </header>
+
+      <!-- Executive Report Print Header (Feature 6 - Print Only) -->
+      <div id="printExecutiveHeader" class="print-executive-header" aria-hidden="true">
+        <div class="print-brand-row">
+          <div class="print-brand-info">
+            <h1 id="printReportTitle" class="print-title">Web Activity & Focus Executive Digest</h1>
+            <span id="printReportPeriod" class="print-date">Reporting Period: All Time</span>
+          </div>
+          <div class="print-logo-box">
+            <span class="print-logo-text">Media Sentinel Enterprise</span>
+          </div>
+        </div>
+        <div class="print-summary-grid">
+          <div class="print-summary-card">
+            <span class="print-stat-label">Total Active Time</span>
+            <strong id="printStatTotalTime" class="print-stat-value">0h 00m</strong>
+          </div>
+          <div class="print-summary-card">
+            <span class="print-stat-label">Top Focus Domain</span>
+            <strong id="printStatTopDomain" class="print-stat-value">--</strong>
+          </div>
+          <div class="print-summary-card">
+            <span class="print-stat-label">Productivity Index</span>
+            <strong id="printStatProductivity" class="print-stat-value">--</strong>
+          </div>
+          <div class="print-summary-card">
+            <span class="print-stat-label">Media Consumed</span>
+            <strong id="printStatMediaTime" class="print-stat-value">0h 00m</strong>
+          </div>
+        </div>
+      </div>
 
       <!-- Tab Content Area -->
       <div class="tab-content-container">
@@ -1195,6 +1235,64 @@
                     <span>🎬 Download CSV (Media History)</span>
                   </button>
                 </div>
+
+                <div class="export-tile">
+                  <div class="export-tile-info">
+                    <span class="export-format-badge html">HTML</span>
+                    <h4 id="titleExportHtmlDigest" class="export-tile-title">Executive Offline HTML Digest</h4>
+                    <p id="descExportHtmlDigest" class="export-tile-desc">Download a self-contained, standalone HTML report with embedded styles and telemetry.</p>
+                  </div>
+                  <button id="btnDownloadHtmlReport" class="btn-export-tile">
+                    <span>📄 Download HTML Report</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Advanced Backup, Snapshots & SQLite Hub (Feature 5) -->
+            <div id="cardAdvancedBackupRestore" class="settings-card bento-card liquid-glass-card bento-span-6">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">💾</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingAdvancedBackupCard" class="settings-card-title">Advanced Backup, Snapshots & SQLite Hub</h3>
+                  <span id="subAdvancedBackupCard" class="settings-card-sub">Disaster recovery, 7-day rolling snapshots, and desktop SQLite synchronization</span>
+                </div>
+              </div>
+
+              <div class="backup-actions-grid">
+                <div class="backup-action-box">
+                  <h4 id="lblImportBackupHeader" class="backup-action-title">📥 Backup Restore</h4>
+                  <p id="lblImportBackupDesc" class="backup-action-desc">Import JSON backup with Schema v2.0 verification and conflict resolution.</p>
+                  <div class="backup-input-row">
+                    <label for="inputBackupFile" class="btn btn-primary btn-sm" id="lblImportBackup">📥 Import JSON Backup</label>
+                    <input type="file" id="inputBackupFile" accept=".json" class="hidden">
+                    <button id="btnImportJsonBackup" class="btn btn-primary btn-sm">📥 Import JSON</button>
+                  </div>
+                </div>
+
+                <div class="backup-action-box">
+                  <h4 id="lblSnapshotRollbackHeader" class="backup-action-title">⏪ Rolling Daily Snapshots</h4>
+                  <p id="lblSnapshotRollbackDesc" class="backup-action-desc">Roll back to automatic 7-day trailing local storage snapshots.</p>
+                  <div class="snapshot-controls-row">
+                    <select id="selectSnapshotRollback" class="form-select select-snapshot" aria-label="Select Snapshot">
+                      <option value="">Select a snapshot...</option>
+                    </select>
+                    <button id="btnApplySnapshotRollback" class="btn btn-secondary btn-sm">Restore</button>
+                  </div>
+                  <div class="quick-snapshot-buttons">
+                    <button id="btnRollbackYesterday" class="btn btn-ghost btn-xs">⏪ Yesterday</button>
+                    <button id="btnRollback3Days" class="btn btn-ghost btn-xs">⏪ 3 Days Ago</button>
+                  </div>
+                </div>
+
+                <div class="backup-action-box">
+                  <h4 id="lblSqliteSyncHeader" class="backup-action-title">🔄 SQLite Data Hub</h4>
+                  <p id="lblSqliteSyncDesc" class="backup-action-desc">Replicate history to desktop SQLite database or pull full backup.</p>
+                  <div class="hub-sync-buttons-row">
+                    <button id="btnReplicateSqliteHub" class="btn btn-secondary btn-sm">🔄 Replicate to Hub</button>
+                    <button id="btnRestoreFromSqliteHub" class="btn btn-secondary btn-sm">📥 Restore from Hub</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1255,6 +1353,47 @@
 
       </div>
     </main>
+  </div>
+
+  <!-- Modal Dialog: Backup Conflict Resolution (Feature 5) -->
+  <div id="modalConflictResolution" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="conflictModalTitle">
+    <div class="modal-card liquid-glass-card conflict-modal-card">
+      <div class="modal-header">
+        <span class="modal-icon">⚠️</span>
+        <h3 id="conflictModalTitle" class="modal-title">Restore Conflict Resolution</h3>
+        <button id="btnConflictClose" class="btn-icon-close" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="conflictModalDesc" class="modal-message">A backup file has been loaded. Existing telemetry was found in local storage. Choose how to merge conflicting dates:</p>
+        <div class="conflict-summary-pill" id="conflictSummaryPill">
+          <span id="conflictFileVersionBadge" class="badge-version">v2.0</span>
+          <span id="conflictFileDateCount">0 dates found in backup</span>
+        </div>
+        <div class="conflict-choices-list">
+          <div class="conflict-choice-item">
+            <button id="btnConflictMerge" class="btn btn-primary btn-block">
+              <strong>Merge (Recommended)</strong>
+              <small class="choice-subtext">Combine existing and backup records, preserving highest active durations.</small>
+            </button>
+          </div>
+          <div class="conflict-choice-item">
+            <button id="btnConflictOverwrite" class="btn btn-danger-solid btn-block">
+              <strong>Overwrite All</strong>
+              <small class="choice-subtext">Wipe existing local telemetry and replace completely with backup data.</small>
+            </button>
+          </div>
+          <div class="conflict-choice-item">
+            <button id="btnConflictAppend" class="btn btn-secondary btn-block">
+              <strong>Append-Only (New Dates Only)</strong>
+              <small class="choice-subtext">Add missing calendar dates only; existing recorded dates will remain unchanged.</small>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnConflictCancel" class="btn-modal-secondary">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- Confirmation Modal Dialog -->

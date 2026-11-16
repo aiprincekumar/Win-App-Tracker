@@ -1,0 +1,305 @@
+﻿/**
+ * Web Activity & Media Sentinel - Advanced Backup, Snapshots, SQLite Hub & Executive Digest Stylesheet
+ * Features 5 & 6: Backup dropzone, Snapshot controls, Conflict Modal, and @media print Executive Digest Engine.
+ * 
+ * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
+ */
+
+/* =============================================================================
+ * Feature 5: Advanced Backup, Snapshots & SQLite Hub
+ * ============================================================================= */
+
+.backup-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.backup-action-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.backup-action-box:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.backup-action-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 6px 0;
+}
+
+.backup-action-desc {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin: 0 0 14px 0;
+  flex-grow: 1;
+}
+
+.backup-input-row,
+.snapshot-controls-row,
+.hub-sync-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-snapshot-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.btn-xs {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.select-snapshot {
+  flex: 1;
+  min-width: 150px;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #f1f5f9;
+}
+
+/* Conflict Resolution Modal */
+.conflict-modal-card {
+  max-width: 520px;
+  width: 90%;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+.conflict-summary-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  margin: 12px 0 18px 0;
+  font-size: 0.82rem;
+  color: #10b981;
+}
+
+.badge-version {
+  background: #10b981;
+  color: #022c22;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.conflict-choices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conflict-choice-item {
+  width: 100%;
+}
+
+.conflict-choice-item button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.choice-subtext {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* =============================================================================
+ * Feature 6: Executive PDF & HTML Digest Engine (@media print)
+ * ============================================================================= */
+
+/* Hidden on screen by default */
+.print-executive-header {
+  display: none;
+}
+
+@media print {
+  /* Hide non-printable navigation, sidebar, action buttons, modals and search bars */
+  .sidebar,
+  .dashboard-header-actions,
+  .btn,
+  .btn-action-outline,
+  .temporal-subtabs,
+  .search-container,
+  .browser-filter-container,
+  .modal-backdrop,
+  .omni-modal-overlay,
+  .sticky-mini-player-dock,
+  .settings-card,
+  #heroAudioLabStatus,
+  #canvasAudioVisualizer,
+  #paneSettings,
+  #paneMedia,
+  #customDateRangePicker,
+  #btnSidebarReconnectHub,
+  #dataHubBadge {
+    display: none !important;
+  }
+
+  /* Reset main background to pure white for crisp paper printing */
+  html, body, .dashboard-layout, .main-content, .tab-content-container {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Executive Report Header */
+  .print-executive-header {
+    display: block !important;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  .print-brand-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .print-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+  }
+
+  .print-date {
+    font-size: 0.85rem;
+    color: #475569;
+  }
+
+  .print-logo-box {
+    border: 1px solid #0f172a;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .print-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .print-summary-card {
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    border-radius: 6px;
+    background: #f8fafc;
+  }
+
+  .print-stat-label {
+    display: block;
+    font-size: 0.72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .print-stat-value {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 2px;
+  }
+
+  /* Keep cards and table rows together without awkward page breaks */
+  .metrics-grid,
+  .metric-card,
+  .analytics-hero-card,
+  .table-card,
+  .domain-table-container,
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Enhance borders and contrast for grayscale / color printing */
+  .bento-card, .metric-card, table {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  th, td {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+}
+
+/* Light Theme Overrides */
+body.theme-light .backup-action-box {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+body.theme-light .backup-action-box:hover {
+  background: #f1f5f9;
+  border-color: #10b981;
+}
+
+body.theme-light .backup-action-title {
+  color: #0f172a;
+}
+
+body.theme-light .backup-action-desc {
+  color: #64748b;
+}
+
+body.theme-light .select-snapshot {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+body.theme-light .conflict-modal-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}

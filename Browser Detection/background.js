@@ -3629,6 +3629,68 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // ---------------------------------------------------------------------------
+  // Phase 3: Backup Snapshots & SQLite Data Hub Sync IPC Handlers
+  // ---------------------------------------------------------------------------
+  if (msgType === 'GET_BACKUP_SNAPSHOTS' || message.action === 'GET_BACKUP_SNAPSHOTS') {
+    (async () => {
+      await ensureStorageLoaded();
+      try {
+        const SNAPSHOT_INDEX_KEY = 'sentinel_snapshot_index';
+        const res = await browserAPI.storage.local.get([SNAPSHOT_INDEX_KEY]);
+        const index = res[SNAPSHOT_INDEX_KEY] || [];
+        const snapshotsData = await browserAPI.storage.local.get(index);
+        const list = index.map(key => snapshotsData[key]).filter(Boolean);
+        sendResponse({ success: true, snapshots: list });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (msgType === 'RESTORE_BACKUP_SNAPSHOT' || message.action === 'RESTORE_BACKUP_SNAPSHOT') {
+    (async () => {
+      await ensureStorageLoaded();
+      try {
+        const snapshotKey = message.snapshotKey;
+        const res = await browserAPI.storage.local.get([snapshotKey]);
+        const snapshot = res[snapshotKey];
+        if (!snapshot || !snapshot.tracking_history) {
+          sendResponse({ success: false, error: 'Snapshot not found' });
+          return;
+        }
+        await browserAPI.storage.local.set({
+          sentinel_activity_data: snapshot.tracking_history,
+          trackingHistory: snapshot.tracking_history
+        });
+        sendResponse({ success: true, snapshotKey, date: snapshot.date });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (msgType === 'SYNC_HISTORY_UPSERT' || message.action === 'SYNC_HISTORY_UPSERT') {
+    (async () => {
+      await ensureStorageLoaded();
+      const history = message.tracking_history || message.data || {};
+      if (dataHubConnected && dataHubWs && dataHubWs.readyState === WebSocket.OPEN) {
+        sendDataHubMessage({
+          type: 'SYNC_HISTORY_UPSERT',
+          client_id: clientId,
+          tracking_history: history,
+          timestamp: Date.now()
+        });
+        sendResponse({ success: true, forwardedToHub: true });
+      } else {
+        sendResponse({ success: true, forwardedToHub: false, offline: true });
+      }
+    })();
+    return true;
+  }
 });
 
 // Reactively synchronize configuration changes from chrome.storage

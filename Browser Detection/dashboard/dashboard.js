@@ -72,6 +72,7 @@ const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.Sentin
 const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
 const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
 const _MediaDeckVisualizer = (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature) ? globalThis.MediaDeckVisualizerFeature : _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
+const _BackupHubDigest = (typeof globalThis !== 'undefined' && globalThis.BackupHubDigestFeature) ? globalThis.BackupHubDigestFeature : _safeRequire('./src/dashboard/features/backup_hub_digest_feature.js', '../src/dashboard/features/backup_hub_digest_feature.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelDashboardModules = {
@@ -87,7 +88,8 @@ if (typeof window !== 'undefined') {
     FeatureRegistry: _FeatureRegistry,
     DashboardFeatureManager: _DashboardFeatureManager,
     TemporalProductivity: _TemporalProductivity,
-    MediaDeckVisualizer: _MediaDeckVisualizer
+    MediaDeckVisualizer: _MediaDeckVisualizer,
+    BackupHubDigest: _BackupHubDigest
   };
 }
 
@@ -210,6 +212,37 @@ const DASHBOARD_I18N = {
     visualizer_mode_wave: 'Waveform',
     active_streams_count: (count) => `${count} active stream${count === 1 ? '' : 's'}`,
     no_media_streams: 'No active media streams detected across open tabs',
+    
+    // Feature 5: Advanced Backup & Hub Sync
+    btn_import_json: '📥 Import Backup & Restore',
+    btn_rollback_snapshot: '⏪ Rollback to Snapshot',
+    btn_sync_sqlite_hub: '🔄 Replicate to SQLite Hub',
+    btn_restore_sqlite_hub: '📥 Restore from SQLite Data Hub',
+    dlg_conflict_title: 'Restore Conflict Resolution',
+    dlg_conflict_merge: 'Merge (Recommended)',
+    dlg_conflict_overwrite: 'Overwrite All',
+    dlg_conflict_append: 'Append-Only (New Dates Only)',
+    dlg_conflict_cancel: 'Cancel',
+    heading_advanced_backup: 'Advanced Backup, Snapshots & SQLite Hub',
+    sub_advanced_backup: 'Disaster recovery, 7-day rolling snapshots, and desktop SQLite synchronization',
+    lbl_import_backup_header: 'Backup Restore',
+    lbl_import_backup_desc: 'Import JSON backup with Schema v2.0 verification and conflict resolution',
+    lbl_snapshot_rollback_header: 'Rolling Daily Snapshots',
+    lbl_snapshot_rollback_desc: 'Roll back to automatic 7-day trailing local storage snapshots',
+    lbl_sqlite_sync_header: 'SQLite Data Hub',
+    lbl_sqlite_sync_desc: 'Replicate history to desktop SQLite database or pull full backup',
+    btn_yesterday: '⏪ Yesterday',
+    btn_3days_ago: '⏪ 3 Days Ago',
+
+    // Feature 6: Executive Digest
+    btn_print_pdf: '🖨️ Print / Save as PDF',
+    btn_download_html: '📄 Download Standalone HTML',
+    digest_title: 'Web Activity & Focus Executive Digest',
+    digest_period: 'Reporting Period',
+    digest_total_time: 'Total Active Time',
+    digest_top_domain: 'Top Focus Domain',
+    digest_productivity: 'Productivity Index',
+    digest_media_time: 'Media Consumed',
     donut_center_today: "Today's Total Time",
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
@@ -555,6 +588,37 @@ const DASHBOARD_I18N = {
     visualizer_mode_wave: 'वेवफॉर्म',
     active_streams_count: (count) => `${count} सक्रिय स्ट्रीम`,
     no_media_streams: 'खुले टैब्स में कोई सक्रिय मीडिया स्ट्रीम नहीं मिली',
+    
+    // Feature 5: Advanced Backup & Hub Sync
+    btn_import_json: '📥 बैकअप इम्पोर्ट व पुनर्स्थापना',
+    btn_rollback_snapshot: '⏪ पूर्व स्नैपशॉट पर लौटें',
+    btn_sync_sqlite_hub: '🔄 SQLite हब में रेप्लिकेट करें',
+    btn_restore_sqlite_hub: '📥 SQLite डेटा हब से पुनर्स्थापित करें',
+    dlg_conflict_title: 'डेटा टकराव समाधान',
+    dlg_conflict_merge: 'मर्ज करें (अनुशंसित)',
+    dlg_conflict_overwrite: 'पूर्ण प्रतिस्थापन (Overwrite)',
+    dlg_conflict_append: 'केवल नई तिथियां जोड़ें (Append-Only)',
+    dlg_conflict_cancel: 'रद्द करें',
+    heading_advanced_backup: 'उन्नत बैकअप, स्नैपशॉट्स व SQLite हब',
+    sub_advanced_backup: 'आपदा पुनर्प्राप्ति, 7-दिवसीय रोलिंग स्नैपशॉट्स और डेस्कटॉप SQLite सिंक्रोनाइज़ेशन',
+    lbl_import_backup_header: 'बैकअप पुनर्स्थापना',
+    lbl_import_backup_desc: 'स्कीमा v2.0 सत्यापन और टकराव समाधान के साथ JSON बैकअप आयात करें',
+    lbl_snapshot_rollback_header: 'रोलिंग दैनिक स्नैपशॉट्स',
+    lbl_snapshot_rollback_desc: 'स्वचालित 7-दिवसीय स्थानीय स्टोरेज स्नैपशॉट पर वापस लौटें',
+    lbl_sqlite_sync_header: 'SQLite डेटा हब',
+    lbl_sqlite_sync_desc: 'डेस्कटॉप SQLite डेटाबेस में इतिहास रेप्लिकेट करें या पूर्ण बैकअप पुनर्प्राप्त करें',
+    btn_yesterday: '⏪ बीता हुआ कल',
+    btn_3days_ago: '⏪ 3 दिन पहले',
+
+    // Feature 6: Executive Digest
+    btn_print_pdf: '🖨️ प्रिंट करें / PDF के रूप में सहेजें',
+    btn_download_html: '📄 स्टैंडअलोन HTML डाउनलोड करें',
+    digest_title: 'वेब सक्रियता व उत्पादकता एग्जीक्यूटिव डाइजेस्ट',
+    digest_period: 'रिपोर्टिंग अवधि',
+    digest_total_time: 'कुल सक्रिय समय',
+    digest_top_domain: 'शीर्ष फोकस डोमेन',
+    digest_productivity: 'उत्पादकता सूचकांक',
+    digest_media_time: 'मीडिया उपभोग समय',
     donut_center_today: 'आज का कुल समय',
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
@@ -2064,6 +2128,316 @@ function getVisualizerState() {
     return _MediaDeckVisualizer.getVisualizerState();
   }
   return null;
+}
+
+// =============================================================================
+// Phase 3: Feature 5 & 6 Facade Functions (Backup, Snapshots, SQLite Hub & Digest)
+// =============================================================================
+
+function validateBackupSchemaV2(parsedObj, options) {
+  if (_BackupHubDigest && typeof _BackupHubDigest.validateBackupSchemaV2 === 'function') {
+    return _BackupHubDigest.validateBackupSchemaV2(parsedObj, options);
+  }
+  return { valid: false, error: 'BackupHubDigest module unavailable' };
+}
+
+function resolveBackupConflict(currentHistory, importedHistory, strategy) {
+  if (_BackupHubDigest && typeof _BackupHubDigest.resolveBackupConflict === 'function') {
+    return _BackupHubDigest.resolveBackupConflict(currentHistory, importedHistory, strategy);
+  }
+  return importedHistory || {};
+}
+
+function captureDailySnapshot(storageAPI, currentHistory, settings, options) {
+  const api = storageAPI || (typeof chrome !== 'undefined' && chrome.storage ? chrome.storage.local : null);
+  const hist = currentHistory || (dashboardData && dashboardData.activityData) || {};
+  const setts = settings || cachedSettings || {};
+  if (_BackupHubDigest && typeof _BackupHubDigest.captureDailySnapshot === 'function') {
+    return _BackupHubDigest.captureDailySnapshot(api, hist, setts, options);
+  }
+  return Promise.resolve({ success: false, error: 'BackupHubDigest module unavailable' });
+}
+
+function listDailySnapshots(storageAPI) {
+  const api = storageAPI || (typeof chrome !== 'undefined' && chrome.storage ? chrome.storage.local : null);
+  if (_BackupHubDigest && typeof _BackupHubDigest.listDailySnapshots === 'function') {
+    return _BackupHubDigest.listDailySnapshots(api);
+  }
+  return Promise.resolve([]);
+}
+
+function rollbackToSnapshot(snapshotKey, storageAPI) {
+  const api = storageAPI || (typeof chrome !== 'undefined' && chrome.storage ? chrome.storage.local : null);
+  if (_BackupHubDigest && typeof _BackupHubDigest.rollbackToSnapshot === 'function') {
+    return _BackupHubDigest.rollbackToSnapshot(snapshotKey, api);
+  }
+  return Promise.reject(new Error('BackupHubDigest module unavailable'));
+}
+
+function replicateToSqliteHub(data, options) {
+  const hist = data || (dashboardData && dashboardData.activityData) || {};
+  if (_BackupHubDigest && typeof _BackupHubDigest.replicateToSqliteHub === 'function') {
+    return _BackupHubDigest.replicateToSqliteHub(hist, options);
+  }
+  return Promise.resolve({ success: false, error: 'BackupHubDigest module unavailable' });
+}
+
+function restoreFromSqliteHub(options) {
+  if (_BackupHubDigest && typeof _BackupHubDigest.restoreFromSqliteHub === 'function') {
+    return _BackupHubDigest.restoreFromSqliteHub(options);
+  }
+  return Promise.resolve({ success: false, error: 'BackupHubDigest module unavailable' });
+}
+
+function triggerPrintPdf(options) {
+  const totalTime = (typeof formatHHMMSS === 'function' && dashboardData) ? formatHHMMSS(dashboardData.totalSeconds || 0) : '0h 00m';
+  const topDom = (dashboardData && Array.isArray(dashboardData.items) && dashboardData.items[0]) ? dashboardData.items[0].domain : '--';
+  const prod = (typeof lastCalculatedProductivityScore !== 'undefined') ? `${lastCalculatedProductivityScore} / 100` : '85 / 100';
+  const opts = Object.assign({
+    doc: typeof document !== 'undefined' ? document : null,
+    win: typeof window !== 'undefined' ? window : null,
+    totalTime,
+    topDomain: topDom,
+    productivity: prod,
+    mediaTime: (typeof formatHHMMSS === 'function' && dashboardData) ? formatHHMMSS(dashboardData.totalMediaSeconds || 0) : '0h 00m'
+  }, options);
+
+  if (_BackupHubDigest && typeof _BackupHubDigest.triggerPrintPdf === 'function') {
+    return _BackupHubDigest.triggerPrintPdf(opts);
+  }
+  if (typeof window !== 'undefined' && typeof window.print === 'function') {
+    window.print();
+    return { printed: true };
+  }
+  return { printed: false, error: 'Print engine unavailable' };
+}
+
+function downloadStandaloneHtmlDigest(data, options) {
+  const payload = data || {
+    tracking_history: (dashboardData && dashboardData.activityData) || {},
+    media_history: mediaHistoryData || []
+  };
+  const opts = Object.assign({
+    reportingPeriod: (typeof currentTemporalRange !== 'undefined' && currentTemporalRange) ? `Range: ${currentTemporalRange}` : 'All Recorded Time',
+    productivityIndex: (typeof lastCalculatedProductivityScore !== 'undefined') ? lastCalculatedProductivityScore : 85
+  }, options);
+
+  if (_BackupHubDigest && typeof _BackupHubDigest.downloadStandaloneHtmlDigest === 'function') {
+    return _BackupHubDigest.downloadStandaloneHtmlDigest(payload, opts);
+  }
+  return { success: false, error: 'Digest engine unavailable' };
+}
+
+function handleBackupFileSelection(file, options = {}) {
+  if (!file) return;
+  const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    try {
+      const text = e.target.result;
+      const validation = validateBackupSchemaV2(text);
+      if (!validation.valid) {
+        showToast((currentLang === 'hi') ? `अमान्य बैकअप फ़ाइल: ${validation.error}` : `Invalid backup file: ${validation.error}`, true);
+        return;
+      }
+
+      const backupObj = validation.data;
+      const importedHistory = (backupObj.payload && (backupObj.payload.tracking_history || backupObj.payload.trackingHistory)) || backupObj.trackingHistory || {};
+      const currentHistory = (dashboardData && dashboardData.activityData) || {};
+
+      const localDateCount = Object.keys(currentHistory).length;
+      if (localDateCount > 0 && doc && doc.getElementById('modalConflictResolution')) {
+        _BackupHubDigest.openConflictResolutionModal(validation, {
+          onMerge: async () => {
+            const merged = resolveBackupConflict(currentHistory, importedHistory, 'merge');
+            await persistRestoredData(merged);
+            showToast((currentLang === 'hi') ? 'डेटा सफलतापूर्वक मर्ज हो गया!' : 'Backup merged successfully!');
+          },
+          onOverwrite: async () => {
+            const overwritten = resolveBackupConflict(currentHistory, importedHistory, 'overwrite');
+            await persistRestoredData(overwritten);
+            showToast((currentLang === 'hi') ? 'बैकअप से पूर्ण प्रतिस्थापन सफल!' : 'Restored with complete overwrite!');
+          },
+          onAppend: async () => {
+            const appended = resolveBackupConflict(currentHistory, importedHistory, 'append');
+            await persistRestoredData(appended);
+            showToast((currentLang === 'hi') ? 'नई तिथियां सफलतापूर्वक जोड़ी गईं!' : 'Appended missing dates successfully!');
+          },
+          onCancel: () => {
+            showToast((currentLang === 'hi') ? 'पुनर्स्थापना रद्द कर दी गई' : 'Restore cancelled');
+          }
+        }, { doc });
+      } else {
+        await persistRestoredData(importedHistory);
+        showToast((currentLang === 'hi') ? 'बैकअप सफलतापूर्वक पुनर्स्थापित हुआ!' : 'Backup restored successfully!');
+      }
+    } catch (err) {
+      showToast((currentLang === 'hi') ? `त्रुटि: ${err.message}` : `Error parsing backup: ${err.message}`, true);
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+async function persistRestoredData(newHistory) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    await new Promise(r => chrome.storage.local.set({
+      sentinel_activity_data: newHistory,
+      trackingHistory: newHistory
+    }, r));
+  }
+  if (typeof refreshDashboard === 'function') {
+    await refreshDashboard(true);
+  }
+  await populateSnapshotRollbackSelect();
+}
+
+async function populateSnapshotRollbackSelect(options = {}) {
+  const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+  if (!doc) return;
+  const select = doc.getElementById('selectSnapshotRollback');
+  if (!select) return;
+
+  while (select.firstChild) {
+    select.removeChild(select.firstChild);
+  }
+
+  const defaultOpt = doc.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = (currentLang === 'hi') ? 'स्नैपशॉट चुनें...' : 'Select a snapshot...';
+  select.appendChild(defaultOpt);
+
+  try {
+    const snapshots = await listDailySnapshots();
+    snapshots.forEach(s => {
+      const opt = doc.createElement('option');
+      opt.value = s.key;
+      const fmtTime = (typeof formatHHMMSS === 'function') ? formatHHMMSS(s.totalActiveSeconds) : s.totalActiveSeconds + 's';
+      opt.textContent = `${s.date} (${s.domainCount} domains, ${fmtTime})`;
+      select.appendChild(opt);
+    });
+  } catch (_) {}
+}
+
+function initBackupAndDigestHandlers() {
+  if (typeof document === 'undefined') return;
+
+  // 1. JSON Backup Import via file input & button
+  const fileInput = document.getElementById('inputBackupFile');
+  const btnImport = document.getElementById('btnImportJsonBackup');
+  if (btnImport && fileInput) {
+    btnImport.addEventListener('click', () => {
+      fileInput.click();
+    });
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleBackupFileSelection(e.target.files[0]);
+        fileInput.value = '';
+      }
+    });
+  }
+
+  // 2. Snapshot rollback button
+  const btnApplySnapshot = document.getElementById('btnApplySnapshotRollback');
+  const selectSnapshot = document.getElementById('selectSnapshotRollback');
+  if (btnApplySnapshot && selectSnapshot) {
+    btnApplySnapshot.addEventListener('click', async () => {
+      const key = selectSnapshot.value;
+      if (!key) {
+        showToast((currentLang === 'hi') ? 'कृपया पुनर्स्थापना के लिए स्नैपशॉट चुनें' : 'Please select a snapshot to restore', true);
+        return;
+      }
+      try {
+        await rollbackToSnapshot(key);
+        if (typeof refreshDashboard === 'function') await refreshDashboard(true);
+        showToast((currentLang === 'hi') ? 'स्नैपशॉट सफलतापूर्वक पुनर्स्थापित हो गया!' : 'Snapshot restored successfully!');
+      } catch (err) {
+        showToast((currentLang === 'hi') ? `त्रुटि: ${err.message}` : `Error restoring snapshot: ${err.message}`, true);
+      }
+    });
+  }
+
+  // 3. Quick snapshot buttons (Yesterday & 3 Days Ago)
+  const btnYesterday = document.getElementById('btnRollbackYesterday');
+  if (btnYesterday) {
+    btnYesterday.addEventListener('click', async () => {
+      const snaps = await listDailySnapshots();
+      if (snaps.length > 0) {
+        await rollbackToSnapshot(snaps[0].key);
+        if (typeof refreshDashboard === 'function') await refreshDashboard(true);
+        showToast((currentLang === 'hi') ? 'कल के स्नैपशॉट पर पुनर्स्थापित!' : 'Rolled back to recent snapshot!');
+      } else {
+        showToast((currentLang === 'hi') ? 'कोई पूर्व स्नैपशॉट उपलब्ध नहीं है' : 'No prior snapshot available', true);
+      }
+    });
+  }
+
+  const btn3Days = document.getElementById('btnRollback3Days');
+  if (btn3Days) {
+    btn3Days.addEventListener('click', async () => {
+      const snaps = await listDailySnapshots();
+      const target = snaps[2] || snaps[snaps.length - 1];
+      if (target) {
+        await rollbackToSnapshot(target.key);
+        if (typeof refreshDashboard === 'function') await refreshDashboard(true);
+        showToast((currentLang === 'hi') ? `${target.date} के स्नैपशॉट पर पुनर्स्थापित!` : `Rolled back to ${target.date}!`);
+      } else {
+        showToast((currentLang === 'hi') ? 'कोई 3-दिवसीय स्नैपशॉट उपलब्ध नहीं है' : 'No 3-day snapshot available', true);
+      }
+    });
+  }
+
+  // 4. SQLite Data Hub replicate and restore buttons
+  const btnReplicateHub = document.getElementById('btnReplicateSqliteHub');
+  if (btnReplicateHub) {
+    btnReplicateHub.addEventListener('click', async () => {
+      showToast((currentLang === 'hi') ? 'SQLite Data Hub में डेटा रेप्लिकेट किया जा रहा है...' : 'Replicating data to SQLite Data Hub...');
+      const res = await replicateToSqliteHub();
+      if (res && res.success) {
+        showToast((currentLang === 'hi') ? `सफलतापूर्वक ${res.syncedDates || 0} तिथियां SQLite हब में सिंक हो गईं!` : `Successfully replicated ${res.syncedDates || 0} dates to SQLite Hub!`);
+      } else {
+        showToast((currentLang === 'hi') ? 'हब ऑफलाइन है या कनेक्ट नहीं हुआ' : 'SQLite Hub is offline or unreachable', true);
+      }
+    });
+  }
+
+  const btnRestoreHub = document.getElementById('btnRestoreFromSqliteHub');
+  if (btnRestoreHub) {
+    btnRestoreHub.addEventListener('click', async () => {
+      showToast((currentLang === 'hi') ? 'SQLite Hub से डेटा पुनर्प्राप्त किया जा रहा है...' : 'Restoring data from SQLite Data Hub...');
+      const res = await restoreFromSqliteHub();
+      if (res && res.success && res.trackingHistory && Object.keys(res.trackingHistory).length > 0) {
+        await persistRestoredData(res.trackingHistory);
+        showToast((currentLang === 'hi') ? 'SQLite हब से डेटा सफलतापूर्वक पुनर्स्थापित हो गया!' : 'Successfully restored from SQLite Data Hub!');
+      } else {
+        showToast((currentLang === 'hi') ? 'हब में कोई डेटा नहीं मिला या हब ऑफलाइन है' : 'No data found in SQLite Hub or Hub is offline', true);
+      }
+    });
+  }
+
+  // 5. Print PDF button
+  const btnPrintPdf = document.getElementById('btnPrintPdf');
+  if (btnPrintPdf) {
+    btnPrintPdf.addEventListener('click', () => {
+      triggerPrintPdf();
+    });
+  }
+
+  // 6. Download Standalone HTML report button
+  const btnDownloadDigest = document.getElementById('btnDownloadHtmlDigest');
+  const btnDownloadReport = document.getElementById('btnDownloadHtmlReport');
+  const handleDownload = () => {
+    downloadStandaloneHtmlDigest();
+    showToast((currentLang === 'hi') ? 'स्टैंडअलोन HTML रिपोर्ट डाउनलोड हो गई!' : 'Offline HTML report downloaded!');
+  };
+  if (btnDownloadDigest) btnDownloadDigest.addEventListener('click', handleDownload);
+  if (btnDownloadReport) btnDownloadReport.addEventListener('click', handleDownload);
+
+  // Populate snapshots selector initially
+  populateSnapshotRollbackSelect();
 }
 
 function isInternalDomain(domain) {
@@ -3900,12 +4274,34 @@ function saveSleepSettings() {
 function exportFullJson() {
   if (!dashboardData) return;
 
+  const payload = {
+    settings: cachedSettings || {},
+    tracking_history: dashboardData.activityData || {},
+    media_history: mediaHistoryData || []
+  };
+
+  const checksum = (_BackupHubDigest && typeof _BackupHubDigest.computeCRC32 === 'function')
+    ? _BackupHubDigest.computeCRC32(payload)
+    : '00000000';
+
   const exportPayload = {
+    $schema: 'https://sentinel.local/schemas/backup-v2.json',
+    schema_version: '2.0.0',
+    exported_at: new Date().toISOString(),
+    checksum: checksum,
+    device_profile: {
+      browser: typeof detectedBrowserType !== 'undefined' ? detectedBrowserType : 'Chrome',
+      extension_version: '2.5.0',
+      os: 'Windows'
+    },
+    payload: payload,
+    // Backward-compatibility legacy fields for v1 readers
     exportedAt: new Date().toISOString(),
     exportSource: 'Web Activity & Media Sentinel Dashboard',
     author: 'Atul Verma (aiprincekumar)',
     settings: cachedSettings,
     activityData: dashboardData.activityData,
+    trackingHistory: dashboardData.activityData,
     mediaHistory: mediaHistoryData
   };
 
@@ -6572,6 +6968,9 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
   if (canvasViz) {
     initAudioVisualizer(canvasViz);
   }
+
+  // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
+  initBackupAndDigestHandlers();
 }
 
 // Bootstrap Initialization
@@ -6582,6 +6981,9 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
+
+    // Capture daily rolling snapshot on dashboard launch
+    captureDailySnapshot().catch(() => {});
 
     // Initialize dashboard modular features
     try {
@@ -6810,7 +7212,21 @@ if (typeof module !== 'undefined' && module.exports) {
     getVisualizerState,
     MediaDeckVisualizerFeature: _MediaDeckVisualizer,
     getActiveMediaStreams: () => activeMediaStreams,
-    setActiveMediaStreams: (val) => { activeMediaStreams = val; }
+    setActiveMediaStreams: (val) => { activeMediaStreams = val; },
+    // Phase 3 Backup, Snapshots, SQLite Hub & Executive Digest exports
+    validateBackupSchemaV2,
+    resolveBackupConflict,
+    captureDailySnapshot,
+    listDailySnapshots,
+    rollbackToSnapshot,
+    replicateToSqliteHub,
+    restoreFromSqliteHub,
+    triggerPrintPdf,
+    downloadStandaloneHtmlDigest,
+    handleBackupFileSelection,
+    populateSnapshotRollbackSelect,
+    initBackupAndDigestHandlers,
+    BackupHubDigestFeature: _BackupHubDigest
   };
 }
 
@@ -6849,6 +7265,19 @@ if (typeof window !== 'undefined') {
   window.stopVisualizerLoop = stopVisualizerLoop;
   window.setAudioPlayingState = setAudioPlayingState;
   window.getVisualizerState = getVisualizerState;
+  window.validateBackupSchemaV2 = validateBackupSchemaV2;
+  window.resolveBackupConflict = resolveBackupConflict;
+  window.captureDailySnapshot = captureDailySnapshot;
+  window.listDailySnapshots = listDailySnapshots;
+  window.rollbackToSnapshot = rollbackToSnapshot;
+  window.replicateToSqliteHub = replicateToSqliteHub;
+  window.restoreFromSqliteHub = restoreFromSqliteHub;
+  window.triggerPrintPdf = triggerPrintPdf;
+  window.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
+  window.handleBackupFileSelection = handleBackupFileSelection;
+  window.populateSnapshotRollbackSelect = populateSnapshotRollbackSelect;
+  window.initBackupAndDigestHandlers = initBackupAndDigestHandlers;
+  window.BackupHubDigestFeature = _BackupHubDigest;
 }
 
 if (typeof globalThis !== 'undefined') {
@@ -6871,6 +7300,16 @@ if (typeof globalThis !== 'undefined') {
   globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
   globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
   globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
+  globalThis.validateBackupSchemaV2 = validateBackupSchemaV2;
+  globalThis.resolveBackupConflict = resolveBackupConflict;
+  globalThis.captureDailySnapshot = captureDailySnapshot;
+  globalThis.listDailySnapshots = listDailySnapshots;
+  globalThis.rollbackToSnapshot = rollbackToSnapshot;
+  globalThis.replicateToSqliteHub = replicateToSqliteHub;
+  globalThis.restoreFromSqliteHub = restoreFromSqliteHub;
+  globalThis.triggerPrintPdf = triggerPrintPdf;
+  globalThis.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
+  globalThis.BackupHubDigestFeature = _BackupHubDigest;
 }
 
 // ============================================================================
