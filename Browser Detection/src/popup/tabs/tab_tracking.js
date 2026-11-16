@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Focus & Tracking Tab Controller
  * Domain distribution statistics, donut chart synchronization, and categories.
  * 

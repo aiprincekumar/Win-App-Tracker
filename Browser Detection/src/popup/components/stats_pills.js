@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Stats Pills Component
  * Renders Today, Daily Average, and Sessions stat pills with 100% Trusted Types safety.
  * 

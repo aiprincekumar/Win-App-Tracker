@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Popup IPC Service
  * Coordinates communication with the background service worker.
  * 

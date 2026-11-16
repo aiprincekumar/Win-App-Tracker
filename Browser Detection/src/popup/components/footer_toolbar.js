@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Footer Toolbar Component
  * Strictly manages the single-row 7-button layout invariant.
  * 

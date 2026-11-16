@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Popup Storage Service
  * Persists and hydrates user settings and filter states from chrome.storage.local.
  * 

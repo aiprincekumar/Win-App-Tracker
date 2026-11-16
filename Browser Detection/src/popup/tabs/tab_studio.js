@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Studio Vault Tab Controller
  * Timestamp notes, clip bookmarks, and screenshot gallery.
  * 

@@ -35,6 +35,46 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 
   });
 }
 
+// =============================================================================
+// Modular Popup Subsystems (src/popup/)
+// =============================================================================
+function _safeRequire(relPath1, relPath2) {
+  if (typeof require !== 'function') return null;
+  try {
+    return require(relPath1);
+  } catch (_) {
+    try {
+      return require(relPath2);
+    } catch (__) {
+      return null;
+    }
+  }
+}
+
+const _PopupState = (typeof globalThis !== 'undefined' && globalThis.PopupState) ? globalThis.PopupState : _safeRequire('./src/popup/state/popup_state.js', '../src/popup/state/popup_state.js');
+const _TabQuick = (typeof globalThis !== 'undefined' && globalThis.TabQuick) ? globalThis.TabQuick : _safeRequire('./src/popup/tabs/tab_quick.js', '../src/popup/tabs/tab_quick.js');
+const _TabMedia = (typeof globalThis !== 'undefined' && globalThis.TabMedia) ? globalThis.TabMedia : _safeRequire('./src/popup/tabs/tab_media.js', '../src/popup/tabs/tab_media.js');
+const _TabAutomations = (typeof globalThis !== 'undefined' && globalThis.TabAutomations) ? globalThis.TabAutomations : _safeRequire('./src/popup/tabs/tab_automations.js', '../src/popup/tabs/tab_automations.js');
+const _TabWellness = (typeof globalThis !== 'undefined' && globalThis.TabWellness) ? globalThis.TabWellness : _safeRequire('./src/popup/tabs/tab_wellness.js', '../src/popup/tabs/tab_wellness.js');
+const _TabAudio = (typeof globalThis !== 'undefined' && globalThis.TabAudio) ? globalThis.TabAudio : _safeRequire('./src/popup/tabs/tab_audio.js', '../src/popup/tabs/tab_audio.js');
+const _TabSettings = (typeof globalThis !== 'undefined' && globalThis.TabSettings) ? globalThis.TabSettings : _safeRequire('./src/popup/tabs/tab_settings.js', '../src/popup/tabs/tab_settings.js');
+const _HeaderBadges = (typeof globalThis !== 'undefined' && globalThis.HeaderBadges) ? globalThis.HeaderBadges : _safeRequire('./src/popup/components/header_badges.js', '../src/popup/components/header_badges.js');
+const _DataHubService = (typeof globalThis !== 'undefined' && globalThis.DataHubService) ? globalThis.DataHubService : _safeRequire('./src/popup/services/data_hub_service.js', '../src/popup/services/data_hub_service.js');
+
+if (typeof window !== 'undefined') {
+  window.__SentinelPopupModules = {
+    PopupState: _PopupState,
+    TabQuick: _TabQuick,
+    TabMedia: _TabMedia,
+    TabAutomations: _TabAutomations,
+    TabWellness: _TabWellness,
+    TabAudio: _TabAudio,
+    TabSettings: _TabSettings,
+    HeaderBadges: _HeaderBadges,
+    DataHubService: _DataHubService
+  };
+}
+
 // Color palette for donut slices and domain bars
 const PALETTE = [
   '#10b981', // Emerald
@@ -4138,3 +4178,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
+if (typeof window !== 'undefined') {
+  window.__SentinelPopupModules = window.__SentinelPopupModules || {
+    PopupState: _PopupState,
+    TabQuick: _TabQuick,
+    TabMedia: _TabMedia,
+    TabAutomations: _TabAutomations,
+    TabWellness: _TabWellness,
+    TabAudio: _TabAudio,
+    TabSettings: _TabSettings,
+    HeaderBadges: _HeaderBadges,
+    DataHubService: _DataHubService
+  };
+}
