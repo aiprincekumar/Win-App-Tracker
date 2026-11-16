@@ -554,9 +554,9 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
   assert(contentMediaCode.includes('window.__SentinelFullscreenController.toggle(null, { forceWeb: true });'),
     'content_media.js must fall back to __SentinelFullscreenController.toggle(null, { forceWeb: true })');
 
-  // 3.2 Verify popup.js delegates to dual actuation: executeScript (world: 'MAIN') AND sendMediaControl('toggle_fullscreen')
+  // 3.2 Verify popup.js delegates to single-execution fallback: executeScript (world: 'MAIN') with fallback sendMediaControl('toggle_fullscreen')
   assert(popupJsCode.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
-    'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId)');
+    'popup.js must dispatch fallback sendMediaControl("toggle_fullscreen", {}, targetTabId)');
 
   const btnFsIndex = popupJsCode.indexOf("const btnFullscreen = document.getElementById('btnCtrlFullscreen');");
   assert(btnFsIndex !== -1, 'Must find btnCtrlFullscreen in popup.js');
@@ -567,6 +567,10 @@ console.log('\nTest 3: On-Video Overlay Fullscreen Button Linking Verification')
     'popup.js #btnCtrlFullscreen must contain browserAPI.scripting.executeScript for 0ms actuation');
   assert(btnFsBlock.includes("world: 'MAIN'"),
     'popup.js #btnCtrlFullscreen must execute in MAIN world for direct DOM and controller access');
+  assert(btnFsBlock.includes('.catch('),
+    'popup.js #btnCtrlFullscreen must attach .catch() handler for fallback');
+  assert(btnFsBlock.includes('else {'),
+    'popup.js #btnCtrlFullscreen must contain else fallback branch');
 
   // 3.3 Simulation: When Floating Button Exists in DOM (Priority 1 in content_media.js)
   {
@@ -699,7 +703,7 @@ console.log('\nTest 4: Bloat Removal & Fullscreen Invariants in popup/popup.js #
   assert(lineCount <= 55, `#btnCtrlFullscreen block should be concise (<= 55 lines, currently ${lineCount} lines)`);
   console.log(`  ✅ #btnCtrlFullscreen block is clean and compact (${lineCount} lines, down from ~180 lines)`);
 
-  // 4.3 Verify dual actuation: direct executeScript (world: 'MAIN') AND sendMediaControl
+  // 4.3 Verify single-execution determinism: direct executeScript (world: 'MAIN') with fallback sendMediaControl
   assert(btnFsBlock.includes('browserAPI.scripting.executeScript'),
     'popup.js #btnCtrlFullscreen must contain browserAPI.scripting.executeScript for 0ms actuation');
   assert(btnFsBlock.includes("world: 'MAIN'"),
@@ -707,7 +711,7 @@ console.log('\nTest 4: Bloat Removal & Fullscreen Invariants in popup/popup.js #
   assert(btnFsBlock.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
     'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId) for background telemetry sync');
 
-  console.log('  ✅ Dual actuation (direct executeScript in MAIN world & sendMediaControl IPC) verified in #btnCtrlFullscreen');
+  console.log('  ✅ Single-execution determinism (direct executeScript in MAIN world with fallback sendMediaControl IPC) verified in #btnCtrlFullscreen');
 }
 
 // ---------------------------------------------------------------------------
@@ -1284,32 +1288,29 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     console.log('  ✅ #btnCtrlSpeedDown & #btnCtrlSpeedUp: Dual actuation (step_speed IPC & direct MAIN world executeScript) verified');
   }
 
-  // 9.9 Test Fullscreen Toggle via #btnCtrlFullscreen
+  // 9.9 Test Fullscreen Toggle via #btnCtrlFullscreen (Single-Execution Determinism)
   {
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlFullscreen.click();
 
-    assert.strictEqual(interceptedMediaControls.length, 1, 'sendMediaControl must be called exactly once for fullscreen');
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_fullscreen');
-    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
     assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on fullscreen');
     assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
     assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
-    console.log('  ✅ #btnCtrlFullscreen: Dual actuation (toggle_fullscreen IPC & direct MAIN world executeScript) verified');
+    assert.strictEqual(interceptedMediaControls.length, 0, 'sendMediaControl must NOT be called when direct executeScript succeeds');
+    console.log('  ✅ #btnCtrlFullscreen: Single-execution determinism verified (executeScript executed, IPC suppressed)');
   }
 
   // 9.10 Test PiP, Theater, and Quality Steppers
   {
-    // PiP
+    // PiP (Single-Execution Determinism)
     interceptedMediaControls.length = 0;
     interceptedExecuteScripts.length = 0;
     mockElements.btnCtrlPip.click();
-    assert.strictEqual(interceptedMediaControls.length, 1);
-    assert.strictEqual(interceptedMediaControls[0].action, 'toggle_pip');
-    assert.strictEqual(interceptedMediaControls[0].tabId, 42);
-    assert.strictEqual(interceptedExecuteScripts.length, 1);
-    assert.strictEqual(interceptedExecuteScripts[0].world, 'MAIN');
+    assert.strictEqual(interceptedExecuteScripts.length, 1, 'Must execute direct executeScript on PiP');
+    assert.strictEqual(interceptedExecuteScripts[0].target.tabId, 42);
+    assert.strictEqual(interceptedMediaControls.length, 0, 'sendMediaControl must NOT be called when direct executeScript succeeds');
+    console.log('  ✅ #btnCtrlPip: Single-execution determinism verified (executeScript executed, IPC suppressed)');
 
     // Theater
     interceptedMediaControls.length = 0;
