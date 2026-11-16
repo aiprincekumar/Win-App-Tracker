@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Dashboard Analytics Service
  * Aggregates multi-browser activity logs into domain totals and daily averages.
  * 

@@ -43,6 +43,46 @@ function safeRuntimeSendMessage(message, callback) {
   return null;
 }
 
+// =============================================================================
+// Modular Dashboard Subsystems (src/dashboard/)
+// =============================================================================
+function _safeRequire(relPath1, relPath2) {
+  if (typeof require !== 'function') return null;
+  try {
+    return require(relPath1);
+  } catch (_) {
+    try {
+      return require(relPath2);
+    } catch (__) {
+      return null;
+    }
+  }
+}
+
+const _DashboardState = (typeof globalThis !== 'undefined' && globalThis.DashboardState) ? globalThis.DashboardState : _safeRequire('./src/dashboard/state/dashboard_state.js', '../src/dashboard/state/dashboard_state.js');
+const _BrowserFilter = (typeof globalThis !== 'undefined' && globalThis.BrowserFilter) ? globalThis.BrowserFilter : _safeRequire('./src/dashboard/filters/browser_filter.js', '../src/dashboard/filters/browser_filter.js');
+const _DonutChart = (typeof globalThis !== 'undefined' && globalThis.DonutChart) ? globalThis.DonutChart : _safeRequire('./src/dashboard/charts/donut_chart.js', '../src/dashboard/charts/donut_chart.js');
+const _TimeSeriesChart = (typeof globalThis !== 'undefined' && globalThis.TimeSeriesChart) ? globalThis.TimeSeriesChart : _safeRequire('./src/dashboard/charts/time_series_chart.js', '../src/dashboard/charts/time_series_chart.js');
+const _DomainTable = (typeof globalThis !== 'undefined' && globalThis.DomainTable) ? globalThis.DomainTable : _safeRequire('./src/dashboard/components/domain_table.js', '../src/dashboard/components/domain_table.js');
+const _CsvExporter = (typeof globalThis !== 'undefined' && globalThis.CsvExporter) ? globalThis.CsvExporter : _safeRequire('./src/dashboard/services/csv_exporter.js', '../src/dashboard/services/csv_exporter.js');
+const _AudioLabController = (typeof globalThis !== 'undefined' && globalThis.AudioLabController) ? globalThis.AudioLabController : _safeRequire('./src/dashboard/audio/audio_lab_controller.js', '../src/dashboard/audio/audio_lab_controller.js');
+const _OmniPalette = (typeof globalThis !== 'undefined' && globalThis.OmniPalette) ? globalThis.OmniPalette : _safeRequire('./src/dashboard/palette/omni_palette.js', '../src/dashboard/palette/omni_palette.js');
+const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.PrecisionTimelineScrubber) ? globalThis.PrecisionTimelineScrubber : _safeRequire('./src/dashboard/scrubber/scrubber.js', '../src/dashboard/scrubber/scrubber.js');
+
+if (typeof window !== 'undefined') {
+  window.__SentinelDashboardModules = {
+    DashboardState: _DashboardState,
+    BrowserFilter: _BrowserFilter,
+    DonutChart: _DonutChart,
+    TimeSeriesChart: _TimeSeriesChart,
+    DomainTable: _DomainTable,
+    CsvExporter: _CsvExporter,
+    AudioLabController: _AudioLabController,
+    OmniPalette: _OmniPalette,
+    PrecisionScrubber: _PrecisionScrubber
+  };
+}
+
 // Color Palette for SVG Donut slices and progress bars
 const PALETTE = [
   '#10b981', // Emerald
@@ -2743,7 +2783,9 @@ function renderDomainTable(items) {
   if (countBadge) countBadge.textContent = t('domain_count_suffix', filtered.length);
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '';
+    while (tbody.firstChild) {
+      tbody.removeChild(tbody.firstChild);
+    }
     if (emptyBox) {
       emptyBox.classList.remove('hidden');
       const emptyIconEl = emptyBox.querySelector('.empty-icon');
@@ -2766,55 +2808,116 @@ function renderDomainTable(items) {
   }
 
   if (emptyBox) emptyBox.classList.add('hidden');
-  tbody.innerHTML = '';
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
 
   filtered.forEach(it => {
+    if (_DomainTable && typeof _DomainTable.buildDomainTableRow === 'function') {
+      const modularTr = _DomainTable.buildDomainTableRow(it, {
+        document,
+        formatDuration,
+        formatTimestamp,
+        t,
+        isInternalDomain
+      });
+      if (modularTr) {
+        tbody.appendChild(modularTr);
+        return;
+      }
+    }
+
     const isInternal = Boolean(it.isInternal || isInternalDomain(it.domain));
-    let badgeHtml = '';
-    if (it.domain === 'Dashboard' || it.domain === 'Extension') {
-      badgeHtml = `<span class="badge-tag badge-extension" title="Extension Dashboard">🧩 ${escapeHtml(it.domain)}</span>`;
-    } else if (isInternal) {
-      badgeHtml = `<span class="badge-tag badge-internal" title="Internal Browser Scheme">⚙️ Internal</span>`;
-    }
-
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="col-domain">
-        <div class="domain-cell">
-          <img src="${escapeHtml(it.favicon || '../icons/icon32.png')}" alt="" class="domain-fav">
-          <span class="domain-name-text">${escapeHtml(it.domain)}</span>
-          ${badgeHtml}
-        </div>
-      </td>
-      <td class="col-time">
-        <span class="time-cell-main">${formatDuration(it.computedSeconds)}</span>
-        <div class="time-dual-pills">
-          <span class="pill-mini-fg" title="Foreground Active Time">🖥️ ${formatDuration(it.foregroundSeconds || 0)}</span>
-          <span class="pill-mini-bg" title="Background Media Playback Time">🎵 ${formatDuration(it.backgroundMediaSeconds || 0)}</span>
-        </div>
-      </td>
-      <td class="col-ratio">
-        <div class="table-ratio-wrapper">
-          <div class="table-ratio-track">
-            <div class="table-ratio-fill" style="width: ${it.ratioPercent}%;"></div>
-          </div>
-          <span class="table-ratio-pct">${it.ratioPercent}%</span>
-        </div>
-      </td>
-      <td class="col-sessions">
-        <span class="badge-tag">${t('session_unit', it.sessions)}</span>
-      </td>
-      <td class="col-last">
-        <span class="time-last-active">${formatTimestamp(it.lastActive)}</span>
-      </td>
-    `;
 
-    const favImg = tr.querySelector('.domain-fav');
-    if (favImg) {
-      favImg.addEventListener('error', () => {
-        favImg.src = '../icons/icon32.png';
-      }, { once: true });
+    const tdDomain = document.createElement('td');
+    tdDomain.className = 'col-domain';
+    const cellDiv = document.createElement('div');
+    cellDiv.className = 'domain-cell';
+    const favImg = document.createElement('img');
+    favImg.src = it.favicon || '../icons/icon32.png';
+    favImg.alt = '';
+    favImg.className = 'domain-fav';
+    favImg.addEventListener('error', () => {
+      favImg.src = '../icons/icon32.png';
+    }, { once: true });
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'domain-name-text';
+    nameSpan.textContent = it.domain || '';
+    cellDiv.appendChild(favImg);
+    cellDiv.appendChild(nameSpan);
+
+    if (it.domain === 'Dashboard' || it.domain === 'Extension') {
+      const extBadge = document.createElement('span');
+      extBadge.className = 'badge-tag badge-extension';
+      extBadge.title = 'Extension Dashboard';
+      extBadge.textContent = `🧩 ${it.domain}`;
+      cellDiv.appendChild(extBadge);
+    } else if (isInternal) {
+      const internalBadge = document.createElement('span');
+      internalBadge.className = 'badge-tag badge-internal';
+      internalBadge.title = 'Internal Browser Scheme';
+      internalBadge.textContent = '⚙️ Internal';
+      cellDiv.appendChild(internalBadge);
     }
+    tdDomain.appendChild(cellDiv);
+
+    const tdTime = document.createElement('td');
+    tdTime.className = 'col-time';
+    const timeMain = document.createElement('span');
+    timeMain.className = 'time-cell-main';
+    timeMain.textContent = formatDuration(it.computedSeconds);
+    const dualPills = document.createElement('div');
+    dualPills.className = 'time-dual-pills';
+    const pillFg = document.createElement('span');
+    pillFg.className = 'pill-mini-fg';
+    pillFg.title = 'Foreground Active Time';
+    pillFg.textContent = `🖥️ ${formatDuration(it.foregroundSeconds || 0)}`;
+    const pillBg = document.createElement('span');
+    pillBg.className = 'pill-mini-bg';
+    pillBg.title = 'Background Media Playback Time';
+    pillBg.textContent = `🎵 ${formatDuration(it.backgroundMediaSeconds || 0)}`;
+    dualPills.appendChild(pillFg);
+    dualPills.appendChild(pillBg);
+    tdTime.appendChild(timeMain);
+    tdTime.appendChild(dualPills);
+
+    const tdRatio = document.createElement('td');
+    tdRatio.className = 'col-ratio';
+    const ratioWrapper = document.createElement('div');
+    ratioWrapper.className = 'table-ratio-wrapper';
+    const ratioTrack = document.createElement('div');
+    ratioTrack.className = 'table-ratio-track';
+    const ratioFill = document.createElement('div');
+    ratioFill.className = 'table-ratio-fill';
+    ratioFill.style.width = `${it.ratioPercent}%;`;
+    ratioTrack.appendChild(ratioFill);
+    const ratioPct = document.createElement('span');
+    ratioPct.className = 'table-ratio-pct';
+    ratioPct.textContent = `${it.ratioPercent}%`;
+    ratioWrapper.appendChild(ratioTrack);
+    ratioWrapper.appendChild(ratioPct);
+    tdRatio.appendChild(ratioWrapper);
+
+    const tdSessions = document.createElement('td');
+    tdSessions.className = 'col-sessions';
+    const sessionsBadge = document.createElement('span');
+    sessionsBadge.className = 'badge-tag';
+    sessionsBadge.textContent = t('session_unit', it.sessions);
+    tdSessions.appendChild(sessionsBadge);
+
+    const tdLast = document.createElement('td');
+    tdLast.className = 'col-last';
+    const lastSpan = document.createElement('span');
+    lastSpan.className = 'time-last-active';
+    lastSpan.textContent = formatTimestamp(it.lastActive);
+    tdLast.appendChild(lastSpan);
+
+    tr.appendChild(tdDomain);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdRatio);
+    tr.appendChild(tdSessions);
+    tr.appendChild(tdLast);
 
     tbody.appendChild(tr);
   });
@@ -4492,6 +4595,28 @@ function applyCardStaggerIndices() {
   }
 }
 
+/**
+ * OO Class encapsulation for PrecisionTimelineScrubber.
+ */
+class PrecisionTimelineScrubber {
+  constructor(scrubberEl, tooltipEl, durationSec = 0) {
+    this.scrubberEl = scrubberEl;
+    this.tooltipEl = tooltipEl;
+    this.durationSec = durationSec;
+    if (scrubberEl && tooltipEl) {
+      initPrecisionScrubber(scrubberEl, tooltipEl, durationSec);
+    }
+  }
+
+  setDuration(durationSec) {
+    this.durationSec = durationSec;
+  }
+
+  renderChapters(chapters) {
+    renderScrubberChapterTicks(chapters, this.durationSec);
+  }
+}
+
 // =============================================================================
 // Event Listeners & UI Binding
 // =============================================================================
@@ -6062,6 +6187,17 @@ if (typeof module !== 'undefined' && module.exports) {
     animateNumberRoll,
     renderScrubberChapterTicks,
     applyCardStaggerIndices,
+    PrecisionTimelineScrubber,
+    // Modular Subsystems
+    DashboardState: _DashboardState,
+    BrowserFilter: _BrowserFilter,
+    DonutChart: _DonutChart,
+    TimeSeriesChart: _TimeSeriesChart,
+    DomainTable: _DomainTable,
+    CsvExporter: _CsvExporter,
+    AudioLabController: _AudioLabController,
+    OmniPalette: _OmniPalette,
+    ScrubberModule: _PrecisionScrubber,
     // Phase 4: Synthesized Audio Haptics & Dynamic Multi-Theme Engine exports
     SentinelHapticAudioEngine,
     sentinelHaptics,
@@ -6086,6 +6222,7 @@ if (typeof window !== 'undefined') {
   window.animateNumberRoll = animateNumberRoll;
   window.renderScrubberChapterTicks = renderScrubberChapterTicks;
   window.applyCardStaggerIndices = applyCardStaggerIndices;
+  window.PrecisionTimelineScrubber = PrecisionTimelineScrubber;
   window.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
   window.sentinelHaptics = sentinelHaptics;
   window.MultiThemeEngine = MultiThemeEngine;
@@ -6097,6 +6234,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof globalThis !== 'undefined') {
+  globalThis.PrecisionTimelineScrubber = PrecisionTimelineScrubber;
   globalThis.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
   globalThis.sentinelHaptics = sentinelHaptics;
   globalThis.MultiThemeEngine = MultiThemeEngine;
