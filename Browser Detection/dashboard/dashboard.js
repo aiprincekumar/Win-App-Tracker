@@ -3255,8 +3255,24 @@ function initPomodoroWidget() {
 
   const updateUI = (state) => {
     const timeDisplay = document.getElementById('pomodoroTimeDisplay');
+    const pillClock = document.getElementById('pomodoroPillClock');
+    const pillBadge = document.getElementById('pomodoroPillBadge');
+    const progressBar = document.getElementById('pomodoroProgressBar');
     const modeBadge = document.getElementById('pomodoroModeBadge');
     const startBtn = document.getElementById('btnStartPomodoro');
+
+    if (pillClock && state.formattedTime) {
+      pillClock.textContent = state.formattedTime;
+    }
+    if (pillBadge) {
+      pillBadge.textContent = state.mode === 'focus' ? 'Focus' : 'Break';
+      pillBadge.className = state.mode === 'focus' ? 'badge-focus-micro' : 'badge-break-micro';
+    }
+    if (progressBar && state.remainingSeconds !== undefined) {
+      const totalSec = state.mode === 'focus' ? (25 * 60) : (5 * 60);
+      const pct = Math.max(0, Math.min(100, (state.remainingSeconds / totalSec) * 100));
+      progressBar.style.width = pct + '%';
+    }
 
     if (timeDisplay && state.formattedTime) {
       timeDisplay.textContent = state.formattedTime;

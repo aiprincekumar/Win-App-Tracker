@@ -41,19 +41,7 @@
           <span id="navSettingsText" class="nav-text">Settings & Data</span>
         </button>
       </nav>
-      <!-- Sidebar Pomodoro Focus Sentinel Widget (Feature 8) -->
-      <div id="widgetPomodoroSentinel" class="sidebar-hud-card pomodoro-card">
-        <div class="pomodoro-header">
-          <span id="txtPomodoroTitle" class="pomodoro-card-title">🧘 Focus Sentinel & Pomodoro</span>
-          <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
-        </div>
-        <div id="pomodoroTimeDisplay" class="pomodoro-time">25:00</div>
-        <div class="pomodoro-controls">
-          <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start</button>
-          <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
-          <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
-        </div>
-      </div>
+
 
 
       <!-- Sidebar Footer Data Hub Status Widget -->
@@ -155,6 +143,38 @@
             </svg>
             <span id="themeToggleText">Light</span>
           </button>
+          
+          <!-- Restored: Compact Pomodoro Interactive Pill in Top Bar (Preserves id="widgetPomodoroSentinel") -->
+          <div id="widgetPomodoroSentinel" class="pomodoro-pill-container">
+            <button type="button" id="pomodoroNavPill" class="pomodoro-nav-pill" aria-haspopup="true" aria-expanded="false" title="Focus Sentinel & Pomodoro">
+              <span class="pomodoro-pill-icon">🧘</span>
+              <span id="pomodoroPillClock" class="pomodoro-pill-time">25:00</span>
+              <span id="pomodoroPillBadge" class="badge-focus-micro">Focus</span>
+            </button>
+
+            <!-- Floating Glassmorphism Popover Modal -->
+            <div id="pomodoroPopoverModal" class="pomodoro-popover-card liquid-glass-card hidden" role="dialog" aria-modal="false" aria-label="Pomodoro Controls">
+              <div class="pomodoro-popover-header">
+                <div class="pomodoro-popover-title-group">
+                  <span id="txtPomodoroTitle" class="pomodoro-popover-title">🧘 Focus Sentinel & Pomodoro</span>
+                  <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+                </div>
+                <button type="button" id="btnPomodoroPopoverClose" class="btn-icon-close" aria-label="Close">✕</button>
+              </div>
+              <div class="pomodoro-popover-body">
+                <div id="pomodoroTimeDisplay" class="pomodoro-big-time">25:00</div>
+                <div class="pomodoro-progress-track">
+                  <div id="pomodoroProgressBar" class="pomodoro-progress-fill" style="width: 100%;"></div>
+                </div>
+                <div class="pomodoro-popover-actions">
+                  <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start</button>
+                  <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
+                  <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Consolidated Export Dropdown Hub -->
           <div class="export-dropdown-container">
             <button type="button" id="btnExportMenu" class="btn-action-outline btn-export-trigger" aria-haspopup="true" aria-expanded="false" title="Export & Reports">
