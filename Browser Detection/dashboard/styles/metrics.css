@@ -1,0 +1,39 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Metrics & KPI Styles
+ * File: dashboard/styles/metrics.css
+ */
+
+.metrics-bento-row {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 1.25rem !important;
+  width: 100%;
+}
+
+.metrics-bento-row .metric-card {
+  min-width: 0;
+  grid-column: span 1 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-radius: 16px;
+}
+
+@media (max-width: 1280px) {
+  .metrics-bento-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .metrics-bento-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-bento-row {
+    grid-template-columns: 1fr !important;
+  }
+}
