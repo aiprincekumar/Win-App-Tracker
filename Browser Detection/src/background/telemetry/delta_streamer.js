@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Delta Streamer Subsystem
  * Streams time tracking deltas and media session changes to Data Hub.
  * 

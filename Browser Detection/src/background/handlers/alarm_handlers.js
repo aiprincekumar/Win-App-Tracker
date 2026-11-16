@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Alarm Handlers Subsystem
  * Encapsulates chrome.alarms dispatching for periodic flushes, sleep timer expiration, and sync.
  * 

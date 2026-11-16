@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Offline Queue Manager
  * Buffers time-tracking and telemetry deltas during Data Hub disconnects and flushes on reconnect.
  * 

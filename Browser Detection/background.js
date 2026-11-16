@@ -43,6 +43,9 @@ const _MessageRouter = typeof MessageRouter !== 'undefined' ? MessageRouter : (t
 
 if (typeof globalThis !== 'undefined') {
   globalThis.SentinelBackgroundModules = {
+    SharedConstants: _SharedConstants,
+    SharedContracts: _SharedContracts,
+    SharedFormatters: _SharedFormatters,
     ConfigManager: _ConfigManager,
     StateManager: _StateManager,
     StorageManager: _StorageManager,

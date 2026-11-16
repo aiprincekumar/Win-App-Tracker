@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Shared Formatters
- * Domain extraction, date formatting, duration formatting, and favicon resolver.
+ * Domain extraction, date formatting, duration formatting, favicon resolver, and RFC 4180 CSV cell escaping.
  * 
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
  */
@@ -110,12 +110,32 @@
     return `${secs}s`;
   }
 
+  /**
+   * Universal RFC 4180 compliant CSV cell escaper with CSV formula injection mitigation (OWASP).
+   * Handles null, undefined, special characters, newlines, commas, and double quotes.
+   * Mitigates DDE/CSV formula injection by prepending a single quote when string begins with [=+\-@\t\r].
+   *
+   * @param {*} val
+   * @returns {string}
+   */
+  function escapeCsvCell(val) {
+    if (val === null || val === undefined) return '""';
+    let str = String(val);
+    // 1. CSV Formula Injection Defense (OWASP: DDE mitigation)
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
+    // 2. RFC 4180 quote escaping
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+
   const SharedFormatters = Object.freeze({
     getTodayDateString,
     isInternalDomain,
     extractDomain,
     getFaviconUrl,
-    formatDuration
+    formatDuration,
+    escapeCsvCell
   });
 
   if (typeof module !== 'undefined' && module.exports) {

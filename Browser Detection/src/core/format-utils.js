@@ -1,15 +1,16 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Core Format Utilities
  */
 (function (global) {
   'use strict';
   const Shared = (typeof module !== 'undefined' && module.exports)
     ? require('../shared/formatters.js')
-    : global.SharedFormatters;
+    : (global.SharedFormatters || {});
 
   const FormatUtils = Object.freeze({
     getTodayDateString: Shared.getTodayDateString,
-    formatDuration: Shared.formatDuration
+    formatDuration: Shared.formatDuration,
+    escapeCsvCell: Shared.escapeCsvCell
   });
 
   if (typeof module !== 'undefined' && module.exports) {

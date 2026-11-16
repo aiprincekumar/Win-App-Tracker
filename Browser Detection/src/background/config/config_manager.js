@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Background Config Manager
  * Browser detection, client ID initialization, and configuration constants.
  * 

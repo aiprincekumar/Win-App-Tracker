@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Web Activity & Media Sentinel - Sleep Timer Storage Subsystem
  * Persistence and retrieval for sleep timer state machine & user preferences.
  * 
