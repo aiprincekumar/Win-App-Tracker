@@ -3686,10 +3686,12 @@ function setupEventListeners() {
               }));
             } catch (_) {}
           }
-        }).catch(() => {});
+        }).catch(() => {
+          sendMediaControl('toggle_fullscreen', {}, targetTabId);
+        });
+      } else {
+        sendMediaControl('toggle_fullscreen', {}, targetTabId);
       }
-
-      sendMediaControl('toggle_fullscreen', {}, targetTabId);
     });
   }
 
@@ -3715,10 +3717,12 @@ function setupEventListeners() {
               video.requestPictureInPicture().catch(() => {});
             }
           }
-        }).catch(() => {});
+        }).catch(() => {
+          sendMediaControl('toggle_pip', {}, targetTabId);
+        });
+      } else {
+        sendMediaControl('toggle_pip', {}, targetTabId);
       }
-
-      sendMediaControl('toggle_pip', {}, targetTabId);
     });
   }
 
