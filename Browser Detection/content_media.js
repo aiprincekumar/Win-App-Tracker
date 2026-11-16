@@ -2190,8 +2190,9 @@
     }
 
     // Immediately broadcast updated telemetry state after control action
-    setTimeout(() => dispatchMediaTelemetry(true), 60);
-    setTimeout(() => dispatchMediaTelemetry(true), 250);
+    const scheduleTelemetry = typeof safeSetTimeout === 'function' ? safeSetTimeout : setTimeout;
+    scheduleTelemetry(() => dispatchMediaTelemetry(true), 60);
+    scheduleTelemetry(() => dispatchMediaTelemetry(true), 250);
     return { success: true };
   }
 
@@ -2206,7 +2207,7 @@
       restoreDomainSpeed();
       dispatchMediaTelemetry(true);
       [200, 500, 1000, 2000].forEach(delay => {
-        setTimeout(() => {
+        safeSetTimeout(() => {
           if (isContextInvalidated || !isExtensionContextValid()) {
             teardownMediaSentinel();
             return;
@@ -2236,7 +2237,7 @@
       teardownMediaSentinel();
       return;
     }
-    setTimeout(() => {
+    safeSetTimeout(() => {
       if (isContextInvalidated || !isExtensionContextValid()) {
         teardownMediaSentinel();
         return;
@@ -2252,7 +2253,7 @@
       teardownMediaSentinel();
       return;
     }
-    setTimeout(() => {
+    safeSetTimeout(() => {
       if (isContextInvalidated || !isExtensionContextValid()) {
         teardownMediaSentinel();
         return;
@@ -2296,7 +2297,7 @@
 
   // Extra scans during first 5 seconds to catch dynamically injected players
   [500, 1500, 3000, 5000].forEach(delay => {
-    setTimeout(() => {
+    safeSetTimeout(() => {
       if (isContextInvalidated || !isExtensionContextValid()) {
         teardownMediaSentinel();
         return;
@@ -2309,7 +2310,7 @@
 
   // Periodic heartbeat every 2 seconds to keep telemetry strictly synced
   periodicHeartbeatTimer = setInterval(() => {
-    if (!isExtensionContextValid() || isContextInvalidated) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
       teardownMediaSentinel();
       return;
     }
@@ -2413,11 +2414,19 @@
 
   // Runtime IPC Message Listener (Queries & Controls)
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!isExtensionContextValid() || isContextInvalidated) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
       teardownMediaSentinel();
       return;
     }
     if (!message || (!message.type && !message.action)) return;
+
+    const safeSendResponse = (data) => {
+      try {
+        sendResponse(data);
+      } catch (e) {
+        if (isInvalidationError(e)) teardownMediaSentinel();
+      }
+    };
 
     const msgType = message.type || '';
     const msgAction = message.action || '';
@@ -2426,7 +2435,7 @@
     // 1. Telemetry Query
     if (msgType === 'QUERY_PAGE_MEDIA' || msgAction === 'QUERY_PAGE_MEDIA') {
       const { currentState } = evaluatePageMediaState();
-      sendResponse(currentState);
+      safeSendResponse(currentState);
       return true;
     }
 
@@ -2437,14 +2446,14 @@
         : (message.data && message.data.action);
       const targetData = message.data || {};
       const result = handleMediaControl(targetAction, targetData);
-      sendResponse(result);
+      safeSendResponse(result);
       return true;
     }
 
     // 3. Dedicated SET_VOLUME Envelope (from background worker or popup)
     if (msgType === 'SET_VOLUME' || msgAction === 'SET_VOLUME') {
       const result = handleMediaControl('set_volume', message.data || { volume: message.volume, percent: message.percent });
-      sendResponse(result);
+      safeSendResponse(result);
       return true;
     }
 
@@ -2459,14 +2468,14 @@
       const targetAction = KNOWN_MEDIA_ACTIONS.includes(msgAction) ? msgAction : msgType;
       const targetData = message.data || ((targetAction === 'set_volume' || targetAction === 'SET_VOLUME') ? { volume: message.volume, percent: message.percent } : {});
       const result = handleMediaControl(targetAction, targetData);
-      sendResponse(result);
+      safeSendResponse(result);
       return true;
     }
 
     // 5. Smooth Fade and Pause Envelope
     if (msgType === 'FADE_AND_PAUSE' || msgAction === 'FADE_AND_PAUSE') {
       executeSmoothFadeAndPause(message.fadeDurationSeconds || 30);
-      sendResponse({ received: true });
+      safeSendResponse({ received: true });
       return true;
     }
 
@@ -2482,7 +2491,7 @@
       try {
         handleMediaControl('pause');
       } catch (_) {}
-      sendResponse({ paused: true });
+      safeSendResponse({ paused: true });
       return true;
     }
 
@@ -2491,7 +2500,7 @@
       try {
         handleMediaControl('play');
       } catch (_) {}
-      sendResponse({ resumed: true });
+      safeSendResponse({ resumed: true });
       return true;
     }
 
@@ -2505,7 +2514,7 @@
         }, '*');
       } catch (_) {}
       setAudioOnlyMode(Boolean(settings && settings.audio_only));
-      sendResponse({ success: true, audio_only: Boolean(settings && settings.audio_only) });
+      safeSendResponse({ success: true, audio_only: Boolean(settings && settings.audio_only) });
       return true;
     }
 
@@ -2514,7 +2523,7 @@
       try {
         const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
         if (!video || !video.videoWidth || !video.videoHeight) {
-          sendResponse({ success: false, error: 'No active video element with valid dimensions found' });
+          safeSendResponse({ success: false, error: 'No active video element with valid dimensions found' });
           return true;
         }
         const canvas = document.createElement('canvas');
@@ -2522,14 +2531,14 @@
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          sendResponse({ success: false, error: 'Failed to create 2d canvas context' });
+          safeSendResponse({ success: false, error: 'Failed to create 2d canvas context' });
           return true;
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/png');
-        sendResponse({ success: true, dataUrl, width: canvas.width, height: canvas.height });
+        safeSendResponse({ success: true, dataUrl, width: canvas.width, height: canvas.height });
       } catch (err) {
-        sendResponse({ success: false, error: err.message });
+        safeSendResponse({ success: false, error: err.message });
       }
       return true;
     }
@@ -2584,7 +2593,9 @@
       teardownInvalidatedContext,
       safeStorageGet,
       safeStorageSet,
-      safeSendMessage
+      safeSendMessage,
+      safeSetTimeout,
+      safeClearTimeout
     };
   }
 

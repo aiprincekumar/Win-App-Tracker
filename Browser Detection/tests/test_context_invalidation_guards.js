@@ -71,6 +71,12 @@ assert(contentMediaSource.includes('safeStorageGet([\'audio_lab_settings\']'),
 assert(contentMediaSource.includes('safeStorageSet({ smart_automations:'), 
   'saveDomainSpeed must use safeStorageSet');
 
+assert(contentMediaSource.includes('function safeSetTimeout('), 
+  'content_media.js must define safeSetTimeout');
+
+assert(contentMediaSource.includes('activeTimeouts.clear()'), 
+  'teardownMediaSentinel must clear activeTimeouts');
+
 console.log('  ✅ All architectural functions and wrappers verified present in source.');
 
 // ---------------------------------------------------------------------------
@@ -437,6 +443,93 @@ console.log('\nTest 5: In-Memory VM Sandbox Lifecycle Verification of content_me
   }, 'safeSendMessage must NOT throw when called in invalidated context');
 
   console.log('  ✅ Sandbox lifecycle simulation proved: 0 unhandled exceptions upon extension reload.');
+}
+
+// ---------------------------------------------------------------------------
+// Test 6: In-Depth Timeout, Listener & Telemetry Invalidation Neutralization
+// ---------------------------------------------------------------------------
+console.log('\nTest 6: In-Depth Timeout, Listener & Telemetry Invalidation Neutralization');
+
+{
+  let clearedTimeoutIds = [];
+  const sandbox = {
+    window: {
+      location: { hostname: 'www.youtube.com', href: 'https://www.youtube.com' },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      postMessage: () => {},
+      top: null
+    },
+    document: {
+      readyState: 'complete',
+      documentElement: { getAttribute: () => null, setAttribute: () => {}, nodeType: 1 },
+      body: { nodeType: 1 },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      getElementById: () => null,
+      createElement: (tag) => ({ tagName: tag.toUpperCase(), setAttribute: () => {}, style: {} })
+    },
+    globalThis: {
+      chrome: {
+        runtime: {
+          id: 'test-env-id-6',
+          sendMessage: (msg, cb) => cb && cb({ ok: true }),
+          onMessage: { addListener: () => {}, removeListener: () => {} },
+          getURL: (path) => `chrome-extension://test-env-id-6/${path}`
+        },
+        storage: {
+          local: { get: (k, cb) => cb && cb({}), set: (i, cb) => cb && cb() },
+          onChanged: { addListener: () => {}, removeListener: () => {} }
+        }
+      }
+    },
+    setInterval: () => 101,
+    clearInterval: () => {},
+    setTimeout: (fn, ms) => 202,
+    clearTimeout: (id) => { clearedTimeoutIds.push(id); },
+    MutationObserver: class { observe() {} disconnect() {} },
+    WeakSet: WeakSet,
+    Set: Set,
+    Date: Date,
+    Math: Math,
+    Node: { ELEMENT_NODE: 1 },
+    console: { debug: () => {}, log: () => {}, warn: () => {}, error: () => {} }
+  };
+  sandbox.window.top = sandbox.window;
+  sandbox.chrome = sandbox.globalThis.chrome;
+
+  vm.createContext(sandbox);
+  vm.runInContext(contentMediaSource, sandbox);
+
+  const contextHelper = sandbox.window.__SentinelMediaContext;
+  assert(contextHelper, 'Context helper must be available');
+  assert.strictEqual(contextHelper.isExtensionContextValid(), true);
+
+  // 6.1 Schedule safe timeout and verify registration
+  const timerId = contextHelper.safeSetTimeout(() => {}, 100);
+  assert.strictEqual(timerId, 202, 'safeSetTimeout should return allocated timer id');
+
+  // 6.2 Trigger teardown
+  contextHelper.teardownMediaSentinel();
+  assert.strictEqual(contextHelper.isContextInvalidated(), true);
+  assert.strictEqual(contextHelper.isOrphaned(), true);
+  assert(clearedTimeoutIds.includes(202), 'Teardown must clear all active tracked timeouts');
+
+  // 6.3 Scheduling timeout after invalidation must immediately return null
+  const nullTimerId = contextHelper.safeSetTimeout(() => {}, 100);
+  assert.strictEqual(nullTimerId, null, 'safeSetTimeout must return null when context is already invalidated');
+
+  // 6.4 Safe send message receives context invalidated error in callback
+  let errorReceived = null;
+  contextHelper.safeSendMessage({ type: 'PING' }, (resp, err) => {
+    errorReceived = err;
+  });
+  assert(errorReceived && /context invalidated/i.test(errorReceived.message), 
+    'safeSendMessage must provide Extension context invalidated error to callback');
+
+  console.log('  ✅ In-depth timeout cancellation and safe unregistration verified.');
 }
 
 console.log('\n🎉 ALL EXTENSION CONTEXT INVALIDATION GUARD TESTS PASSED WITH 100% SUCCESS!');
