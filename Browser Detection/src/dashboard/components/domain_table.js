@@ -84,7 +84,54 @@
 
     tdDomain.appendChild(cellDiv);
 
-    // 2. Column Time
+    // 2. Column Category (Feature 2: Productivity Classifier)
+    const tdCategory = doc.createElement('td');
+    tdCategory.className = 'col-category';
+
+    const catSelect = doc.createElement('select');
+    catSelect.className = 'domain-cat-select styled-select';
+    catSelect.setAttribute('data-domain', it.domain || '');
+    catSelect.setAttribute('aria-label', `Category for ${it.domain}`);
+
+    const getCategoryFn = typeof options.getDomainCategory === 'function'
+      ? options.getDomainCategory
+      : ((typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature)
+        ? globalThis.TemporalProductivityFeature.getDomainCategory
+        : () => 'work');
+
+    const assignedCat = it.category || getCategoryFn(it.domain, options.domainCategoryOverrides);
+
+    const catList = [
+      { id: 'work', key: 'cat_work', label: '💼 Work & Dev' },
+      { id: 'learning', key: 'cat_learning', label: '📚 Learning & Research' },
+      { id: 'entertainment', key: 'cat_entertainment', label: '🎮 Entertainment & Media' },
+      { id: 'social', key: 'cat_social', label: '💬 Social & Chat' },
+      { id: 'utility', key: 'cat_utility', label: '⚙️ Utilities & Tools' }
+    ];
+
+    catList.forEach((c) => {
+      const opt = doc.createElement('option');
+      opt.value = c.id;
+      opt.textContent = typeof t === 'function' ? t(c.key) : c.label;
+      if (c.id === assignedCat) {
+        opt.selected = true;
+      }
+      catSelect.appendChild(opt);
+    });
+
+    if (typeof options.onCategoryChange === 'function') {
+      catSelect.addEventListener('change', (e) => {
+        options.onCategoryChange(it.domain, e.target.value);
+      });
+    } else if (typeof globalThis !== 'undefined' && typeof globalThis.handleCategoryOverride === 'function') {
+      catSelect.addEventListener('change', (e) => {
+        globalThis.handleCategoryOverride(it.domain, e.target.value);
+      });
+    }
+
+    tdCategory.appendChild(catSelect);
+
+    // 3. Column Time
     const tdTime = doc.createElement('td');
     tdTime.className = 'col-time';
 
@@ -152,6 +199,7 @@
     tdLast.appendChild(lastSpan);
 
     tr.appendChild(tdDomain);
+    tr.appendChild(tdCategory);
     tr.appendChild(tdTime);
     tr.appendChild(tdRatio);
     tr.appendChild(tdSessions);

@@ -736,3 +736,381 @@
 .hero-volume-track {
   position: relative;
 }
+
+/* ========================================================================= */
+/* Phase 1: Chrono-Activity Heatmap & Productivity Scoring Engine Styles      */
+/* ========================================================================= */
+
+/* 1. Chrono-Heatmap Container & 7x24 Matrix Grid */
+.chrono-heatmap-container {
+  overflow-x: auto;
+  padding: 1rem 0;
+  width: 100%;
+}
+
+.chrono-heatmap-grid {
+  display: grid;
+  grid-template-columns: 50px repeat(24, minmax(28px, 1fr));
+  gap: 4px;
+  align-items: center;
+  min-width: 760px;
+}
+
+.heatmap-day-label, .heatmap-hour-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+  text-align: center;
+  user-select: none;
+}
+
+.heatmap-day-label {
+  text-align: right;
+  padding-right: 8px;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
+  position: relative;
+}
+
+.heatmap-cell:hover, .heatmap-cell:focus-visible {
+  transform: scale(1.18);
+  z-index: 5;
+  outline: 2px solid var(--accent-emerald, #10b981);
+  outline-offset: 1px;
+}
+
+/* Dark Theme Intensity Tiers */
+.heatmap-cell[data-intensity="0"], .legend-cell.tier-0 {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.heatmap-cell[data-intensity="1"], .legend-cell.tier-1 {
+  background: #064e3b;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.heatmap-cell[data-intensity="2"], .legend-cell.tier-2 {
+  background: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.heatmap-cell[data-intensity="3"], .legend-cell.tier-3 {
+  background: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.6);
+}
+.heatmap-cell[data-intensity="4"], .legend-cell.tier-4 {
+  background: #10b981;
+  border: 1px solid #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+/* Light Theme Intensity Tiers */
+body.theme-light .heatmap-cell[data-intensity="0"], body.theme-light .legend-cell.tier-0 {
+  background: #e2e8f0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+body.theme-light .heatmap-cell[data-intensity="1"], body.theme-light .legend-cell.tier-1 {
+  background: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+body.theme-light .heatmap-cell[data-intensity="2"], body.theme-light .legend-cell.tier-2 {
+  background: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+body.theme-light .heatmap-cell[data-intensity="3"], body.theme-light .legend-cell.tier-3 {
+  background: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.6);
+}
+body.theme-light .heatmap-cell[data-intensity="4"], body.theme-light .legend-cell.tier-4 {
+  background: #047857;
+  border: 1px solid #064e3b;
+  box-shadow: 0 0 10px rgba(4, 120, 87, 0.3);
+}
+
+/* 2. Heatmap Controls, Tooltip & Legend Bar */
+.heatmap-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.heatmap-mode-toggles {
+  display: inline-flex;
+  border-radius: 8px;
+  background: var(--bg-input, rgba(15, 23, 42, 0.85));
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.1));
+  padding: 2px;
+}
+
+.btn-toggle-mode {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-toggle-mode.active {
+  background: var(--accent-emerald, #10b981);
+  color: #042f2e;
+  font-weight: 600;
+}
+
+.heatmap-wow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+
+.wow-label {
+  color: var(--text-muted, #94a3b8);
+}
+
+.wow-val {
+  font-weight: 600;
+}
+
+.wow-val.positive {
+  color: #10b981;
+}
+
+.wow-val.negative {
+  color: #f43f5e;
+}
+
+.heatmap-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  flex-wrap: wrap;
+}
+
+.legend-title {
+  font-weight: 600;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.custom-date-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg-card, rgba(22, 30, 49, 0.75));
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  margin-left: 8px;
+}
+
+.custom-date-picker input[type="date"] {
+  background: var(--bg-input, rgba(15, 23, 42, 0.85));
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.1));
+  color: var(--text-main, #f8fafc);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.heatmap-tooltip {
+  position: absolute;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: var(--text-main, #f8fafc);
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: opacity 150ms ease;
+}
+
+.tooltip-title {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--accent-emerald, #10b981);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+/* 3. Productivity Score Card & Radial Gauge */
+.productivity-score-card {
+  min-height: 140px;
+}
+
+.productivity-gauge-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 6px 0;
+}
+
+.gauge-svg-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.productivity-radial-gauge {
+  transform: rotate(0deg);
+}
+
+.gauge-bg {
+  stroke: var(--border-dim, rgba(255, 255, 255, 0.1));
+}
+
+.gauge-progress {
+  transition: stroke-dashoffset 400ms cubic-bezier(0.16, 1, 0.3, 1), stroke 300ms ease;
+  stroke-linecap: round;
+}
+
+.gauge-progress.tier-focus, .gauge-progress.focus {
+  stroke: #10b981;
+}
+
+.gauge-progress.tier-balanced, .gauge-progress.balanced {
+  stroke: #f59e0b;
+}
+
+.gauge-progress.tier-distracted, .gauge-progress.distracted {
+  stroke: #f43f5e;
+}
+
+.gauge-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.productivity-score-num {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text-main, #f8fafc);
+}
+
+.score-max-unit {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  margin-left: 2px;
+}
+
+.badge-productivity-tier {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.badge-productivity-tier.tier-focus, .badge-productivity-tier.focus {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-productivity-tier.tier-balanced, .badge-productivity-tier.balanced {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-productivity-tier.tier-distracted, .badge-productivity-tier.distracted {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+/* 4. Domain Table Category Select & Semantic Badges */
+.col-category {
+  width: 170px;
+  min-width: 150px;
+}
+
+.domain-cat-select {
+  background: var(--bg-input, rgba(15, 23, 42, 0.85));
+  color: var(--text-main, #f8fafc);
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  width: 100%;
+  max-width: 160px;
+}
+
+.domain-cat-select:focus-visible {
+  outline: 2px solid var(--accent-emerald, #10b981);
+  border-color: var(--accent-emerald, #10b981);
+}
+
+.badge-cat-work {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.badge-cat-learning {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-cat-entertainment {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.badge-cat-social {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.badge-cat-utility {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}

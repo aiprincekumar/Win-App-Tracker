@@ -70,6 +70,7 @@ const _OmniPalette = (typeof globalThis !== 'undefined' && globalThis.OmniPalett
 const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.PrecisionTimelineScrubber) ? globalThis.PrecisionTimelineScrubber : _safeRequire('./src/dashboard/scrubber/scrubber.js', '../src/dashboard/scrubber/scrubber.js');
 const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
 const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
+const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelDashboardModules = {
@@ -83,7 +84,8 @@ if (typeof window !== 'undefined') {
     OmniPalette: _OmniPalette,
     PrecisionScrubber: _PrecisionScrubber,
     FeatureRegistry: _FeatureRegistry,
-    DashboardFeatureManager: _DashboardFeatureManager
+    DashboardFeatureManager: _DashboardFeatureManager,
+    TemporalProductivity: _TemporalProductivity
   };
 }
 
@@ -174,8 +176,26 @@ const DASHBOARD_I18N = {
     heading_usage_dist: 'Website Usage Time Distribution',
     caption_usage_dist: 'Select time range: Today, Daily Average, or Total Time',
     subtab_today: '📅 Today',
+    subtab_yesterday: '⏪ Yesterday',
+    subtab_7days: '📊 Last 7 Days',
+    subtab_30days: '🗓️ Last 30 Days',
+    subtab_custom: '🎯 Custom Range',
     subtab_daily: '📈 Daily Avg',
     subtab_total: '🌐 Total Time',
+    heatmap_title: 'Chrono-Activity Heatmap (24h x 7d)',
+    heatmap_mode_focus: 'Focus & Browsing Time',
+    heatmap_mode_media: 'Media Watch Time',
+    heatmap_wow_delta: 'Week-over-Week Change',
+    productivity_title: 'Productivity Index',
+    productivity_badge_focus: 'Deep Focus',
+    productivity_badge_balanced: 'Balanced',
+    productivity_badge_distracted: 'Distracted',
+    cat_work: 'Work & Engineering',
+    cat_learning: 'Learning & Research',
+    cat_entertainment: 'Entertainment & Media',
+    cat_social: 'Social & Communication',
+    cat_utility: 'Utilities & Tools',
+    th_category: 'Category',
     donut_center_today: "Today's Total Time",
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
@@ -489,8 +509,26 @@ const DASHBOARD_I18N = {
     heading_usage_dist: 'वेबसाइट उपयोग समय वितरण',
     caption_usage_dist: 'समय सीमा चुनें: आज, दैनिक औसत या कुल समय',
     subtab_today: '📅 आज',
+    subtab_yesterday: '⏪ बीता हुआ कल',
+    subtab_7days: '📊 पिछले 7 दिन',
+    subtab_30days: '🗓️ पिछले 30 दिन',
+    subtab_custom: '🎯 कस्टम अवधि',
     subtab_daily: '📈 दैनिक औसत',
     subtab_total: '🌐 कुल समय',
+    heatmap_title: 'क्रोनो-सक्रियता हीटमैप (24 घंटे x 7 दिन)',
+    heatmap_mode_focus: 'फोकस व ब्राउज़िंग समय',
+    heatmap_mode_media: 'मीडिया वॉच-टाइम',
+    heatmap_wow_delta: 'साप्ताहिक तुलनात्मक अंतर',
+    productivity_title: 'उत्पादकता सूचकांक',
+    productivity_badge_focus: 'गहन ध्यान',
+    productivity_badge_balanced: 'संतुलित',
+    productivity_badge_distracted: 'विचलित',
+    cat_work: 'कार्य व इंजीनियरिंग',
+    cat_learning: 'शिक्षा व शोध',
+    cat_entertainment: 'मनोरंजन व मीडिया',
+    cat_social: 'सामाजिक संवाद',
+    cat_utility: 'यूटिलिटी व टूल्स',
+    th_category: 'श्रेणी',
     donut_center_today: 'आज का कुल समय',
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
@@ -1671,6 +1709,234 @@ let selectedBrowser = 'all'; // 'all' | 'chrome' | 'edge' | 'brave' | 'opera'
 let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
 let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
 
+// Feature 1 & 2 State: Temporal Engine & Productivity Classifier
+let domainCategoryOverrides = {};
+let currentHeatmapMode = 'focus'; // 'focus' | 'media'
+let currentHeatmapMatrix = null;
+let customStartDate = '';
+let customEndDate = '';
+
+const DEFAULT_DOMAIN_CATEGORIES = (_TemporalProductivity && _TemporalProductivity.DEFAULT_DOMAIN_CATEGORIES) || {
+  'github.com': 'work',
+  'gitlab.com': 'work',
+  'stackoverflow.com': 'work',
+  'vscode.dev': 'work',
+  'jira.atlassian.com': 'work',
+  'linear.app': 'work',
+  'aws.amazon.com': 'work',
+  'console.cloud.google.com': 'work',
+  'figma.com': 'work',
+  'localhost': 'work',
+  '127.0.0.1': 'work',
+  'developer.mozilla.org': 'learning',
+  'arxiv.org': 'learning',
+  'coursera.org': 'learning',
+  'udemy.com': 'learning',
+  'wikipedia.org': 'learning',
+  'medium.com': 'learning',
+  'dev.to': 'learning',
+  'youtube.com': 'entertainment',
+  'netflix.com': 'entertainment',
+  'spotify.com': 'entertainment',
+  'twitch.tv': 'entertainment',
+  'web.whatsapp.com': 'social',
+  'slack.com': 'social',
+  'discord.com': 'social',
+  'twitter.com': 'social',
+  'x.com': 'social',
+  'reddit.com': 'social',
+  'mail.google.com': 'utility',
+  'drive.google.com': 'utility',
+  'notion.so': 'utility',
+  'google.com': 'utility'
+};
+
+function getDomainCategory(domain, overrides = domainCategoryOverrides) {
+  if (_TemporalProductivity && typeof _TemporalProductivity.getDomainCategory === 'function') {
+    return _TemporalProductivity.getDomainCategory(domain, overrides);
+  }
+  if (!domain) return 'utility';
+  const clean = String(domain).toLowerCase().trim();
+  if (overrides && overrides[clean]) {
+    if (typeof overrides[clean] === 'string') return overrides[clean];
+    if (typeof overrides[clean] === 'object' && overrides[clean].category) return overrides[clean].category;
+  }
+  if (DEFAULT_DOMAIN_CATEGORIES[clean]) return DEFAULT_DOMAIN_CATEGORIES[clean];
+  const parts = clean.split('.');
+  if (parts.length > 2) {
+    const parent = parts.slice(-2).join('.');
+    if (DEFAULT_DOMAIN_CATEGORIES[parent]) return DEFAULT_DOMAIN_CATEGORIES[parent];
+  }
+  if (isInternalDomain(clean)) return 'utility';
+  return 'work';
+}
+
+function calculateProductivityScore(timeByCategory, totalActiveTime) {
+  if (_TemporalProductivity && typeof _TemporalProductivity.calculateProductivityScore === 'function') {
+    return _TemporalProductivity.calculateProductivityScore(timeByCategory, totalActiveTime);
+  }
+  const W = (timeByCategory && Number(timeByCategory.work)) || 0;
+  const L = (timeByCategory && Number(timeByCategory.learning)) || 0;
+  const U = (timeByCategory && Number(timeByCategory.utility)) || 0;
+  const S = (timeByCategory && Number(timeByCategory.social)) || 0;
+  const E = (timeByCategory && Number(timeByCategory.entertainment)) || 0;
+  const sum = W + L + U + S + E;
+  const T = typeof totalActiveTime === 'number' && totalActiveTime > 0 ? totalActiveTime : sum;
+  if (T <= 0) return { score: 0, tier: 'distracted', timeByCategory: { work: W, learning: L, utility: U, social: S, entertainment: E }, totalActiveTime: 0, valueOf: function() { return this.score; } };
+  const rawNumerator = (W * 1.0) + (L * 0.95) + (U * 0.7) - (S * 0.4) - (E * 0.8);
+  const score = Math.max(0, Math.min(100, Math.round((rawNumerator / T) * 100)));
+  const tier = score >= 80 ? 'focus' : score >= 60 ? 'balanced' : 'distracted';
+  return { score, tier, timeByCategory: { work: W, learning: L, utility: U, social: S, entertainment: E }, totalActiveTime: T, valueOf: function() { return this.score; } };
+}
+
+function renderProductivityGauge(score, tier) {
+  if (_TemporalProductivity && typeof _TemporalProductivity.renderProductivityGauge === 'function') {
+    return _TemporalProductivity.renderProductivityGauge(score, tier, null, { document, t });
+  }
+  const elScore = document.getElementById('valProductivityScore');
+  const elBadge = document.getElementById('badgeProductivityTier');
+  const circle = document.getElementById('gaugeProgressCircle');
+  const clampedScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const resolvedTier = tier || (clampedScore >= 80 ? 'focus' : clampedScore >= 60 ? 'balanced' : 'distracted');
+  if (elScore) elScore.textContent = String(clampedScore);
+  if (elBadge) {
+    elBadge.className = `badge-productivity-tier tier-${resolvedTier} ${resolvedTier}`;
+    elBadge.textContent = resolvedTier === 'focus' ? t('productivity_badge_focus') : resolvedTier === 'balanced' ? t('productivity_badge_balanced') : t('productivity_badge_distracted');
+  }
+  if (circle) {
+    circle.style.strokeDashoffset = String(238.76 * (1 - clampedScore / 100));
+    circle.className = `gauge-progress tier-${resolvedTier}`;
+    circle.style.stroke = resolvedTier === 'focus' ? '#10b981' : resolvedTier === 'balanced' ? '#f59e0b' : '#f43f5e';
+  }
+}
+
+function handleCategoryOverride(domain, newCategory) {
+  if (!domain || !newCategory) return;
+  const clean = String(domain).toLowerCase().trim();
+  if (!domainCategoryOverrides) domainCategoryOverrides = {};
+  domainCategoryOverrides[clean] = {
+    category: newCategory,
+    isCustomOverride: true,
+    assignedAt: Date.now()
+  };
+
+  const onUpdated = () => {
+    if (dashboardData) {
+      renderTimeTrackingTab(dashboardData);
+    }
+  };
+
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    browserAPI.storage.local.set({ domain_category_overrides: domainCategoryOverrides }, onUpdated);
+  } else {
+    onUpdated();
+  }
+}
+
+function aggregateChronoHeatmap(rawHistory, range) {
+  if (_TemporalProductivity && typeof _TemporalProductivity.aggregateChronoHeatmap === 'function') {
+    return _TemporalProductivity.aggregateChronoHeatmap(rawHistory, range);
+  }
+  return [];
+}
+
+function renderChronoHeatmap(matrix, mode = 'focus') {
+  if (_TemporalProductivity && typeof _TemporalProductivity.renderChronoHeatmap === 'function') {
+    return _TemporalProductivity.renderChronoHeatmap(matrix, mode, null, { document, t });
+  }
+}
+
+function getDatesInRange(startStr, endStr) {
+  if (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function') {
+    return _TemporalProductivity.getDatesInRange(startStr, endStr);
+  }
+  const dates = [];
+  const cur = new Date(startStr);
+  const end = new Date(endStr);
+  while (cur <= end) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, '0');
+    const d = String(cur.getDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${d}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+function updateProductivityMetrics(items) {
+  const list = Array.isArray(items) ? items : [];
+  const timeByCategory = {
+    work: 0,
+    learning: 0,
+    entertainment: 0,
+    social: 0,
+    utility: 0
+  };
+
+  let totalActiveTime = 0;
+  list.forEach(item => {
+    const cat = getDomainCategory(item.domain, domainCategoryOverrides);
+    const sec = item.computedSeconds || item.totalSeconds || 0;
+    if (timeByCategory[cat] !== undefined) {
+      timeByCategory[cat] += sec;
+    } else {
+      timeByCategory.work += sec;
+    }
+    totalActiveTime += sec;
+  });
+
+  const summary = calculateProductivityScore(timeByCategory, totalActiveTime);
+  renderProductivityGauge(summary.score, summary.tier);
+  return summary;
+}
+
+function updateChronoHeatmap(data) {
+  let rawHistory = {};
+  if (data && data.activityData && data.activityData.history) {
+    rawHistory = data.activityData.history;
+  } else if (data && data.activityData && data.activityData.domains) {
+    const historyMap = {};
+    for (const [dom, dObj] of Object.entries(data.activityData.domains)) {
+      if (dObj.days) {
+        for (const [dateStr, dayStats] of Object.entries(dObj.days)) {
+          if (!historyMap[dateStr]) {
+            historyMap[dateStr] = { domains: {}, hourlyBuckets: {} };
+          }
+          historyMap[dateStr].domains[dom] = {
+            activeTime: dayStats.seconds || dayStats.foregroundSeconds || 0,
+            mediaTime: dayStats.backgroundMediaSeconds || 0,
+            sessions: dayStats.sessions || 1
+          };
+          if (dayStats.hourlyBuckets) {
+            for (const [h, b] of Object.entries(dayStats.hourlyBuckets)) {
+              if (!historyMap[dateStr].hourlyBuckets[h]) {
+                historyMap[dateStr].hourlyBuckets[h] = { activeTime: 0, mediaTime: 0, sessions: 0, topDomain: dom };
+              }
+              historyMap[dateStr].hourlyBuckets[h].activeTime += (b.activeTime || 0);
+              historyMap[dateStr].hourlyBuckets[h].mediaTime += (b.mediaTime || 0);
+              historyMap[dateStr].hourlyBuckets[h].sessions += (b.sessions || 0);
+            }
+          }
+        }
+      }
+    }
+    rawHistory = historyMap;
+  } else if (data && typeof data === 'object') {
+    rawHistory = data;
+  }
+
+  let range = temporalSubtab || '7d';
+  if (range === 'custom') {
+    range = { mode: 'custom', startDate: customStartDate, endDate: customEndDate };
+  } else if (range === 'daily' || range === 'total') {
+    range = '7d';
+  }
+
+  currentHeatmapMatrix = aggregateChronoHeatmap(rawHistory, range);
+  renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
+  return currentHeatmapMatrix;
+}
+
 function isInternalDomain(domain) {
   if (!domain) return false;
   let d = String(domain).toLowerCase().trim();
@@ -1899,8 +2165,17 @@ function applyDashboardLanguage(lang) {
   setTxt('headingUsageDist', 'heading_usage_dist');
   setTxt('captionUsageDist', 'caption_usage_dist');
   setTxt('subtabTodayText', 'subtab_today');
+  setTxt('subtabYesterdayText', 'subtab_yesterday');
+  setTxt('subtab7DaysText', 'subtab_7days');
+  setTxt('subtab30DaysText', 'subtab_30days');
+  setTxt('subtabCustomText', 'subtab_custom');
   setTxt('subtabDailyText', 'subtab_daily');
   setTxt('subtabTotalText', 'subtab_total');
+  setTxt('lblProductivityScore', 'productivity_title');
+  setTxt('headingChronoHeatmap', 'heatmap_title');
+  setTxt('btnHeatmapModeFocus', 'heatmap_mode_focus');
+  setTxt('btnHeatmapModeMedia', 'heatmap_mode_media');
+  setTxt('lblHeatmapWow', 'heatmap_wow_delta');
   setTxt('headingTopBreakdown', 'top_breakdown');
 
   setTxt('headingDomainTable', 'domain_table_heading');
@@ -1909,6 +2184,7 @@ function applyDashboardLanguage(lang) {
   if (domSearch) domSearch.placeholder = t('search_domain_placeholder');
 
   setTxt('thColDomain', 'th_domain');
+  setTxt('thColCategory', 'th_category');
   setTxt('thColTime', 'th_time');
   setTxt('thColRatio', 'th_ratio');
   setTxt('thColSessions', 'th_sessions');
@@ -2398,6 +2674,41 @@ function processTimeTrackingData(actData, temporalMode, todayStr) {
     let computedSec = 0;
     if (temporalMode === 'today') {
       computedSec = targetTodaySec;
+    } else if (temporalMode === 'yesterday') {
+      const yDate = new Date();
+      yDate.setDate(yDate.getDate() - 1);
+      const yStr = `${yDate.getFullYear()}-${String(yDate.getMonth() + 1).padStart(2, '0')}-${String(yDate.getDate()).padStart(2, '0')}`;
+      const yObj = (domainObj.days && domainObj.days[yStr]) || null;
+      computedSec = yObj ? (selectedTrackingMode === 'foreground' ? (typeof yObj.foregroundSeconds === 'number' ? yObj.foregroundSeconds : (yObj.seconds || 0)) : selectedTrackingMode === 'background_media' ? (yObj.backgroundMediaSeconds || 0) : (yObj.seconds || 0)) : 0;
+    } else if (temporalMode === '7d' || temporalMode === '30d' || temporalMode === 'custom') {
+      let datesList = [];
+      const formatYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (temporalMode === '7d') {
+        const s = new Date();
+        s.setDate(s.getDate() - 6);
+        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
+          ? _TemporalProductivity.getDatesInRange(formatYMD(s), todayStr)
+          : [todayStr];
+      } else if (temporalMode === '30d') {
+        const s = new Date();
+        s.setDate(s.getDate() - 29);
+        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
+          ? _TemporalProductivity.getDatesInRange(formatYMD(s), todayStr)
+          : [todayStr];
+      } else {
+        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
+          ? _TemporalProductivity.getDatesInRange(customStartDate || todayStr, customEndDate || todayStr)
+          : [todayStr];
+      }
+      computedSec = 0;
+      if (domainObj.days) {
+        datesList.forEach((ds) => {
+          const dItem = domainObj.days[ds];
+          if (dItem) {
+            computedSec += (selectedTrackingMode === 'foreground' ? (typeof dItem.foregroundSeconds === 'number' ? dItem.foregroundSeconds : (dItem.seconds || 0)) : selectedTrackingMode === 'background_media' ? (dItem.backgroundMediaSeconds || 0) : (dItem.seconds || 0));
+          }
+        });
+      }
     } else if (temporalMode === 'daily') {
       computedSec = Math.round(targetTotalSec / historyDays);
     } else {
@@ -2598,6 +2909,10 @@ function renderTimeTrackingTab(data) {
 
   // 4. Domain Breakdown Table
   renderDomainTable(stats.items);
+
+  // 5. Phase 1: Productivity Score & Heatmap
+  updateProductivityMetrics(stats.items);
+  updateChronoHeatmap(data);
 }
 
 function renderDonutChart(items, totalSeconds, subtab) {
@@ -2866,6 +3181,34 @@ function renderDomainTable(items) {
     }
     tdDomain.appendChild(cellDiv);
 
+    const tdCategory = document.createElement('td');
+    tdCategory.className = 'col-category';
+    const catSelect = document.createElement('select');
+    catSelect.className = 'domain-cat-select';
+    catSelect.setAttribute('data-domain', it.domain || '');
+    catSelect.setAttribute('aria-label', `Select category for ${it.domain || ''}`);
+    const currentCat = typeof getDomainCategory === 'function' ? getDomainCategory(it.domain) : 'utility';
+    const catOptions = [
+      { id: 'work', label: t('cat_work') || 'Work & Dev' },
+      { id: 'learning', label: t('cat_learning') || 'Learning' },
+      { id: 'entertainment', label: t('cat_entertainment') || 'Entertainment' },
+      { id: 'social', label: t('cat_social') || 'Social' },
+      { id: 'utility', label: t('cat_utility') || 'Utilities' }
+    ];
+    catOptions.forEach(opt => {
+      const optEl = document.createElement('option');
+      optEl.value = opt.id;
+      optEl.textContent = opt.label;
+      if (opt.id === currentCat) optEl.selected = true;
+      catSelect.appendChild(optEl);
+    });
+    catSelect.addEventListener('change', (e) => {
+      if (typeof handleCategoryOverride === 'function') {
+        handleCategoryOverride(it.domain, e.target.value);
+      }
+    });
+    tdCategory.appendChild(catSelect);
+
     const tdTime = document.createElement('td');
     tdTime.className = 'col-time';
     const timeMain = document.createElement('span');
@@ -2918,6 +3261,7 @@ function renderDomainTable(items) {
     tdLast.appendChild(lastSpan);
 
     tr.appendChild(tdDomain);
+    tr.appendChild(tdCategory);
     tr.appendChild(tdTime);
     tr.appendChild(tdRatio);
     tr.appendChild(tdSessions);
@@ -4843,12 +5187,61 @@ function setupEventListeners() {
       });
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
-      temporalSubtab = btn.getAttribute('data-temporal');
+      temporalSubtab = btn.getAttribute('data-temporal') || btn.getAttribute('data-range') || 'today';
+      const customPicker = document.getElementById('customDateRangePicker');
+      if (customPicker) {
+        if (temporalSubtab === 'custom') {
+          customPicker.classList.remove('hidden');
+        } else {
+          customPicker.classList.add('hidden');
+        }
+      }
       if (dashboardData) {
         renderTimeTrackingTab(dashboardData);
       }
     });
   });
+
+  const btnApplyCustom = document.getElementById('btnApplyCustomRange');
+  if (btnApplyCustom) {
+    btnApplyCustom.addEventListener('click', () => {
+      const startInp = document.getElementById('inputCustomStart') || document.getElementById('inputCustomStartDate');
+      const endInp = document.getElementById('inputCustomEnd') || document.getElementById('inputCustomEndDate');
+      if (startInp && endInp && startInp.value && endInp.value) {
+        customStartDate = startInp.value;
+        customEndDate = endInp.value;
+        temporalSubtab = 'custom';
+        if (dashboardData) {
+          renderTimeTrackingTab(dashboardData);
+        }
+      }
+    });
+  }
+
+  const btnHeatFocus = document.getElementById('btnHeatmapModeFocus');
+  const btnHeatMedia = document.getElementById('btnHeatmapModeMedia');
+  if (btnHeatFocus && btnHeatMedia) {
+    btnHeatFocus.addEventListener('click', () => {
+      btnHeatFocus.classList.add('active');
+      btnHeatFocus.setAttribute('aria-pressed', 'true');
+      btnHeatMedia.classList.remove('active');
+      btnHeatMedia.setAttribute('aria-pressed', 'false');
+      currentHeatmapMode = 'focus';
+      if (dashboardData) {
+        updateChronoHeatmap(dashboardData);
+      }
+    });
+    btnHeatMedia.addEventListener('click', () => {
+      btnHeatMedia.classList.add('active');
+      btnHeatMedia.setAttribute('aria-pressed', 'true');
+      btnHeatFocus.classList.remove('active');
+      btnHeatFocus.setAttribute('aria-pressed', 'false');
+      currentHeatmapMode = 'media';
+      if (dashboardData) {
+        updateChronoHeatmap(dashboardData);
+      }
+    });
+  }
 
   // 6. Domain Search & Sort
   const domSearchInput = document.getElementById('tableDomainSearch');
@@ -6022,6 +6415,9 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       } else if (changes.audioLabConfig && changes.audioLabConfig.newValue) {
         updateDashboardAudioLabUI(changes.audioLabConfig.newValue);
       }
+      if (changes.domain_category_overrides && changes.domain_category_overrides.newValue) {
+        domainCategoryOverrides = Object.assign({}, changes.domain_category_overrides.newValue);
+      }
       refreshDashboard();
     }
   });
@@ -6056,7 +6452,8 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         'audio_lab_settings',
         'audioLabConfig',
         'userThemePreferences',
-        'audioHapticsConfig'
+        'audioHapticsConfig',
+        'domain_category_overrides'
       ], (res) => {
         let lang = 'en';
         if (res && res.language) {
@@ -6107,6 +6504,9 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
           selectedDomainCategory = res.selected_domain_category;
           const selCat = document.getElementById('domainCategorySelect');
           if (selCat) selCat.value = selectedDomainCategory;
+        }
+        if (res && res.domain_category_overrides && typeof res.domain_category_overrides === 'object') {
+          domainCategoryOverrides = Object.assign({}, res.domain_category_overrides);
         }
         applyDashboardLanguage(lang);
         refreshDashboard();
@@ -6222,11 +6622,38 @@ if (typeof module !== 'undefined' && module.exports) {
     getCurrentSubstrate: () => currentSubstrate,
     setCurrentSubstrate: (val) => { currentSubstrate = val; },
     getCurrentAccent: () => currentAccent,
-    setCurrentAccent: (val) => { currentAccent = val; }
+    setCurrentAccent: (val) => { currentAccent = val; },
+    // Phase 1 Temporal Engine & Productivity Classifier exports
+    aggregateChronoHeatmap,
+    renderChronoHeatmap,
+    calculateProductivityScore,
+    renderProductivityGauge,
+    handleCategoryOverride,
+    getDomainCategory,
+    DEFAULT_DOMAIN_CATEGORIES,
+    updateProductivityMetrics,
+    updateChronoHeatmap,
+    getDatesInRange,
+    TemporalProductivityFeature: _TemporalProductivity,
+    getDomainCategoryOverrides: () => domainCategoryOverrides,
+    setDomainCategoryOverrides: (val) => { domainCategoryOverrides = val; },
+    getCurrentHeatmapMode: () => currentHeatmapMode,
+    setCurrentHeatmapMode: (val) => { currentHeatmapMode = val; },
+    getCustomStartDate: () => customStartDate,
+    setCustomStartDate: (val) => { customStartDate = val; },
+    getCustomEndDate: () => customEndDate,
+    setCustomEndDate: (val) => { customEndDate = val; }
   };
 }
 
 if (typeof window !== 'undefined') {
+  window.aggregateChronoHeatmap = aggregateChronoHeatmap;
+  window.renderChronoHeatmap = renderChronoHeatmap;
+  window.calculateProductivityScore = calculateProductivityScore;
+  window.renderProductivityGauge = renderProductivityGauge;
+  window.handleCategoryOverride = handleCategoryOverride;
+  window.getDomainCategory = getDomainCategory;
+  window.DEFAULT_DOMAIN_CATEGORIES = DEFAULT_DOMAIN_CATEGORIES;
   window.formatHHMMSS = formatHHMMSS;
   window.formatTimeHHMMSS = formatTimeHHMMSS;
   window.initPrecisionScrubber = initPrecisionScrubber;
@@ -6245,6 +6672,13 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof globalThis !== 'undefined') {
+  globalThis.aggregateChronoHeatmap = aggregateChronoHeatmap;
+  globalThis.renderChronoHeatmap = renderChronoHeatmap;
+  globalThis.calculateProductivityScore = calculateProductivityScore;
+  globalThis.renderProductivityGauge = renderProductivityGauge;
+  globalThis.handleCategoryOverride = handleCategoryOverride;
+  globalThis.getDomainCategory = getDomainCategory;
+  globalThis.DEFAULT_DOMAIN_CATEGORIES = DEFAULT_DOMAIN_CATEGORIES;
   globalThis.PrecisionTimelineScrubber = PrecisionTimelineScrubber;
   globalThis.SentinelHapticAudioEngine = SentinelHapticAudioEngine;
   globalThis.sentinelHaptics = sentinelHaptics;

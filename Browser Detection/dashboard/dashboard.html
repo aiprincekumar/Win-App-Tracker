@@ -156,56 +156,80 @@
         <section id="paneTracking" class="tab-pane active" role="tabpanel" aria-labelledby="navTabTracking">
           
           <div id="tabContentTimeTracking" class="bento-grid-container">
-            <!-- Key Metrics Cards Row (4 Bento Spans of 3 cols each = 12 cols) -->
-            <div class="metric-card bento-card liquid-glass-card bento-span-3">
-              <div class="metric-header">
-                <span id="lblMetricToday" class="metric-label">Today's Browsing Time</span>
-                <span class="metric-icon-box cyan">⏱️</span>
+            <!-- Key Metrics Cards Row (5 Cards in Responsive Metrics Grid) -->
+            <div class="metrics-grid bento-span-12" id="trackingMetricsGrid">
+              <div class="metric-card bento-card liquid-glass-card bento-span-3">
+                <div class="metric-header">
+                  <span id="lblMetricToday" class="metric-label">Today's Browsing Time</span>
+                  <span class="metric-icon-box cyan">⏱️</span>
+                </div>
+                <div class="metric-value-container">
+                  <span id="trackMetricTodayTime" class="metric-big-num">0h 00m</span>
+                </div>
+                <div class="metric-footer">
+                  <span id="lblMetricTodaySub" class="metric-subtext">Active browser sessions</span>
+                </div>
               </div>
-              <div class="metric-value-container">
-                <span id="trackMetricTodayTime" class="metric-big-num">0h 00m</span>
-              </div>
-              <div class="metric-footer">
-                <span id="lblMetricTodaySub" class="metric-subtext">Active browser sessions</span>
-              </div>
-            </div>
 
-            <div class="metric-card bento-card liquid-glass-card bento-span-3">
-              <div class="metric-header">
-                <span id="lblMetricDaily" class="metric-label">Daily Average</span>
-                <span class="metric-icon-box emerald">📊</span>
+              <div class="metric-card bento-card liquid-glass-card bento-span-3">
+                <div class="metric-header">
+                  <span id="lblMetricDaily" class="metric-label">Daily Average</span>
+                  <span class="metric-icon-box emerald">📊</span>
+                </div>
+                <div class="metric-value-container">
+                  <span id="trackMetricDailyAvg" class="metric-big-num">0h 00m</span>
+                </div>
+                <div class="metric-footer">
+                  <span id="trackMetricHistoryDays" class="metric-subtext">Average over past 1 day</span>
+                </div>
               </div>
-              <div class="metric-value-container">
-                <span id="trackMetricDailyAvg" class="metric-big-num">0h 00m</span>
-              </div>
-              <div class="metric-footer">
-                <span id="trackMetricHistoryDays" class="metric-subtext">Average over past 1 day</span>
-              </div>
-            </div>
 
-            <div class="metric-card bento-card liquid-glass-card bento-span-3">
-              <div class="metric-header">
-                <span id="lblMetricTotal" class="metric-label">Total Tracked Time</span>
-                <span class="metric-icon-box violet">⏳</span>
+              <div class="metric-card bento-card liquid-glass-card bento-span-3">
+                <div class="metric-header">
+                  <span id="lblMetricTotal" class="metric-label">Total Tracked Time</span>
+                  <span class="metric-icon-box violet">⏳</span>
+                </div>
+                <div class="metric-value-container">
+                  <span id="trackMetricTotalTime" class="metric-big-num">0h 00m</span>
+                </div>
+                <div class="metric-footer">
+                  <span id="trackMetricFirstDate" class="metric-subtext">Since tracking began</span>
+                </div>
               </div>
-              <div class="metric-value-container">
-                <span id="trackMetricTotalTime" class="metric-big-num">0h 00m</span>
-              </div>
-              <div class="metric-footer">
-                <span id="trackMetricFirstDate" class="metric-subtext">Since tracking began</span>
-              </div>
-            </div>
 
-            <div class="metric-card bento-card liquid-glass-card bento-span-3">
-              <div class="metric-header">
-                <span id="lblMetricTopDomain" class="metric-label">Top Website</span>
-                <span class="metric-icon-box amber">🏆</span>
+              <div class="metric-card bento-card liquid-glass-card bento-span-3">
+                <div class="metric-header">
+                  <span id="lblMetricTopDomain" class="metric-label">Top Website</span>
+                  <span class="metric-icon-box amber">🏆</span>
+                </div>
+                <div class="metric-value-container">
+                  <span id="trackMetricTopDomain" class="metric-big-num text-truncate">-</span>
+                </div>
+                <div class="metric-footer">
+                  <span id="trackMetricTopDomainTime" class="metric-subtext">Most active domain</span>
+                </div>
               </div>
-              <div class="metric-value-container">
-                <span id="trackMetricTopDomain" class="metric-big-num text-truncate">-</span>
-              </div>
-              <div class="metric-footer">
-                <span id="trackMetricTopDomainTime" class="metric-subtext">Most active domain</span>
+
+              <!-- Metric Card 5 (Feature 2): Productivity Score Radial Gauge -->
+              <div id="cardProductivityScore" class="metric-card bento-card liquid-glass-card bento-span-3 productivity-score-card">
+                <div class="metric-header">
+                  <span id="lblProductivityScore" class="metric-label">Productivity Index</span>
+                  <span class="metric-icon-box emerald">🎯</span>
+                </div>
+                <div class="metric-value-container productivity-gauge-container">
+                  <div class="gauge-svg-wrapper">
+                    <svg id="svgProductivityGauge" class="productivity-radial-gauge" viewBox="0 0 100 100" width="70" height="70" role="img" aria-label="Productivity score radial gauge">
+                      <circle class="gauge-bg" cx="50" cy="50" r="38" stroke-width="8" fill="none" />
+                      <circle id="gaugeProgressCircle" class="gauge-progress tier-focus" cx="50" cy="50" r="38" stroke-width="8" fill="none" stroke-dasharray="238.76" stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+                    </svg>
+                    <div class="gauge-center-text">
+                      <span id="valProductivityScore" class="productivity-score-num">--</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="metric-footer">
+                  <span id="badgeProductivityTier" class="badge-productivity-tier focus">Deep Focus</span>
+                </div>
               </div>
             </div>
 
@@ -217,17 +241,36 @@
                   <span id="captionUsageDist" class="card-caption">Select time range: Today, Daily Average, or Total Time</span>
                 </div>
 
-                <!-- Temporal Subtabs Toggle -->
+                <!-- Temporal Subtabs Toggle (Features 1 & Extended Ranges) -->
                 <div class="temporal-subtabs" role="tablist">
-                  <button class="subtab-btn active" data-temporal="today" role="tab" aria-selected="true">
+                  <button class="subtab-btn active" data-temporal="today" data-range="today" id="btnFilterToday" role="tab" aria-selected="true">
                     <span id="subtabTodayText">📅 Today</span>
                   </button>
-                  <button class="subtab-btn" data-temporal="daily" role="tab" aria-selected="false">
+                  <button class="subtab-btn" data-temporal="yesterday" data-range="yesterday" id="btnFilterYesterday" role="tab" aria-selected="false">
+                    <span id="subtabYesterdayText">⏪ Yesterday</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="7d" data-range="7d" id="btnFilter7Days" role="tab" aria-selected="false">
+                    <span id="subtab7DaysText">📊 Last 7 Days</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="30d" data-range="30d" id="btnFilter30Days" role="tab" aria-selected="false">
+                    <span id="subtab30DaysText">🗓️ Last 30 Days</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="custom" data-range="custom" id="btnFilterCustom" role="tab" aria-selected="false">
+                    <span id="subtabCustomText">🎯 Custom</span>
+                  </button>
+                  <button class="subtab-btn" data-temporal="daily" role="tab" aria-selected="false" id="btnFilterDaily">
                     <span id="subtabDailyText">📈 Daily Avg</span>
                   </button>
-                  <button class="subtab-btn" data-temporal="total" role="tab" aria-selected="false">
+                  <button class="subtab-btn" data-temporal="total" role="tab" aria-selected="false" id="btnFilterTotal">
                     <span id="subtabTotalText">🌐 Total Time</span>
                   </button>
+                </div>
+                <!-- Custom Date Range Picker Dropdown -->
+                <div id="customDateRangePicker" class="custom-date-picker hidden">
+                  <input type="date" id="inputCustomStart" aria-label="Start Date">
+                  <span class="date-picker-sep">to</span>
+                  <input type="date" id="inputCustomEnd" aria-label="End Date">
+                  <button id="btnApplyCustomRange" class="btn btn-sm btn-primary">Apply</button>
                 </div>
               </div>
 
@@ -258,6 +301,43 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Feature 1: 7x24 Chrono-Distribution Heatmap Card -->
+            <div id="cardChronoHeatmap" class="analytics-hero-card bento-card liquid-glass-card bento-span-12">
+              <div class="card-top-bar">
+                <div class="card-title-group">
+                  <h3 id="headingChronoHeatmap" class="card-heading">🗓️ Chrono-Activity Heatmap (24h x 7d)</h3>
+                  <span id="captionChronoHeatmap" class="card-caption">Hourly distribution matrix across 7 days with Week-over-Week delta</span>
+                </div>
+
+                <div class="heatmap-controls-row">
+                  <div class="heatmap-mode-toggles" role="group" aria-label="Heatmap Mode">
+                    <button id="btnHeatmapModeFocus" class="btn-toggle-mode active" data-mode="focus">🌐 Focus &amp; Browsing Time</button>
+                    <button id="btnHeatmapModeMedia" class="btn-toggle-mode" data-mode="media">🎬 Media Watch Time</button>
+                  </div>
+                  <div id="heatmapWowBadge" class="heatmap-wow-badge">
+                    <span class="wow-label" id="lblHeatmapWow">Week-over-Week Change:</span>
+                    <span class="wow-val" id="valHeatmapWow">+0.0% 📈</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 7x24 Matrix Grid Container (Monday-Sunday x 00:00-23:00 = 168 cells) -->
+              <div id="heatmapGridContainer" class="chrono-heatmap-container">
+                <!-- Dynamically populated via JS -->
+              </div>
+
+              <!-- Heatmap Legend & Tooltip Anchor -->
+              <div class="heatmap-legend-bar">
+                <span class="legend-title">Legend:</span>
+                <span class="legend-item"><span class="legend-cell tier-0"></span> 0m</span>
+                <span class="legend-item"><span class="legend-cell tier-1"></span> 1-15m</span>
+                <span class="legend-item"><span class="legend-cell tier-2"></span> 15-30m</span>
+                <span class="legend-item"><span class="legend-cell tier-3"></span> 30-45m</span>
+                <span class="legend-item"><span class="legend-cell tier-4"></span> 45-60m</span>
+              </div>
+              <div id="heatmapCellTooltip" class="heatmap-tooltip hidden" role="tooltip"></div>
             </div>
 
             <!-- Comprehensive Domain Breakdown Table Card -->
@@ -299,6 +379,7 @@
                   <thead>
                     <tr>
                       <th id="thColDomain" class="col-domain">Website / Domain</th>
+                      <th id="thColCategory" class="col-category">Category</th>
                       <th id="thColTime" class="col-time">Time Spent</th>
                       <th id="thColRatio" class="col-ratio">Ratio</th>
                       <th id="thColSessions" class="col-sessions">Sessions</th>
