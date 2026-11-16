@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 2 (Smart Automations Engine: Defects 07, 08, 09)
  * 
  * Verifies:

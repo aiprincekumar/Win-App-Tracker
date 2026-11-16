@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Popup SQLite Data Hub Synchronization & Multi-Browser Filter
  * 
  * Verifies:

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 4 - Dashboard Bilingual i18n Parity & Centralized Dictionary Expansion
  * 
  * Target Defects Verified:

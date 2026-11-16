@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Active Tab Timer Fix, Dual/Triple Media Tracking & Internal Schemes Filter
  * 
  * Verifies:

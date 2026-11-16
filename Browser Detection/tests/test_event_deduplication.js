@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Unit Test Suite for Event Deduplication, Cooldown Locks, and Single-Source Dispatch
  * Tests Browser Detection extension event architecture fixes.
  */

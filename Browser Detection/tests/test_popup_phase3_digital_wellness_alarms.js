@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 3 (Digital Wellness & Alarms: Defect 12)
  * Web Activity & Media Sentinel MV3 Extension
  * 

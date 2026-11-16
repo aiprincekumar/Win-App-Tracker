@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Comprehensive Verification Test Suite:
  * Compact, Icon-Only Header Status Badges & Interactive Controls Architecture
  * 

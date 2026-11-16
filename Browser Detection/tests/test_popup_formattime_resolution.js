@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: formatTime Resolution & Runtime Sanity
  * Web Activity & Media Sentinel MV3 Extension - popup/popup.js
  * 

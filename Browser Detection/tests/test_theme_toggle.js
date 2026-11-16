@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Comprehensive Verification Test Suite:
  * Dark Mode and Light Mode Header Toggle Button Architecture & State Machine
  * 

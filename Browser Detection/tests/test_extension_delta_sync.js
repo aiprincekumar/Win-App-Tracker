@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 02 Extension Delta Sync & Offline Queue
  * 
  * Features verified:

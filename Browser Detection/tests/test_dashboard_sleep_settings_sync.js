@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 1 - Dashboard Mode Sleep Timer & Inactivity Sentinel UI & Storage Binding
  * 
  * Target Defects Verified:

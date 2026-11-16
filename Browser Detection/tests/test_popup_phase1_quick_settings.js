@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 1 (Quick Settings & UI Polish) Architecture
  * 
  * Verifies:

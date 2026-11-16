@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite: Dashboard Future UI/UX Actual Verification
  * Asserts all 5 future UI/UX systems are fully wired up in HTML, CSS, and JS.
  */

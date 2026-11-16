@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 03 Dashboard Multi-Browser Dropdown Filter & Unified Analytics
  * 
  * Features verified:

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Automated Verification Test Suite:
  * Light Mode Color Contrast & WCAG AA Readability Remediation
  * 

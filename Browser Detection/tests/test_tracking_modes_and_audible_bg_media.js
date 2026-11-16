@@ -1,4 +1,4 @@
-/**
+﻿/**
  * tests/test_tracking_modes_and_audible_bg_media.js
  * Verification Test Suite for:
  *  1. Compact Dropdown UI Labels in dashboard.html and popup.html

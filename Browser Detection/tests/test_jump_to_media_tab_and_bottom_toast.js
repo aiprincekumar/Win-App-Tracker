@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite:
  * 1. Multi-Tier JUMP_TO_MEDIA_TAB Resolution & Telemetry Stamping
  * 2. Bottom Fixed Toast Notifications (Zero Layout Shift Standard - CLS = 0)

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Phase 3 - Window Focus Restoration & SQLite Hub Reconnect Resilience
  * 
  * Target Defects Verified:
