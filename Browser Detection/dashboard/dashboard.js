@@ -1243,6 +1243,95 @@ if (typeof globalThis !== 'undefined') {
   globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
   globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+  globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
+  globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
+  globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
+}
+
+// ============================================================================
+// Future UI/UX Systems Helpers
+// ============================================================================
+
+function initStickyMiniPlayerDock() {
+  if (typeof document === 'undefined') return;
+  const heroCard = document.getElementById('heroMediaPlayerCard');
+  const miniDock = document.getElementById('stickyMiniPlayerDock');
+  if (!heroCard || !miniDock) return;
+
+  const playPauseBtn = document.getElementById('miniDockPlayPause');
+  const titleEl = document.getElementById('miniDockTitle');
+  const timeEl = document.getElementById('miniDockTime');
+  const pipBtn = document.getElementById('miniDockPip');
+  const jumpBtn = document.getElementById('miniDockJump');
+  const closeBtn = document.getElementById('miniDockClose');
+
+  if (playPauseBtn) {
+    playPauseBtn.addEventListener('click', () => {
+      if (typeof triggerMediaPlayPause === 'function') triggerMediaPlayPause();
+    });
+  }
+  if (pipBtn) {
+    pipBtn.addEventListener('click', () => {
+      if (typeof triggerMediaPip === 'function') triggerMediaPip();
+    });
+  }
+  if (jumpBtn) {
+    jumpBtn.addEventListener('click', () => {
+      heroCard.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      miniDock.classList.add('hidden');
+    });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const pm = (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia) 
+                 || (typeof globalMediaState !== 'undefined' && globalMediaState && globalMediaState.primaryMedia);
+      const isPlaying = pm && (pm.status === 'playing' || pm.is_playing || pm.isPlaying);
+      
+      if (!entry.isIntersecting && isPlaying) {
+        miniDock.classList.remove('hidden');
+        if (titleEl && pm.title) titleEl.textContent = pm.title;
+        if (timeEl && typeof pm.currentTimeFormatted === 'string') timeEl.textContent = pm.currentTimeFormatted;
+      } else {
+        miniDock.classList.add('hidden');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  observer.observe(heroCard);
+}
+
+function updateSidebarLiveEqState(isPlaying) {
+  if (typeof document === 'undefined') return;
+  const viz = document.getElementById('sidebarLiveEqVisualizer');
+  if (!viz) return;
+  if (isPlaying) {
+    viz.classList.remove('hidden');
+  } else {
+    viz.classList.add('hidden');
+  }
+}
+
+function updateHeroVolumeUI(volumeFraction) {
+  if (typeof document === 'undefined') return;
+  const volIcon = document.getElementById('heroVolumeIcon');
+  const volText = document.getElementById('heroVolumeText');
+  const volTooltip = document.querySelector('.vol-floating-tooltip');
+  
+  const pct = Math.round(volumeFraction * 100);
+  if (volText) volText.textContent = `${pct}%`;
+  if (volTooltip) volTooltip.textContent = `${pct}%`;
+
+  if (volIcon) {
+    if (pct === 0) volIcon.textContent = '🔇';
+    else if (pct <= 33) volIcon.textContent = '🔈';
+    else if (pct <= 66) volIcon.textContent = '🔉';
+    else volIcon.textContent = '🔊';
+  }
 }
 
 function updateThemeToggleUI(theme) {
@@ -2536,6 +2625,38 @@ function renderDonutChart(items, totalSeconds, subtab) {
     title.textContent = `${slice.domain}: ${formatDuration(slice.computedSeconds)} (${slice.ratioPercent}%)`;
     circle.appendChild(title);
 
+    circle.addEventListener('mouseenter', () => {
+      const centerInfo = document.querySelector('.donut-center-info');
+      if (centerInfo) {
+        let faviconImg = centerInfo.querySelector('.donut-center-favicon');
+        if (!faviconImg) {
+          faviconImg = document.createElement('img');
+          faviconImg.className = 'donut-center-favicon';
+          centerInfo.insertBefore(faviconImg, centerTimeEl);
+        }
+        faviconImg.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(slice.domain)}&sz=32`;
+        faviconImg.style.display = 'inline-block';
+        centerTimeEl.textContent = formatDuration(slice.computedSeconds);
+        centerLabelEl.textContent = `${slice.domain} (${slice.ratioPercent}%)`;
+      }
+    });
+
+    circle.addEventListener('mouseleave', () => {
+      const centerInfo = document.querySelector('.donut-center-info');
+      if (centerInfo) {
+        const faviconImg = centerInfo.querySelector('.donut-center-favicon');
+        if (faviconImg) faviconImg.style.display = 'none';
+        centerTimeEl.textContent = formatDuration(totalSeconds);
+        if (subtab === 'today') {
+          centerLabelEl.textContent = t('donut_center_today');
+        } else if (subtab === 'daily') {
+          centerLabelEl.textContent = t('donut_center_daily');
+        } else {
+          centerLabelEl.textContent = t('donut_center_total');
+        }
+      }
+    });
+
     slicesGroup.appendChild(circle);
 
     const tag = document.createElement('div');
@@ -2774,6 +2895,7 @@ function renderHeroMediaPlayer(pm) {
   if (heroControls) heroControls.classList.remove('hidden');
 
   const isPlaying = Boolean(pm.isPlaying);
+  updateSidebarLiveEqState(isPlaying);
   if (isPlaying) {
     pulseDot.className = 'player-pulse-dot playing';
     statusBadge.className = 'status-pill playing';
@@ -3960,9 +4082,23 @@ class OmniCommandPaletteController {
       item.setAttribute('id', `omni-item-${idx}`);
       item.setAttribute('aria-selected', idx === this.selectedIndex ? 'true' : 'false');
 
-      const iconSpan = document.createElement('span');
-      iconSpan.className = 'omni-item-icon';
-      iconSpan.textContent = cmd.icon || '⚡';
+      const itemLeft = document.createElement('div');
+      itemLeft.className = 'cmd-result-left';
+
+      if (cmd.id && cmd.id.startsWith('domain-')) {
+        const domainName = cmd.id.replace('domain-', '');
+        const faviconImg = document.createElement('img');
+        faviconImg.className = 'cmd-favicon';
+        faviconImg.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domainName)}&sz=32`;
+        faviconImg.alt = '';
+        faviconImg.onerror = function() { this.style.display = 'none'; };
+        itemLeft.appendChild(faviconImg);
+      } else {
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'omni-item-icon';
+        iconSpan.textContent = cmd.icon || '⚡';
+        itemLeft.appendChild(iconSpan);
+      }
 
       const contentDiv = document.createElement('div');
       contentDiv.className = 'omni-item-content';
@@ -3977,13 +4113,13 @@ class OmniCommandPaletteController {
 
       contentDiv.appendChild(titleSpan);
       contentDiv.appendChild(catSpan);
+      itemLeft.appendChild(contentDiv);
 
       const kbd = document.createElement('kbd');
-      kbd.className = 'omni-enter-hint';
+      kbd.className = 'cmd-kbd-hint omni-enter-hint';
       kbd.textContent = '↵';
 
-      item.appendChild(iconSpan);
-      item.appendChild(contentDiv);
+      item.appendChild(itemLeft);
       item.appendChild(kbd);
 
       item.addEventListener('click', () => {
@@ -5768,6 +5904,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     startLiveClock();
     setupEventListeners();
     applyCardStaggerIndices();
+    initStickyMiniPlayerDock();
 
     // Load language preference, browser filter, tracking mode, category, sleep, theme, and audio lab from storage
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
@@ -5968,4 +6105,93 @@ if (typeof globalThis !== 'undefined') {
   globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
   globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+  globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
+  globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
+  globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
+}
+
+// ============================================================================
+// Future UI/UX Systems Helpers
+// ============================================================================
+
+function initStickyMiniPlayerDock() {
+  if (typeof document === 'undefined') return;
+  const heroCard = document.getElementById('heroMediaPlayerCard');
+  const miniDock = document.getElementById('stickyMiniPlayerDock');
+  if (!heroCard || !miniDock) return;
+
+  const playPauseBtn = document.getElementById('miniDockPlayPause');
+  const titleEl = document.getElementById('miniDockTitle');
+  const timeEl = document.getElementById('miniDockTime');
+  const pipBtn = document.getElementById('miniDockPip');
+  const jumpBtn = document.getElementById('miniDockJump');
+  const closeBtn = document.getElementById('miniDockClose');
+
+  if (playPauseBtn) {
+    playPauseBtn.addEventListener('click', () => {
+      if (typeof triggerMediaPlayPause === 'function') triggerMediaPlayPause();
+    });
+  }
+  if (pipBtn) {
+    pipBtn.addEventListener('click', () => {
+      if (typeof triggerMediaPip === 'function') triggerMediaPip();
+    });
+  }
+  if (jumpBtn) {
+    jumpBtn.addEventListener('click', () => {
+      heroCard.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      miniDock.classList.add('hidden');
+    });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const pm = (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia) 
+                 || (typeof globalMediaState !== 'undefined' && globalMediaState && globalMediaState.primaryMedia);
+      const isPlaying = pm && (pm.status === 'playing' || pm.is_playing || pm.isPlaying);
+      
+      if (!entry.isIntersecting && isPlaying) {
+        miniDock.classList.remove('hidden');
+        if (titleEl && pm.title) titleEl.textContent = pm.title;
+        if (timeEl && typeof pm.currentTimeFormatted === 'string') timeEl.textContent = pm.currentTimeFormatted;
+      } else {
+        miniDock.classList.add('hidden');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  observer.observe(heroCard);
+}
+
+function updateSidebarLiveEqState(isPlaying) {
+  if (typeof document === 'undefined') return;
+  const viz = document.getElementById('sidebarLiveEqVisualizer');
+  if (!viz) return;
+  if (isPlaying) {
+    viz.classList.remove('hidden');
+  } else {
+    viz.classList.add('hidden');
+  }
+}
+
+function updateHeroVolumeUI(volumeFraction) {
+  if (typeof document === 'undefined') return;
+  const volIcon = document.getElementById('heroVolumeIcon');
+  const volText = document.getElementById('heroVolumeText');
+  const volTooltip = document.querySelector('.vol-floating-tooltip');
+  
+  const pct = Math.round(volumeFraction * 100);
+  if (volText) volText.textContent = `${pct}%`;
+  if (volTooltip) volTooltip.textContent = `${pct}%`;
+
+  if (volIcon) {
+    if (pct === 0) volIcon.textContent = '🔇';
+    else if (pct <= 33) volIcon.textContent = '🔈';
+    else if (pct <= 66) volIcon.textContent = '🔉';
+    else volIcon.textContent = '🔊';
+  }
 }

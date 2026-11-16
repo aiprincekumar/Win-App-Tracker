@@ -29,6 +29,11 @@
           <span class="nav-icon">🎬</span>
           <span id="navMediaText" class="nav-text">Media Analytics</span>
           <span id="sidebarLiveDot" class="nav-live-dot hidden" title="Media Active"></span>
+          <span id="sidebarLiveEqVisualizer" class="kinetic-eq-visualizer hidden" aria-hidden="true">
+            <span class="eq-bar bar-1"></span>
+            <span class="eq-bar bar-2"></span>
+            <span class="eq-bar bar-3"></span>
+          </span>
         </button>
         <button id="navTabSettings" class="nav-item" data-tab="settings" role="tab" aria-selected="false" aria-controls="paneSettings">
           <span class="nav-icon">⚙️</span>
@@ -1179,6 +1184,15 @@
         <!-- Injected shortcuts list -->
       </div>
     </div>
+  </div>
+
+  <div id="stickyMiniPlayerDock" class="sticky-mini-player-dock hidden" role="region" aria-label="Mini Media Player Dock">
+    <button id="miniDockPlayPause" class="mini-dock-btn" title="Play/Pause">▶</button>
+    <div id="miniDockTitle" class="mini-dock-title" title="Media Title">No Media Playing</div>
+    <div id="miniDockTime" class="mini-dock-time">0:00 / 0:00</div>
+    <button id="miniDockPip" class="mini-dock-btn" title="Picture-in-Picture">📺</button>
+    <button id="miniDockJump" class="mini-dock-btn" title="Jump to Media Player">⬆</button>
+    <button id="miniDockClose" class="mini-dock-btn" title="Dismiss">✕</button>
   </div>
 
   <script src="dashboard.js"></script>
