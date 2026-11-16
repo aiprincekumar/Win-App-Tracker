@@ -1874,27 +1874,42 @@ button.spinning .refresh-spinner-icon,
   word-break: break-word;
 }
 
-/* Hero Progress Section */
+/* Hero Progress Section (Unified Timeline) */
 .hero-progress-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .hero-progress-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
   width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  height: 6px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-full);
-  cursor: pointer;
-  position: relative;
+  pointer-events: none;
   user-select: none;
   touch-action: none;
-  transition: height 0.15s ease;
+  transition: height 180ms ease, background 180ms ease;
+  overflow: hidden;
 }
 
+.scrubber-wrapper:hover .hero-progress-track,
 .hero-progress-track:hover {
-  height: 10px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+body.theme-light .hero-progress-track,
+body.theme-light #heroProgressBar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .scrubber-wrapper:hover .hero-progress-track {
+  background: rgba(0, 0, 0, 0.14);
 }
 
 .hero-progress-fill {
@@ -1909,22 +1924,19 @@ button.spinning .refresh-spinner-icon,
   transition: none !important;
 }
 
+/* Hide legacy inner white thumb so only the sleek range thumb renders */
 .hero-progress-thumb {
   position: absolute;
-  right: -6px;
-  top: -4px;
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5), 0 0 8px rgba(16, 185, 129, 0.6);
+  display: none !important;
+  opacity: 0;
   pointer-events: none;
-  transition: transform 0.1s ease;
+  width: 0;
+  height: 0;
 }
 
 .hero-progress-track:hover .hero-progress-thumb,
 .hero-progress-track.dragging .hero-progress-thumb {
-  transform: scale(1.2);
+  transform: none;
 }
 
 .hero-progress-labels {
@@ -2624,6 +2636,7 @@ button.spinning .refresh-spinner-icon,
 /* ACCESSIBILITY FOCUS VISIBLE OUTLINES (Defect 17 - WCAG Compliance)        */
 /* ========================================================================= */
 #heroProgressBar:focus-visible,
+#heroMediaSeekSlider:focus-visible,
 #heroVolumeBar:focus-visible,
 .audio-boost-slider:focus-visible,
 #heroAudioBoostSlider:focus-visible,
@@ -3462,26 +3475,49 @@ body.theme-light kbd {
   position: relative;
   width: 100%;
   padding: 8px 0;
+  height: 24px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
 }
 
 .hero-seek-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
   -webkit-appearance: none;
   appearance: none;
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  outline: none;
+  z-index: 5;
   cursor: pointer;
-  position: relative;
-  z-index: 2;
-  transition: background 180ms ease;
+  outline: none;
+  border: none;
+}
+
+.hero-seek-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+  height: 100%;
+}
+
+.hero-seek-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+  height: 100%;
+}
+
+.hero-seek-slider::-moz-range-progress {
+  background: transparent;
 }
 
 .hero-seek-slider:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
 }
 
 .hero-seek-slider:focus-visible {
@@ -3502,6 +3538,10 @@ body.theme-light kbd {
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.hero-seek-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
 .hero-seek-slider:active::-webkit-slider-thumb {
   transform: scale(1.45);
 }
@@ -3515,6 +3555,10 @@ body.theme-light kbd {
   box-shadow: 0 0 10px var(--color-accent-primary, #10b981);
   cursor: pointer;
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hero-seek-slider:hover::-moz-range-thumb {
+  transform: scale(1.15);
 }
 
 .hero-seek-slider:active::-moz-range-thumb {
@@ -3555,7 +3599,12 @@ body.theme-light kbd {
   height: 6px;
   transform: translateY(-50%);
   pointer-events: none;
-  z-index: 1;
+  z-index: 3;
+  transition: height 180ms ease;
+}
+
+.scrubber-wrapper:hover .scrubber-ticks-container {
+  height: 8px;
 }
 
 .scrubber-chapter-tick {
@@ -3576,7 +3625,7 @@ body.theme-light .scrubber-floating-tooltip {
 }
 
 body.theme-light .hero-seek-slider {
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
 }
 
 /* =============================================================================

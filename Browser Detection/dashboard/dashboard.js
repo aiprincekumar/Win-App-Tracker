@@ -5177,6 +5177,12 @@ function setupEventListeners() {
         heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
         heroProgress.setAttribute('aria-valuetext', `${formatDigitalTime(targetSeconds)} / ${formatDigitalTime(dur)}`);
 
+        const seekSlider = document.getElementById('heroMediaSeekSlider');
+        if (seekSlider) {
+          seekSlider.value = String(pct);
+          seekSlider.setAttribute('aria-valuenow', String(Math.round(pct)));
+        }
+
         const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
         if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
           browserAPI.scripting.executeScript({
@@ -5219,10 +5225,17 @@ function setupEventListeners() {
       const elCur = document.getElementById('heroTimeElapsed');
       const elPct = document.getElementById('heroProgressPercent');
       const fill = document.getElementById('heroProgressFill');
+      const heroProgress = document.getElementById('heroProgressBar');
       if (fill) fill.style.width = `${pct.toFixed(1)}%`;
       if (elCur && dur > 0) elCur.textContent = formatDigitalTime(targetSec);
       if (elPct) elPct.textContent = `${pct.toFixed(1)}%`;
       seekSlider.setAttribute('aria-valuenow', String(Math.round(pct)));
+      if (heroProgress) {
+        heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+        heroProgress.setAttribute('aria-valuetext', `${formatDigitalTime(targetSec)} / ${dur > 0 ? formatDigitalTime(dur) : '--:--'}`);
+      }
+      isDraggingHeroProgress = true;
+      lastHeroProgressDragTime = Date.now();
     });
 
     seekSlider.addEventListener('change', (e) => {
@@ -5232,7 +5245,43 @@ function setupEventListeners() {
       const targetSec = dur > 0 ? (pct / 100) * dur : 0;
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       const fill = document.getElementById('heroProgressFill');
+      const heroProgress = document.getElementById('heroProgressBar');
       if (fill) fill.style.width = `${pct.toFixed(1)}%`;
+      if (heroProgress) {
+        heroProgress.setAttribute('aria-valuenow', String(Math.round(pct)));
+        heroProgress.setAttribute('aria-valuetext', `${formatDigitalTime(targetSec)} / ${dur > 0 ? formatDigitalTime(dur) : '--:--'}`);
+      }
+      isDraggingHeroProgress = false;
+      lastHeroProgressDragTime = Date.now();
+
+      // Direct fast MAIN world scripting execution for YouTube & HTML5 video (0ms timeline seek)
+      if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
+        browserAPI.scripting.executeScript({
+          target: { tabId: targetTabId, allFrames: true },
+          world: 'MAIN',
+          func: (seekPercent, seekSeconds) => {
+            const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+            const video = Array.from(document.querySelectorAll('video')).find(v => !v.paused) || document.querySelector('video');
+            let d = 0;
+            if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+              try { d = moviePlayer.getDuration() || 0; } catch (_) {}
+            }
+            if ((!d || d <= 0) && video) {
+              d = video.duration || 0;
+            }
+            const target = (typeof seekSeconds === 'number' && seekSeconds > 0)
+              ? seekSeconds
+              : (d > 0 ? (seekPercent / 100) * d : 0);
+            if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+              try { moviePlayer.seekTo(target, true); return; } catch (_) {}
+            } else if (video) {
+              try { video.currentTime = target; } catch (_) {}
+            }
+          },
+          args: [pct, targetSec]
+        }).catch(() => {});
+      }
+
       sendMediaControl('seek_percent', { percent: pct, positionSeconds: targetSec }, targetTabId);
     });
   } else if (scrubberWrapper && scrubberTooltip) {
