@@ -703,13 +703,26 @@ console.log('\nTest 4: Bloat Removal & Fullscreen Invariants in popup/popup.js #
   assert(lineCount <= 55, `#btnCtrlFullscreen block should be concise (<= 55 lines, currently ${lineCount} lines)`);
   console.log(`  ✅ #btnCtrlFullscreen block is clean and compact (${lineCount} lines, down from ~180 lines)`);
 
-  // 4.3 Verify single-execution determinism: direct executeScript (world: 'MAIN') with fallback sendMediaControl
+  // 4.3 Verify single-execution fallback: direct executeScript (world: 'MAIN') with .catch() and else fallback
   assert(btnFsBlock.includes('browserAPI.scripting.executeScript'),
     'popup.js #btnCtrlFullscreen must contain browserAPI.scripting.executeScript for 0ms actuation');
   assert(btnFsBlock.includes("world: 'MAIN'"),
     'popup.js #btnCtrlFullscreen must execute in MAIN world for direct DOM and controller access');
+  assert(btnFsBlock.includes('.catch('),
+    'popup.js #btnCtrlFullscreen must contain .catch() handler on executeScript');
   assert(btnFsBlock.includes("sendMediaControl('toggle_fullscreen', {}, targetTabId);"),
-    'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId) for background telemetry sync');
+    'popup.js must dispatch sendMediaControl("toggle_fullscreen", {}, targetTabId) in fallback branches');
+  assert(btnFsBlock.includes('else {'),
+    'popup.js #btnCtrlFullscreen must contain else fallback block');
+
+  const elseIndex = btnFsBlock.indexOf('else {');
+  assert(elseIndex !== -1, 'btnFsBlock must contain else fallback block');
+  const afterElse = btnFsBlock.slice(elseIndex);
+  const elseCloseBrace = afterElse.indexOf('}');
+  assert(elseCloseBrace !== -1, 'Must find closing brace of else block in btnFsBlock');
+  const trailingCode = afterElse.slice(elseCloseBrace + 1);
+  assert(!trailingCode.includes("sendMediaControl('toggle_fullscreen'"),
+    'sendMediaControl("toggle_fullscreen") must NOT occur outside/after the if/else fallback in btnFsBlock');
 
   console.log('  ✅ Single-execution determinism (direct executeScript in MAIN world with fallback sendMediaControl IPC) verified in #btnCtrlFullscreen');
 }
@@ -852,20 +865,38 @@ console.log('\nTest 6: In-Popup Media Controls Wiring & Dual Actuation Verificat
 
   // 6.7 Extended Controls: PiP, Theater, and Quality Steppers
   assert(popupJsCode.includes("sendMediaControl('toggle_pip', {}, targetTabId);"),
-    'btnCtrlPip must dispatch toggle_pip unconditionally');
+    'btnCtrlPip must dispatch toggle_pip fallback');
   assert(popupJsCode.includes("sendMediaControl('toggle_theater', {}, targetTabId);"),
-    'btnCtrlTheater must dispatch toggle_theater unconditionally');
+    'btnCtrlTheater must dispatch toggle_theater');
   assert(popupJsCode.includes("sendMediaControl('step_quality', { direction: 'down' }, targetTabId);"),
-    'btnCtrlQualityDown must dispatch step_quality down unconditionally');
+    'btnCtrlQualityDown must dispatch step_quality down');
   assert(popupJsCode.includes("sendMediaControl('step_quality', { direction: 'up' }, targetTabId);"),
-    'btnCtrlQualityUp must dispatch step_quality up unconditionally');
+    'btnCtrlQualityUp must dispatch step_quality up');
 
   const pipStart = popupJsCode.indexOf("const btnPip = document.getElementById('btnCtrlPip');");
+  const theaterStart = popupJsCode.indexOf("const btnTheater = document.getElementById('btnCtrlTheater');", pipStart);
+  assert(pipStart !== -1 && theaterStart !== -1, 'Must find btnPip and btnTheater boundaries');
+  const btnPipBlock = popupJsCode.slice(pipStart, theaterStart);
+
+  assert(btnPipBlock.includes('browserAPI.scripting.executeScript'), 'btnCtrlPip must contain browserAPI.scripting.executeScript');
+  assert(btnPipBlock.includes('.catch('), 'btnCtrlPip must contain .catch() handler');
+  assert(btnPipBlock.includes("sendMediaControl('toggle_pip', {}, targetTabId);"), 'btnCtrlPip must contain sendMediaControl fallback');
+  assert(btnPipBlock.includes('else {'), 'btnCtrlPip must contain else block');
+
+  const pipElseIndex = btnPipBlock.indexOf('else {');
+  assert(pipElseIndex !== -1, 'btnPipBlock must contain else fallback block');
+  const afterPipElse = btnPipBlock.slice(pipElseIndex);
+  const pipElseClose = afterPipElse.indexOf('}');
+  assert(pipElseClose !== -1, 'Must find closing brace of else block in btnPipBlock');
+  const trailingPipCode = afterPipElse.slice(pipElseClose + 1);
+  assert(!trailingPipCode.includes("sendMediaControl('toggle_pip'"),
+    'sendMediaControl("toggle_pip") must NOT occur outside/after the if/else fallback in btnPipBlock');
+
   const progressStart = popupJsCode.indexOf("const progressContainer = document.getElementById('progressBarContainer');");
   const extBlock = popupJsCode.slice(pipStart, progressStart);
   assert(extBlock.includes('browserAPI.scripting.executeScript'), 'Extended controls must contain executeScript');
   assert(extBlock.includes("world: 'MAIN'"), 'Extended controls must execute in MAIN world');
-  console.log('  ✅ Extended controls (PiP, Theater, Quality Steppers) correctly wire to dual actuation (0ms executeScript MAIN world & IPC)');
+  console.log('  ✅ Extended controls (PiP single-execution fallback, Theater, Quality Steppers) correctly wire to verified execution patterns');
 }
 
 // ---------------------------------------------------------------------------
