@@ -184,6 +184,11 @@ console.log('\nBattery 6: HTML Bento Grid Architecture & Card Materiality Classe
   assert(html.includes('metric-card bento-card liquid-glass-card bento-span-4'), 'Media metrics must use .bento-card .liquid-glass-card .bento-span-4');
   assert(html.includes('id="heroMediaPlayerCard" class="live-player-hero-card bento-card liquid-glass-card bento-span-8 bento-row-span-2"'), '#heroMediaPlayerCard must use .bento-span-8 .bento-row-span-2');
   assert(html.includes('id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2"'), '#heroAudioLabStatus must use .bento-span-4 .bento-row-span-2');
+  assert(
+    html.includes('id="heroAudioEqCard"') &&
+    html.includes('audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12'),
+    '#heroAudioEqCard must declare .bento-card and .liquid-glass-card with .bento-span-12'
+  );
 
   // Settings Tab Spans
   assert(html.includes('settings-card bento-card liquid-glass-card bento-span-6'), 'Settings cards must use .bento-card .liquid-glass-card .bento-span-6');
@@ -219,8 +224,8 @@ console.log('\nBattery 7: DOM Invariant & Critical Selector Preservation Verific
     'heroMediaControls', 'btnHeroRewind', 'btnHeroPlayPause', 'btnHeroForward', 'btnHeroMute',
     'heroProgressBar', 'heroProgressFill', 'heroVolumeBar', 'heroVolumeFill',
     'btnHeroFullscreen', 'btnHeroPip', 'btnHeroTheater', 'btnHeroSwitchTab',
-    // Audio Lab Controls
-    'heroAudioLabStatus', 'audioLabTitle', 'audioLabPresetBadge', 'heroAudioBoostSlider', 'heroAudioBoostVal',
+    // Audio Lab & Equalizer Controls
+    'heroAudioLabStatus', 'heroAudioEqCard', 'audioLabTitle', 'audioLabPresetBadge', 'heroAudioBoostSlider', 'heroAudioBoostVal',
     'audioEqPresetSelect', 'btnResetEq', 'eqBand60', 'eqBand250', 'eqBand1000', 'eqBand4000', 'eqBand16000',
     'toggleVocalClarity', 'toggleNightShield', 'toggleAudioOnlyMode',
     // Settings & Dialogs

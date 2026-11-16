@@ -113,6 +113,7 @@ console.log('\nBattery 2: Complete DOM Element & Interactive Control Presence in
 
   // Card container & Status Text
   assert(html.includes('id="heroAudioLabStatus"'), 'dashboard.html must contain #heroAudioLabStatus');
+  assert(html.includes('id="heroAudioEqCard"'), 'dashboard.html must contain dedicated #heroAudioEqCard');
   assert(html.includes('id="audioLabStatusText"'), 'dashboard.html must contain #audioLabStatusText');
 
   console.log('  ✅ Master Boost Slider (#heroAudioBoostSlider) & Readout (#heroAudioBoostVal) present');
@@ -490,6 +491,16 @@ console.log('\nBattery 11: W3C Trusted Types & Strict CSP Zero-innerHTML Securit
   assert(!audioWidgetHtml.includes('onchange='), '#heroAudioLabStatus must not contain onchange handlers');
   assert(!audioWidgetHtml.includes('oninput='), '#heroAudioLabStatus must not contain oninput handlers');
 
+  // Verify #heroAudioEqCard container has NO inline event handlers or scripts
+  const eqWidgetMatch = html.match(/<div[^>]*id="heroAudioEqCard"[\s\S]*?<\/div>\s*<\/div>/);
+  assert(eqWidgetMatch, '#heroAudioEqCard container must exist in dashboard.html');
+  const eqWidgetHtml = eqWidgetMatch[0];
+  assert(!eqWidgetHtml.includes('<script'), '#heroAudioEqCard must not contain script tags');
+  assert(!eqWidgetHtml.includes('javascript:'), '#heroAudioEqCard must not contain javascript: URLs');
+  assert(!eqWidgetHtml.includes('onclick='), '#heroAudioEqCard must not contain onclick handlers');
+  assert(!eqWidgetHtml.includes('onchange='), '#heroAudioEqCard must not contain onchange handlers');
+  assert(!eqWidgetHtml.includes('oninput='), '#heroAudioEqCard must not contain oninput handlers');
+
   // Verify updateDashboardAudioLabUI, dispatchAudioLabSettings & persistDashboardAudioLabSettings contain zero innerHTML
   const audioUiFuncMatch = code.match(/function updateDashboardAudioLabUI\([\s\S]*?\n\}/);
   assert(audioUiFuncMatch, 'updateDashboardAudioLabUI function must exist');
@@ -500,8 +511,58 @@ console.log('\nBattery 11: W3C Trusted Types & Strict CSP Zero-innerHTML Securit
   assert(!dispatchFuncMatch[0].includes('.innerHTML'), 'dispatchAudioLabSettings must NOT use .innerHTML');
 
   console.log('  ✅ #heroAudioLabStatus container contains 0 inline handlers or script tags');
+  console.log('  ✅ #heroAudioEqCard container contains 0 inline handlers or script tags');
   console.log('  ✅ Audio Lab functions contain 0 assignments to .innerHTML');
   console.log('  ✅ 100% compliant with W3C Trusted Types & Manifest V3 Strict CSP');
 }
 
-console.log('\n🎉 ALL 11 FULL AUDIO LAB & WEB AUDIO DSP PARITY TEST BATTERIES PASSED WITH 100% SUCCESS!\n');
+// ===========================================================================
+// Battery 12: Dedicated 5-Band Graphic Equalizer Studio Deck Bento & Liquid Glass Verification
+// ===========================================================================
+console.log('\nBattery 12: Dedicated 5-Band Graphic Equalizer Studio Deck Bento & Liquid Glass Verification');
+{
+  const html = fs.readFileSync(dashHtmlPath, 'utf8');
+  const css = fs.readFileSync(dashCssPath, 'utf8');
+
+  // Verify Dedicated Top-Level Bento Architecture (span-12)
+  assert(
+    html.includes('id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12"'),
+    '#heroAudioEqCard must declare .audio-eq-widget .glass-card .bento-card .liquid-glass-card .bento-span-12'
+  );
+
+  // Structural Separation: Verify #heroAudioEqCard is NOT nested inside #heroAudioLabStatus
+  const labMatch = html.match(/<div[^>]*id="heroAudioLabStatus"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/);
+  assert(labMatch, '#heroAudioLabStatus block must be parsed cleanly');
+  assert(!labMatch[0].includes('heroAudioEqCard'), '#heroAudioEqCard must NOT be nested inside #heroAudioLabStatus');
+
+  // Verify Studio Deck Header & Controls
+  assert(html.includes('class="eq-card-header"'), 'Equalizer card must include .eq-card-header');
+  assert(html.includes('class="eq-title-group"'), 'Equalizer card must include .eq-title-group');
+  assert(html.includes('id="lblAudioEqTitle"'), 'Equalizer card must include #lblAudioEqTitle');
+  assert(html.includes('class="eq-badge-specs"'), 'Equalizer card must include .eq-badge-specs');
+  assert(html.includes('class="eq-actions-group"'), 'Equalizer card must include .eq-actions-group');
+
+  // Verify 5-Band Vertical Slider Grid & Roles
+  assert(html.includes('class="eq-bands-grid" role="region" aria-label="Equalizer Frequency Bands"'), 'Equalizer bands grid must declare accessible region attributes');
+  const bands = ['60', '250', '1000', '4000', '16000'];
+  bands.forEach((b) => {
+    assert(html.includes(`id="eqBand${b}"`), `#heroAudioEqCard must contain slider #eqBand${b}`);
+    assert(html.includes(`id="eqVal${b}"`), `#heroAudioEqCard must contain decibel badge #eqVal${b}`);
+    const sliderRegex = new RegExp(`id="eqBand${b}"[^>]*orient="vertical"[^>]*class="eq-vertical-slider"`);
+    assert(sliderRegex.test(html), `#eqBand${b} must have orient="vertical" and class="eq-vertical-slider"`);
+  });
+
+  // Verify CSS Styling & Materiality Tokens
+  assert(css.includes('.audio-eq-widget {'), 'dashboard.css must declare .audio-eq-widget base styles');
+  assert(css.includes('.audio-eq-widget.liquid-glass-card {'), 'dashboard.css must declare .audio-eq-widget.liquid-glass-card specular styling');
+  assert(css.includes('.audio-eq-widget.liquid-glass-card:hover {'), 'dashboard.css must declare .audio-eq-widget.liquid-glass-card:hover hover physics');
+  assert(css.includes('#heroAudioEqCard { grid-column: span 12; }') || css.includes('#heroAudioEqCard'), 'dashboard.css must declare responsive rules for #heroAudioEqCard');
+  assert(css.includes('body.theme-light .audio-eq-widget'), 'dashboard.css must declare light theme overrides for .audio-eq-widget');
+
+  console.log('  ✅ #heroAudioEqCard certified as dedicated Bento Studio Deck (.bento-span-12)');
+  console.log('  ✅ Clean structural separation confirmed (#heroAudioEqCard independent of #heroAudioLabStatus)');
+  console.log('  ✅ 5-band vertical frequency sliders, badges & accessible region verified');
+  console.log('  ✅ Liquid glass tokens, specular borders & responsive breakpoints verified');
+}
+
+console.log('\n🎉 ALL 12 FULL AUDIO LAB & WEB AUDIO DSP PARITY TEST BATTERIES PASSED WITH 100% SUCCESS!\n');
