@@ -5956,6 +5956,7 @@ let dashboardListenersAttached = false;
 function setupEventListeners() {
   if (dashboardListenersAttached) return;
   dashboardListenersAttached = true;
+  setupExportDropdown();
 
   // Feature 7: Blacklist & Domain Notes Event Listeners
   const btnAddBlacklist = document.getElementById('btnAddBlacklistPattern');
@@ -7639,8 +7640,78 @@ if (typeof window !== 'undefined') {
   window.getDomainBudgets = () => domainBudgets;
 }
 
+
+// =============================================================================
+// Phase 1 Restoration: Consolidated Export Dropdown Hub
+// =============================================================================
+function setupExportDropdown() {
+  const btnExportMenu = document.getElementById('btnExportMenu');
+  const exportDropdownMenu = document.getElementById('exportDropdownMenu');
+  if (!btnExportMenu || !exportDropdownMenu) return;
+
+  btnExportMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isExpanded = btnExportMenu.getAttribute('aria-expanded') === 'true';
+    btnExportMenu.setAttribute('aria-expanded', !isExpanded);
+    exportDropdownMenu.classList.toggle('hidden');
+  });
+
+  const btnExportTimeCsv = document.getElementById('btnExportTimeCsv');
+  if (btnExportTimeCsv) {
+    btnExportTimeCsv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const btnExportTrackingCsv = document.getElementById('btnExportTrackingCsv');
+      if (btnExportTrackingCsv) btnExportTrackingCsv.click();
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  const btnExportMediaCsvMenu = document.getElementById('btnExportMediaCsvMenu');
+  if (btnExportMediaCsvMenu) {
+    btnExportMediaCsvMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const btnExportMediaCsv = document.getElementById('btnExportMediaCsv');
+      if (btnExportMediaCsv) btnExportMediaCsv.click();
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  const btnPrintPdf = document.getElementById('btnPrintPdf');
+  if (btnPrintPdf) {
+    btnPrintPdf.addEventListener('click', () => {
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  const btnDownloadDigest = document.getElementById('btnDownloadHtmlDigest');
+  if (btnDownloadDigest) {
+    btnDownloadDigest.addEventListener('click', () => {
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!exportDropdownMenu.contains(e.target) && !btnExportMenu.contains(e.target)) {
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      exportDropdownMenu.classList.add('hidden');
+      btnExportMenu.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+  setupExportDropdown,
     populateSettingsForm,
     populateSleepSettingsForm,
     saveDashboardSettings,

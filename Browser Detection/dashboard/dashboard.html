@@ -155,15 +155,45 @@
             </svg>
             <span id="themeToggleText">Light</span>
           </button>
-          <!-- Feature 6: Executive Digest Print & Offline Export -->
-          <button id="btnPrintPdf" class="btn-action-outline btn-print-pdf" title="Print / Save PDF (window.print)">
-            <span class="action-btn-icon">🖨️</span>
-            <span id="btnPrintPdfText">PDF</span>
-          </button>
-          <button id="btnDownloadHtmlDigest" class="btn-action-outline btn-html-digest" title="Download Standalone Offline HTML Report">
-            <span class="action-btn-icon">📄</span>
-            <span id="btnDownloadHtmlDigestText">Report</span>
-          </button>
+          <!-- Consolidated Export Dropdown Hub -->
+          <div class="export-dropdown-container">
+            <button type="button" id="btnExportMenu" class="btn-action-outline btn-export-trigger" aria-haspopup="true" aria-expanded="false" title="Export & Reports">
+              <span class="action-btn-icon">📥</span>
+              <span id="btnExportMenuText">Export</span>
+              <span class="dropdown-chevron">▾</span>
+            </button>
+            <div id="exportDropdownMenu" class="export-dropdown-menu liquid-glass-card hidden" role="menu" aria-label="Export Formats">
+              <button type="button" id="btnPrintPdf" class="export-menu-item" role="menuitem">
+                <span class="menu-item-icon">🖨️</span>
+                <div class="menu-item-info">
+                  <span class="menu-item-title" id="btnPrintPdfText">Save PDF Executive Digest</span>
+                  <span class="menu-item-desc">Print-optimized multi-page report</span>
+                </div>
+              </button>
+              <button type="button" id="btnDownloadHtmlDigest" class="export-menu-item" role="menuitem">
+                <span class="menu-item-icon">📄</span>
+                <div class="menu-item-info">
+                  <span class="menu-item-title" id="btnDownloadHtmlDigestText">Offline HTML Report</span>
+                  <span class="menu-item-desc">Self-contained interactive dashboard</span>
+                </div>
+              </button>
+              <div class="dropdown-divider"></div>
+              <button type="button" id="btnExportTimeCsv" class="export-menu-item" role="menuitem">
+                <span class="menu-item-icon">📊</span>
+                <div class="menu-item-info">
+                  <span class="menu-item-title">Export Time Data (CSV)</span>
+                  <span class="menu-item-desc">RFC 4180 raw tabular records</span>
+                </div>
+              </button>
+              <button type="button" id="btnExportMediaCsvMenu" class="export-menu-item" role="menuitem">
+                <span class="menu-item-icon">🎬</span>
+                <div class="menu-item-info">
+                  <span class="menu-item-title">Export Media History (CSV)</span>
+                  <span class="menu-item-desc">Full audio/video play records</span>
+                </div>
+              </button>
+            </div>
+          </div>
           <button id="btnGlobalRefresh" class="btn-action-outline" title="Refresh Data">
             <span class="refresh-spinner-icon">🔄</span>
             <span id="btnGlobalRefreshText">Refresh</span>
@@ -212,7 +242,7 @@
           
           <div id="tabContentTimeTracking" class="bento-grid-container">
             <!-- Key Metrics Cards Row (5 Cards in Responsive Metrics Grid) -->
-            <div class="metrics-grid bento-span-12" id="trackingMetricsGrid">
+            <div class="metrics-grid metrics-bento-row bento-span-12" id="trackingMetricsGrid" role="region" aria-label="Key Performance Indicators">
               <div class="metric-card bento-card liquid-glass-card bento-span-3">
                 <div class="metric-header">
                   <span id="lblMetricToday" class="metric-label">Today's Browsing Time</span>
