@@ -4327,3 +4327,50 @@ body.high-contrast-mode .studio-screenshot-card {
   color: #92400e;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 12px rgba(217, 119, 6, 0.15);
 }
+
+/* ========================================================================= */
+/* Dynamic Accent Palettes & Active Accent Tokens (styles/themes/palettes.css)*/
+/* ========================================================================= */
+:root,
+[data-palette="emerald"] {
+  --accent-primary: #10b981;
+  --accent-primary-glow: rgba(16, 185, 129, 0.25);
+  --color-accent: #10b981;
+  --color-accent-glow: rgba(16, 185, 129, 0.25);
+}
+
+[data-palette="cyan"] {
+  --accent-primary: #06b6d4;
+  --accent-primary-glow: rgba(6, 182, 212, 0.25);
+  --color-accent: #06b6d4;
+  --color-accent-glow: rgba(6, 182, 212, 0.25);
+}
+
+[data-palette="purple"] {
+  --accent-primary: #8b5cf6;
+  --accent-primary-glow: rgba(139, 92, 246, 0.25);
+  --color-accent: #8b5cf6;
+  --color-accent-glow: rgba(139, 92, 246, 0.25);
+}
+
+[data-palette="amber"] {
+  --accent-primary: #f59e0b;
+  --accent-primary-glow: rgba(245, 158, 11, 0.25);
+  --color-accent: #f59e0b;
+  --color-accent-glow: rgba(245, 158, 11, 0.25);
+}
+
+[data-palette="rose"] {
+  --accent-primary: #f43f5e;
+  --accent-primary-glow: rgba(244, 63, 94, 0.25);
+  --color-accent: #f43f5e;
+  --color-accent-glow: rgba(244, 63, 94, 0.25);
+}
+
+/* Palette Utility Classes */
+.palette-emerald { --accent-active: #10b981; }
+.palette-cyan { --accent-active: #06b6d4; }
+.palette-purple { --accent-active: #8b5cf6; }
+.palette-amber { --accent-active: #f59e0b; }
+.palette-rose { --accent-active: #f43f5e; }
+

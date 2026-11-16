@@ -1,0 +1,106 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Tab 4: Digital Wellness & Focus Styles
+ * File: popup/styles/tabs/tab_wellness.css
+ * Focus Ratio Card, Productive / Entertainment Meters & Doomscroll Breaker Alert
+ */
+
+/* ==========================================================================
+   Tab 4: Focus & Wellness Styles
+   ========================================================================== */
+.focus-wellness-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.focus-ratio-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.focus-ratio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.focus-ratio-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.focus-ratio-readout {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #10b981;
+}
+.ratio-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  display: flex;
+  overflow: hidden;
+}
+.ratio-bar-productive {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  transition: width 0.3s ease;
+}
+.ratio-bar-entertainment {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #f43f5e);
+  transition: width 0.3s ease;
+}
+.ratio-labels-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  font-weight: 600;
+}
+.ratio-lbl.prod {
+  color: #10b981;
+}
+.ratio-lbl.ent {
+  color: #f59e0b;
+}
+
+/* Doomscroll Breaker */
+.doomscroll-breaker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.doomscroll-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.doomscroll-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.doomscroll-sub {
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.doomscroll-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.doomscroll-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 10px;
+  padding: 3px 6px;
+  outline: none;
+}

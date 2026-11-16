@@ -2,7 +2,12 @@
  * Sentinel Web Activity & Media Sentinel - Dashboard Layout & Structure
  * File: dashboard/styles/layout.css
  * Reset, Grid Layout, Sidebar Navigation, Bento Container & Shimmer Loaders
+ * Aggregates modular layout stylesheets from dashboard/styles/layout/
  */
+
+@import './layout/header_sidebar.css';
+@import './layout/bento_grid.css';
+@import './layout/responsive.css';
 
 /* Reset and Global Base */
 *, *::before, *::after {

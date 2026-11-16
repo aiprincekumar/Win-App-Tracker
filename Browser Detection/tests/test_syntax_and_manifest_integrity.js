@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Extension Syntax, Manifest & File Integrity
  * 
  * Verifies:
@@ -890,6 +890,63 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(bgJs.includes("msgType === 'TOGGLE_TRACKING_PAUSE'"), 'background.js must handle TOGGLE_TRACKING_PAUSE');
     assert(bgJs.includes('if (isTrackingPaused)'), 'background.js commitActiveInterval must guard against paused tracking');
     console.log('  ✅ background.js service worker verified: State storage, message handlers, and interval ticker protection');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test 15: Granular Modular CSS Architecture & UTF-8 BOM Integrity
+  // ---------------------------------------------------------------------------
+  console.log('\nTest 15: Granular Modular CSS Architecture & UTF-8 BOM Integrity');
+  {
+    const targetSubFiles = [
+      'popup/styles/tabs/tab_activity.css',
+      'popup/styles/tabs/tab_media.css',
+      'popup/styles/tabs/tab_analytics.css',
+      'popup/styles/tabs/tab_automations.css',
+      'popup/styles/tabs/tab_wellness.css',
+      'popup/styles/tabs/tab_audio_lab.css',
+      'popup/styles/themes/dark_glass.css',
+      'popup/styles/themes/light_contrast.css',
+      'popup/styles/themes/palettes.css',
+      'dashboard/styles/layout/header_sidebar.css',
+      'dashboard/styles/layout/bento_grid.css',
+      'dashboard/styles/layout/responsive.css',
+      'dashboard/styles/media/hero_player.css',
+      'dashboard/styles/media/scrubber_controls.css'
+    ];
+
+    targetSubFiles.forEach((rel) => {
+      const full = path.join(baseDir, rel);
+      assert(fs.existsSync(full), `Granular modular CSS file must exist: ${rel}`);
+      const buf = fs.readFileSync(full);
+      assert(buf.length > 0, `File ${rel} must not be empty`);
+      assert(buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf, `File ${rel} must include UTF-8 BOM`);
+    });
+    console.log('  ✅ All 14 granular domain CSS sub-files exist with verified UTF-8 BOM');
+
+    // Verify parent aggregation & @import linkage
+    const tabsCss = fs.readFileSync(path.join(baseDir, 'popup/styles/tabs.css'), 'utf8');
+    assert(tabsCss.includes("@import './tabs/tab_activity.css';"), 'tabs.css must import tab_activity.css');
+    assert(tabsCss.includes("@import './tabs/tab_media.css';"), 'tabs.css must import tab_media.css');
+    assert(tabsCss.includes("@import './tabs/tab_analytics.css';"), 'tabs.css must import tab_analytics.css');
+    assert(tabsCss.includes("@import './tabs/tab_automations.css';"), 'tabs.css must import tab_automations.css');
+    assert(tabsCss.includes("@import './tabs/tab_wellness.css';"), 'tabs.css must import tab_wellness.css');
+    assert(tabsCss.includes("@import './tabs/tab_audio_lab.css';"), 'tabs.css must import tab_audio_lab.css');
+
+    const themesCss = fs.readFileSync(path.join(baseDir, 'popup/styles/themes.css'), 'utf8');
+    assert(themesCss.includes("@import './themes/dark_glass.css';"), 'themes.css must import dark_glass.css');
+    assert(themesCss.includes("@import './themes/light_contrast.css';"), 'themes.css must import light_contrast.css');
+    assert(themesCss.includes("@import './themes/palettes.css';"), 'themes.css must import palettes.css');
+
+    const layoutCss = fs.readFileSync(path.join(baseDir, 'dashboard/styles/layout.css'), 'utf8');
+    assert(layoutCss.includes("@import './layout/header_sidebar.css';"), 'layout.css must import header_sidebar.css');
+    assert(layoutCss.includes("@import './layout/bento_grid.css';"), 'layout.css must import bento_grid.css');
+    assert(layoutCss.includes("@import './layout/responsive.css';"), 'layout.css must import responsive.css');
+
+    const mediaCss = fs.readFileSync(path.join(baseDir, 'dashboard/styles/media.css'), 'utf8');
+    assert(mediaCss.includes("@import './media/hero_player.css';"), 'media.css must import hero_player.css');
+    assert(mediaCss.includes("@import './media/scrubber_controls.css';"), 'media.css must import scrubber_controls.css');
+
+    console.log('  ✅ Parent modular stylesheets verify 100% seamless @import and aggregation of all domain sub-modules');
   }
 
   console.log('\n🎉 ALL EXTENSION SYNTAX, MANIFEST & FILE INTEGRITY TESTS PASSED WITH 100% SUCCESS!');

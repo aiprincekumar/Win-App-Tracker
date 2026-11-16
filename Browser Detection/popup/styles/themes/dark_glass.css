@@ -1,0 +1,122 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Cybernetic Dark Glassmorphic Theme
+ * File: popup/styles/themes/dark_glass.css
+ * Dark Mode Substrates, Specular Highlights & High Contrast Mode Accessibility (WCAG AAA)
+ */
+
+/* ==========================================================================
+   Defect 16: High Contrast Mode Accessibility Architecture
+   ========================================================================== */
+body.high-contrast-mode {
+  filter: contrast(115%);
+  background: #000000 !important;
+  color: #ffffff !important;
+  --bg-primary: #000000 !important;
+  --bg-surface: #000000 !important;
+  --bg-card: #000000 !important;
+  --text-primary: #ffffff !important;
+  --text-secondary: #ffffff !important;
+  --text-dim: #e2e8f0 !important;
+  --border-dim: #ffffff !important;
+  --border-focus: #00ffcc !important;
+  --accent-emerald: #00ffcc !important;
+  --accent-emerald-glow: rgba(0, 255, 204, 0.4) !important;
+  --accent-cyan: #00ffcc !important;
+  --accent-sky: #00ffcc !important;
+  --accent-purple: #00ffcc !important;
+  --accent-amber: #00ffcc !important;
+}
+
+body.high-contrast-mode .sentinel-app {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+body.high-contrast-mode .header,
+body.high-contrast-mode .media-card,
+body.high-contrast-mode .audio-card,
+body.high-contrast-mode .sub-card,
+body.high-contrast-mode .studio-card,
+body.high-contrast-mode .breakdown-section,
+body.high-contrast-mode .focus-wellness-card,
+body.high-contrast-mode .tracking-card,
+body.high-contrast-mode .quick-settings-popover,
+body.high-contrast-mode .media-playback-dock,
+body.high-contrast-mode .sentinel-footer,
+body.high-contrast-mode .chart-section {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast-mode .top-tab-btn {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+body.high-contrast-mode .top-tab-btn.active {
+  background: #00ffcc !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  font-weight: 800 !important;
+}
+
+body.high-contrast-mode .top-tab-btn.active .top-tab-label {
+  color: #000000 !important;
+}
+
+body.high-contrast-mode .ws-badge,
+body.high-contrast-mode .btn-quick-settings,
+body.high-contrast-mode .btn-theme-toggle {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+body.high-contrast-mode .ws-badge:hover,
+body.high-contrast-mode .btn-quick-settings:hover,
+body.high-contrast-mode .btn-theme-toggle:hover {
+  border-color: #00ffcc !important;
+  color: #00ffcc !important;
+}
+
+body.high-contrast-mode button,
+body.high-contrast-mode select,
+body.high-contrast-mode input {
+  background-color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}
+
+body.high-contrast-mode button:hover,
+body.high-contrast-mode button:focus-visible,
+body.high-contrast-mode select:focus,
+body.high-contrast-mode input:focus {
+  border-color: #00ffcc !important;
+  outline: 2px solid #00ffcc !important;
+}
+
+body.high-contrast-mode .action-btn.primary,
+body.high-contrast-mode .btn-connect {
+  background: #00ffcc !important;
+  color: #000000 !important;
+  border: 2px solid #ffffff !important;
+  font-weight: 700 !important;
+}
+
+body.high-contrast-mode a,
+body.high-contrast-mode .accent-text,
+body.high-contrast-mode .highlight,
+body.high-contrast-mode .media-card-title,
+body.high-contrast-mode .active-accent {
+  color: #00ffcc !important;
+}
+
+body.high-contrast-mode .domain-item,
+body.high-contrast-mode .studio-note-item,
+body.high-contrast-mode .studio-screenshot-card {
+  background: #000000 !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+}

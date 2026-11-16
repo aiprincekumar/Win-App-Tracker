@@ -1,0 +1,357 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Tab 3: Studio, Vault & Smart Automations
+ * File: popup/styles/tabs/tab_automations.css
+ * Studio Vault, Bookmarks, Timed Clips, Screenshot Gallery, Resume Playback & Smart Rules
+ */
+
+/* ==========================================================================
+   Tab 3: Studio / Vault Styles
+   ========================================================================== */
+.studio-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.studio-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.studio-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.note-input-row {
+  display: flex;
+  gap: 6px;
+}
+.studio-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-dim);
+  border-radius: 7px;
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 6px 9px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.studio-input:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.4);
+}
+.btn-pin-note {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.25) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  border-radius: 7px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-pin-note:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(59, 130, 246, 0.35) 100%);
+}
+.btn-text-sm {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+}
+.btn-text-sm:hover {
+  color: #f43f5e;
+}
+.studio-items-list {
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+.studio-items-list::-webkit-scrollbar {
+  width: 4px;
+}
+.studio-items-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.empty-state-sm {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 12px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+.studio-clip-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.studio-clip-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+.clip-time-btn {
+  background: rgba(6, 182, 212, 0.18);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #22d3ee;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.clip-time-btn:hover {
+  background: rgba(6, 182, 212, 0.3);
+}
+.clip-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.clip-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clip-source {
+  font-size: 8.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-delete-clip {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.btn-delete-clip:hover {
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.1);
+}
+
+/* Screenshots Gallery */
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.screenshot-thumb-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #000;
+  cursor: pointer;
+}
+.screenshot-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.screenshot-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.screenshot-thumb-wrap:hover .screenshot-thumb-overlay {
+  opacity: 1;
+}
+
+/* Resume Playback Card */
+.resume-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.resume-card-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.resume-video-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.resume-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.resume-meta {
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+.btn-resume-action {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.btn-resume-action:hover {
+  background: rgba(16, 185, 129, 0.3);
+  color: #fff;
+}
+
+/* Sub-Cards & Smart Automations Card */
+/* Sub-Cards (Used in Tools, Studio, and Utility Panes) */
+.sub-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.sub-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sub-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Smart Automations Card (Compact 2-Row Layout matching Sound Enhancements) */
+.automations-card {
+  padding: 9px 12px;
+  gap: 7px;
+}
+.automations-card .sub-card-header {
+  min-height: unset;
+}
+.automations-card .sub-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.automation-list,
+.automation-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+}
+.automation-row,
+.automation-toggle-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-dim);
+  border-radius: 7px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.automation-row.span-2,
+.automation-toggle-row.span-2 {
+  grid-column: span 2;
+}
+.automation-row:hover,
+.automation-toggle-row:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.automation-row:has(input:checked),
+.automation-toggle-row:has(input:checked) {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.04);
+}
+.automation-row:has(input:checked):hover,
+.automation-toggle-row:has(input:checked):hover {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.automation-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: unset;
+}
+.automation-item-header .switch-toggle-sm {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+.automation-info,
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.automation-name,
+.toggle-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  text-wrap: balance;
+  letter-spacing: -0.1px;
+  word-break: break-word;
+}
+.automation-desc,
+.toggle-sub {
+  font-size: 8.5px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  text-wrap: pretty;
+  word-break: break-word;
+}

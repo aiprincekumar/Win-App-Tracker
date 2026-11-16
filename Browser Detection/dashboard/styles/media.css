@@ -2,7 +2,11 @@
  * Sentinel Web Activity & Media Sentinel - Media Player & Scrubber Styles
  * File: dashboard/styles/media.css
  * Tab B: Live Media Player Hero Card, Precision Timeline Scrubber & Volume Controls
+ * Aggregates modular media stylesheets from dashboard/styles/media/
  */
+
+@import './media/hero_player.css';
+@import './media/scrubber_controls.css';
 
 /* ========================================================================= */
 /* TAB B: LIVE MEDIA PLAYER HERO CARD                                        */

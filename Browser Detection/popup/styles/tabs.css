@@ -2,7 +2,15 @@
  * Sentinel Web Activity & Media Sentinel - Popup Navigation & Views
  * File: popup/styles/tabs.css
  * 6-Tab Single-Word Navigation, Active Indicators, Media Player Card, Donut Chart & Domain List
+ * Aggregates granular sub-tab stylesheets from popup/styles/tabs/
  */
+
+@import './tabs/tab_activity.css';
+@import './tabs/tab_media.css';
+@import './tabs/tab_analytics.css';
+@import './tabs/tab_automations.css';
+@import './tabs/tab_wellness.css';
+@import './tabs/tab_audio_lab.css';
 
 /* ==========================================================================
    Top Primary Multi-Tabs Navigation & View Panes (6-Tab Single-Word Architecture)
