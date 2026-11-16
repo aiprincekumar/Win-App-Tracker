@@ -4,11 +4,41 @@
  * Light Mode Overrides, High Contrast Accessibility (WCAG AAA) & Focus Rings
  */
 
-body.theme-light,
-[data-theme="light"] body,
-html[data-theme="light"] body {
+/* Explicit Dark Theme Scoped Tokens */
+body.theme-dark {
+  --bg-deep: #080b11;
+  --bg-sidebar: #0d121d;
+  --bg-surface: #131926;
+  --bg-surface-elevated: #1a2332;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(19, 25, 38, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  font-family: var(--font-family);
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Explicit Light Theme Scoped Tokens */
+body.theme-light {
   --bg-deep: #f8fafc;
   --bg-sidebar: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+
   --bg-stage: #f1f5f9;
   --bg-card: rgba(255, 255, 255, 0.92);
   --bg-card-hover: #ffffff;
@@ -16,9 +46,6 @@ html[data-theme="light"] body {
   --bg-input: #ffffff;
   --bg-subtle: rgba(0, 0, 0, 0.04);
 
-  --text-primary: #0f172a;      /* 15.6:1 contrast against #f8fafc */
-  --text-secondary: #334155;    /* 9.6:1 contrast against #f8fafc */
-  --text-muted: #475569;        /* 5.8:1 contrast against #f1f5f9 - WCAG AA & AAA */
   --text-inverse: #ffffff;
 
   --border-dim: rgba(0, 0, 0, 0.10);
@@ -51,11 +78,53 @@ html[data-theme="light"] body {
   -webkit-font-smoothing: antialiased;
 }
 
-body.theme-light .dashboard-layout,
-[data-theme="light"] .dashboard-layout {
+body.theme-light .dashboard-layout {
   background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.04) 0%, transparent 40%),
               radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
               var(--bg-deep);
+}
+
+/* Light Mode High-Contrast Subtabs & Time Distribution Pills (WCAG AAA >= 7:1) */
+body.theme-light .temporal-subtabs,
+body.theme-light #timeDistributionCard .pill-tab-group,
+body.theme-light #timeDistributionCard .temporal-subtabs {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+body.theme-light .subtab-btn,
+body.theme-light #timeDistributionCard .subtab-btn {
+  color: #1e293b; /* 11.8:1 contrast against #f1f5f9 (WCAG AAA >= 7:1) */
+}
+
+body.theme-light .subtab-btn:hover,
+body.theme-light #timeDistributionCard .subtab-btn:hover {
+  color: #0f172a;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .subtab-btn.active,
+body.theme-light #timeDistributionCard .subtab-btn.active {
+  background: #ffffff;
+  color: #0f172a; /* 15.6:1 contrast against #ffffff (WCAG AAA >= 7:1) */
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Light Mode Multi-Browser Filter Selectors */
+body.theme-light .browser-filter-container {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .browser-filter-select {
+  color: #0f172a;
+}
+
+body.theme-light .browser-filter-select option {
+  background-color: #ffffff;
+  color: #0f172a;
 }
 
 /* Light Mode Scoped Overrides */

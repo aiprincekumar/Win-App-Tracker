@@ -314,8 +314,8 @@ button.spinning .refresh-spinner-icon,
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-width: 0;
-  flex-shrink: 1;
+  min-width: 220px;
+  flex-shrink: 0;
   overflow: visible;
   padding: 2px 0;
 }
@@ -349,10 +349,16 @@ button.spinning .refresh-spinner-icon,
 .app-bar-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
   flex-shrink: 0;
   flex-wrap: nowrap !important;
   white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  #liveClockPill {
+    display: none !important;
+  }
 }
 
 /* Multi-Browser Filter Selector Component */
@@ -569,7 +575,7 @@ button.spinning .refresh-spinner-icon,
 
 /* Tab Container */
 .tab-content-container {
-  padding: 28px 32px 48px 32px;
+  padding: 16px 24px 36px 24px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -692,6 +698,24 @@ button.spinning .refresh-spinner-icon,
 
 
 .browser-filter-container.compact-pill {
-  padding: 4px 8px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 2px 8px;
   gap: 4px;
+  border-radius: var(--radius-full);
+}
+
+.browser-filter-container.compact-pill .browser-filter-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.browser-filter-container.compact-pill .browser-filter-select,
+#browserFilterSelect,
+#trackingModeSelect {
+  height: 24px;
+  padding: 1px 4px;
+  font-size: 11.5px;
+  max-width: 110px;
 }
