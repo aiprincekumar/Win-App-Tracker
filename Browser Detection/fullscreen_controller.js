@@ -174,6 +174,24 @@
           box-sizing: border-box !important;
         }
 
+        /* Direct HTML5 <video> styled with sentinel-web-fullscreen */
+        video.sentinel-web-fullscreen {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          object-fit: contain !important;
+          margin: auto !important;
+          z-index: 2147483647 !important;
+          background: #000000 !important;
+          box-sizing: border-box !important;
+        }
+
         /* Force YouTube video container to fill 100vw / 100vh */
         .sentinel-web-fullscreen .html5-video-container {
           width: 100vw !important;
@@ -398,6 +416,10 @@
 
     // 2. If a preferredTarget is supplied
     if (preferredTarget && (preferredTarget.nodeType === 1 || (typeof HTMLElement !== 'undefined' && preferredTarget instanceof HTMLElement))) {
+      // Body or DocumentElement must NEVER be returned as a fullscreen target
+      if (preferredTarget === document.body || preferredTarget === document.documentElement) {
+        return null;
+      }
       // If preferredTarget is a video element, search for player container ancestors
       if (preferredTarget.tagName === 'VIDEO' || preferredTarget.nodeName === 'VIDEO') {
         const container = (typeof preferredTarget.closest === 'function')
@@ -424,7 +446,7 @@
       return video;
     }
 
-    return document.body || document.documentElement || null;
+    return null;
   }
 
   /**
@@ -434,7 +456,9 @@
     if (typeof document === 'undefined') return false;
     ensureStyles();
     const el = getTargetElement(targetEl);
-    if (!el) return false;
+    if (!el || el === document.body || el === document.documentElement) {
+      return false;
+    }
 
     // Clean any existing classes
     document.querySelectorAll('.sentinel-web-fullscreen').forEach((elem) => {

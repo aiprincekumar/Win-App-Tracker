@@ -3652,8 +3652,6 @@ function setupEventListeners() {
       lastFullscreenClick = now;
 
       let targetTabId = getActiveMediaTabId();
-
-      // Resolve active tabId reliably if not cached yet
       if (!targetTabId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
         try {
           const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
@@ -3663,28 +3661,30 @@ function setupEventListeners() {
 
       if (browserAPI.scripting && typeof browserAPI.scripting.executeScript === 'function' && targetTabId) {
         browserAPI.scripting.executeScript({
-          target: { tabId: targetTabId },
+          target: { tabId: targetTabId, allFrames: true },
           world: 'MAIN',
           func: () => {
+            const video = document.querySelector('video') || document.getElementById('movie_player');
+            if (!video) return false;
             const ctrl = window.__SentinelFullscreenController || globalThis.__SentinelFullscreenController;
-            if (ctrl && typeof ctrl.toggleWebFullscreen === 'function') {
-              ctrl.toggleWebFullscreen();
-              return;
-            }
-            if (ctrl && typeof ctrl.toggle === 'function') {
-              ctrl.toggle(null, { forceWeb: true });
-              return;
-            }
             const floatingBtn = document.getElementById('__sentinel_fs_floating_btn__');
             if (floatingBtn) {
               floatingBtn.click();
-              return;
+              return true;
             }
-            try {
-              window.dispatchEvent(new CustomEvent('__SENTINEL_FULLSCREEN_ACTION__', {
-                detail: { action: 'toggle', options: { forceWeb: true } }
-              }));
-            } catch (_) {}
+            if (ctrl && typeof ctrl.toggleWebFullscreen === 'function') {
+              ctrl.toggleWebFullscreen();
+              return true;
+            }
+            if (ctrl && typeof ctrl.toggle === 'function') {
+              ctrl.toggle(video, { forceWeb: true });
+              return true;
+            }
+            if (video.requestFullscreen) {
+              video.requestFullscreen().catch(() => {});
+              return true;
+            }
+            return false;
           }
         }).catch(() => {
           sendMediaControl('toggle_fullscreen', {}, targetTabId);

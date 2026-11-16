@@ -14,11 +14,20 @@
   'use strict';
 
   // Cross-browser runtime API wrapper
-  const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.browser.runtime 
-    ? globalThis.browser 
-    : globalThis.chrome;
+  let browserAPI = null;
+  try {
+    browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.browser && globalThis.browser.runtime 
+      ? globalThis.browser 
+      : (typeof globalThis.chrome !== 'undefined' ? globalThis.chrome : null);
+  } catch (_) {
+    return;
+  }
 
-  if (!browserAPI || !browserAPI.runtime || !browserAPI.runtime.sendMessage) {
+  try {
+    if (!browserAPI || !browserAPI.runtime || !browserAPI.runtime.sendMessage) {
+      return;
+    }
+  } catch (_) {
     return;
   }
 
@@ -33,9 +42,56 @@
   let fadeIntervalId = null;
   let adObserver = null;
 
+  // Tracked listeners for clean unregistration on context invalidation
+  let storageListenerAd = null;
+  let storageListenerSpeed = null;
+  let storageListenerAudio = null;
+  let runtimeMessageListener = null;
+
   // Extension context invalidation lifecycle management
   let isContextInvalidated = false;
   let isOrphaned = false;
+  const activeTimeouts = new Set();
+
+  /**
+   * Safe setTimeout wrapper that tracks pending timer IDs so teardownMediaSentinel
+   * can cancel all outstanding timers when extension context becomes invalidated.
+   *
+   * @param {Function} fn
+   * @param {number} delay
+   * @returns {number|null}
+   */
+  function safeSetTimeout(fn, delay) {
+    if (isContextInvalidated) return null;
+    let timerId = null;
+    timerId = setTimeout(() => {
+      activeTimeouts.delete(timerId);
+      if (isContextInvalidated || !isExtensionContextValid()) {
+        teardownMediaSentinel();
+        return;
+      }
+      try {
+        fn();
+      } catch (err) {
+        if (isInvalidationError(err)) {
+          teardownMediaSentinel();
+        }
+      }
+    }, delay);
+    activeTimeouts.add(timerId);
+    return timerId;
+  }
+
+  /**
+   * Safe clearTimeout wrapper that also cleans up tracked timer ID.
+   * @param {number|null} id
+   */
+  function safeClearTimeout(id) {
+    if (id) {
+      activeTimeouts.delete(id);
+      try { clearTimeout(id); } catch (_) {}
+    }
+  }
 
   /**
    * Synchronously checks whether the extension context is still active and valid.
@@ -45,9 +101,17 @@
    * @returns {boolean}
    */
   function isExtensionContextValid() {
+    if (isContextInvalidated) {
+      return false;
+    }
     try {
-      return Boolean(browserAPI && browserAPI.runtime && browserAPI.runtime.id);
+      if (!browserAPI || !browserAPI.runtime || !browserAPI.runtime.id) {
+        teardownMediaSentinel();
+        return false;
+      }
+      return true;
     } catch (_) {
+      teardownMediaSentinel();
       return false;
     }
   }
@@ -68,7 +132,7 @@
   function isInvalidationError(err) {
     if (!err) return false;
     const msg = String(err.message || err.error || err);
-    return /Extension context invalidated/i.test(msg);
+    return /(?:Extension )?context invalidated/i.test(msg);
   }
 
   /**
@@ -82,15 +146,21 @@
 
     // Clear periodic telemetry heartbeat timer
     if (periodicHeartbeatTimer) {
-      clearInterval(periodicHeartbeatTimer);
+      try { clearInterval(periodicHeartbeatTimer); } catch (_) {}
       periodicHeartbeatTimer = null;
     }
 
     // Clear smooth fade pause interval if active
     if (fadeIntervalId) {
-      clearInterval(fadeIntervalId);
+      try { clearInterval(fadeIntervalId); } catch (_) {}
       fadeIntervalId = null;
     }
+
+    // Clear all tracked active timeouts
+    for (const timerId of activeTimeouts) {
+      try { clearTimeout(timerId); } catch (_) {}
+    }
+    activeTimeouts.clear();
 
     // Disconnect DOM MutationObservers
     if (observer && typeof observer.disconnect === 'function') {
@@ -105,6 +175,35 @@
       try { adObserver.disconnect(); } catch (_) {}
       adObserver = null;
     }
+
+    // Safely unregister runtime & storage event listeners if API is accessible
+    try {
+      if (storageListenerAd && browserAPI && browserAPI.storage && browserAPI.storage.onChanged && typeof browserAPI.storage.onChanged.removeListener === 'function') {
+        browserAPI.storage.onChanged.removeListener(storageListenerAd);
+      }
+    } catch (_) {}
+    storageListenerAd = null;
+
+    try {
+      if (storageListenerSpeed && browserAPI && browserAPI.storage && browserAPI.storage.onChanged && typeof browserAPI.storage.onChanged.removeListener === 'function') {
+        browserAPI.storage.onChanged.removeListener(storageListenerSpeed);
+      }
+    } catch (_) {}
+    storageListenerSpeed = null;
+
+    try {
+      if (storageListenerAudio && browserAPI && browserAPI.storage && browserAPI.storage.onChanged && typeof browserAPI.storage.onChanged.removeListener === 'function') {
+        browserAPI.storage.onChanged.removeListener(storageListenerAudio);
+      }
+    } catch (_) {}
+    storageListenerAudio = null;
+
+    try {
+      if (runtimeMessageListener && browserAPI && browserAPI.runtime && browserAPI.runtime.onMessage && typeof browserAPI.runtime.onMessage.removeListener === 'function') {
+        browserAPI.runtime.onMessage.removeListener(runtimeMessageListener);
+      }
+    } catch (_) {}
+    runtimeMessageListener = null;
 
     try {
       console.debug('[Media Sentinel] Extension context invalidated; detached running intervals and observers.');
@@ -130,9 +229,17 @@
       if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) {
         return;
       }
-      browserAPI.storage.local.get(keys, (res) => {
+      const maybePromise = browserAPI.storage.local.get(keys, (res) => {
         try {
-          const err = browserAPI.runtime && browserAPI.runtime.lastError;
+          let err = null;
+          try {
+            err = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null;
+          } catch (rErr) {
+            if (isInvalidationError(rErr)) {
+              teardownMediaSentinel();
+              return;
+            }
+          }
           if (err && isInvalidationError(err)) {
             teardownMediaSentinel();
             return;
@@ -146,6 +253,13 @@
           }
         }
       });
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise.catch((err) => {
+          if (isInvalidationError(err)) {
+            teardownMediaSentinel();
+          }
+        });
+      }
     } catch (err) {
       if (isInvalidationError(err)) {
         teardownMediaSentinel();
@@ -168,9 +282,17 @@
       if (!browserAPI || !browserAPI.storage || !browserAPI.storage.local) {
         return;
       }
-      browserAPI.storage.local.set(items, () => {
+      const maybePromise = browserAPI.storage.local.set(items, () => {
         try {
-          const err = browserAPI.runtime && browserAPI.runtime.lastError;
+          let err = null;
+          try {
+            err = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null;
+          } catch (rErr) {
+            if (isInvalidationError(rErr)) {
+              teardownMediaSentinel();
+              return;
+            }
+          }
           if (err && isInvalidationError(err)) {
             teardownMediaSentinel();
             return;
@@ -184,6 +306,13 @@
           }
         }
       });
+      if (maybePromise && typeof maybePromise.catch === 'function') {
+        maybePromise.catch((err) => {
+          if (isInvalidationError(err)) {
+            teardownMediaSentinel();
+          }
+        });
+      }
     } catch (err) {
       if (isInvalidationError(err)) {
         teardownMediaSentinel();
@@ -206,7 +335,15 @@
       if (browserAPI && browserAPI.runtime && browserAPI.runtime.id) {
         const maybePromise = browserAPI.runtime.sendMessage(message, (response) => {
           try {
-            const err = browserAPI.runtime.lastError;
+            let err = null;
+            try {
+              err = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null;
+            } catch (rErr) {
+              if (isInvalidationError(rErr)) {
+                teardownMediaSentinel();
+                return;
+              }
+            }
             if (err && isInvalidationError(err)) {
               teardownMediaSentinel();
             }
@@ -821,59 +958,65 @@
       return;
     }
 
-    const { currentState } = evaluatePageMediaState();
+    try {
+      const { currentState } = evaluatePageMediaState();
 
-    // Prevent non-media iframes from clobbering top frame
-    if (!isTopFrame && !currentState.hasMedia) {
-      return;
-    }
+      // Prevent non-media iframes from clobbering top frame
+      if (!isTopFrame && !currentState.hasMedia) {
+        return;
+      }
 
-    const now = Date.now();
+      const now = Date.now();
 
-    if (!force && lastReportedState) {
-      const p1 = lastReportedState.primaryMedia;
-      const p2 = currentState.primaryMedia;
+      if (!force && lastReportedState) {
+        const p1 = lastReportedState.primaryMedia;
+        const p2 = currentState.primaryMedia;
 
-      // Check if primary media state changed fundamentally
-      const primaryChanged = (!p1 && p2) || (p1 && !p2) || (p1 && p2 && (
-        p1.state !== p2.state ||
-        p1.isPlaying !== p2.isPlaying ||
-        p1.isMuted !== p2.isMuted ||
-        Math.abs(p1.volume - p2.volume) > 0.02 ||
-        p1.playbackRate !== p2.playbackRate ||
-        p1.resolutionLabel !== p2.resolutionLabel ||
-        p1.playbackQuality !== p2.playbackQuality ||
-        p1.isLive !== p2.isLive ||
-        p1.title !== p2.title ||
-        p1.mediaType !== p2.mediaType ||
-        Math.abs(p1.duration - p2.duration) > 1.0
-      ));
+        // Check if primary media state changed fundamentally
+        const primaryChanged = (!p1 && p2) || (p1 && !p2) || (p1 && p2 && (
+          p1.state !== p2.state ||
+          p1.isPlaying !== p2.isPlaying ||
+          p1.isMuted !== p2.isMuted ||
+          Math.abs(p1.volume - p2.volume) > 0.02 ||
+          p1.playbackRate !== p2.playbackRate ||
+          p1.resolutionLabel !== p2.resolutionLabel ||
+          p1.playbackQuality !== p2.playbackQuality ||
+          p1.isLive !== p2.isLive ||
+          p1.title !== p2.title ||
+          p1.mediaType !== p2.mediaType ||
+          Math.abs(p1.duration - p2.duration) > 1.0
+        ));
 
-      const isPlaying = Boolean(p2 && p2.isPlaying);
-      const timeElapsed = now - lastProgressBroadcastTime;
+        const isPlaying = Boolean(p2 && p2.isPlaying);
+        const timeElapsed = now - lastProgressBroadcastTime;
 
-      if (!primaryChanged && lastReportedState.anyPlaying === currentState.anyPlaying) {
-        if (isPlaying) {
-          // During active playback, throttle progress updates to ~1 second
-          if (timeElapsed < 900) {
-            return;
-          }
-        } else {
-          // When paused/stopped/idle, throttle to 2.5 seconds
-          if (timeElapsed < 2500) {
-            return;
+        if (!primaryChanged && lastReportedState.anyPlaying === currentState.anyPlaying) {
+          if (isPlaying) {
+            // During active playback, throttle progress updates to ~1 second
+            if (timeElapsed < 900) {
+              return;
+            }
+          } else {
+            // When paused/stopped/idle, throttle to 2.5 seconds
+            if (timeElapsed < 2500) {
+              return;
+            }
           }
         }
       }
+
+      lastReportedState = currentState;
+      lastProgressBroadcastTime = now;
+
+      safeSendMessage({
+        type: 'MEDIA_STATE_CHANGED',
+        payload: currentState
+      });
+    } catch (err) {
+      if (isInvalidationError(err)) {
+        teardownMediaSentinel();
+      }
     }
-
-    lastReportedState = currentState;
-    lastProgressBroadcastTime = now;
-
-    safeSendMessage({
-      type: 'MEDIA_STATE_CHANGED',
-      payload: currentState
-    });
   }
 
   /**
@@ -1208,6 +1351,9 @@
         return;
       }
       if (document.getElementById('__media_sentinel_bridge_script__')) {
+        return;
+      }
+      if (!browserAPI || !browserAPI.runtime || typeof browserAPI.runtime.getURL !== 'function') {
         return;
       }
       const s = document.createElement('script');
@@ -1556,8 +1702,8 @@
     // Listen to browserAPI.storage.onChanged for real-time reactivity without page reload
     if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       try {
-        browserAPI.storage.onChanged.addListener((changes, areaName) => {
-          if (!isExtensionContextValid() || isContextInvalidated) {
+        storageListenerAd = (changes, areaName) => {
+          if (isContextInvalidated || !isExtensionContextValid()) {
             teardownMediaSentinel();
             return;
           }
@@ -1568,7 +1714,8 @@
               checkAndApplyAdSilencer();
             }
           }
-        });
+        };
+        browserAPI.storage.onChanged.addListener(storageListenerAd);
       } catch (err) {
         if (isInvalidationError(err)) teardownMediaSentinel();
       }
@@ -1613,10 +1760,10 @@
           });
           isAdMuted = false;
         }
-        setTimeout(() => {
+        safeSetTimeout(() => {
           if (!isContextInvalidated && isExtensionContextValid()) checkAndApplyAdSilencer();
         }, 100);
-        setTimeout(() => {
+        safeSetTimeout(() => {
           if (!isContextInvalidated && isExtensionContextValid()) checkAndApplyAdSilencer();
         }, 500);
       }, { passive: true });
@@ -1655,6 +1802,7 @@
     if (!host) return;
 
     safeStorageGet(['smart_automations'], (res) => {
+      if (isContextInvalidated) return;
       if (!res || !res.smart_automations) return;
       const smartAutomations = res.smart_automations;
       if (smartAutomations.domain_speed_memory === false) {
@@ -1680,7 +1828,7 @@
               } catch (_) {}
             });
           } finally {
-            setTimeout(() => {
+            safeSetTimeout(() => {
               isRestoringSpeed = false;
             }, 100);
           }
@@ -1707,6 +1855,7 @@
     if (!host) return;
 
     safeStorageGet(['smart_automations'], (res) => {
+      if (isContextInvalidated) return;
       const smartAutomations = (res && res.smart_automations) ? { ...res.smart_automations } : {};
       if (smartAutomations.domain_speed_memory === false) {
         domainSpeedMemoryEnabled = false;
@@ -1727,8 +1876,8 @@
   // Listen to browserAPI.storage.onChanged for real-time reactivity for domain_speed_memory
   if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
     try {
-      browserAPI.storage.onChanged.addListener((changes, areaName) => {
-        if (!isExtensionContextValid() || isContextInvalidated) {
+      storageListenerSpeed = (changes, areaName) => {
+        if (isContextInvalidated || !isExtensionContextValid()) {
           teardownMediaSentinel();
           return;
         }
@@ -1741,7 +1890,8 @@
             }
           }
         }
-      });
+      };
+      browserAPI.storage.onChanged.addListener(storageListenerSpeed);
     } catch (err) {
       if (isInvalidationError(err)) teardownMediaSentinel();
     }
@@ -1784,6 +1934,7 @@
     }
 
     safeStorageGet(['audio_lab_settings'], (res) => {
+      if (isContextInvalidated) return;
       if (res && res.audio_lab_settings) {
         setAudioOnlyMode(Boolean(res.audio_lab_settings.audio_only));
         try {
@@ -1797,8 +1948,8 @@
 
     if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       try {
-        browserAPI.storage.onChanged.addListener((changes, areaName) => {
-          if (!isExtensionContextValid() || isContextInvalidated) {
+        storageListenerAudio = (changes, areaName) => {
+          if (isContextInvalidated || !isExtensionContextValid()) {
             teardownMediaSentinel();
             return;
           }
@@ -1814,7 +1965,8 @@
               } catch (_) {}
             }
           }
-        });
+        };
+        browserAPI.storage.onChanged.addListener(storageListenerAudio);
       } catch (err) {
         if (isInvalidationError(err)) teardownMediaSentinel();
       }
@@ -1968,6 +2120,14 @@
             break;
           }
           case 'toggle_fullscreen': {
+            const hasMedia = Boolean(
+              primaryMediaElement ||
+              document.querySelector('video') ||
+              document.getElementById('movie_player') ||
+              document.querySelector('.html5-video-player')
+            );
+            if (!hasMedia) break;
+
             if (window.__SentinelFullscreenController && typeof window.__SentinelFullscreenController.toggle === 'function') {
               window.__SentinelFullscreenController.toggle(null, { forceWeb: true });
             } else {
