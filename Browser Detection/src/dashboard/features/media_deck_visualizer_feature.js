@@ -418,6 +418,8 @@
   function initAudioVisualizer(canvasEl, options = {}) {
     if (!canvasEl) return null;
     visualizerCanvas = canvasEl;
+    if (!visualizerCanvas.width) visualizerCanvas.width = 600;
+    if (!visualizerCanvas.height) visualizerCanvas.height = 120;
     visualizerCtx = canvasEl.getContext ? canvasEl.getContext('2d') : null;
 
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
@@ -431,31 +433,43 @@
       const btnBars = doc.getElementById('btnVizModeBars');
       const btnWave = doc.getElementById('btnVizModeWave');
 
-      if (btnBars) {
-        btnBars.addEventListener('click', () => {
+      if (btnBars && !btnBars.__vizBound) {
+        btnBars.__vizBound = true;
+        btnBars.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
           setVisualizerMode('bars', options);
         });
       }
 
-      if (btnWave) {
-        btnWave.addEventListener('click', () => {
+      if (btnWave && !btnWave.__vizBound) {
+        btnWave.__vizBound = true;
+        btnWave.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
           setVisualizerMode('wave', options);
         });
       }
 
       // Zero-Overhead Idle Sleep Sentinel on Visibility Change
-      doc.addEventListener('visibilitychange', () => {
-        if (doc.visibilityState === 'hidden') {
-          stopVisualizerLoop();
-        } else if (isVisualizerPlaying) {
-          startVisualizerLoop();
-        }
-      });
+      if (!doc.__vizVisibilityBound) {
+        doc.__vizVisibilityBound = true;
+        doc.addEventListener('visibilitychange', () => {
+          if (doc.visibilityState === 'hidden') {
+            stopVisualizerLoop();
+          } else if (isVisualizerPlaying) {
+            startVisualizerLoop(options);
+          }
+        });
+      }
     }
 
     // Clear bands
     peakHoldBars.fill(0);
     currentBandValues.fill(0);
+
+    // Initial idle baseline draw
+    if (!isVisualizerPlaying) {
+      stopVisualizerLoop();
+    }
 
     return {
       canvas: visualizerCanvas,
@@ -478,15 +492,23 @@
       if (btnBars) {
         if (mode === 'bars') {
           btnBars.classList.add('btn-active');
+          btnBars.classList.add('active');
+          if (typeof btnBars.setAttribute === 'function') btnBars.setAttribute('aria-pressed', 'true');
         } else {
           btnBars.classList.remove('btn-active');
+          btnBars.classList.remove('active');
+          if (typeof btnBars.setAttribute === 'function') btnBars.setAttribute('aria-pressed', 'false');
         }
       }
       if (btnWave) {
         if (mode === 'wave') {
           btnWave.classList.add('btn-active');
+          btnWave.classList.add('active');
+          if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'true');
         } else {
           btnWave.classList.remove('btn-active');
+          btnWave.classList.remove('active');
+          if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'false');
         }
       }
     }
@@ -660,6 +682,12 @@
     const rightDb = amplitudeToDb(telemetry.rightRms);
     const leftPct = dbToPercent(leftDb);
     const rightPct = dbToPercent(rightDb);
+
+    if (!vuLeftBarEl && doc) vuLeftBarEl = doc.getElementById('vuBarLeft');
+    if (!vuRightBarEl && doc) vuRightBarEl = doc.getElementById('vuBarRight');
+    if (!vuClipBadgeEl && doc) vuClipBadgeEl = doc.getElementById('vuClipIndicator');
+    if (!vuValLeftEl && doc) vuValLeftEl = doc.getElementById('vuValLeft');
+    if (!vuValRightEl && doc) vuValRightEl = doc.getElementById('vuValRight');
 
     if (vuLeftBarEl) {
       vuLeftBarEl.style.width = `${leftPct.toFixed(1)}%`;

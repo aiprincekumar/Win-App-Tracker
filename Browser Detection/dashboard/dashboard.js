@@ -71,7 +71,26 @@ const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.Prec
 const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
 const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
 const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
-const _MediaDeckVisualizer = (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature) ? globalThis.MediaDeckVisualizerFeature : _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
+let _MediaDeckVisualizer = (typeof window !== 'undefined' && window.MediaDeckVisualizerFeature)
+  || (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature)
+  || _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
+
+function getResolvedVisualizer() {
+  if (typeof window !== 'undefined' && window.MediaDeckVisualizerFeature) {
+    _MediaDeckVisualizer = window.MediaDeckVisualizerFeature;
+    return _MediaDeckVisualizer;
+  }
+  if (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature) {
+    _MediaDeckVisualizer = globalThis.MediaDeckVisualizerFeature;
+    return _MediaDeckVisualizer;
+  }
+  if (_MediaDeckVisualizer) {
+    return _MediaDeckVisualizer;
+  }
+  _MediaDeckVisualizer = _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
+  return _MediaDeckVisualizer;
+}
+
 const _BackupHubDigest = (typeof globalThis !== 'undefined' && globalThis.BackupHubDigestFeature) ? globalThis.BackupHubDigestFeature : _safeRequire('./src/dashboard/features/backup_hub_digest_feature.js', '../src/dashboard/features/backup_hub_digest_feature.js');
 const _WellbeingBlacklist = (typeof globalThis !== 'undefined' && globalThis.WellbeingBlacklistFeature) ? globalThis.WellbeingBlacklistFeature : _safeRequire('./src/dashboard/features/wellbeing_blacklist_feature.js', '../src/dashboard/features/wellbeing_blacklist_feature.js');
 
@@ -89,7 +108,9 @@ if (typeof window !== 'undefined') {
     FeatureRegistry: _FeatureRegistry,
     DashboardFeatureManager: _DashboardFeatureManager,
     TemporalProductivity: _TemporalProductivity,
-    MediaDeckVisualizer: _MediaDeckVisualizer,
+    get MediaDeckVisualizer() {
+      return getResolvedVisualizer();
+    },
     BackupHubDigest: _BackupHubDigest,
     WellbeingBlacklist: _WellbeingBlacklist
   };
@@ -2166,8 +2187,9 @@ let activeMediaStreams = [];
 function pollMultiTabMediaStreams(options = {}) {
   const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.pollMultiTabMediaStreams === 'function') {
-    return _MediaDeckVisualizer.pollMultiTabMediaStreams(opt).then(streams => {
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.pollMultiTabMediaStreams === 'function') {
+    return viz.pollMultiTabMediaStreams(opt).then(streams => {
       activeMediaStreams = streams || [];
       return activeMediaStreams;
     });
@@ -2178,15 +2200,17 @@ function pollMultiTabMediaStreams(options = {}) {
 function renderMultiTabMediaDeck(streamsList, containerEl, options = {}) {
   const container = containerEl || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.renderMultiTabMediaDeck === 'function') {
-    return _MediaDeckVisualizer.renderMultiTabMediaDeck(streamsList, container, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.renderMultiTabMediaDeck === 'function') {
+    return viz.renderMultiTabMediaDeck(streamsList, container, opt);
   }
 }
 
 function handleRemoteMediaCommand(tabId, command, value, options = {}) {
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleRemoteMediaCommand === 'function') {
-    return _MediaDeckVisualizer.handleRemoteMediaCommand(tabId, command, value, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.handleRemoteMediaCommand === 'function') {
+    return viz.handleRemoteMediaCommand(tabId, command, value, opt);
   }
   return Promise.resolve({ success: true, tabId, command });
 }
@@ -2194,8 +2218,9 @@ function handleRemoteMediaCommand(tabId, command, value, options = {}) {
 function handleSoloTab(soloTabId, options = {}) {
   const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleSoloTab === 'function') {
-    return _MediaDeckVisualizer.handleSoloTab(soloTabId, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.handleSoloTab === 'function') {
+    return viz.handleSoloTab(soloTabId, opt);
   }
   return Promise.resolve({ success: true, soloTabId });
 }
@@ -2203,60 +2228,105 @@ function handleSoloTab(soloTabId, options = {}) {
 function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
   const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.handleMuteAllOthers === 'function') {
-    return _MediaDeckVisualizer.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.handleMuteAllOthers === 'function') {
+    return viz.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
   }
   return Promise.resolve([]);
 }
 
 function initAudioVisualizer(canvasEl, options = {}) {
   const canvas = canvasEl || (typeof document !== 'undefined' ? document.getElementById('canvasAudioVisualizer') : null);
+  if (canvas) {
+    if (!canvas.width) canvas.width = 600;
+    if (!canvas.height) canvas.height = 120;
+  }
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.initAudioVisualizer === 'function') {
-    return _MediaDeckVisualizer.initAudioVisualizer(canvas, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.initAudioVisualizer === 'function') {
+    const res = viz.initAudioVisualizer(canvas, opt);
+    const state = viz.getVisualizerState ? viz.getVisualizerState() : null;
+    if (state && state.isPlaying) {
+      viz.startVisualizerLoop(opt);
+    }
+    return res;
   }
   return null;
 }
 
 function setVisualizerMode(mode, options = {}) {
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.setVisualizerMode === 'function') {
-    return _MediaDeckVisualizer.setVisualizerMode(mode, opt);
+  const viz = getResolvedVisualizer();
+  let res = mode;
+  if (viz && typeof viz.setVisualizerMode === 'function') {
+    res = viz.setVisualizerMode(mode, opt);
   }
-  return mode;
+  const doc = opt.doc;
+  if (doc) {
+    const btnBars = doc.getElementById('btnVizModeBars');
+    const btnWave = doc.getElementById('btnVizModeWave');
+    if (btnBars) {
+      if (mode === 'bars') {
+        btnBars.classList.add('btn-active');
+        btnBars.classList.add('active');
+        if (typeof btnBars.setAttribute === 'function') btnBars.setAttribute('aria-pressed', 'true');
+      } else {
+        btnBars.classList.remove('btn-active');
+        btnBars.classList.remove('active');
+        if (typeof btnBars.setAttribute === 'function') btnBars.setAttribute('aria-pressed', 'false');
+      }
+    }
+    if (btnWave) {
+      if (mode === 'wave') {
+        btnWave.classList.add('btn-active');
+        btnWave.classList.add('active');
+        if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'true');
+      } else {
+        btnWave.classList.remove('btn-active');
+        btnWave.classList.remove('active');
+        if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'false');
+      }
+    }
+  }
+  return res;
 }
 
 function renderVisualizerFrame(timestamp, options = {}) {
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.renderVisualizerFrame === 'function') {
-    return _MediaDeckVisualizer.renderVisualizerFrame(timestamp, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.renderVisualizerFrame === 'function') {
+    return viz.renderVisualizerFrame(timestamp, opt);
   }
   return { rendered: false };
 }
 
 function startVisualizerLoop(options = {}) {
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.startVisualizerLoop === 'function') {
-    return _MediaDeckVisualizer.startVisualizerLoop(opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.startVisualizerLoop === 'function') {
+    return viz.startVisualizerLoop(opt);
   }
 }
 
 function stopVisualizerLoop() {
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.stopVisualizerLoop === 'function') {
-    return _MediaDeckVisualizer.stopVisualizerLoop();
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.stopVisualizerLoop === 'function') {
+    return viz.stopVisualizerLoop();
   }
 }
 
 function setAudioPlayingState(isPlaying, options = {}) {
   const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.setAudioPlayingState === 'function') {
-    return _MediaDeckVisualizer.setAudioPlayingState(isPlaying, opt);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.setAudioPlayingState === 'function') {
+    return viz.setAudioPlayingState(isPlaying, opt);
   }
 }
 
 function getVisualizerState() {
-  if (_MediaDeckVisualizer && typeof _MediaDeckVisualizer.getVisualizerState === 'function') {
-    return _MediaDeckVisualizer.getVisualizerState();
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.getVisualizerState === 'function') {
+    return viz.getVisualizerState();
   }
   return null;
 }
@@ -4612,6 +4682,11 @@ function renderHeroMediaPlayer(pm) {
     if (activeContent) activeContent.classList.add('hidden');
     if (idleContent) idleContent.classList.remove('hidden');
     if (sidebarDot) sidebarDot.classList.add('hidden');
+    if (typeof document !== 'undefined') {
+      pollMultiTabMediaStreams({ containerEl: document.getElementById('mediaDeckGrid'), doc: document, t });
+    }
+    const anyOtherPlaying = Boolean(activeMediaStreams && activeMediaStreams.some(s => s.isPlaying && !s.isMuted));
+    setAudioPlayingState(anyOtherPlaying);
     return;
   }
 
@@ -4743,8 +4818,8 @@ function renderHeroMediaPlayer(pm) {
   }
 
   // 5. Phase 2: Feature 4 Audio Visualizer Playing State
-  const isAudioPlaying = Boolean(pm && pm.isPlaying);
-  setAudioPlayingState(isAudioPlaying);
+  const anyPlaying = Boolean((pm && pm.isPlaying) || (activeMediaStreams && activeMediaStreams.some(s => s.isPlaying && !s.isMuted)));
+  setAudioPlayingState(anyPlaying);
 }
 
 function renderMediaHistoryTable(history) {
@@ -7805,6 +7880,48 @@ function setupEventListeners() {
       sentinelHaptics.playSuccessChime();
     });
   }
+
+  // 15. Phase 2: Feature 3 Multi-Tab Media Deck & Audio Visualizer Handlers
+  const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
+  if (btnMuteAllOthers) {
+    btnMuteAllOthers.addEventListener('click', () => {
+      handleMuteAllOthers();
+    });
+  }
+
+  const btnVizModeBars = document.getElementById('btnVizModeBars');
+  if (btnVizModeBars) {
+    btnVizModeBars.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      setVisualizerMode('bars');
+    });
+  }
+
+  const btnVizModeWave = document.getElementById('btnVizModeWave');
+  if (btnVizModeWave) {
+    btnVizModeWave.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      setVisualizerMode('wave');
+    });
+  }
+
+  const canvasViz = document.getElementById('canvasAudioVisualizer');
+  if (canvasViz) {
+    initAudioVisualizer(canvasViz);
+    canvasViz.addEventListener('click', () => {
+      const viz = getResolvedVisualizer();
+      if (viz) {
+        const state = viz.getVisualizerState ? viz.getVisualizerState() : null;
+        if (state) {
+          const nextMode = state.mode === 'bars' ? 'wave' : 'bars';
+          setVisualizerMode(nextMode);
+        }
+      }
+    });
+  }
+
+  // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
+  initBackupAndDigestHandlers();
 }
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -7847,25 +7964,15 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       if (changes.domain_category_overrides && changes.domain_category_overrides.newValue) {
         domainCategoryOverrides = Object.assign({}, changes.domain_category_overrides.newValue);
       }
+      if (changes.globalMediaState && changes.globalMediaState.newValue) {
+        const gm = changes.globalMediaState.newValue;
+        const pm = gm.primaryMedia;
+        const isPlaying = Boolean((pm && pm.isPlaying) || (activeMediaStreams && activeMediaStreams.some(s => s.isPlaying && !s.isMuted)));
+        setAudioPlayingState(isPlaying);
+      }
       refreshDashboard();
     }
   });
-
-  // 15. Phase 2: Feature 3 Multi-Tab Media Deck & Audio Visualizer Handlers
-  const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
-  if (btnMuteAllOthers) {
-    btnMuteAllOthers.addEventListener('click', () => {
-      handleMuteAllOthers();
-    });
-  }
-
-  const canvasViz = document.getElementById('canvasAudioVisualizer');
-  if (canvasViz) {
-    initAudioVisualizer(canvasViz);
-  }
-
-  // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
-  initBackupAndDigestHandlers();
 }
 
 // Bootstrap Initialization
@@ -8214,7 +8321,10 @@ if (typeof module !== 'undefined' && module.exports) {
     stopVisualizerLoop,
     setAudioPlayingState,
     getVisualizerState,
-    MediaDeckVisualizerFeature: _MediaDeckVisualizer,
+    get MediaDeckVisualizerFeature() {
+      return getResolvedVisualizer();
+    },
+    getResolvedVisualizer,
     getActiveMediaStreams: () => activeMediaStreams,
     setActiveMediaStreams: (val) => { activeMediaStreams = val; },
     // Phase 3 Backup, Snapshots, SQLite Hub & Executive Digest exports
