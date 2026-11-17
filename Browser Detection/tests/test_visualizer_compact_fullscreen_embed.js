@@ -71,8 +71,8 @@ console.log('\nTest 2: Dedicated Three Action Buttons Specification in dashboard
   const btnFwMatch = html.match(/<button[^>]*id="btnVizFullWindow"[^>]*>/);
   assert(btnFwMatch, '#btnVizFullWindow declaration must exist');
   assert(btnFwMatch[0].includes('btn-viz-action-icon'), '#btnVizFullWindow must have btn-viz-action-icon class');
-  assert(btnFwMatch[0].includes('title="Full Window"') || btnFwMatch[0].includes('title="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow title attribute verified');
-  assert(btnFwMatch[0].includes('aria-label="Full Window"') || btnFwMatch[0].includes('aria-label="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow aria-label attribute verified');
+  assert(btnFwMatch[0].includes('title="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow title attribute verified');
+  assert(btnFwMatch[0].includes('aria-label="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow aria-label attribute verified');
   assert(btnFwMatch[0].includes('aria-expanded="false"'), '#btnVizFullWindow aria-expanded="false" attribute verified');
   assert(btnFwMatch[0].includes('tabindex="0"'), '#btnVizFullWindow tabindex="0" attribute verified');
 
@@ -88,8 +88,8 @@ console.log('\nTest 2: Dedicated Three Action Buttons Specification in dashboard
   const btnFsMatch = html.match(/<button[^>]*id="btnVizFullscreen"[^>]*>/);
   assert(btnFsMatch, '#btnVizFullscreen declaration must exist');
   assert(btnFsMatch[0].includes('btn-viz-action-icon'), '#btnVizFullscreen must have btn-viz-action-icon class');
-  assert(btnFsMatch[0].includes('title="Full Screen (F)"') || btnFsMatch[0].includes('title="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen title attribute verified');
-  assert(btnFsMatch[0].includes('aria-label="Full Screen (F)"') || btnFsMatch[0].includes('aria-label="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen aria-label attribute verified');
+  assert(btnFsMatch[0].includes('title="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen title attribute verified');
+  assert(btnFsMatch[0].includes('aria-label="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen aria-label attribute verified');
   assert(btnFsMatch[0].includes('aria-expanded="false"'), '#btnVizFullscreen aria-expanded="false" attribute verified');
   assert(btnFsMatch[0].includes('tabindex="0"'), '#btnVizFullscreen tabindex="0" attribute verified');
 

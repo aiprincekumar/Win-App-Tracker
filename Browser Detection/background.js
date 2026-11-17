@@ -1696,6 +1696,14 @@ function trackMediaSession(tabId, payload) {
     const resolution = pm.resolutionLabel || (pm.videoWidth && pm.videoHeight ? `${pm.videoWidth}x${pm.videoHeight}` : 'Audio / Standard');
     const incomingUrl = payload.url || (pm && pm.url) || '';
 
+    // Strictly filter out internal extension URLs and internal domains
+    if (!domain || isInternalDomain(domain) || isInternalUrl(incomingUrl)) {
+      if (activeMediaSessions.has(tabId)) {
+        activeMediaSessions.delete(tabId);
+      }
+      return;
+    }
+
     if (session) {
       // Check for in-tab SPA or video transition (e.g. YouTube next video, playlist auto-play, or route change)
       const existingCanonical = extractCanonicalMediaId(session.url);
@@ -1760,8 +1768,10 @@ function trackMediaSession(tabId, payload) {
       if (incomingUrl && (!session.url || session.url === '')) session.url = incomingUrl;
       session.isPlaying = true;
 
-      // Update in mediaHistory in real time
-      updateMediaHistoryEntry(session, false);
+      // Update in mediaHistory in real time (Strict Minimum 5-Second Playback Rule)
+      if (session.watchDuration >= 5) {
+        updateMediaHistoryEntry(session, false);
+      }
       streamMediaSessionUpdate(session, 'update');
     } else {
       // Start a brand new session
@@ -1792,6 +1802,10 @@ function trackMediaSession(tabId, payload) {
   } else {
     // Media paused or stopped
     if (session) {
+      if (isInternalDomain(session.domain) || isInternalUrl(session.url)) {
+        activeMediaSessions.delete(tabId);
+        return;
+      }
       const elapsedMs = now - session.lastHeartbeat;
       const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
       if (elapsedSec > 0 && session.isPlaying) {
@@ -1816,6 +1830,11 @@ function finalizeMediaSession(tabId) {
   const session = activeMediaSessions.get(tabId);
   if (!session) return;
 
+  if (isInternalDomain(session.domain) || isInternalUrl(session.url)) {
+    activeMediaSessions.delete(tabId);
+    return;
+  }
+
   session.isPlaying = false;
   if (session.volumeSamples.length > 0) {
     const sum = session.volumeSamples.reduce((a, b) => a + b, 0);
@@ -1825,9 +1844,16 @@ function finalizeMediaSession(tabId) {
   // Stream finalize to Data Hub
   streamMediaSessionUpdate(session, 'finalize');
 
-  // Only record if watched for at least 1 second
-  if (session.watchDuration >= 1) {
+  // Enforce Minimum 5-Second Playback Rule:
+  // Strictly record if watched for at least 5 seconds; discard sub-5-second blips as transient noise
+  if (session.watchDuration >= 5) {
     updateMediaHistoryEntry(session, true);
+  } else {
+    const idx = mediaHistory.findIndex(m => m.id === session.id);
+    if (idx >= 0) {
+      mediaHistory.splice(idx, 1);
+      saveMediaHistory();
+    }
   }
 
   activeMediaSessions.delete(tabId);
@@ -1849,8 +1875,20 @@ async function handleTabAudibleStateChange(tabId, isAudible, tab) {
         }
       } catch (_) {}
     }
+
+    const rawUrl = (tabObj && tabObj.url) ? tabObj.url : '';
+    const domain = rawUrl ? extractDomain(rawUrl) : 'web';
+
+    // Strictly filter out internal extension URLs and internal domains
+    // (e.g. Dashboard audio lab, visualizer, audio chimes, chrome/edge internal pages)
+    if (!domain || isInternalDomain(domain) || isInternalUrl(rawUrl)) {
+      if (activeMediaSessions.has(tabId)) {
+        activeMediaSessions.delete(tabId);
+      }
+      return;
+    }
+
     let session = activeMediaSessions.get(tabId);
-    const domain = (tabObj && tabObj.url) ? extractDomain(tabObj.url) : 'web';
     const title = (tabObj && tabObj.title) ? tabObj.title : 'Audio Playback';
 
     if (!session) {
@@ -1860,7 +1898,7 @@ async function handleTabAudibleStateChange(tabId, isAudible, tab) {
         title,
         platform: domain,
         domain,
-        url: (tabObj && tabObj.url) || '',
+        url: rawUrl,
         mediaType: 'audio',
         resolution: 'Audio Stream',
         videoDuration: 0,
@@ -1891,38 +1929,48 @@ async function handleTabAudibleStateChange(tabId, isAudible, tab) {
     }
   } else {
     const session = activeMediaSessions.get(tabId);
-    if (session && session.isAudible) {
-      session.isAudible = false;
-      const tabMedia = tabMediaMap.get(tabId);
-      if (!tabMedia || !tabMedia.anyPlaying) {
-        // Commit remaining elapsed playback seconds before concluding session to prevent data loss
-        const elapsedMs = now - session.lastHeartbeat;
-        const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
-        if (elapsedSec > 0 && session.isPlaying) {
-          session.watchDuration += elapsedSec;
-          session.lastHeartbeat += (elapsedSec * 1000);
-          const isForeground = (tabId === activeTabId && isBrowserFocused);
-          if (!isForeground) {
-            commitBackgroundMediaDelta(session.domain, elapsedSec);
+    if (session) {
+      if (isInternalDomain(session.domain) || isInternalUrl(session.url)) {
+        activeMediaSessions.delete(tabId);
+        return;
+      }
+      if (session.isAudible) {
+        session.isAudible = false;
+        const tabMedia = tabMediaMap.get(tabId);
+        if (!tabMedia || !tabMedia.anyPlaying) {
+          // Commit remaining elapsed playback seconds before concluding session to prevent data loss
+          const elapsedMs = now - session.lastHeartbeat;
+          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+          if (elapsedSec > 0 && session.isPlaying) {
+            session.watchDuration += elapsedSec;
+            session.lastHeartbeat += (elapsedSec * 1000);
+            const isForeground = (tabId === activeTabId && isBrowserFocused);
+            if (!isForeground) {
+              commitBackgroundMediaDelta(session.domain, elapsedSec);
+            }
           }
+          session.isPlaying = false;
+          session.lastUpdated = now;
+          finalizeMediaSession(tabId);
         }
-        session.isPlaying = false;
-        session.lastUpdated = now;
-        finalizeMediaSession(tabId);
       }
     }
   }
 }
 
 /**
- * Upserts a media session entry into mediaHistory
+ * Upserts a media session entry into mediaHistory (Strict Minimum 5-Second Playback Rule)
  */
 function updateMediaHistoryEntry(session, persist = false) {
-  if (session.watchDuration < 1 && !(session.controlEvents && session.controlEvents.length > 0)) return;
+  if (!session) return;
+  // Strictly require at least 5 seconds of playback duration; discard sub-5s transient noise
+  if (session.watchDuration < 5) return;
+  // Discard internal/extension domains and URLs
+  if (isInternalDomain(session.domain) || isInternalUrl(session.url)) return;
 
-  const avgVol = session.volumeSamples.length > 0
+  const avgVol = session.volumeSamples && session.volumeSamples.length > 0
     ? Math.round(session.volumeSamples.reduce((a, b) => a + b, 0) / session.volumeSamples.length)
-    : session.peakVolume;
+    : (session.peakVolume || 100);
 
   const entry = {
     id: session.id,
@@ -1935,9 +1983,9 @@ function updateMediaHistoryEntry(session, persist = false) {
     watchDuration: Math.round(session.watchDuration),
     videoDuration: Math.round(session.videoDuration || 0),
     averageVolume: avgVol,
-    peakVolume: session.peakVolume,
-    lowVolume: session.lowVolume,
-    volumeSamples: session.volumeSamples.slice(-20),
+    peakVolume: session.peakVolume || 100,
+    lowVolume: session.lowVolume || 100,
+    volumeSamples: (session.volumeSamples || []).slice(-20),
     playbackRate: session.playbackRate || 1.0,
     lastWindowMode: session.lastWindowMode || 'standard',
     controlEvents: (session.controlEvents || []).slice(-10),
@@ -2255,6 +2303,7 @@ async function getAllActiveMediaStreams() {
     const domain = pm.domain || mediaState.domain || (mediaState.url ? extractDomain(mediaState.url) : '');
     const title = pm.title || mediaState.title || (domain ? domain : `Tab ${tabId}`);
     const url = pm.src || mediaState.url || '';
+    if (isInternalDomain(domain) || isInternalUrl(url)) continue;
     const favIconUrl = mediaState.favIconUrl || '';
     const currentTime = Number.isFinite(pm.currentTime) ? Number(pm.currentTime) : 0;
     const duration = Number.isFinite(pm.duration) ? Number(pm.duration) : 0;
@@ -2301,6 +2350,7 @@ async function getAllActiveMediaStreams() {
           if (!t || !t.id) continue;
           const numId = Number(t.id);
           const domain = t.url ? extractDomain(t.url) : 'web';
+          if (isInternalDomain(domain) || isInternalUrl(t.url)) continue;
           const isMuted = Boolean(t.mutedInfo && t.mutedInfo.muted);
           const existing = streamMap.get(numId);
           if (existing) {
@@ -2364,7 +2414,10 @@ async function getAllActiveMediaStreams() {
       }
     } catch (_) {}
 
-    // Final defensive check: tab must have verifiable media or audio
+    // Final defensive check: tab must have verifiable media or audio and not be internal
+    if (isInternalDomain(streamInfo.domain) || isInternalUrl(streamInfo.url)) {
+      continue;
+    }
     const isVerifiableStream = Boolean(
       streamInfo.isAudible === true ||
       streamInfo.playbackState === 'playing' ||
@@ -4336,22 +4389,30 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     // 3. Commit media sessions with remainder preservation (foreground and background duration accumulation)
     const now = Date.now();
     for (const [tabId, session] of activeMediaSessions.entries()) {
-      if (session && session.isPlaying) {
-        const isForeground = (tabId === activeTabId && isBrowserFocused);
-        if (isTrackingPaused) {
-          // When time tracking is paused, freeze media delta accumulation
-          session.lastHeartbeat = now;
-        } else {
-          const elapsedMs = now - session.lastHeartbeat;
-          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
-          if (elapsedSec > 0) {
-            session.watchDuration += elapsedSec;
-            session.lastHeartbeat += (elapsedSec * 1000);
-            session.lastUpdated = now;
-            if (!isForeground) {
-              commitBackgroundMediaDelta(session.domain, elapsedSec);
+      if (session) {
+        if (isInternalDomain(session.domain) || isInternalUrl(session.url)) {
+          activeMediaSessions.delete(tabId);
+          continue;
+        }
+        if (session.isPlaying) {
+          const isForeground = (tabId === activeTabId && isBrowserFocused);
+          if (isTrackingPaused) {
+            // When time tracking is paused, freeze media delta accumulation
+            session.lastHeartbeat = now;
+          } else {
+            const elapsedMs = now - session.lastHeartbeat;
+            const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+            if (elapsedSec > 0) {
+              session.watchDuration += elapsedSec;
+              session.lastHeartbeat += (elapsedSec * 1000);
+              session.lastUpdated = now;
+              if (!isForeground) {
+                commitBackgroundMediaDelta(session.domain, elapsedSec);
+              }
+              if (session.watchDuration >= 5) {
+                updateMediaHistoryEntry(session, false);
+              }
             }
-            updateMediaHistoryEntry(session, false);
           }
         }
       }
