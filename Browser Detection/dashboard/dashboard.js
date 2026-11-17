@@ -5053,8 +5053,80 @@ function renderDomainTable(items) {
 // =============================================================================
 
 /**
+ * Classifies if a media history entry represents internal browser schemes or extension pages
+ */
+function isInternalMediaEntry(item) {
+  if (!item) return true;
+  const domain = String(item.domain || item.platform || '').trim();
+  const lowerDomain = domain.toLowerCase();
+  const url = String(item.url || '').trim();
+  const lowerUrl = url.toLowerCase();
+
+  // Internal/extension domains check
+  if (
+    lowerDomain === 'dashboard' ||
+    lowerDomain === 'extension' ||
+    lowerDomain === 'newtab' ||
+    lowerDomain === 'chrome' ||
+    lowerDomain === 'edge' ||
+    lowerDomain === 'about' ||
+    lowerDomain === 'web' ||
+    lowerDomain === 'unknown' ||
+    lowerDomain === '127.0.0.1' ||
+    lowerDomain === 'localhost' ||
+    lowerDomain === '0.0.0.0' ||
+    lowerDomain === '::1' ||
+    lowerDomain.startsWith('chrome-extension://') ||
+    lowerDomain.startsWith('edge-extension://') ||
+    lowerDomain.startsWith('moz-extension://') ||
+    lowerDomain.startsWith('extension:')
+  ) {
+    return true;
+  }
+
+  // Internal/extension URL check (preserving external websites with 'dashboard' in domain/path)
+  if (
+    lowerUrl.startsWith('chrome-extension://') ||
+    lowerUrl.startsWith('edge-extension://') ||
+    lowerUrl.startsWith('moz-extension://') ||
+    lowerUrl.startsWith('extension://') ||
+    lowerUrl.startsWith('chrome://') ||
+    lowerUrl.startsWith('edge://') ||
+    lowerUrl.startsWith('about:') ||
+    lowerUrl.startsWith('data:') ||
+    lowerUrl.startsWith('blob:chrome-extension://') ||
+    lowerUrl.startsWith('blob:edge-extension://') ||
+    lowerUrl.includes('dashboard/dashboard.html') ||
+    lowerUrl.endsWith('/dashboard.html') ||
+    lowerUrl.endsWith('dashboard.html')
+  ) {
+    if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://')) {
+      return true;
+    }
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') {
+        return true;
+      }
+    } catch (_) {}
+  }
+
+  return false;
+}
+
+/**
+ * Extracts normalized playback watch duration in seconds
+ */
+function getMediaItemDuration(item) {
+  if (!item) return 0;
+  return Number(item.watchDuration ?? item.watch_duration_seconds ?? item.duration ?? 0);
+}
+
+/**
  * Resolves and merges media history from background storage and SQLite Data Hub
  * Eliminates empty array truthiness bug and provides intelligent deduplication
+ * Enforces strict defense-in-depth filtering against internal extension pages and sub-5-second noise
  *
  * @param {Array} bgList - Media history array from background service worker (chrome.storage.local)
  * @param {Array} hubList - Media history array from SQLite Data Hub or memory cache
@@ -5068,6 +5140,22 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
 
   const mergedMap = new Map();
 
+  const isInternal = (typeof isInternalMediaEntry === 'function')
+    ? isInternalMediaEntry
+    : (item) => {
+        if (!item) return true;
+        const dom = String(item.domain || item.platform || '').toLowerCase().trim();
+        const u = String(item.url || '').toLowerCase().trim();
+        return dom === 'dashboard' || dom === 'extension' || dom === 'web' || dom === 'unknown' ||
+               u.startsWith('chrome-extension://') || u.startsWith('edge-extension://') ||
+               u.startsWith('moz-extension://') || u.startsWith('chrome://') || u.startsWith('edge://') ||
+               u.startsWith('about:') || u.includes('dashboard/dashboard.html');
+      };
+
+  const getDuration = (typeof getMediaItemDuration === 'function')
+    ? getMediaItemDuration
+    : (item) => (item ? Number(item.watchDuration ?? item.watch_duration_seconds ?? item.duration ?? 0) : 0);
+
   const getItemKey = (item) => {
     if (!item) return null;
     if (item.id) return String(item.id);
@@ -5078,9 +5166,10 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
     return `${domain}::${title}::${ts}`;
   };
 
-  // Add Data Hub records first
+  // Add Data Hub records first (with internal & sub-5s filtering)
   if (hasHub) {
     for (const item of hubList) {
+      if (!item || isInternal(item) || getDuration(item) < 5) continue;
       const key = getItemKey(item);
       if (key) {
         mergedMap.set(key, Object.assign({}, item));
@@ -5088,14 +5177,15 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
     }
   }
 
-  // Overlay background records (richer realtime telemetry)
+  // Overlay background records (with internal & sub-5s filtering)
   if (hasBg) {
     for (const item of bgList) {
+      if (!item || isInternal(item) || getDuration(item) < 5) continue;
       const key = getItemKey(item);
       if (key) {
         const existing = mergedMap.get(key);
         if (existing) {
-          const higherWatch = Math.max(item.watchDuration || 0, existing.watchDuration || 0);
+          const higherWatch = Math.max(getDuration(item), getDuration(existing));
           const mostRecentTs = existing.timestamp || item.timestamp || 0;
           const mostRecentUpdate = Math.max(item.lastUpdated || item.timestamp || 0, existing.lastUpdated || existing.timestamp || 0);
 
@@ -5112,7 +5202,8 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
     }
   }
 
-  return Array.from(mergedMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  const result = Array.from(mergedMap.values()).filter(item => !isInternal(item) && getDuration(item) >= 5);
+  return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
 function renderMediaAnalyticsTab(data) {
