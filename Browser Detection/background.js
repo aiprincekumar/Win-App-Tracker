@@ -1141,10 +1141,18 @@ async function loadStorageData() {
     }
 
     if (res && Array.isArray(res[CONFIG.MEDIA_HISTORY_STORAGE_KEY])) {
-      const validItems = res[CONFIG.MEDIA_HISTORY_STORAGE_KEY].filter(m => m && typeof m === 'object' && m.id);
+      const validItems = res[CONFIG.MEDIA_HISTORY_STORAGE_KEY].filter(m => {
+        if (!m || typeof m !== 'object' || !m.id) return false;
+        if (isInternalDomain(m.domain || m.platform) || isInternalUrl(m.url)) return false;
+        const dur = Number(m.watchDuration ?? m.watch_duration_seconds ?? m.duration ?? 0);
+        return dur >= 5;
+      });
       const existingIds = new Set(mediaHistory.map(m => m.id));
       const filtered = validItems.filter(m => !existingIds.has(m.id));
       mediaHistory = [...mediaHistory, ...filtered].slice(0, CONFIG.MAX_MEDIA_HISTORY);
+      if (validItems.length !== res[CONFIG.MEDIA_HISTORY_STORAGE_KEY].length) {
+        saveMediaHistory();
+      }
     } else if (!Array.isArray(mediaHistory)) {
       mediaHistory = [];
     }
@@ -1580,6 +1588,12 @@ async function saveStorageData() {
     if (!Array.isArray(mediaHistory)) {
       mediaHistory = [];
     }
+    mediaHistory = mediaHistory.filter(m => {
+      if (!m || !m.id) return false;
+      if (isInternalDomain(m.domain || m.platform) || isInternalUrl(m.url)) return false;
+      const dur = Number(m.watchDuration ?? m.watch_duration_seconds ?? m.duration ?? 0);
+      return dur >= 5;
+    });
     if (mediaHistory.length > CONFIG.MAX_MEDIA_HISTORY) {
       mediaHistory = mediaHistory.slice(0, CONFIG.MAX_MEDIA_HISTORY);
     }
@@ -1624,6 +1638,13 @@ async function reinjectContentScripts() {
 async function saveMediaHistory() {
   try {
     if (!Array.isArray(mediaHistory)) mediaHistory = [];
+    // Ensure all saved items strictly meet the minimum 5-second and non-internal criteria
+    mediaHistory = mediaHistory.filter(m => {
+      if (!m || !m.id) return false;
+      if (isInternalDomain(m.domain || m.platform) || isInternalUrl(m.url)) return false;
+      const dur = Number(m.watchDuration ?? m.watch_duration_seconds ?? m.duration ?? 0);
+      return dur >= 5;
+    });
     if (mediaHistory.length > CONFIG.MAX_MEDIA_HISTORY) {
       mediaHistory = mediaHistory.slice(0, CONFIG.MAX_MEDIA_HISTORY);
     }
