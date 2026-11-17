@@ -545,7 +545,22 @@ const DASHBOARD_I18N = {
     bento_customize: 'Customize Layout',
     bento_reset_layout: 'Reset to Default Layout',
     scrubber_chapter: 'Chapter',
-    scrubber_hover_time: 'Time'
+    scrubber_hover_time: 'Time',
+    // Local Services & Hardware Bridges Card
+    hardware_bridges_title: 'Local Services & Hardware Bridges',
+    hardware_bridges_sub: 'WebSocket daemons, SQLite storage engine, and peripheral telemetry',
+    bridge_hub_name: 'SQLite Data Hub Daemon',
+    bridge_hub_port: 'Port 65433 (WAL)',
+    bridge_hub_desc: 'Local high-concurrency event telemetry & persistent database store',
+    bridge_hud_name: 'Video Detector HUD Bridge',
+    bridge_hud_port: 'Port 65432',
+    bridge_hud_desc: 'Real-time overlay bridge for Windows desktop video sentinel',
+    btn_reconnect_hub: '⚡ Reconnect Hub',
+    btn_hub_connected: '✅ Connected',
+    btn_connecting: '⏳ Connecting...',
+    bridge_status_online: 'Connected',
+    bridge_status_starting: 'Connecting...',
+    bridge_status_offline: 'Offline'
   },
   hi: {
     // Brand & Header
@@ -951,7 +966,22 @@ const DASHBOARD_I18N = {
     bento_customize: 'लेआउट अनुकूलित करें',
     bento_reset_layout: 'डिफ़ॉल्ट लेआउट पर रीसेट करें',
     scrubber_chapter: 'अध्याय (Chapter)',
-    scrubber_hover_time: 'समय'
+    scrubber_hover_time: 'समय',
+    // Local Services & Hardware Bridges Card
+    hardware_bridges_title: 'स्थानीय सेवाएँ और हार्डवेयर सेतु',
+    hardware_bridges_sub: 'वेबसॉकेट डेमॉन, SQLite स्टोरेज इंजन, और परिधीय टेलीमेट्री',
+    bridge_hub_name: 'SQLite डेटा हब डेमॉन',
+    bridge_hub_port: 'पोर्ट 65433 (WAL)',
+    bridge_hub_desc: 'स्थानीय उच्च-समवर्ती घटना टेलीमेट्री और स्थायी डेटाबेस संग्रह',
+    bridge_hud_name: 'वीडियो डिटेक्टर HUD ब्रिज',
+    bridge_hud_port: 'पोर्ट 65432',
+    bridge_hud_desc: 'विंडोज डेस्कटॉप वीडियो प्रहरी के लिए रीयल-टाइम ओवरले सेतु',
+    btn_reconnect_hub: '⚡ हब पुनः कनेक्ट करें',
+    btn_hub_connected: '✅ कनेक्टेड',
+    btn_connecting: '⏳ कनेक्ट हो रहा है...',
+    bridge_status_online: 'कनेक्टेड',
+    bridge_status_starting: 'कनेक्ट हो रहा है...',
+    bridge_status_offline: 'ऑफ़लाइन'
   }
 };
 
@@ -996,7 +1026,25 @@ const DASHBOARD_UIUX_I18N = {
     hotkeys_nav_3: "Switch to Settings Tab",
     hotkeys_media_play: "Play / Pause Active Video",
     hotkeys_media_mute: "Mute / Unmute Audio",
-    hotkeys_cmd_palette: "Open Omni Command Palette"
+    hotkeys_cmd_palette: "Open Omni Command Palette",
+    
+    // Local Services & Hardware Bridges
+    hardware_bridges_title: "Local Services & Hardware Bridges",
+    hardware_bridges_sub: "WebSocket daemons, SQLite storage engine, and peripheral telemetry",
+    bridge_hub_name: "SQLite Data Hub Daemon",
+    bridge_hub_port: "Port 65433 (WAL)",
+    bridge_hub_desc: "Local high-concurrency event telemetry & persistent database store",
+    bridge_hud_name: "Video Detector HUD Bridge",
+    bridge_hud_port: "Port 65432",
+    bridge_hud_desc: "Real-time overlay bridge for Windows desktop video sentinel",
+    btn_reconnect_hub: "⚡ Reconnect Hub",
+    btn_reconnect_hud: "⚡ Reconnect HUD",
+    btn_hub_connected: "✅ Connected",
+    btn_hud_connected: "✅ Connected",
+    btn_connecting: "⏳ Connecting...",
+    bridge_status_online: "Connected",
+    bridge_status_starting: "Connecting...",
+    bridge_status_offline: "Offline"
   },
   hi: {
     // Bento & Layout
@@ -1035,7 +1083,25 @@ const DASHBOARD_UIUX_I18N = {
     hotkeys_nav_3: "सेटिंग्स टैब पर जाएं",
     hotkeys_media_play: "सक्रिय वीडियो प्ले / पॉज़ करें",
     hotkeys_media_mute: "ऑडियो म्यूट / अनम्यूट करें",
-    hotkeys_cmd_palette: "ओम्नी कमांड पैलेट खोलें"
+    hotkeys_cmd_palette: "ओम्नी कमांड पैलेट खोलें",
+    
+    // Local Services & Hardware Bridges
+    hardware_bridges_title: "स्थानीय सेवाएँ और हार्डवेयर सेतु",
+    hardware_bridges_sub: "वेबसॉकेट डेमॉन, SQLite स्टोरेज इंजन, और परिधीय टेलीमेट्री",
+    bridge_hub_name: "SQLite डेटा हब डेमॉन",
+    bridge_hub_port: "पोर्ट 65433 (WAL)",
+    bridge_hub_desc: "स्थानीय उच्च-समवर्ती घटना टेलीमेट्री और स्थायी डेटाबेस संग्रह",
+    bridge_hud_name: "वीडियो डिटेक्टर HUD ब्रिज",
+    bridge_hud_port: "पोर्ट 65432",
+    bridge_hud_desc: "विंडोज डेस्कटॉप वीडियो प्रहरी के लिए रीयल-टाइम ओवरले सेतु",
+    btn_reconnect_hub: "⚡ हब पुनः कनेक्ट करें",
+    btn_reconnect_hud: "⚡ HUD पुनः कनेक्ट करें",
+    btn_hub_connected: "✅ कनेक्टेड",
+    btn_hud_connected: "✅ कनेक्टेड",
+    btn_connecting: "⏳ कनेक्ट हो रहा है...",
+    bridge_status_online: "कनेक्टेड",
+    bridge_status_starting: "कनेक्ट हो रहा है...",
+    bridge_status_offline: "ऑफ़लाइन"
   }
 };
 
@@ -1043,7 +1109,8 @@ let currentLang = 'en';
 
 function t(key, ...args) {
   const dict = DASHBOARD_I18N[currentLang] || DASHBOARD_I18N.en;
-  let val = dict[key] || DASHBOARD_I18N.en[key] || key;
+  const uiuxDict = (typeof DASHBOARD_UIUX_I18N !== 'undefined' && (DASHBOARD_UIUX_I18N[currentLang] || DASHBOARD_UIUX_I18N.en)) || {};
+  let val = dict[key] || uiuxDict[key] || DASHBOARD_I18N.en[key] || (typeof DASHBOARD_UIUX_I18N !== 'undefined' && DASHBOARD_UIUX_I18N.en && DASHBOARD_UIUX_I18N.en[key]) || key;
   if (typeof val === 'function') {
     return val(...args);
   }
