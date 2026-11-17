@@ -321,7 +321,22 @@ console.log('\nBattery 5: dashboard.js resolveUnifiedMediaHistory Defense-in-Dep
 // ---------------------------------------------------------------------------
 console.log('\nBattery 6: SQLite Database Consistency & Pruned Verification');
 {
-  const { execFileSync } = require('child_process');
+  const { execSync, execFileSync } = require('child_process');
+  const candidatePythons = [
+    'python',
+    'py',
+    'C:\\Users\\Atul Verma\\.venv\\Scripts\\python.exe',
+    'C:\\Users\\Atul Verma\\.local\\bin\\python.exe'
+  ];
+  let pythonCmd = 'python';
+  for (const cand of candidatePythons) {
+    try {
+      execSync(`"${cand}" --version`, { stdio: 'ignore' });
+      pythonCmd = cand;
+      break;
+    } catch (e) {}
+  }
+
   const pyVerify = `
 import sqlite3
 db_path = r"C:\\Users\\Atul Verma\\Desktop\\Win App Tracker\\Browser Data Hub\\browser_activity.db"
@@ -358,7 +373,12 @@ print(f"{internal_count},{sub5_count},{total_count},{integrity}")
 conn.close()
 `;
 
-  const output = execFileSync('python', ['-c', pyVerify], { encoding: 'utf8' }).trim();
+  let output;
+  try {
+    output = execFileSync(pythonCmd, ['-c', pyVerify], { encoding: 'utf8' }).trim();
+  } catch (e) {
+    output = execSync(`"${pythonCmd}" -c "${pyVerify.replace(/\r?\n/g, ' ')}"`, { encoding: 'utf8' }).trim();
+  }
   const [internalCount, sub5Count, totalCount, integrity] = output.split(',');
 
   assert.strictEqual(Number(internalCount), 0, 'media_sessions must contain 0 internal domain/URL records');
