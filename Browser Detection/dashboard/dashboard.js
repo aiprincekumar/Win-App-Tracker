@@ -526,6 +526,8 @@ const DASHBOARD_I18N = {
     audiolab_vocal_desc: 'Highlight dialogue frequencies over loud music',
     audiolab_night_title: '🌙 Night Shield',
     audiolab_night_desc: 'Compress dynamic range & soften sudden loud sounds',
+    audiolab_bass_title: '🔊 Sub-Bass Boost',
+    audiolab_bass_desc: 'Deep low-frequency punch and warm bass enhancement',
     audiolab_audio_only_title: '📻 Audio-Only Mode',
     audiolab_audio_only_desc: 'Save battery and CPU by suppressing video frames',
     audiolab_boost_min: '0%',
@@ -966,6 +968,8 @@ const DASHBOARD_I18N = {
     audiolab_vocal_desc: 'तेज़ संगीत में भी संवाद व आवाज़ को स्पष्ट उभारें',
     audiolab_night_title: '🌙 नाइट शील्ड',
     audiolab_night_desc: 'अचानक तेज़ आवाज़ों व विस्फोटों को मंद करें',
+    audiolab_bass_title: '🔊 सब-बास बूस्ट',
+    audiolab_bass_desc: 'गहरा बेस व लो-फ़्रीक्वेंसी पंच उभारें',
     audiolab_audio_only_title: '📻 केवल ऑडियो मोड',
     audiolab_audio_only_desc: 'वीडियो फ़्रेम रोककर बैटरी व मेमोरी की बचत करें',
     audiolab_boost_min: '0%',
@@ -1855,7 +1859,8 @@ let dashboardAudioLabSettings = {
     '16000': 0
   },
   vocal_clarity: false,
-  night_shield: false
+  night_shield: false,
+  bass_boost: false
 };
 
 function dispatchAudioLabSettings(settings) {
@@ -1906,37 +1911,25 @@ function persistDashboardAudioLabSettings(updated) {
   dispatchAudioLabSettings(dashboardAudioLabSettings);
 }
 
-function updateDashboardAudioLabUI(settings) {
-  if (!settings) return;
-  dashboardAudioLabSettings = { ...dashboardAudioLabSettings, ...settings };
-  if (settings.eq_bands) {
-    dashboardAudioLabSettings.eq_bands = {
-      ...dashboardAudioLabSettings.eq_bands,
-      ...settings.eq_bands
-    };
-  }
-
-  // 1. Master Volume Boost
-  const boostVal = typeof dashboardAudioLabSettings.master_boost === 'number'
-    ? dashboardAudioLabSettings.master_boost
-    : 100;
+function updateDashboardAudioBoostUI(boostVal) {
+  const boost = typeof boostVal === 'number' ? boostVal : 100;
   const boostValEl = document.getElementById('heroAudioBoostVal');
   if (boostValEl) {
-    boostValEl.textContent = `${boostVal}%`;
+    boostValEl.textContent = `${boost}%`;
   }
-
   const slider = document.getElementById('heroAudioBoostSlider');
   if (slider) {
-    if (Number(slider.value) !== Number(boostVal)) {
-      slider.value = String(boostVal);
+    if (Number(slider.value) !== Number(boost)) {
+      slider.value = String(boost);
     }
     if (typeof slider.setAttribute === 'function') {
-      slider.setAttribute('aria-valuenow', String(boostVal));
+      slider.setAttribute('aria-valuenow', String(boost));
     }
   }
+}
 
-  // 2. Preset Badge & Dropdown
-  let preset = dashboardAudioLabSettings.eq_preset || 'flat';
+function updateDashboardAudioEqPresetUI(presetKey) {
+  let preset = presetKey || 'flat';
   if (preset === 'vocal_clarify') preset = 'vocal_enhancer';
   if (preset === 'night') preset = 'night_mode';
 
@@ -1954,13 +1947,12 @@ function updateDashboardAudioLabUI(settings) {
       }
     }
   }
+}
 
-  // 3. 5-Band Equalizer Sliders & Badges
+function updateDashboardAudioEqBandsUI(bands) {
   const eqBands = ['60', '250', '1000', '4000', '16000'];
   eqBands.forEach((b) => {
-    const val = (dashboardAudioLabSettings.eq_bands && typeof dashboardAudioLabSettings.eq_bands[b] === 'number')
-      ? dashboardAudioLabSettings.eq_bands[b]
-      : 0;
+    const val = (bands && typeof bands[b] === 'number') ? bands[b] : 0;
     const bandSlider = document.getElementById(`eqBand${b}`);
     if (bandSlider) {
       if (Number(bandSlider.value) !== Number(val)) {
@@ -1975,18 +1967,16 @@ function updateDashboardAudioLabUI(settings) {
       valSpan.textContent = `${val > 0 ? '+' : ''}${val}dB`;
     }
   });
+}
 
-  // 4. Feature Badges & Toggles
+function updateDashboardAudioTogglesUI() {
   const isVocal = Boolean(dashboardAudioLabSettings.vocal_clarity);
   const vocalBadge = document.getElementById('audioLabVocalBadge');
   if (vocalBadge) {
     vocalBadge.textContent = isVocal ? t('audiolab_vocal_on') : t('audiolab_vocal_off');
     if (vocalBadge.classList && typeof vocalBadge.classList.add === 'function') {
-      if (isVocal) {
-        vocalBadge.classList.add('badge-active');
-      } else {
-        vocalBadge.classList.remove('badge-active');
-      }
+      if (isVocal) vocalBadge.classList.add('badge-active');
+      else vocalBadge.classList.remove('badge-active');
     }
   }
   const toggleVocal = document.getElementById('toggleVocalClarity');
@@ -1999,11 +1989,8 @@ function updateDashboardAudioLabUI(settings) {
   if (nightBadge) {
     nightBadge.textContent = isNight ? t('audiolab_night_on') : t('audiolab_night_off');
     if (nightBadge.classList && typeof nightBadge.classList.add === 'function') {
-      if (isNight) {
-        nightBadge.classList.add('badge-active');
-      } else {
-        nightBadge.classList.remove('badge-active');
-      }
+      if (isNight) nightBadge.classList.add('badge-active');
+      else nightBadge.classList.remove('badge-active');
     }
   }
   const toggleNight = document.getElementById('toggleNightShield');
@@ -2011,11 +1998,33 @@ function updateDashboardAudioLabUI(settings) {
     toggleNight.checked = isNight;
   }
 
+  const isBass = Boolean(dashboardAudioLabSettings.bass_boost);
+  const toggleBass = document.getElementById('toggleBassBoost');
+  if (toggleBass && toggleBass.checked !== isBass) {
+    toggleBass.checked = isBass;
+  }
+
   const isAudioOnly = Boolean(dashboardAudioLabSettings.audio_only);
   const toggleAudioOnly = document.getElementById('toggleAudioOnlyMode');
   if (toggleAudioOnly && toggleAudioOnly.checked !== isAudioOnly) {
     toggleAudioOnly.checked = isAudioOnly;
   }
+}
+
+function updateDashboardAudioLabUI(settings) {
+  if (!settings) return;
+  dashboardAudioLabSettings = { ...dashboardAudioLabSettings, ...settings };
+  if (settings.eq_bands) {
+    dashboardAudioLabSettings.eq_bands = {
+      ...dashboardAudioLabSettings.eq_bands,
+      ...settings.eq_bands
+    };
+  }
+
+  updateDashboardAudioBoostUI(dashboardAudioLabSettings.master_boost);
+  updateDashboardAudioEqPresetUI(dashboardAudioLabSettings.eq_preset);
+  updateDashboardAudioEqBandsUI(dashboardAudioLabSettings.eq_bands);
+  updateDashboardAudioTogglesUI();
 }
 
 // Global Dashboard State
@@ -2319,7 +2328,12 @@ function initAudioVisualizer(canvasEl, options = {}) {
     if (!canvas.width) canvas.width = 600;
     if (!canvas.height) canvas.height = 120;
   }
-  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null }, options);
+  const opt = Object.assign({
+    browserAPI,
+    doc: typeof document !== 'undefined' ? document : null,
+    showToast: typeof showToast === 'function' ? showToast : null,
+    t: typeof t === 'function' ? t : null
+  }, options);
   const viz = getResolvedVisualizer();
   if (viz && typeof viz.initAudioVisualizer === 'function') {
     const res = viz.initAudioVisualizer(canvas, opt);
@@ -2453,7 +2467,11 @@ function setVisualizerFullWindowState(active) {
   if (card) {
     if (isFw) {
       card.classList.add('visualizer-theater-mode');
-      if (document.body) document.body.classList.add('visualizer-theater-active');
+      card.classList.remove('visualizer-fullscreen-mode');
+      if (document.body) {
+        document.body.classList.add('visualizer-theater-active');
+        document.body.classList.remove('visualizer-fullscreen-active');
+      }
     } else {
       card.classList.remove('visualizer-theater-mode');
       if (document.body) document.body.classList.remove('visualizer-theater-active');
@@ -2495,6 +2513,10 @@ function toggleVisualizerFullWindow() {
 }
 
 function isVisualizerFullscreenActive() {
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.isVisualizerFullscreenActive === 'function') {
+    return viz.isVisualizerFullscreenActive();
+  }
   const card = (typeof document !== 'undefined') ? document.getElementById('heroAudioLabStatus') : null;
   if (!card) return false;
   const isNative = typeof document !== 'undefined' && Boolean(
@@ -2504,7 +2526,7 @@ function isVisualizerFullscreenActive() {
     document.msFullscreenElement === card ||
     (document.fullscreenElement && card.contains(document.fullscreenElement))
   );
-  return isNative || Boolean(card.classList && typeof card.classList.contains === 'function' ? card.classList.contains('visualizer-theater-mode') : (card.classList && Array.isArray(card.classList) && card.classList.includes('visualizer-theater-mode')));
+  return isNative || Boolean(card.classList && typeof card.classList.contains === 'function' ? card.classList.contains('visualizer-fullscreen-mode') : false);
 }
 
 function updateVisualizerCanvasResolution() {
@@ -2557,11 +2579,24 @@ function syncFullscreenUI(isActive) {
 
   if (card) {
     if (isActive) {
-      card.classList.add('visualizer-theater-mode');
-      if (document.body) document.body.classList.add('visualizer-theater-active');
-    } else if (!isVisualizerFullWindowActive()) {
+      card.classList.add('visualizer-fullscreen-mode');
       card.classList.remove('visualizer-theater-mode');
-      if (document.body) document.body.classList.remove('visualizer-theater-active');
+      if (document.body) {
+        document.body.classList.add('visualizer-fullscreen-active');
+        document.body.classList.remove('visualizer-theater-active');
+      }
+    } else {
+      card.classList.remove('visualizer-fullscreen-mode');
+      card.classList.remove('visualizer-theater-mode');
+      if (document.body) {
+        document.body.classList.remove('visualizer-fullscreen-active');
+        document.body.classList.remove('visualizer-theater-active');
+      }
+      const btnFw = document.getElementById('btnVizFullWindow');
+      if (btnFw) {
+        btnFw.setAttribute('aria-expanded', 'false');
+        btnFw.classList.remove('active');
+      }
     }
   }
 
@@ -2587,6 +2622,11 @@ function setVisualizerFullscreenState(active) {
     document.mozFullScreenElement ||
     document.msFullscreenElement
   );
+
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.setVisualizerFullscreenState === 'function') {
+    viz.setVisualizerFullscreenState(isFs);
+  }
 
   if (isFs) {
     if (!currentlyFs && canvasContainer) {
@@ -2627,14 +2667,7 @@ function setVisualizerFullscreenState(active) {
 }
 
 function toggleVisualizerFullscreen() {
-  const isCurrentlyFs = Boolean(
-    (typeof document !== 'undefined') && (
-      document.fullscreenElement ||
-      document.webkitFullscreenElement ||
-      document.mozFullScreenElement ||
-      document.msFullscreenElement
-    )
-  );
+  const isCurrentlyFs = isVisualizerFullscreenActive();
   const next = !isCurrentlyFs;
   setVisualizerFullscreenState(next);
   if (typeof showToast === 'function') {
@@ -3274,6 +3307,8 @@ function applyDashboardLanguage(lang) {
   setTxt('lblAudioVocalDesc', 'audiolab_vocal_desc');
   setTxt('lblAudioNightTitle', 'audiolab_night_title');
   setTxt('lblAudioNightDesc', 'audiolab_night_desc');
+  setTxt('lblAudioBassTitle', 'audiolab_bass_title');
+  setTxt('lblAudioBassDesc', 'audiolab_bass_desc');
   setTxt('lblAudioOnlyTitle', 'audiolab_audio_only_title');
   setTxt('lblAudioOnlyDesc', 'audiolab_audio_only_desc');
 
@@ -8532,7 +8567,16 @@ function setupEventListeners() {
     });
   }
 
-  // 7. Audio-Only Mode Toggle
+  // 7. Sub-Bass Boost Toggle
+  const toggleBass = document.getElementById('toggleBassBoost');
+  if (toggleBass) {
+    toggleBass.addEventListener('change', () => {
+      dashboardAudioLabSettings.bass_boost = toggleBass.checked;
+      persistDashboardAudioLabSettings(dashboardAudioLabSettings);
+    });
+  }
+
+  // 8. Audio-Only Mode Toggle
   const toggleAudioOnly = document.getElementById('toggleAudioOnlyMode');
   if (toggleAudioOnly) {
     toggleAudioOnly.addEventListener('change', () => {
@@ -8795,7 +8839,8 @@ function setupEventListeners() {
 
   // Full Window (Theater Mode) Button Binding
   const btnVizFullWindow = document.getElementById('btnVizFullWindow');
-  if (btnVizFullWindow) {
+  if (btnVizFullWindow && !btnVizFullWindow.__vizBound) {
+    btnVizFullWindow.__vizBound = true;
     btnVizFullWindow.addEventListener('click', (e) => {
       if (e && typeof e.preventDefault === 'function') e.preventDefault();
       toggleVisualizerFullWindow();
@@ -8804,7 +8849,8 @@ function setupEventListeners() {
 
   // Fullscreen Visualizer Button Binding
   const btnVizFullscreen = document.getElementById('btnVizFullscreen');
-  if (btnVizFullscreen) {
+  if (btnVizFullscreen && !btnVizFullscreen.__vizBound) {
+    btnVizFullscreen.__vizBound = true;
     btnVizFullscreen.addEventListener('click', (e) => {
       if (e && typeof e.preventDefault === 'function') e.preventDefault();
       toggleVisualizerFullscreen();
@@ -8813,7 +8859,8 @@ function setupEventListeners() {
 
   // Video Embed Toggle Button Binding
   const btnVizVideoEmbedToggle = document.getElementById('btnVizVideoEmbedToggle');
-  if (btnVizVideoEmbedToggle) {
+  if (btnVizVideoEmbedToggle && !btnVizVideoEmbedToggle.__vizBound) {
+    btnVizVideoEmbedToggle.__vizBound = true;
     btnVizVideoEmbedToggle.addEventListener('click', (e) => {
       if (e && typeof e.preventDefault === 'function') e.preventDefault();
       const isPressed = btnVizVideoEmbedToggle.getAttribute('aria-pressed') === 'true';
@@ -8834,15 +8881,16 @@ function setupEventListeners() {
   // Escape key handler for fullscreen visualizer & full window
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-      if (isVisualizerFullWindowActive()) {
+      if (isVisualizerFullscreenActive()) {
+        setVisualizerFullscreenState(false);
+        setVisualizerFullWindowState(false);
+        if (typeof showToast === 'function') {
+          showToast(typeof t === 'function' ? t('toast_viz_fullscreen_exited') : 'Visualizer exited Fullscreen mode');
+        }
+      } else if (isVisualizerFullWindowActive()) {
         setVisualizerFullWindowState(false);
         if (typeof showToast === 'function') {
           showToast(typeof t === 'function' ? t('toast_viz_fullwindow_exited') : 'Visualizer exited Full Window mode');
-        }
-      } else if (isVisualizerFullscreenActive()) {
-        setVisualizerFullscreenState(false);
-        if (typeof showToast === 'function') {
-          showToast(typeof t === 'function' ? t('toast_viz_fullscreen_exited') : 'Visualizer exited Fullscreen mode');
         }
       }
     }
@@ -8857,9 +8905,9 @@ function setupEventListeners() {
       const isNowNative = !!(
         fsEl && (fsEl === card || fsEl === canvasContainer || (card && card.contains(fsEl)))
       );
-      if (!isNowNative && card && !card.classList.contains('visualizer-theater-mode')) {
+      if (!isNowNative) {
         syncFullscreenUI(false);
-      } else if (isNowNative) {
+      } else {
         syncFullscreenUI(true);
       }
     });

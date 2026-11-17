@@ -673,15 +673,31 @@
             doc.msFullscreenElement
           );
           isNativeFullscreenActive = isFs;
+          isFullscreenActive = isFs;
           updateFullscreenButtonState(doc, isFs);
           const card = doc.getElementById('heroAudioLabStatus');
           if (card) {
             if (isFs) {
-              card.classList.add('visualizer-theater-mode');
-              if (doc.body) doc.body.classList.add('visualizer-theater-active');
-            } else if (!isFullWindowActive) {
+              card.classList.add('visualizer-fullscreen-mode');
               card.classList.remove('visualizer-theater-mode');
-              if (doc.body) doc.body.classList.remove('visualizer-theater-active');
+              if (doc.body) {
+                doc.body.classList.add('visualizer-fullscreen-active');
+                doc.body.classList.remove('visualizer-theater-active');
+              }
+              isFullWindowActive = false;
+            } else {
+              card.classList.remove('visualizer-fullscreen-mode');
+              card.classList.remove('visualizer-theater-mode');
+              if (doc.body) {
+                doc.body.classList.remove('visualizer-fullscreen-active');
+                doc.body.classList.remove('visualizer-theater-active');
+              }
+              isFullWindowActive = false;
+              const btnFw = doc.getElementById('btnVizFullWindow');
+              if (btnFw) {
+                btnFw.setAttribute('aria-expanded', 'false');
+                btnFw.classList.remove('active');
+              }
             }
           }
           const canvas = visualizerCanvas || doc.getElementById('canvasAudioVisualizer');
@@ -824,7 +840,11 @@
     if (card) {
       if (isFullWindowActive) {
         card.classList.add('visualizer-theater-mode');
-        if (doc.body) doc.body.classList.add('visualizer-theater-active');
+        card.classList.remove('visualizer-fullscreen-mode');
+        if (doc.body) {
+          doc.body.classList.add('visualizer-theater-active');
+          doc.body.classList.remove('visualizer-fullscreen-active');
+        }
       } else {
         card.classList.remove('visualizer-theater-mode');
         if (doc.body) doc.body.classList.remove('visualizer-theater-active');
@@ -833,14 +853,17 @@
 
     if (btn) {
       btn.setAttribute('aria-expanded', isFullWindowActive ? 'true' : 'false');
+      const tFn = options.t || (typeof globalThis !== 'undefined' && globalThis.t) || (typeof window !== 'undefined' && window.t);
       if (isFullWindowActive) {
         btn.classList.add('active');
-        btn.setAttribute('title', 'Exit Full Window');
-        btn.setAttribute('aria-label', 'Exit Full Window');
+        const exitTitle = typeof tFn === 'function' ? tFn('viz_fullwindow_exit_title') : 'Exit Visualizer Full Window (Theater)';
+        btn.setAttribute('title', exitTitle);
+        btn.setAttribute('aria-label', exitTitle);
       } else {
         btn.classList.remove('active');
-        btn.setAttribute('title', 'Full Window');
-        btn.setAttribute('aria-label', 'Full Window');
+        const enterTitle = typeof tFn === 'function' ? tFn('viz_fullwindow_toggle_title') : 'Toggle Visualizer Full Window (Theater)';
+        btn.setAttribute('title', enterTitle);
+        btn.setAttribute('aria-label', enterTitle);
       }
     }
 
@@ -852,7 +875,15 @@
   }
 
   function toggleVisualizerFullWindow(options = {}) {
-    return setVisualizerFullWindowState(!isFullWindowActive, options);
+    const next = !isFullWindowActive;
+    const res = setVisualizerFullWindowState(next, options);
+    const showToastFn = options.showToast || (typeof globalThis !== 'undefined' && globalThis.showToast) || (typeof window !== 'undefined' && window.showToast);
+    const tFn = options.t || (typeof globalThis !== 'undefined' && globalThis.t) || (typeof window !== 'undefined' && window.t);
+    if (typeof showToastFn === 'function') {
+      const msgKey = next ? 'toast_viz_fullwindow_entered' : 'toast_viz_fullwindow_exited';
+      showToastFn(typeof tFn === 'function' ? tFn(msgKey) : (next ? 'Visualizer entered Full Window Theater mode' : 'Visualizer exited Full Window mode'));
+    }
+    return res;
   }
 
   function updateFullscreenButtonState(doc, active) {
@@ -860,14 +891,17 @@
     const btn = doc.getElementById('btnVizFullscreen');
     if (!btn) return;
     btn.setAttribute('aria-expanded', active ? 'true' : 'false');
+    const tFn = (typeof globalThis !== 'undefined' && globalThis.t) || (typeof window !== 'undefined' && window.t);
     if (active) {
       btn.classList.add('active');
-      btn.setAttribute('title', 'Exit Full Screen');
-      btn.setAttribute('aria-label', 'Exit Full Screen');
+      const exitTitle = typeof tFn === 'function' ? tFn('viz_fullscreen_exit_title') : 'Exit Fullscreen Visualizer';
+      btn.setAttribute('title', exitTitle);
+      btn.setAttribute('aria-label', exitTitle);
     } else {
       btn.classList.remove('active');
-      btn.setAttribute('title', 'Full Screen (F)');
-      btn.setAttribute('aria-label', 'Full Screen (F)');
+      const toggleTitle = typeof tFn === 'function' ? tFn('viz_fullscreen_toggle_title') : 'Toggle Visualizer Fullscreen';
+      btn.setAttribute('title', toggleTitle);
+      btn.setAttribute('aria-label', toggleTitle);
     }
     const iconExpand = btn.querySelector ? btn.querySelector('.viz-icon-expand') : null;
     const iconCompress = btn.querySelector ? btn.querySelector('.viz-icon-compress') : null;
@@ -906,11 +940,26 @@
     const card = doc.getElementById('heroAudioLabStatus');
     if (card) {
       if (isNativeFullscreenActive) {
-        card.classList.add('visualizer-theater-mode');
-        if (doc.body) doc.body.classList.add('visualizer-theater-active');
-      } else if (!isFullWindowActive) {
+        card.classList.add('visualizer-fullscreen-mode');
         card.classList.remove('visualizer-theater-mode');
-        if (doc.body) doc.body.classList.remove('visualizer-theater-active');
+        if (doc.body) {
+          doc.body.classList.add('visualizer-fullscreen-active');
+          doc.body.classList.remove('visualizer-theater-active');
+        }
+        isFullWindowActive = false;
+      } else {
+        card.classList.remove('visualizer-fullscreen-mode');
+        card.classList.remove('visualizer-theater-mode');
+        if (doc.body) {
+          doc.body.classList.remove('visualizer-fullscreen-active');
+          doc.body.classList.remove('visualizer-theater-active');
+        }
+        isFullWindowActive = false;
+        const btnFw = doc.getElementById('btnVizFullWindow');
+        if (btnFw) {
+          btnFw.setAttribute('aria-expanded', 'false');
+          btnFw.classList.remove('active');
+        }
       }
     }
 
@@ -971,6 +1020,12 @@
       }
       setVisualizerFullscreenState(true, options);
     }
+    const showToastFn = options.showToast || (typeof globalThis !== 'undefined' && globalThis.showToast) || (typeof window !== 'undefined' && window.showToast);
+    const tFn = options.t || (typeof globalThis !== 'undefined' && globalThis.t) || (typeof window !== 'undefined' && window.t);
+    if (typeof showToastFn === 'function') {
+      const msgKey = !isCurrentlyFs ? 'toast_viz_fullscreen_entered' : 'toast_viz_fullscreen_exited';
+      showToastFn(typeof tFn === 'function' ? tFn(msgKey) : (!isCurrentlyFs ? 'Visualizer entered Fullscreen Theater mode' : 'Visualizer exited Fullscreen mode'));
+    }
     return !isCurrentlyFs;
   }
 
@@ -996,7 +1051,15 @@
   }
 
   function toggleVisualizerVideoEmbed(options = {}) {
-    return setVisualizerVideoEmbedState(!isVideoEmbedActive, options);
+    const next = !isVideoEmbedActive;
+    const res = setVisualizerVideoEmbedState(next, options);
+    const showToastFn = options.showToast || (typeof globalThis !== 'undefined' && globalThis.showToast) || (typeof window !== 'undefined' && window.showToast);
+    const tFn = options.t || (typeof globalThis !== 'undefined' && globalThis.t) || (typeof window !== 'undefined' && window.t);
+    if (typeof showToastFn === 'function') {
+      const msgKey = next ? 'toast_viz_embed_mode_active' : 'toast_viz_embed_mode_inactive';
+      showToastFn(typeof tFn === 'function' ? tFn(msgKey) : (next ? 'Video Embed Mode active (Live stream playback preview)' : 'Switched back to Spectrum Visualizer'));
+    }
+    return res;
   }
 
   /**
