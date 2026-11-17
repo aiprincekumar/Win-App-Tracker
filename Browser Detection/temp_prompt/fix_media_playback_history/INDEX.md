@@ -61,10 +61,10 @@ Following forensic inspection of the codebase across `background.js` and `dashbo
 
 | Phase # | Phase Name | Target File(s) | Primary Subagent Role | Gate Verification Suite | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| **01** | Background Telemetry & Session Overhaul | `background.js` | Level 4 Backend Engineer | `node -c background.js`<br>`node tests/test_timer_and_dual_media_tracking.js` | ⏳ PENDING |
-| **02** | Storage Persistence & Active Session Sync | `background.js` | Level 4 Backend Engineer | `node -c background.js`<br>`node tests/test_tab_switch_and_storage_persistence.js` | ⏳ PENDING |
-| **03** | Dashboard Rendering & Truthiness Resilience | `dashboard/dashboard.js` | Level 4 Frontend Engineer | `node -c dashboard/dashboard.js`<br>`node tests/test_media_tab_switch_and_i18n.js` | ⏳ PENDING |
-| **04** | Comprehensive Verification & Independent QA | `tests/test_media_playback_history_backend_fix.js` | Level 4 QA Verification Tester | Full workspace test suite execution (`node run_all_tests.js`) | ⏳ PENDING |
+| **01** | Background Telemetry & Session Overhaul | `background.js` | Level 4 Backend Engineer | `node -c background.js`<br>`node tests/test_timer_and_dual_media_tracking.js` | ✅ COMPLETED |
+| **02** | Storage Persistence & Active Session Sync | `background.js` | Level 4 Backend Engineer | `node -c background.js`<br>`node tests/test_tab_switch_and_storage_persistence.js` | ✅ COMPLETED |
+| **03** | Dashboard Rendering & Truthiness Resilience | `dashboard/dashboard.js` | Level 4 Frontend Engineer | `node -c dashboard/dashboard.js`<br>`node tests/test_media_tab_switch_and_i18n.js` | ✅ COMPLETED |
+| **04** | Comprehensive Verification & Independent QA | `tests/test_media_playback_history_backend_fix.js` | Level 4 QA Verification Tester | Full workspace test suite execution (`node run_all_tests.js`) | ✅ COMPLETED (55/55 PASS) |
 
 ---
 
