@@ -151,6 +151,8 @@
 - *(ui-ux)* Architect phase-wise UI/UX restoration master prompt and project memory
 - *(memory)* Update project_ui_ux_restoration_memory.md to COMPLETED_AND_VERIFIED state
 - *(prompt)* Add phase-wise prompt architecture specification for topbar DOM UI/UX fix
+- *(changelog)* Update changelog with recent commits
+- *(memory)* Update project feature memory with Hardware Bridges and Visualizer milestones
 
 ### 🚜 Refactor
 
