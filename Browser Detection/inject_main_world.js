@@ -1067,6 +1067,30 @@
         break;
       }
 
+      case 'seek_to':
+      case 'seek_absolute': {
+        let dur = 0;
+        if (moviePlayer && typeof moviePlayer.getDuration === 'function') {
+          try { dur = moviePlayer.getDuration() || 0; } catch (_) {}
+        }
+        if ((!dur || dur <= 0) && video) {
+          dur = video.duration || 0;
+        }
+        const maxDuration = (dur > 0) ? dur : 999999;
+        const rawTarget = (typeof data.positionSeconds === 'number')
+          ? data.positionSeconds
+          : ((typeof data.seconds === 'number') ? data.seconds : 0);
+        const target = Math.max(0, Math.min(maxDuration, rawTarget));
+        if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+          try { moviePlayer.seekTo(target, true); } catch (_) {}
+        }
+        if (video) {
+          try { video.currentTime = target; } catch (_) {}
+        }
+        showOSD(`${formatDigitalTime ? formatDigitalTime(target) : target + 's'}`, '📍');
+        break;
+      }
+
       case 'apply_audio_lab_settings':
       case 'APPLY_AUDIO_LAB_SETTINGS': {
         applyAudioLabSettings(data.settings || data);
@@ -1125,7 +1149,7 @@
       minCooldown = 250;
     } else if (action === 'seek_relative') {
       minCooldown = 200;
-    } else if (action === 'seek_percent' || action === 'set_volume' || action === 'SET_VOLUME') {
+    } else if (action === 'seek_percent' || action === 'set_volume' || action === 'SET_VOLUME' || action === 'seek_to' || action === 'seek_absolute') {
       minCooldown = 50;
     }
 

@@ -73,6 +73,45 @@
         stream.isMuted = false;
       } else if (command === 'set_volume') {
         stream.volume = Math.max(0, Math.min(1, Number(value) || 0));
+      } else if (command === 'seek_to' || command === 'seek_absolute') {
+        stream.currentTime = Math.max(0, Number(value) || 0);
+      } else if (command === 'seek_percent') {
+        const pct = Math.max(0, Math.min(100, Number(value) || 0));
+        if (Number.isFinite(stream.duration) && stream.duration > 0) {
+          stream.currentTime = (pct / 100) * stream.duration;
+        }
+      }
+    }
+
+    if (command === 'switch_tab' || command === 'focus_tab') {
+      if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+        return new Promise((resolve) => {
+          try {
+            api.runtime.sendMessage({
+              action: 'DASHBOARD_REMOTE_MEDIA_CMD',
+              tabId: numTabId,
+              command: 'switch_tab',
+              value
+            }, (res) => {
+              if (res && res.success) {
+                resolve(res);
+              } else {
+                try {
+                  api.runtime.sendMessage({
+                    type: 'JUMP_TO_MEDIA_TAB',
+                    tabId: numTabId
+                  }, (fallbackRes) => {
+                    resolve(fallbackRes || res || { success: true, tabId: numTabId, command });
+                  });
+                } catch (_) {
+                  resolve(res || { success: true, simulated: true, tabId: numTabId, command });
+                }
+              }
+            });
+          } catch (_) {
+            resolve({ success: true, simulated: true, tabId: numTabId, command });
+          }
+        });
       }
     }
 
@@ -262,6 +301,13 @@
       // 1. Card Top Bar (Favicon, Title, Platform Tag)
       const topRow = doc.createElement('div');
       topRow.className = 'deck-card-top';
+      topRow.style.cursor = 'pointer';
+      topRow.setAttribute('title', translate('toast_switched_tab') || 'Switch to this tab in browser');
+      topRow.setAttribute('role', 'button');
+      topRow.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
+      topRow.addEventListener('click', () => {
+        handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
+      });
 
       const favicon = doc.createElement('img');
       favicon.className = 'deck-card-favicon';
@@ -314,6 +360,11 @@
 
       const miniScrubber = doc.createElement('div');
       miniScrubber.className = 'deck-mini-scrubber';
+      miniScrubber.style.cursor = 'pointer';
+      miniScrubber.setAttribute('role', 'slider');
+      miniScrubber.setAttribute('aria-label', `Timeline for ${stream.title || 'Tab'}`);
+      miniScrubber.setAttribute('aria-valuemin', '0');
+      miniScrubber.setAttribute('aria-valuemax', '100');
 
       const progress = doc.createElement('div');
       progress.className = 'deck-scrubber-progress';
@@ -321,6 +372,7 @@
         ? Math.min(100, Math.max(0, (stream.currentTime / stream.duration) * 100))
         : 0;
       progress.style.width = `${pct.toFixed(1)}%`;
+      miniScrubber.setAttribute('aria-valuenow', String(Math.round(pct)));
       miniScrubber.appendChild(progress);
 
       const timeSpan = doc.createElement('span');
@@ -328,6 +380,25 @@
       const curFormatted = formatDurationSec(stream.currentTime);
       const durFormatted = formatDurationSec(stream.duration);
       timeSpan.textContent = `${curFormatted} / ${durFormatted}`;
+
+      miniScrubber.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = miniScrubber.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const ratio = clickX / rect.width;
+        const dur = (typeof stream.duration === 'number' && Number.isFinite(stream.duration) && stream.duration > 0)
+          ? stream.duration
+          : 0;
+        if (dur <= 0) return;
+
+        const targetSeconds = Math.max(0, Math.min(dur, ratio * dur));
+        progress.style.width = `${(ratio * 100).toFixed(1)}%`;
+        timeSpan.textContent = `${formatDurationSec(targetSeconds)} / ${formatDurationSec(dur)}`;
+        miniScrubber.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+
+        handleRemoteMediaCommand(stream.tabId, 'seek_to', targetSeconds, options);
+      });
 
       scrubberRow.appendChild(miniScrubber);
       scrubberRow.appendChild(timeSpan);
@@ -339,24 +410,55 @@
       // Play / Pause Toggle Button
       const btnPlayPause = doc.createElement('button');
       btnPlayPause.className = 'btn-deck-ctrl btn-deck-play';
-      const isPlay = stream.playbackState === 'playing';
+      let isPlay = stream.playbackState === 'playing';
       btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
       btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
       btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
       btnPlayPause.addEventListener('click', (e) => {
         e.stopPropagation();
-        handleRemoteMediaCommand(stream.tabId, 'toggle', 0, options);
+        isPlay = !isPlay;
+        btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
+        btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
+        btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
+        if (isPlay) {
+          statusPill.classList.remove('paused');
+          statusPill.classList.add('playing');
+          statusPill.textContent = translate('status_playing') || '🟢 Playing';
+        } else {
+          statusPill.classList.remove('playing');
+          statusPill.classList.add('paused');
+          statusPill.textContent = translate('status_paused') || '⏸️ Paused';
+        }
+        handleRemoteMediaCommand(stream.tabId, isPlay ? 'play' : 'pause', 0, options);
       });
 
       // Mute / Unmute Toggle Button
       const btnMute = doc.createElement('button');
       btnMute.className = 'btn-deck-ctrl btn-deck-mute';
-      btnMute.textContent = stream.isMuted ? '🔇' : '🔊';
-      btnMute.setAttribute('title', stream.isMuted ? 'Unmute Tab' : 'Mute Tab');
-      btnMute.setAttribute('aria-label', stream.isMuted ? 'Unmute Tab' : 'Mute Tab');
+      let isMutedState = Boolean(stream.isMuted);
+      btnMute.textContent = isMutedState ? '🔇' : '🔊';
+      btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+      btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
       btnMute.addEventListener('click', (e) => {
         e.stopPropagation();
-        const nextCmd = stream.isMuted ? 'unmute' : 'mute';
+        isMutedState = !isMutedState;
+        btnMute.textContent = isMutedState ? '🔇' : '🔊';
+        btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+        btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+        if (isMutedState) {
+          statusPill.classList.add('muted');
+          statusPill.textContent = translate('status_muted') || '🔇 Muted';
+        } else {
+          statusPill.classList.remove('muted');
+          if (stream.playbackState === 'playing' || stream.isAudible) {
+            statusPill.classList.add('playing');
+            statusPill.textContent = translate('status_playing') || '🟢 Playing';
+          } else {
+            statusPill.classList.add('paused');
+            statusPill.textContent = translate('status_paused') || '⏸️ Paused';
+          }
+        }
+        const nextCmd = isMutedState ? 'mute' : 'unmute';
         handleRemoteMediaCommand(stream.tabId, nextCmd, 0, options);
       });
 
@@ -365,7 +467,14 @@
       volSlider.type = 'range';
       volSlider.min = '0';
       volSlider.max = '100';
-      const currentVolPct = Math.round((typeof stream.volume === 'number' ? stream.volume : 1.0) * 100);
+      volSlider.setAttribute('data-slider-tab-id', String(stream.tabId));
+      const isCurrentActiveSlider = doc.activeElement &&
+        doc.activeElement.classList &&
+        doc.activeElement.classList.contains('deck-volume-slider') &&
+        doc.activeElement.getAttribute('data-slider-tab-id') === String(stream.tabId);
+      const currentVolPct = isCurrentActiveSlider
+        ? Math.round(Number(doc.activeElement.value) || 0)
+        : Math.round((typeof stream.volume === 'number' ? stream.volume : 1.0) * 100);
       volSlider.value = String(currentVolPct);
       volSlider.className = 'deck-volume-slider';
       volSlider.setAttribute('title', `Volume: ${currentVolPct}%`);
@@ -373,6 +482,8 @@
       volSlider.addEventListener('input', (e) => {
         e.stopPropagation();
         const v = Number(volSlider.value) / 100;
+        volSlider.setAttribute('title', `Volume: ${volSlider.value}%`);
+        volSlider.setAttribute('aria-label', `Volume: ${volSlider.value}%`);
         handleRemoteMediaCommand(stream.tabId, 'set_volume', v, options);
       });
 
@@ -390,10 +501,22 @@
         handleSoloTab(stream.tabId, Object.assign({}, options, { containerEl }));
       });
 
+      // Switch to Tab Button
+      const btnSwitchTab = doc.createElement('button');
+      btnSwitchTab.className = 'btn-deck-ctrl btn-deck-switch-tab';
+      btnSwitchTab.textContent = translate('btn_switch_tab') || '🎯 Switch Tab';
+      btnSwitchTab.setAttribute('title', 'Switch to this media tab in browser');
+      btnSwitchTab.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
+      btnSwitchTab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
+      });
+
       controlsRow.appendChild(btnPlayPause);
       controlsRow.appendChild(btnMute);
       controlsRow.appendChild(volSlider);
       controlsRow.appendChild(btnSolo);
+      controlsRow.appendChild(btnSwitchTab);
 
       // Assemble card
       card.appendChild(topRow);
@@ -482,6 +605,24 @@
         });
       }
 
+      const btnFullscreen = doc.getElementById('btnVizFullscreen');
+      if (btnFullscreen && !btnFullscreen.__vizBound) {
+        btnFullscreen.__vizBound = true;
+        btnFullscreen.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          toggleVisualizerFullscreen(options);
+        });
+      }
+
+      const btnVideoEmbed = doc.getElementById('btnVizVideoEmbedToggle');
+      if (btnVideoEmbed && !btnVideoEmbed.__vizBound) {
+        btnVideoEmbed.__vizBound = true;
+        btnVideoEmbed.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          toggleVisualizerVideoEmbed(options);
+        });
+      }
+
       // Zero-Overhead Idle Sleep Sentinel on Visibility Change
       if (!doc.__vizVisibilityBound) {
         doc.__vizVisibilityBound = true;
@@ -563,6 +704,102 @@
     }
 
     return visualizerMode;
+  }
+
+  let isFullscreenActive = false;
+  let isVideoEmbedActive = false;
+
+  function isVisualizerFullscreenActive() {
+    return isFullscreenActive;
+  }
+
+  function setVisualizerFullscreenState(active, options = {}) {
+    isFullscreenActive = Boolean(active);
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    if (!doc) return isFullscreenActive;
+
+    const card = doc.getElementById('heroAudioLabStatus');
+    const btn = doc.getElementById('btnVizFullscreen');
+    const canvas = visualizerCanvas || doc.getElementById('canvasAudioVisualizer');
+
+    if (card) {
+      if (isFullscreenActive) {
+        card.classList.add('visualizer-theater-mode');
+        if (doc.body) doc.body.classList.add('visualizer-theater-active');
+      } else {
+        card.classList.remove('visualizer-theater-mode');
+        if (doc.body) doc.body.classList.remove('visualizer-theater-active');
+      }
+    }
+
+    if (btn) {
+      btn.setAttribute('aria-expanded', isFullscreenActive ? 'true' : 'false');
+      if (isFullscreenActive) {
+        btn.classList.add('active');
+        btn.setAttribute('title', 'Exit Fullscreen Visualizer');
+        btn.setAttribute('aria-label', 'Exit Fullscreen Visualizer');
+      } else {
+        btn.classList.remove('active');
+        btn.setAttribute('title', 'Toggle Visualizer Fullscreen');
+        btn.setAttribute('aria-label', 'Toggle Visualizer Fullscreen');
+      }
+      const iconExpand = btn.querySelector ? btn.querySelector('.viz-icon-expand') : null;
+      const iconCompress = btn.querySelector ? btn.querySelector('.viz-icon-compress') : null;
+      if (iconExpand && iconCompress) {
+        if (isFullscreenActive) {
+          iconExpand.classList.add('visually-hidden');
+          iconCompress.classList.remove('visually-hidden');
+        } else {
+          iconExpand.classList.remove('visually-hidden');
+          iconCompress.classList.add('visually-hidden');
+        }
+      }
+    }
+
+    if (canvas) {
+      if (isFullscreenActive) {
+        const container = canvas.parentElement;
+        const rect = (container && typeof container.getBoundingClientRect === 'function') ? container.getBoundingClientRect() : null;
+        const targetW = (rect && rect.width > 0) ? Math.floor(rect.width) : 1200;
+        const targetH = (rect && rect.height > 0) ? Math.floor(rect.height) : 400;
+        canvas.width = Math.max(600, targetW);
+        canvas.height = Math.max(120, targetH);
+      } else {
+        canvas.width = 600;
+        canvas.height = 120;
+      }
+    }
+
+    return isFullscreenActive;
+  }
+
+  function toggleVisualizerFullscreen(options = {}) {
+    return setVisualizerFullscreenState(!isFullscreenActive, options);
+  }
+
+  function isVisualizerVideoEmbedActive() {
+    return isVideoEmbedActive;
+  }
+
+  function setVisualizerVideoEmbedState(active, options = {}) {
+    isVideoEmbedActive = Boolean(active);
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    if (!doc) return isVideoEmbedActive;
+
+    const btn = doc.getElementById('btnVizVideoEmbedToggle');
+    if (btn) {
+      btn.setAttribute('aria-pressed', isVideoEmbedActive ? 'true' : 'false');
+      if (isVideoEmbedActive) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+    return isVideoEmbedActive;
+  }
+
+  function toggleVisualizerVideoEmbed(options = {}) {
+    return setVisualizerVideoEmbedState(!isVideoEmbedActive, options);
   }
 
   /**
@@ -998,6 +1235,12 @@
     handleMuteAllOthers,
     initAudioVisualizer,
     setVisualizerMode,
+    isVisualizerFullscreenActive,
+    setVisualizerFullscreenState,
+    toggleVisualizerFullscreen,
+    isVisualizerVideoEmbedActive,
+    setVisualizerVideoEmbedState,
+    toggleVisualizerVideoEmbed,
     VALID_VIZ_MODES,
     validModes: VALID_VIZ_MODES,
     synthesizeAudioTelemetry,

@@ -228,6 +228,7 @@ const DASHBOARD_I18N = {
     th_category: 'Category',
     media_deck_title: '🎬 Multi-Tab Live Media Deck',
     btn_solo_tab: '🎧 Solo Tab',
+    btn_switch_tab: '🎯 Switch Tab',
     btn_mute_all_others: '🔇 Mute All Others',
     status_audible: '🟢 Audible',
     status_playing: '🟢 Playing',
@@ -243,6 +244,13 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'Matrix Digital Dots',
     viz_effect_flame: 'Neon Flame Peaks',
     viz_effect_stereo: 'Stereo Mirror Butterfly',
+    viz_video_embed_toggle_title: 'Switch to Video Player (Embed Mode)',
+    viz_fullscreen_toggle_title: 'Toggle Visualizer Fullscreen',
+    viz_fullscreen_exit_title: 'Exit Fullscreen Visualizer',
+    toast_viz_embed_mode_active: 'Video Embed Mode active (Live stream playback preview)',
+    toast_viz_embed_mode_inactive: 'Switched back to Spectrum Visualizer',
+    toast_viz_fullscreen_entered: 'Visualizer entered Fullscreen Theater mode',
+    toast_viz_fullscreen_exited: 'Visualizer exited Fullscreen mode',
     active_streams_count: (count) => `${count} active stream${count === 1 ? '' : 's'}`,
     no_media_streams: 'No active media streams detected across open tabs',
     
@@ -656,6 +664,7 @@ const DASHBOARD_I18N = {
     th_category: 'श्रेणी',
     media_deck_title: '🎬 मल्टी-टैब लाइव मीडिया डेक',
     btn_solo_tab: '🎧 सोलो टैब',
+    btn_switch_tab: '🎯 टैब स्विच',
     btn_mute_all_others: '🔇 अन्य सभी को म्यूट करें',
     status_audible: '🟢 ध्वनि चालू',
     status_playing: '🟢 चल रहा है',
@@ -671,6 +680,13 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'मैट्रिक्स डिजिटल डॉट्स',
     viz_effect_flame: 'नियॉन फ्लेम पीक्स',
     viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
+    viz_video_embed_toggle_title: 'वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)',
+    viz_fullscreen_toggle_title: 'विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें',
+    viz_fullscreen_exit_title: 'फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें',
+    toast_viz_embed_mode_active: 'वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय',
+    toast_viz_embed_mode_inactive: 'स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया',
+    toast_viz_fullscreen_entered: 'विज़ुअलाइज़र फ़ुलस्क्रीन थिएटर मोड में सक्रिय',
+    toast_viz_fullscreen_exited: 'विज़ुअलाइज़र सामान्य दृश्य पर वापस आया',
     active_streams_count: (count) => `${count} सक्रिय स्ट्रीम`,
     no_media_streams: 'खुले टैब्स में कोई सक्रिय मीडिया स्ट्रीम नहीं मिली',
     
@@ -1043,6 +1059,13 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_matrix: "Matrix Digital Dots",
     viz_effect_flame: "Neon Flame Peaks",
     viz_effect_stereo: "Stereo Mirror Butterfly",
+    viz_video_embed_toggle_title: "Switch to Video Player (Embed Mode)",
+    viz_fullscreen_toggle_title: "Toggle Visualizer Fullscreen",
+    viz_fullscreen_exit_title: "Exit Fullscreen Visualizer",
+    toast_viz_embed_mode_active: "Video Embed Mode active (Live stream playback preview)",
+    toast_viz_embed_mode_inactive: "Switched back to Spectrum Visualizer",
+    toast_viz_fullscreen_entered: "Visualizer entered Fullscreen Theater mode",
+    toast_viz_fullscreen_exited: "Visualizer exited Fullscreen mode",
 
     // Precision Scrubber
     scrubber_chapter: "Chapter",
@@ -1109,6 +1132,13 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_matrix: "मैट्रिक्स डिजिटल डॉट्स",
     viz_effect_flame: "नियॉन फ्लेम पीक्स",
     viz_effect_stereo: "स्टीरियो मिरर बटरफ्लाई",
+    viz_video_embed_toggle_title: "वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)",
+    viz_fullscreen_toggle_title: "विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें",
+    viz_fullscreen_exit_title: "फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें",
+    toast_viz_embed_mode_active: "वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय",
+    toast_viz_embed_mode_inactive: "स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया",
+    toast_viz_fullscreen_entered: "विज़ुअलाइज़र फ़ुलस्क्रीन थिएटर मोड में सक्रिय",
+    toast_viz_fullscreen_exited: "विज़ुअलाइज़र सामान्य दृश्य पर वापस आया",
 
     // Precision Scrubber
     scrubber_chapter: "अध्याय (Chapter)",
@@ -2384,6 +2414,139 @@ function getVisualizerState() {
   return null;
 }
 
+function isVisualizerFullscreenActive() {
+  const card = (typeof document !== 'undefined') ? document.getElementById('heroAudioLabStatus') : null;
+  if (!card) return false;
+  const isNative = typeof document !== 'undefined' && Boolean(
+    document.fullscreenElement === card ||
+    document.webkitFullscreenElement === card ||
+    document.mozFullScreenElement === card ||
+    document.msFullscreenElement === card
+  );
+  return isNative || Boolean(card.classList && typeof card.classList.contains === 'function' ? card.classList.contains('visualizer-theater-mode') : (card.classList && Array.isArray(card.classList) && card.classList.includes('visualizer-theater-mode')));
+}
+
+function updateVisualizerCanvasResolution() {
+  if (typeof document === 'undefined') return;
+  const canvas = document.getElementById('canvasAudioVisualizer');
+  if (!canvas) return;
+  const isFullscreen = isVisualizerFullscreenActive();
+  if (isFullscreen) {
+    const container = canvas.parentElement;
+    const rect = (container && typeof container.getBoundingClientRect === 'function') ? container.getBoundingClientRect() : null;
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const targetW = (rect && rect.width > 0) ? Math.floor(rect.width * dpr) : (typeof window !== 'undefined' ? Math.floor(window.innerWidth * 0.9 * dpr) : 1200);
+    const targetH = (rect && rect.height > 0) ? Math.floor(rect.height * dpr) : (typeof window !== 'undefined' ? Math.floor((window.innerHeight - 180) * dpr) : 400);
+    canvas.width = Math.max(600, targetW);
+    canvas.height = Math.max(120, targetH);
+  } else {
+    canvas.width = 600;
+    canvas.height = 120;
+  }
+}
+
+function syncFullscreenUI(isActive) {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('btnVizFullscreen');
+  const card = document.getElementById('heroAudioLabStatus');
+  if (btn) {
+    btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    const titleText = isActive
+      ? (typeof t === 'function' ? t('viz_fullscreen_exit_title') : 'Exit Fullscreen Visualizer')
+      : (typeof t === 'function' ? t('viz_fullscreen_toggle_title') : 'Toggle Visualizer Fullscreen');
+    btn.setAttribute('title', titleText);
+    btn.setAttribute('aria-label', titleText);
+    if (isActive) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+    const iconExpand = btn.querySelector ? btn.querySelector('.viz-icon-expand') : null;
+    const iconCompress = btn.querySelector ? btn.querySelector('.viz-icon-compress') : null;
+    if (iconExpand && iconCompress) {
+      if (isActive) {
+        iconExpand.classList.add('visually-hidden');
+        iconCompress.classList.remove('visually-hidden');
+      } else {
+        iconExpand.classList.remove('visually-hidden');
+        iconCompress.classList.add('visually-hidden');
+      }
+    }
+  }
+
+  if (card) {
+    if (isActive) {
+      card.classList.add('visualizer-theater-mode');
+      if (document.body) document.body.classList.add('visualizer-theater-active');
+    } else {
+      card.classList.remove('visualizer-theater-mode');
+      if (document.body) document.body.classList.remove('visualizer-theater-active');
+    }
+  }
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      updateVisualizerCanvasResolution();
+    });
+  } else {
+    updateVisualizerCanvasResolution();
+  }
+}
+
+function setVisualizerFullscreenState(active) {
+  if (typeof document === 'undefined') return;
+  const card = document.getElementById('heroAudioLabStatus');
+  if (!card) return;
+
+  const currentlyActive = isVisualizerFullscreenActive();
+  if (active === currentlyActive) return;
+
+  if (active) {
+    // Request standard Fullscreen API if supported
+    if (typeof card.requestFullscreen === 'function') {
+      try {
+        const promise = card.requestFullscreen();
+        if (promise && typeof promise.then === 'function') {
+          promise.catch(() => {
+            // CSS fallback
+            syncFullscreenUI(true);
+          });
+        }
+      } catch (_) {
+        syncFullscreenUI(true);
+      }
+    } else if (typeof card.webkitRequestFullscreen === 'function') {
+      try {
+        card.webkitRequestFullscreen();
+      } catch (_) {
+        syncFullscreenUI(true);
+      }
+    }
+    syncFullscreenUI(true);
+  } else {
+    // Exit native fullscreen if active
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+      try {
+        if (typeof document.exitFullscreen === 'function') {
+          document.exitFullscreen().catch(() => {});
+        } else if (typeof document.webkitExitFullscreen === 'function') {
+          document.webkitExitFullscreen();
+        }
+      } catch (_) {}
+    }
+    syncFullscreenUI(false);
+  }
+}
+
+function toggleVisualizerFullscreen() {
+  const next = !isVisualizerFullscreenActive();
+  setVisualizerFullscreenState(next);
+  if (typeof showToast === 'function') {
+    const msgKey = next ? 'toast_viz_fullscreen_entered' : 'toast_viz_fullscreen_exited';
+    showToast(typeof t === 'function' ? t(msgKey) : (next ? 'Visualizer entered Fullscreen Theater mode' : 'Visualizer exited Fullscreen mode'));
+  }
+}
+
 // =============================================================================
 // Phase 3: Feature 5 & 6 Facade Functions (Backup, Snapshots, SQLite Hub & Digest)
 // =============================================================================
@@ -3039,6 +3202,20 @@ function applyDashboardLanguage(lang) {
     flame: 'viz_effect_flame',
     stereo_mirror: 'viz_effect_stereo'
   });
+
+  const btnVideoToggle = document.getElementById('btnVizVideoEmbedToggle');
+  if (btnVideoToggle) {
+    btnVideoToggle.setAttribute('title', t('viz_video_embed_toggle_title'));
+    btnVideoToggle.setAttribute('aria-label', t('viz_video_embed_toggle_title'));
+  }
+
+  const btnFullscreen = document.getElementById('btnVizFullscreen');
+  if (btnFullscreen) {
+    const isFs = isVisualizerFullscreenActive();
+    const fsKey = isFs ? 'viz_fullscreen_exit_title' : 'viz_fullscreen_toggle_title';
+    btnFullscreen.setAttribute('title', t(fsKey));
+    btnFullscreen.setAttribute('aria-label', t(fsKey));
+  }
 
   updateDashboardAudioLabUI(dashboardAudioLabSettings);
 
@@ -3981,6 +4158,87 @@ function switchTab(tabKey) {
   }
 
   applyCardStaggerIndices();
+}
+
+// =============================================================================
+// WebSocket Status Indicator Navigation & Settings Deep-Link Controller
+// =============================================================================
+
+// Global tracking for bridge highlight cleanup timers
+let bridgeHighlightTimers = {
+  hub: null,
+  hud: null
+};
+
+/**
+ * Deep-links from sidebar WebSocket status cards directly to the
+ * corresponding hardware bridge row and action button in the Settings pane.
+ *
+ * @param {'sqliteHub'|'videoHud'|'hub'|'hud'} serviceType - Identifier for target bridge service
+ */
+function navigateToBridgeService(serviceType) {
+  // 1. Audio / Haptic feedback if available
+  if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics && typeof sentinelHaptics.playClick === 'function') {
+    sentinelHaptics.playClick();
+  }
+
+  // 2. Switch tab to Settings
+  if (typeof switchTab === 'function') {
+    switchTab('settings');
+  }
+
+  // 3. Determine target elements (supporting both 'sqliteHub'/'hub' and 'videoHud'/'hud')
+  const isHub = (serviceType === 'sqliteHub' || serviceType === 'hub');
+  const targetRowId = isHub ? 'rowBridgeHub' : 'rowBridgeHud';
+  const targetBtnId = isHub ? 'btnSidebarReconnectHub' : 'btnSidebarReconnect';
+
+  const targetRow = (typeof document !== 'undefined') ? document.getElementById(targetRowId) : null;
+  const targetBtn = (typeof document !== 'undefined') ? document.getElementById(targetBtnId) : null;
+
+  // 4. Deferred scroll & focus to allow tab transition to render
+  const prefersReduced = (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+
+  const scrollOpts = {
+    behavior: prefersReduced ? 'auto' : 'smooth',
+    block: 'center'
+  };
+
+  setTimeout(() => {
+    if (targetRow) {
+      if (typeof targetRow.scrollIntoView === 'function') {
+        targetRow.scrollIntoView(scrollOpts);
+      }
+
+      // Clear any pending timer for this service
+      const timerKey = isHub ? 'hub' : 'hud';
+      if (bridgeHighlightTimers[timerKey]) {
+        clearTimeout(bridgeHighlightTimers[timerKey]);
+      }
+
+      // Restart highlight animations
+      targetRow.classList.remove('service-row-highlight');
+      void targetRow.offsetWidth; // Force CSS reflow
+      targetRow.classList.add('service-row-highlight');
+
+      if (targetBtn) {
+        targetBtn.classList.remove('highlight-pulse');
+        void targetBtn.offsetWidth;
+        targetBtn.classList.add('highlight-pulse');
+        if (typeof targetBtn.focus === 'function') {
+          targetBtn.focus({ preventScroll: true });
+        }
+      }
+
+      // Cleanup after 2000ms
+      bridgeHighlightTimers[timerKey] = setTimeout(() => {
+        if (targetRow) targetRow.classList.remove('service-row-highlight');
+        if (targetBtn) targetBtn.classList.remove('highlight-pulse');
+        bridgeHighlightTimers[timerKey] = null;
+      }, 2000);
+    }
+  }, 60);
 }
 
 // =============================================================================
@@ -6848,8 +7106,14 @@ function setupEventListeners() {
   }
 
   // 1. Navigation Tab Switching
-  document.getElementById('navTabTracking').addEventListener('click', () => switchTab('tracking'));
-  document.getElementById('navTabMedia').addEventListener('click', () => switchTab('media'));
+  const navTabTracking = document.getElementById('navTabTracking');
+  if (navTabTracking) {
+    navTabTracking.addEventListener('click', () => switchTab('tracking'));
+  }
+  const navTabMedia = document.getElementById('navTabMedia');
+  if (navTabMedia) {
+    navTabMedia.addEventListener('click', () => switchTab('media'));
+  }
   const navTabWellbeing = document.getElementById('navTabWellbeing');
   if (navTabWellbeing) {
     navTabWellbeing.addEventListener('click', () => switchTab('wellbeing'));
@@ -6858,7 +7122,37 @@ function setupEventListeners() {
   if (microWidget) {
     microWidget.addEventListener('click', () => switchTab('wellbeing'));
   }
-  document.getElementById('navTabSettings').addEventListener('click', () => switchTab('settings'));
+  const navTabSettings = document.getElementById('navTabSettings');
+  if (navTabSettings) {
+    navTabSettings.addEventListener('click', () => switchTab('settings'));
+  }
+
+  // Sidebar WebSocket Status Cards — Deep-Link to Settings
+  const sidebarDataHubCard = document.getElementById('sidebarDataHubCard');
+  if (sidebarDataHubCard) {
+    sidebarDataHubCard.addEventListener('click', () => {
+      navigateToBridgeService('sqliteHub');
+    });
+    sidebarDataHubCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        navigateToBridgeService('sqliteHub');
+      }
+    });
+  }
+
+  const sidebarHudCard = document.getElementById('sidebarHudCard');
+  if (sidebarHudCard) {
+    sidebarHudCard.addEventListener('click', () => {
+      navigateToBridgeService('videoHud');
+    });
+    sidebarHudCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        navigateToBridgeService('videoHud');
+      }
+    });
+  }
 
   // 2. 1-Click Language Switcher (EN / HI Toggle)
   const btnLangToggle = document.getElementById('btnLangToggle');
@@ -7481,6 +7775,9 @@ function setupEventListeners() {
       const pm = (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia) || null;
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       const targetWindowId = (pm && pm.windowId) ? pm.windowId : undefined;
+      if (typeof handleRemoteMediaCommand === 'function' && targetTabId) {
+        handleRemoteMediaCommand(targetTabId, 'switch_tab', 0);
+      }
       safeRuntimeSendMessage({
         type: 'JUMP_TO_MEDIA_TAB',
         tabId: targetTabId,
@@ -8255,6 +8552,72 @@ function setupEventListeners() {
     });
   }
 
+  // Fullscreen Visualizer Button Binding
+  const btnVizFullscreen = document.getElementById('btnVizFullscreen');
+  if (btnVizFullscreen) {
+    btnVizFullscreen.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      toggleVisualizerFullscreen();
+    });
+  }
+
+  // Video Embed Toggle Button Binding
+  const btnVizVideoEmbedToggle = document.getElementById('btnVizVideoEmbedToggle');
+  if (btnVizVideoEmbedToggle) {
+    btnVizVideoEmbedToggle.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const isPressed = btnVizVideoEmbedToggle.getAttribute('aria-pressed') === 'true';
+      const nextState = !isPressed;
+      btnVizVideoEmbedToggle.setAttribute('aria-pressed', nextState ? 'true' : 'false');
+      if (nextState) {
+        btnVizVideoEmbedToggle.classList.add('active');
+      } else {
+        btnVizVideoEmbedToggle.classList.remove('active');
+      }
+      if (typeof showToast === 'function') {
+        const toastKey = nextState ? 'toast_viz_embed_mode_active' : 'toast_viz_embed_mode_inactive';
+        showToast(typeof t === 'function' ? t(toastKey) : (nextState ? 'Video Embed Mode active (Live stream playback preview)' : 'Switched back to Spectrum Visualizer'));
+      }
+    });
+  }
+
+  // Escape key handler for fullscreen visualizer
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+      if (isVisualizerFullscreenActive()) {
+        setVisualizerFullscreenState(false);
+        if (typeof showToast === 'function') {
+          showToast(typeof t === 'function' ? t('toast_viz_fullscreen_exited') : 'Visualizer exited Fullscreen mode');
+        }
+      }
+    }
+  });
+
+  // Native fullscreenchange event handlers
+  ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach((evName) => {
+    document.addEventListener(evName, () => {
+      const card = document.getElementById('heroAudioLabStatus');
+      const isNowNative = !!(
+        document.fullscreenElement === card ||
+        document.webkitFullscreenElement === card ||
+        document.mozFullScreenElement === card ||
+        document.msFullscreenElement === card
+      );
+      if (!isNowNative && card && !card.classList.contains('visualizer-theater-mode')) {
+        syncFullscreenUI(false);
+      } else if (isNowNative) {
+        syncFullscreenUI(true);
+      }
+    });
+  });
+
+  // Window resize handler for canvas resolution adaptation
+  window.addEventListener('resize', () => {
+    if (isVisualizerFullscreenActive()) {
+      updateVisualizerCanvasResolution();
+    }
+  });
+
   // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
   initBackupAndDigestHandlers();
 }
@@ -8598,6 +8961,7 @@ if (typeof module !== 'undefined' && module.exports) {
     exportDashboardBackup,
     SHORTCUTS_REGISTRY,
     switchTab,
+    navigateToBridgeService,
     // Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers exports
     formatHHMMSS,
     formatTimeHHMMSS,
@@ -8658,6 +9022,9 @@ if (typeof module !== 'undefined' && module.exports) {
     handleMuteAllOthers,
     initAudioVisualizer,
     setVisualizerMode,
+    isVisualizerFullscreenActive,
+    setVisualizerFullscreenState,
+    toggleVisualizerFullscreen,
     renderVisualizerFrame,
     startVisualizerLoop,
     stopVisualizerLoop,
@@ -8687,6 +9054,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (typeof window !== 'undefined') {
+  window.navigateToBridgeService = navigateToBridgeService;
   window.updateHUDStatus = updateHUDStatus;
   window.updateDataHubStatus = updateDataHubStatus;
   window.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
@@ -8719,6 +9087,9 @@ if (typeof window !== 'undefined') {
   window.handleMuteAllOthers = handleMuteAllOthers;
   window.initAudioVisualizer = initAudioVisualizer;
   window.setVisualizerMode = setVisualizerMode;
+  window.isVisualizerFullscreenActive = isVisualizerFullscreenActive;
+  window.setVisualizerFullscreenState = setVisualizerFullscreenState;
+  window.toggleVisualizerFullscreen = toggleVisualizerFullscreen;
   window.renderVisualizerFrame = renderVisualizerFrame;
   window.startVisualizerLoop = startVisualizerLoop;
   window.stopVisualizerLoop = stopVisualizerLoop;
@@ -8740,6 +9111,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof globalThis !== 'undefined') {
+  globalThis.navigateToBridgeService = navigateToBridgeService;
   globalThis.updateHUDStatus = updateHUDStatus;
   globalThis.updateDataHubStatus = updateDataHubStatus;
   globalThis.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;

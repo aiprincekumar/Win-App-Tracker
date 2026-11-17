@@ -2141,6 +2141,36 @@
             }
             break;
           }
+          case 'seek_to':
+          case 'seek_absolute': {
+            let dur = primaryMediaElement.duration;
+            if (!Number.isFinite(dur) || dur <= 0) {
+              dur = typeof extractYouTubeDuration === 'function' ? extractYouTubeDuration(primaryMediaElement) : 0;
+            }
+            const maxDuration = (Number.isFinite(dur) && dur > 0) ? dur : 999999;
+            const rawTarget = (typeof data.positionSeconds === 'number')
+              ? data.positionSeconds
+              : ((typeof data.seconds === 'number') ? data.seconds : 0);
+            
+            const clampedSeconds = Math.max(0, Math.min(maxDuration, rawTarget));
+            try {
+              primaryMediaElement.currentTime = clampedSeconds;
+            } catch (_) {}
+
+            // Synchronize with YouTube player instance if embedded
+            try {
+              const moviePlayer = document.getElementById('movie_player') || window.movie_player;
+              if (moviePlayer && typeof moviePlayer.seekTo === 'function') {
+                moviePlayer.seekTo(clampedSeconds, true);
+              }
+            } catch (_) {}
+
+            // Broadcast immediate telemetry so dashboard progress reflects seek
+            try {
+              dispatchMediaTelemetry(true);
+            } catch (_) {}
+            break;
+          }
           case 'cycle_speed': {
             const cur = primaryMediaElement.playbackRate || 1.0;
             const targetSpeed = calculateNextLadderSpeed(cur, 'up');
@@ -2506,6 +2536,7 @@
     // 4. Direct Media Action Fallback (when action is sent directly as type or action)
     const KNOWN_MEDIA_ACTIONS = [
       'play', 'pause', 'toggle_play', 'seek_relative', 'seek_percent',
+      'seek_to', 'seek_absolute',
       'toggle_mute', 'mute', 'unmute', 'set_volume', 'SET_VOLUME', 'step_speed', 'set_speed',
       'cycle_speed', 'toggle_fullscreen', 'toggle_pip', 'toggle_theater',
       'step_quality', 'set_quality'

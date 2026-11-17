@@ -2369,18 +2369,63 @@ async function handleSoloTabExecution(soloTabId) {
 }
 
 /**
+ * Activates a tab and brings its parent window to focus (with minimized window un-minimization)
+ * Hoisted to top-level background scope for global IPC accessibility.
+ * @param {number|string} tabId
+ * @param {number|string} [windowId]
+ * @returns {Promise<{success: boolean, tabId?: number, windowId?: number, error?: string}|false>}
+ */
+const activateAndFocusTab = async function activateAndFocusTab(tabId, windowId) {
+  try {
+    const numTabId = Number(tabId);
+    if (!numTabId) return false;
+    const targetTab = await browserAPI.tabs.get(numTabId);
+    if (!targetTab) return false;
+    
+    await browserAPI.tabs.update(numTabId, { active: true });
+    const winId = windowId || targetTab.windowId;
+    if (winId) {
+      try {
+        let win = null;
+        if (browserAPI.windows && typeof browserAPI.windows.get === 'function') {
+          win = await browserAPI.windows.get(winId);
+        }
+        if (win && win.state === 'minimized') {
+          await browserAPI.windows.update(winId, { state: 'normal', focused: true });
+        } else {
+          await browserAPI.windows.update(winId, { focused: true });
+        }
+      } catch (_) {
+        if (browserAPI.windows && typeof browserAPI.windows.update === 'function') {
+          await browserAPI.windows.update(winId, { state: 'normal', focused: true }).catch(() => {});
+        }
+      }
+    }
+    return { success: true, tabId: numTabId, windowId: winId };
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Phase 2: Feature 3 - Remote Media Command Execution
  * Dispatches remote media command to a specific tab.
  * @param {number} tabId
- * @param {string} command - 'play' | 'pause' | 'toggle' | 'seek' | 'set_volume' | 'mute' | 'unmute' | 'solo'
+ * @param {string} command - 'play' | 'pause' | 'toggle' | 'seek' | 'seek_to' | 'seek_absolute' | 'seek_percent' | 'set_volume' | 'mute' | 'unmute' | 'solo' | 'switch_tab' | 'focus_tab'
  * @param {number} [value]
+ * @param {object} [options]
  */
-async function handleRemoteMediaCommandExecution(tabId, command, value) {
+async function handleRemoteMediaCommandExecution(tabId, command, value, options = {}) {
   const targetId = Number(tabId);
   if (!targetId) return { success: false, error: 'Invalid tabId' };
 
   if (command === 'solo') {
     return await handleSoloTabExecution(targetId);
+  }
+
+  if (command === 'switch_tab' || command === 'focus_tab') {
+    const focusResult = await activateAndFocusTab(targetId, options && options.windowId);
+    return { success: Boolean(focusResult && focusResult.success), tabId: targetId, command, focusResult };
   }
 
   const tabMedia = tabMediaMap.get(targetId);
@@ -2413,14 +2458,43 @@ async function handleRemoteMediaCommandExecution(tabId, command, value) {
       if (pm) pm.isMuted = false;
       safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'unmute' });
       break;
-    case 'seek':
+    case 'seek': {
+      const offset = Number(value) || 0;
+      if (pm && typeof pm.currentTime === 'number') {
+        const dur = (Number.isFinite(pm.duration) && pm.duration > 0) ? pm.duration : 999999;
+        pm.currentTime = Math.max(0, Math.min(dur, pm.currentTime + offset));
+      }
       safeSendTabMessage(targetId, {
         type: 'MEDIA_CONTROL',
         action: 'seek_relative',
-        data: { offsetSeconds: Number(value) || 0 }
+        data: { offsetSeconds: offset }
       });
       break;
-    case 'set_volume':
+    }
+    case 'seek_to':
+    case 'seek_absolute': {
+      const targetSec = Math.max(0, Number(value) || 0);
+      if (pm) pm.currentTime = targetSec;
+      safeSendTabMessage(targetId, {
+        type: 'MEDIA_CONTROL',
+        action: 'seek_to',
+        data: { positionSeconds: targetSec, seconds: targetSec }
+      });
+      break;
+    }
+    case 'seek_percent': {
+      const pct = Math.max(0, Math.min(100, Number(value) || 0));
+      if (pm && Number.isFinite(pm.duration) && pm.duration > 0) {
+        pm.currentTime = (pct / 100) * pm.duration;
+      }
+      safeSendTabMessage(targetId, {
+        type: 'MEDIA_CONTROL',
+        action: 'seek_percent',
+        data: { percent: pct }
+      });
+      break;
+    }
+    case 'set_volume': {
       const vol = Math.max(0, Math.min(1, Number(value) || 0));
       if (pm) pm.volume = vol;
       safeSendTabMessage(targetId, {
@@ -2429,6 +2503,7 @@ async function handleRemoteMediaCommandExecution(tabId, command, value) {
         data: { volume: vol, percent: Math.round(vol * 100) }
       });
       break;
+    }
     default:
       return { success: false, error: `Unknown command: ${command}` };
   }
@@ -3384,6 +3459,18 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const curTime = Number(pm.currentTime) || 0;
           const dur = (Number(pm.duration) > 0) ? Number(pm.duration) : 999999;
           pm.currentTime = Math.max(0, Math.min(dur, curTime + message.data.offsetSeconds));
+        } else if ((message.action === 'seek_to' || message.action === 'seek_absolute') && message.data) {
+          const targetSec = (typeof message.data.positionSeconds === 'number')
+            ? message.data.positionSeconds
+            : ((typeof message.data.seconds === 'number') ? message.data.seconds : 0);
+          pm.currentTime = Math.max(0, targetSec);
+        } else if (message.action === 'seek_percent' && message.data) {
+          const dur = (Number(pm.duration) > 0) ? Number(pm.duration) : 0;
+          if (typeof message.data.positionSeconds === 'number' && message.data.positionSeconds >= 0) {
+            pm.currentTime = message.data.positionSeconds;
+          } else if (typeof message.data.percent === 'number' && dur > 0) {
+            pm.currentTime = (message.data.percent / 100) * dur;
+          }
         }
 
         // Broadcast optimistic update immediately
@@ -3428,42 +3515,6 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'JUMP_TO_MEDIA_TAB') {
     (async () => {
       await ensureStorageLoaded();
-
-      // Helper function to activate a tab and focus its window (with minimized window un-minimization)
-      const activateAndFocusTab = async (tabId, windowId) => {
-        try {
-          const numTabId = Number(tabId);
-          if (!numTabId) return false;
-          const targetTab = await browserAPI.tabs.get(numTabId);
-          if (!targetTab) return false;
-          
-          await browserAPI.tabs.update(numTabId, { active: true });
-          const winId = windowId || targetTab.windowId;
-          if (winId) {
-            try {
-              let win = null;
-              if (browserAPI.windows && typeof browserAPI.windows.get === 'function') {
-                win = await browserAPI.windows.get(winId);
-              }
-              if (win && win.state === 'minimized') {
-                await browserAPI.windows.update(winId, { state: 'normal', focused: true });
-              } else {
-                await browserAPI.windows.update(winId, { focused: true });
-              }
-            } catch (_) {
-              if (browserAPI.windows && typeof browserAPI.windows.update === 'function') {
-                await browserAPI.windows.update(winId, { state: 'normal', focused: true }).catch(() => {});
-              }
-            }
-          }
-          return { success: true, tabId: numTabId, windowId: winId };
-        } catch (_) {
-          return false;
-        }
-      };
-      if (typeof globalThis !== 'undefined') {
-        globalThis.activateAndFocusTab = activateAndFocusTab;
-      }
 
       // Candidate list of tabs to evaluate in sequence
       const candidateTabIds = new Set();
@@ -4170,6 +4221,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
   globalThis.handleSoloTabExecution = handleSoloTabExecution;
   globalThis.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
+  globalThis.activateAndFocusTab = activateAndFocusTab;
   globalThis.matchesTrackingBlacklist = matchesTrackingBlacklist;
   globalThis.compileBlacklistRegexBg = compileBlacklistRegexBg;
   globalThis.getTrackingBlacklist = () => trackingBlacklist;
@@ -4188,6 +4240,7 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
     globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
     globalThis.SentinelBackgroundModules.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
+    globalThis.SentinelBackgroundModules.activateAndFocusTab = activateAndFocusTab;
     globalThis.SentinelBackgroundModules.matchesTrackingBlacklist = matchesTrackingBlacklist;
     globalThis.SentinelBackgroundModules.getTrackingBlacklist = () => trackingBlacklist;
     globalThis.SentinelBackgroundModules.setTrackingBlacklist = (list) => { trackingBlacklist = list; };
