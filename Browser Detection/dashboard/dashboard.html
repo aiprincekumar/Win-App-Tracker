@@ -4,8 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Web Activity & Media Sentinel</title>
-  <link rel="stylesheet" href="dashboard.css">
+  <!-- Design Tokens, Themes & Palettes (Foundational CSS Variables) -->
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/themes.css">
+  <link rel="stylesheet" href="styles/palette.css">
+
+  <!-- Core Layout & Common Component Frameworks -->
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/layout/header_sidebar.css">
+  <link rel="stylesheet" href="styles/layout/bento_grid.css">
+  <link rel="stylesheet" href="styles/layout/responsive.css">
+  <link rel="stylesheet" href="styles/components.css">
+
+  <!-- Domain-Specific Modular Feature Stylesheets -->
+  <link rel="stylesheet" href="styles/metrics.css">
+  <link rel="stylesheet" href="styles/tracking.css">
+  <link rel="stylesheet" href="styles/media.css">
+  <link rel="stylesheet" href="styles/media/hero_player.css">
+  <link rel="stylesheet" href="styles/media/scrubber_controls.css">
+  <link rel="stylesheet" href="styles/audio_lab.css">
+  <link rel="stylesheet" href="styles/settings.css">
+  <link rel="stylesheet" href="styles/hotkeys.css">
+  <link rel="stylesheet" href="styles/backup_digest.css">
   <link rel="stylesheet" href="styles/wellbeing_blacklist.css">
+
+  <!-- Master Stylesheet (Global Aggregation & Root Overrides) -->
+  <link rel="stylesheet" href="dashboard.css">
   <link rel="icon" type="image/png" href="../icons/icon32.png">
 </head>
 <body class="theme-dark">
@@ -60,8 +84,8 @@
         </div>
       </div>
 
-      <!-- Sidebar Footer Data Hub Status Widget -->
-      <div class="sidebar-hud-card">
+      <!-- Sidebar Footer Data Hub Status Widget (Minimalist Telemetry) -->
+      <div class="sidebar-hud-card" title="SQLite Data Hub (ws://127.0.0.1:65433 WAL)">
         <div class="hud-card-header">
           <span class="hud-card-title">SQLite Data Hub</span>
           <span id="dataHubSidebarDot" class="hud-dot offline"></span>
@@ -70,13 +94,10 @@
           <span id="dataHubSidebarLabel" class="hud-status-text">Hub Offline</span>
           <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
         </div>
-        <button id="btnSidebarReconnectHub" class="btn-hud-reconnect" title="Reconnect to SQLite Data Hub">
-          ⚡ Reconnect Hub
-        </button>
       </div>
 
-      <!-- Sidebar Footer HUD Status Widget -->
-      <div class="sidebar-hud-card">
+      <!-- Sidebar Footer HUD Status Widget (Minimalist Telemetry) -->
+      <div class="sidebar-hud-card" title="Video Detector HUD (ws://127.0.0.1:65432)">
         <div class="hud-card-header">
           <span class="hud-card-title">Video Detector HUD</span>
           <span id="hudStatusDot" class="hud-dot offline"></span>
@@ -85,9 +106,6 @@
           <span id="hudStatusLabel" class="hud-status-text">HUD Offline</span>
           <span class="hud-address">ws://127.0.0.1:65432</span>
         </div>
-        <button id="btnSidebarReconnect" class="btn-hud-reconnect" title="Reconnect to HUD">
-          ⚡ Reconnect HUD
-        </button>
       </div>
 
       <!-- Version & Profile footer -->
@@ -1381,6 +1399,48 @@
                   </div>
                   <button id="btnDownloadHtmlReport" class="btn-export-tile">
                     <span>📄 Download HTML Report</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Local Services & Hardware Bridges -->
+            <div id="cardHardwareBridges" class="settings-card bento-card liquid-glass-card bento-span-6 settings-section-card">
+              <div class="settings-card-header">
+                <span class="settings-card-icon">🔌</span>
+                <div class="settings-card-title-group">
+                  <h3 id="headingHardwareBridges" class="settings-card-title">Local Services & Hardware Bridges</h3>
+                  <span id="subHardwareBridges" class="settings-card-sub">WebSocket daemons, SQLite storage engine, and peripheral telemetry</span>
+                </div>
+              </div>
+              <div class="settings-card-body">
+                <!-- Service 1: SQLite Data Hub Daemon -->
+                <div class="bridge-service-row">
+                  <div class="bridge-service-meta">
+                    <div class="bridge-service-name-wrap">
+                      <span class="bridge-service-icon">💾</span>
+                      <span class="bridge-service-name">SQLite Data Hub Daemon</span>
+                      <span class="bridge-port-badge">Port 65433 (WAL)</span>
+                    </div>
+                    <span class="bridge-service-desc">Local high-concurrency event telemetry & persistent database store</span>
+                  </div>
+                  <button id="btnSidebarReconnectHub" class="btn-hud-reconnect btn-bridge-action" title="Reconnect to SQLite Data Hub">
+                    ⚡ Reconnect Hub
+                  </button>
+                </div>
+
+                <!-- Service 2: Video Detector HUD Bridge -->
+                <div class="bridge-service-row">
+                  <div class="bridge-service-meta">
+                    <div class="bridge-service-name-wrap">
+                      <span class="bridge-service-icon">🖥️</span>
+                      <span class="bridge-service-name">Video Detector HUD Bridge</span>
+                      <span class="bridge-port-badge">Port 65432</span>
+                    </div>
+                    <span class="bridge-service-desc">Real-time overlay bridge for Windows desktop video sentinel</span>
+                  </div>
+                  <button id="btnSidebarReconnect" class="btn-hud-reconnect btn-bridge-action" title="Reconnect to HUD">
+                    ⚡ Reconnect HUD
                   </button>
                 </div>
               </div>

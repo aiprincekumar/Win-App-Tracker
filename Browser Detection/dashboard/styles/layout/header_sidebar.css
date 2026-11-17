@@ -146,13 +146,26 @@ body.theme-dark {
   100% { transform: scale(0.9); opacity: 0.6; }
 }
 
-/* Sidebar HUD Widget Card */
+/* Sidebar HUD Widget Card (Minimalist Telemetry) */
 .sidebar-hud-card {
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-md);
-  padding: 14px;
-  margin-bottom: 20px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.75rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-hud-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+body.theme-light .sidebar-hud-card {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: var(--border-dim);
 }
 
 .hud-card-header {

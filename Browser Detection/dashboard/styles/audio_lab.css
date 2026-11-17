@@ -320,7 +320,7 @@ body.theme-light .audio-boost-slider {
 .eq-bands-grid::before {
   content: '';
   position: absolute;
-  top: 52%;
+  top: 50%;
   left: 2rem;
   right: 2rem;
   height: 1px;
@@ -351,14 +351,15 @@ body.theme-light .audio-boost-slider {
   font-size: 0.85rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--accent-emerald);
-  min-width: 44px;
+  color: var(--accent-emerald, #10b981);
+  min-width: 46px;
   text-align: center;
-  padding: 0.2rem 0.45rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 6px;
   background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  transition: all 0.15s ease;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Slider Track Wrapper with Height */
@@ -381,36 +382,46 @@ body.theme-light .audio-boost-slider {
   margin: 0 auto;
   cursor: pointer;
   background: transparent;
-  accent-color: var(--accent-emerald);
+  accent-color: var(--accent-emerald, #10b981);
   touch-action: none;
+  transition: filter 0.2s ease;
 }
 
 .eq-vertical-slider:focus-visible {
-  outline: 2px solid var(--accent-emerald);
+  outline: 2px solid var(--accent-emerald, #10b981);
   outline-offset: 4px;
+  border-radius: 4px;
 }
 
 /* WebKit Track & Thumb Details */
 .eq-vertical-slider::-webkit-slider-runnable-track {
   width: 8px;
-  background: var(--glass-card-border);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+body.theme-light .eq-vertical-slider::-webkit-slider-runnable-track {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.05);
 }
 
 .eq-vertical-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 24px;
-  height: 16px;
-  background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  appearance: none;
+  width: 26px;
+  height: 14px;
   border-radius: 4px;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  background: var(--accent-emerald, #10b981);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.65), 0 2px 4px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.eq-vertical-slider:hover::-webkit-slider-thumb {
+.eq-vertical-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.9), 0 0 4px #fff;
 }
 
 /* Frequency Labels & Subtext */
