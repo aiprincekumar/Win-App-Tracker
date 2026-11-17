@@ -3557,6 +3557,61 @@ body.theme-light .hero-seek-slider {
   border-color: var(--border-hover);
 }
 
+/* Dedicated Real-Time Spectrum Visualizer Bento Card (.visualizer-hero-card) */
+#heroAudioLabStatus.visualizer-hero-card,
+.audio-lab-widget.visualizer-hero-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 380px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg, 18px);
+  padding: 1.25rem 1.4rem;
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease;
+}
+
+#heroAudioLabStatus.visualizer-hero-card:hover,
+.audio-lab-widget.visualizer-hero-card:hover {
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45), 0 0 20px rgba(6, 182, 212, 0.15);
+  transform: translateY(-2px);
+}
+
+.visualizer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.visualizer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visualizer-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.visualizer-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 0.5rem;
+}
+
 .audio-lab-header {
   display: flex;
   align-items: center;
@@ -3986,6 +4041,27 @@ body.theme-light .audio-eq-widget {
   border-color: var(--border-dim);
 }
 
+body.theme-light #heroAudioLabStatus.visualizer-hero-card,
+body.theme-light .audio-lab-widget.visualizer-hero-card {
+  background: var(--glass-surface-bg, rgba(255, 255, 255, 0.85));
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+body.theme-light #heroAudioLabStatus.visualizer-hero-card:hover,
+body.theme-light .audio-lab-widget.visualizer-hero-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.1), 0 0 16px rgba(6, 182, 212, 0.15);
+}
+
+body.theme-light .visualizer-card-header {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .eq-studio-top-deck {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
 body.theme-light .eq-card-header {
   border-bottom-color: var(--border-dim);
 }
@@ -4050,6 +4126,71 @@ body.theme-light .eq-freq-label {
 
 body.theme-light .eq-freq-sub {
   color: var(--text-secondary);
+}
+
+/* ========================================================================= */
+/* STUDIO EQUALIZER UPPER DECK (.eq-studio-top-deck)                         */
+/* Master Volume Boost Slider & 3 Audio Enhancement Chips Integration        */
+/* ========================================================================= */
+.eq-studio-top-deck {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.5fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--glass-card-border);
+}
+
+.audio-enhancements-row {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.audio-enhancements-row .enhancements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.enhancement-card.enhancement-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  height: 100%;
+  min-height: 80px;
+}
+
+.enhancement-chip .enhancement-card-header {
+  margin-bottom: 4px;
+}
+
+.enhancement-chip .enhancement-title {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.enhancement-chip .enhancement-desc {
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1024px) {
+  .eq-studio-top-deck {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .audio-enhancements-row .enhancements-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ========================================================================= */
@@ -5562,7 +5703,9 @@ body.theme-light .btn-test-chime:hover {
 
 /* ========================================================================= */
 /* Phase 2: Feature 4 - 60fps Canvas Audio Visualizer & VU Level Meters      */
+/* iOS 26 Liquid Glass Materiality & Audiophile Studio Deck Architecture     */
 /* ========================================================================= */
+
 .visualizer-panel {
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -5571,7 +5714,19 @@ body.theme-light .btn-test-chime:hover {
   margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.visualizer-hero-card .visualizer-panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-top: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .visualizer-header {
@@ -5588,24 +5743,102 @@ body.theme-light .btn-test-chime:hover {
 }
 
 .visualizer-title {
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
   color: #f8fafc;
+  letter-spacing: -0.01em;
+  margin: 0;
 }
 
+/* Redesigned FFT & Waveform Capsule Toggle Buttons */
 .visualizer-controls {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
 }
 
+.visualizer-controls-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 3px 4px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-viz-mode,
+#btnVizModeBars,
+#btnVizModeWave {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 9999px;
+  background: var(--viz-btn-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--viz-btn-border, rgba(255, 255, 255, 0.1));
+  color: var(--viz-btn-text, #94a3b8);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  user-select: none;
+  line-height: 1;
+}
+
+.btn-viz-mode:hover,
+#btnVizModeBars:hover,
+#btnVizModeWave:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.btn-viz-mode:active,
+#btnVizModeBars:active,
+#btnVizModeWave:active {
+  transform: scale(0.97);
+}
+
+.btn-viz-mode.btn-active,
+.btn-viz-mode.active,
+#btnVizModeBars.btn-active,
+#btnVizModeWave.btn-active {
+  background: var(--viz-btn-active-bg, linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.2)));
+  border-color: var(--viz-btn-active-border, rgba(6, 182, 212, 0.5));
+  color: var(--viz-btn-active-text, #38bdf8);
+  box-shadow: var(--viz-btn-active-shadow, 0 0 12px rgba(6, 182, 212, 0.35)), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  font-weight: 700;
+}
+
+.btn-viz-mode:focus-visible,
+#btnVizModeBars:focus-visible,
+#btnVizModeWave:focus-visible {
+  outline: 2px solid var(--accent-emerald, #10b981);
+  outline-offset: 2px;
+}
+
+/* Studio Obsidian Canvas Chassis */
 .visualizer-canvas-container {
   width: 100%;
-  height: 120px;
-  background: #080b11;
-  border-radius: 8px;
+  height: 130px;
+  min-height: 120px;
+  background: var(--viz-canvas-bg, rgba(10, 15, 28, 0.85));
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--viz-canvas-border, rgba(99, 102, 241, 0.2));
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.7), 0 0 16px rgba(99, 102, 241, 0.08);
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #canvasAudioVisualizer {
@@ -5614,32 +5847,40 @@ body.theme-light .btn-test-chime:hover {
   display: block;
 }
 
+/* Stereo VU Peak Level Meters & 0dB Headroom Indicator */
 .vu-meters-container {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .vu-bar-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--vu-db-text, #94a3b8);
 }
 
 .vu-label {
   width: 14px;
   font-weight: 700;
-  color: #64748b;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #94a3b8);
+  text-align: center;
 }
 
 .vu-meter {
   flex: 1;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vu-track-bg, rgba(15, 23, 42, 0.8));
+  border: 1px solid var(--vu-track-border, rgba(255, 255, 255, 0.06));
   border-radius: 3px;
   overflow: hidden;
   position: relative;
@@ -5648,36 +5889,42 @@ body.theme-light .btn-test-chime:hover {
 .vu-level {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #10b981 0%, #10b981 65%, #f59e0b 82%, #f43f5e 100%);
+  background: var(--vu-gradient-safe, linear-gradient(90deg, #10b981 0%, #06b6d4 60%, #eab308 85%, #ef4444 100%));
   border-radius: 3px;
-  transition: width 0.06s ease-out;
+  transition: width 60ms linear;
 }
 
 .vu-db-text {
   width: 48px;
   text-align: right;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 0.68rem;
-  color: #64748b;
+  font-weight: 600;
+  color: var(--vu-db-text, #94a3b8);
 }
 
 .vu-clip-badge {
   align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.65rem;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  transition: all 0.15s ease;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--clip-badge-ok-bg, rgba(16, 185, 129, 0.12));
+  color: var(--clip-badge-ok-text, #34d399);
+  border: 1px solid var(--clip-badge-ok-border, rgba(16, 185, 129, 0.3));
+  transition: all 0.18s ease;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
 }
 
 .vu-clip-badge.clipping {
-  background: rgba(244, 63, 94, 0.25);
-  color: #f43f5e;
-  border-color: #f43f5e;
-  box-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
+  background: var(--clip-badge-clip-bg, rgba(239, 68, 68, 0.2));
+  color: var(--clip-badge-clip-text, #f87171);
+  border-color: var(--clip-badge-clip-border, rgba(239, 68, 68, 0.6));
+  box-shadow: var(--clip-badge-clip-shadow, 0 0 10px rgba(239, 68, 68, 0.4));
 }
 
 /* Light Theme Overrides */
@@ -5692,7 +5939,7 @@ body.theme-light .deck-card-title {
 }
 
 body.theme-light .visualizer-panel {
-  background: #f8fafc;
+  background: transparent;
   border-color: rgba(0, 0, 0, 0.08);
 }
 
@@ -5700,8 +5947,76 @@ body.theme-light .visualizer-title {
   color: #0f172a;
 }
 
+body.theme-light .visualizer-controls-bar {
+  background: rgba(241, 245, 249, 0.8);
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+body.theme-light .btn-viz-mode,
+body.theme-light #btnVizModeBars,
+body.theme-light #btnVizModeWave {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(203, 213, 225, 0.8);
+  color: #475569;
+}
+
+body.theme-light .btn-viz-mode:hover,
+body.theme-light #btnVizModeBars:hover,
+body.theme-light #btnVizModeWave:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+body.theme-light .btn-viz-mode.btn-active,
+body.theme-light .btn-viz-mode.active,
+body.theme-light #btnVizModeBars.btn-active,
+body.theme-light #btnVizModeWave.btn-active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+  border-color: rgba(6, 182, 212, 0.45);
+  color: #0284c7;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
+}
+
 body.theme-light .visualizer-canvas-container {
   background: #0f172a;
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+body.theme-light .vu-meters-container {
+  background: rgba(241, 245, 249, 0.7);
+  border-color: rgba(203, 213, 225, 0.6);
+}
+
+body.theme-light .vu-bar-wrapper {
+  color: #475569;
+}
+
+body.theme-light .vu-label {
+  color: #334155;
+}
+
+body.theme-light .vu-meter {
+  background: rgba(226, 232, 240, 0.8);
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+body.theme-light .vu-db-text {
+  color: #475569;
+}
+
+body.theme-light .vu-clip-badge {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+body.theme-light .vu-clip-badge.clipping {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
 }
 
 
