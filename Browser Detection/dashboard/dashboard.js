@@ -4695,8 +4695,6 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
   const hasHub = Array.isArray(hubList) && hubList.length > 0;
 
   if (!hasBg && !hasHub) return [];
-  if (hasBg && !hasHub) return bgList.slice();
-  if (!hasBg && hasHub) return hubList.slice();
 
   const mergedMap = new Map();
 
@@ -4711,31 +4709,35 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
   };
 
   // Add Data Hub records first
-  for (const item of hubList) {
-    const key = getItemKey(item);
-    if (key) {
-      mergedMap.set(key, Object.assign({}, item));
+  if (hasHub) {
+    for (const item of hubList) {
+      const key = getItemKey(item);
+      if (key) {
+        mergedMap.set(key, Object.assign({}, item));
+      }
     }
   }
 
   // Overlay background records (richer realtime telemetry)
-  for (const item of bgList) {
-    const key = getItemKey(item);
-    if (key) {
-      const existing = mergedMap.get(key);
-      if (existing) {
-        const higherWatch = Math.max(item.watchDuration || 0, existing.watchDuration || 0);
-        const mostRecentTs = existing.timestamp || item.timestamp || 0;
-        const mostRecentUpdate = Math.max(item.lastUpdated || item.timestamp || 0, existing.lastUpdated || existing.timestamp || 0);
+  if (hasBg) {
+    for (const item of bgList) {
+      const key = getItemKey(item);
+      if (key) {
+        const existing = mergedMap.get(key);
+        if (existing) {
+          const higherWatch = Math.max(item.watchDuration || 0, existing.watchDuration || 0);
+          const mostRecentTs = existing.timestamp || item.timestamp || 0;
+          const mostRecentUpdate = Math.max(item.lastUpdated || item.timestamp || 0, existing.lastUpdated || existing.timestamp || 0);
 
-        mergedMap.set(key, Object.assign({}, existing, item, {
-          watchDuration: higherWatch,
-          timestamp: mostRecentTs,
-          lastUpdated: mostRecentUpdate,
-          isPlaying: Boolean(item.isPlaying || existing.isPlaying)
-        }));
-      } else {
-        mergedMap.set(key, Object.assign({}, item));
+          mergedMap.set(key, Object.assign({}, existing, item, {
+            watchDuration: higherWatch,
+            timestamp: mostRecentTs,
+            lastUpdated: mostRecentUpdate,
+            isPlaying: Boolean(item.isPlaying || existing.isPlaying)
+          }));
+        } else {
+          mergedMap.set(key, Object.assign({}, item));
+        }
       }
     }
   }
