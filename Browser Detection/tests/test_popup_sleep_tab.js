@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Dedicated Sleep Timer Tab in Extension Popup Mode
  * Task ID: TASK-POPUP-SLEEP-TAB-001
  * Author: Level 4 QA Verification Tester
