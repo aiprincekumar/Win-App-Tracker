@@ -175,11 +175,21 @@
                 streams = response;
               }
             }
-            cachedStreams = streams;
+            // Defensive sanitation to guarantee only genuine media tabs are cached
+            const sanitizedStreams = streams.filter(s => {
+              if (!s || !s.tabId) return false;
+              return Boolean(
+                s.isAudible === true ||
+                s.playbackState === 'playing' ||
+                (typeof s.duration === 'number' && s.duration > 0) ||
+                s.hasMedia === true
+              );
+            });
+            cachedStreams = sanitizedStreams;
             if (options.containerEl && options.doc) {
-              renderMultiTabMediaDeck(streams, options.containerEl, options);
+              renderMultiTabMediaDeck(sanitizedStreams, options.containerEl, options);
             }
-            resolve(streams);
+            resolve(sanitizedStreams);
           });
         } catch (_) {
           resolve(cachedStreams);
@@ -199,7 +209,17 @@
     if (!doc || !containerEl) return;
     const translate = typeof options.t === 'function' ? options.t : (k) => k;
 
-    const streams = Array.isArray(streamsList) ? streamsList : [];
+    const rawStreams = Array.isArray(streamsList) ? streamsList : [];
+    // Defensive client-side filtering: guarantee zero non-media cards enter DOM
+    const streams = rawStreams.filter(s => {
+      if (!s || !s.tabId) return false;
+      return Boolean(
+        s.isAudible === true ||
+        s.playbackState === 'playing' ||
+        (typeof s.duration === 'number' && s.duration > 0) ||
+        s.hasMedia === true
+      );
+    });
     cachedStreams = streams;
 
     // Update active streams count badge if present
@@ -393,9 +413,11 @@
   const MIN_DB = -40;
   const MAX_DB = 6;
 
+  const VALID_VIZ_MODES = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+
   let visualizerCanvas = null;
   let visualizerCtx = null;
-  let visualizerMode = 'bars'; // 'bars' | 'wave'
+  let visualizerMode = 'bars'; // 'bars' | 'wave' | 'radial' | 'matrix_dots' | 'flame' | 'stereo_mirror'
   let isVisualizerPlaying = false;
   let isVisualizerSleeping = true;
   let visualizerRafId = null;
@@ -432,6 +454,17 @@
 
       const btnBars = doc.getElementById('btnVizModeBars');
       const btnWave = doc.getElementById('btnVizModeWave');
+      const selectEffect = doc.getElementById('selectVizEffect');
+
+      if (selectEffect && !selectEffect.__vizBound) {
+        selectEffect.__vizBound = true;
+        selectEffect.value = visualizerMode;
+        selectEffect.addEventListener('change', (e) => {
+          if (e && e.target) {
+            setVisualizerMode(e.target.value, options);
+          }
+        });
+      }
 
       if (btnBars && !btnBars.__vizBound) {
         btnBars.__vizBound = true;
@@ -479,14 +512,19 @@
   }
 
   /**
-   * Toggles visualization style between 32-Band FFT Spectrum and Oscilloscope Waveform.
+   * Toggles visualization style across all supported 60fps canvas visualizer effects.
    */
   function setVisualizerMode(mode, options = {}) {
-    if (mode !== 'bars' && mode !== 'wave') return visualizerMode;
+    if (!VALID_VIZ_MODES.includes(mode)) return visualizerMode;
     visualizerMode = mode;
 
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
     if (doc) {
+      const selectEffect = doc.getElementById('selectVizEffect');
+      if (selectEffect && selectEffect.value !== mode) {
+        selectEffect.value = mode;
+      }
+
       const btnBars = doc.getElementById('btnVizModeBars');
       const btnWave = doc.getElementById('btnVizModeWave');
       if (btnBars) {
@@ -511,6 +549,17 @@
           if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'false');
         }
       }
+
+      const canvasEl = doc.getElementById('canvasAudioVisualizer') || doc.getElementById('mediaDeckVisualizerCanvas');
+      if (canvasEl) {
+        if (!canvasEl.dataset) canvasEl.dataset = {};
+        canvasEl.dataset.mode = mode;
+      }
+    }
+
+    if (visualizerCanvas) {
+      if (!visualizerCanvas.dataset) visualizerCanvas.dataset = {};
+      visualizerCanvas.dataset.mode = mode;
     }
 
     return visualizerMode;
@@ -608,7 +657,7 @@
     const wave = telemetry.wave;
 
     // -------------------------------------------------------------------------
-    // Mode A: 32-Band FFT Frequency Spectrum with Falling Peak-Hold Dots
+    // Mode 1: 32-Band FFT Frequency Spectrum with Falling Peak-Hold Dots
     // -------------------------------------------------------------------------
     if (visualizerMode === 'bars') {
       const gap = 3;
@@ -646,9 +695,9 @@
     }
 
     // -------------------------------------------------------------------------
-    // Mode B: Oscilloscope Waveform Mode (Neon Sine Trace)
+    // Mode 2: Oscilloscope Waveform Mode (Neon Sine Trace)
     // -------------------------------------------------------------------------
-    if (visualizerMode === 'wave') {
+    else if (visualizerMode === 'wave') {
       ctx.beginPath();
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = '#06b6d4';
@@ -673,6 +722,132 @@
 
       // Reset shadow for subsequent draw calls
       ctx.shadowBlur = 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // Mode 3: Radial Frequency Burst (Circular Audio Ring)
+    // -------------------------------------------------------------------------
+    else if (visualizerMode === 'radial') {
+      const cx = width / 2;
+      const cy = height / 2;
+      const baseRadius = 22 + (telemetry.leftRms || 0) * 12;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseRadius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < NUM_BANDS; i++) {
+        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+        const spokeLen = 4 + currentBandValues[i] * 32;
+        const angle = (i / NUM_BANDS) * Math.PI * 2 - Math.PI / 2;
+        const x1 = cx + Math.cos(angle) * (baseRadius + 2);
+        const y1 = cy + Math.sin(angle) * (baseRadius + 2);
+        const x2 = cx + Math.cos(angle) * (baseRadius + spokeLen);
+        const y2 = cy + Math.sin(angle) * (baseRadius + spokeLen);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';
+        ctx.stroke();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Mode 4: Matrix Digital Dots / Cyber Voxel Grid
+    // -------------------------------------------------------------------------
+    else if (visualizerMode === 'matrix_dots') {
+      const gap = 3;
+      const totalGaps = (NUM_BANDS - 1) * gap;
+      const colWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+      const numRows = 8;
+      const dotHeight = (height - 16) / numRows;
+
+      for (let i = 0; i < NUM_BANDS; i++) {
+        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+        const x = i * (colWidth + gap);
+
+        for (let r = 0; r < numRows; r++) {
+          const threshold = (r + 0.5) / numRows;
+          const isLit = currentBandValues[i] >= threshold;
+          const y = height - 8 - (r + 1) * dotHeight;
+
+          if (isLit) {
+            ctx.fillStyle = r > 5 ? '#f43f5e' : r > 3 ? '#38bdf8' : '#10b981';
+            ctx.fillRect(x, y + 2, colWidth, dotHeight - 4);
+          } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.fillRect(x, y + 2, colWidth, dotHeight - 4);
+          }
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Mode 5: Neon Flame Peaks (Warm Dynamic Fire Energy)
+    // -------------------------------------------------------------------------
+    else if (visualizerMode === 'flame') {
+      const gap = 3;
+      const totalGaps = (NUM_BANDS - 1) * gap;
+      const barWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+      const time = (timestamp || Date.now()) * 0.005;
+
+      for (let i = 0; i < NUM_BANDS; i++) {
+        const flutter = Math.sin(time * 3 + i * 0.5) * 0.15;
+        currentBandValues[i] = currentBandValues[i] * 0.6 + (freqs[i] || 0) * 0.4;
+        const flameHeight = Math.max(4, (currentBandValues[i] + flutter) * (height - 10));
+        const x = i * (barWidth + gap);
+        const y = height - flameHeight;
+
+        const grad = ctx.createLinearGradient(0, height, 0, y);
+        grad.addColorStop(0, '#dc2626');
+        grad.addColorStop(0.5, '#f59e0b');
+        grad.addColorStop(1, '#fbbf24');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(x, y, barWidth, flameHeight, [4, 4, 0, 0]);
+        } else {
+          ctx.fillRect(x, y, barWidth, flameHeight);
+        }
+        ctx.fill();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Mode 6: Stereo Dual-Channel Butterfly Mirror
+    // -------------------------------------------------------------------------
+    else if (visualizerMode === 'stereo_mirror') {
+      const halfWidth = width / 2;
+      const halfBands = NUM_BANDS / 2;
+      const barWidth = Math.max(2, (halfWidth - (halfBands * 2)) / halfBands);
+
+      // Center divider pulse
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillRect(halfWidth - 1, 4, 2, height - 8);
+
+      for (let i = 0; i < halfBands; i++) {
+        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+        const barHeight = Math.max(2, currentBandValues[i] * (height - 14));
+        const y = (height - barHeight) / 2;
+
+        // Left Mirror (expands from center to left)
+        const xLeft = halfWidth - (i + 1) * (barWidth + 2);
+        ctx.fillStyle = '#06b6d4';
+        ctx.fillRect(xLeft, y, barWidth, barHeight);
+
+        // Right Mirror (expands from center to right)
+        const xRight = halfWidth + i * (barWidth + 2) + 2;
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect(xRight, y, barWidth, barHeight);
+      }
     }
 
     // -------------------------------------------------------------------------
@@ -823,6 +998,8 @@
     handleMuteAllOthers,
     initAudioVisualizer,
     setVisualizerMode,
+    VALID_VIZ_MODES,
+    validModes: VALID_VIZ_MODES,
     synthesizeAudioTelemetry,
     amplitudeToDb,
     dbToPercent,

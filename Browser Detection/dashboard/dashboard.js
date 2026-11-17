@@ -236,6 +236,13 @@ const DASHBOARD_I18N = {
     visualizer_title: '🎛️ Real-Time Audio Spectrum Visualizer',
     visualizer_mode_bars: '32-Band FFT',
     visualizer_mode_wave: 'Waveform',
+    visualizer_effect_label: 'Effect:',
+    viz_effect_bars: '32-Band Spectrum',
+    viz_effect_wave: 'Oscilloscope Wave',
+    viz_effect_radial: 'Radial Frequency Burst',
+    viz_effect_matrix: 'Matrix Digital Dots',
+    viz_effect_flame: 'Neon Flame Peaks',
+    viz_effect_stereo: 'Stereo Mirror Butterfly',
     active_streams_count: (count) => `${count} active stream${count === 1 ? '' : 's'}`,
     no_media_streams: 'No active media streams detected across open tabs',
     
@@ -657,6 +664,13 @@ const DASHBOARD_I18N = {
     visualizer_title: '🎛️ रियल-टाइम ऑडियो स्पेक्ट्रम विज़ुअलाइज़र',
     visualizer_mode_bars: '32-बैंड FFT',
     visualizer_mode_wave: 'वेवफॉर्म',
+    visualizer_effect_label: 'इफ़ेक्ट:',
+    viz_effect_bars: '32-बैंड स्पेक्ट्रम',
+    viz_effect_wave: 'ऑसिलोस्कोप वेव',
+    viz_effect_radial: 'रेडियल फ़्रीक्वेंसी बर्स्ट',
+    viz_effect_matrix: 'मैट्रिक्स डिजिटल डॉट्स',
+    viz_effect_flame: 'नियॉन फ्लेम पीक्स',
+    viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
     active_streams_count: (count) => `${count} सक्रिय स्ट्रीम`,
     no_media_streams: 'खुले टैब्स में कोई सक्रिय मीडिया स्ट्रीम नहीं मिली',
     
@@ -1021,6 +1035,15 @@ const DASHBOARD_UIUX_I18N = {
     cmd_recent_domains: "Recent Domains",
     cmd_navigation: "Direct Navigation",
     
+    // Audio Visualizer Effects
+    visualizer_effect_label: "Effect:",
+    viz_effect_bars: "32-Band Spectrum",
+    viz_effect_wave: "Oscilloscope Wave",
+    viz_effect_radial: "Radial Frequency Burst",
+    viz_effect_matrix: "Matrix Digital Dots",
+    viz_effect_flame: "Neon Flame Peaks",
+    viz_effect_stereo: "Stereo Mirror Butterfly",
+
     // Precision Scrubber
     scrubber_chapter: "Chapter",
     scrubber_hover_time: "Time",
@@ -1078,6 +1101,15 @@ const DASHBOARD_UIUX_I18N = {
     cmd_recent_domains: "हाल के डोमेन्स",
     cmd_navigation: "प्रत्यक्ष नेविगेशन",
     
+    // Audio Visualizer Effects
+    visualizer_effect_label: "इफ़ेक्ट:",
+    viz_effect_bars: "32-बैंड स्पेक्ट्रम",
+    viz_effect_wave: "ऑसिलोस्कोप वेव",
+    viz_effect_radial: "रेडियल फ़्रीक्वेंसी बर्स्ट",
+    viz_effect_matrix: "मैट्रिक्स डिजिटल डॉट्स",
+    viz_effect_flame: "नियॉन फ्लेम पीक्स",
+    viz_effect_stereo: "स्टीरियो मिरर बटरफ्लाई",
+
     // Precision Scrubber
     scrubber_chapter: "अध्याय (Chapter)",
     scrubber_hover_time: "समय",
@@ -2263,6 +2295,11 @@ function setVisualizerMode(mode, options = {}) {
   }
   const doc = opt.doc;
   if (doc) {
+    const selectEffect = doc.getElementById('selectVizEffect');
+    if (selectEffect && selectEffect.value !== mode) {
+      selectEffect.value = mode;
+    }
+
     const btnBars = doc.getElementById('btnVizModeBars');
     const btnWave = doc.getElementById('btnVizModeWave');
     if (btnBars) {
@@ -2287,7 +2324,23 @@ function setVisualizerMode(mode, options = {}) {
         if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'false');
       }
     }
+
+    const canvasEl = doc.getElementById('canvasAudioVisualizer') || doc.getElementById('mediaDeckVisualizerCanvas');
+    if (canvasEl) {
+      if (!canvasEl.dataset) canvasEl.dataset = {};
+      canvasEl.dataset.mode = mode;
+    }
   }
+
+  // Persist preference to chrome.storage.local with localStorage fallback
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ media_sentinel_viz_effect: mode });
+    } else if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('media_sentinel_viz_effect', mode);
+    }
+  } catch (_) {}
+
   return res;
 }
 
@@ -2975,6 +3028,16 @@ function applyDashboardLanguage(lang) {
     acoustic: 'eq_preset_acoustic',
     night_mode: 'eq_preset_night_mode',
     custom: 'eq_preset_custom'
+  });
+
+  setTxt('lblVizEffect', 'visualizer_effect_label');
+  updateSelectOptions('selectVizEffect', {
+    bars: 'viz_effect_bars',
+    wave: 'viz_effect_wave',
+    radial: 'viz_effect_radial',
+    matrix_dots: 'viz_effect_matrix',
+    flame: 'viz_effect_flame',
+    stereo_mirror: 'viz_effect_stereo'
   });
 
   updateDashboardAudioLabUI(dashboardAudioLabSettings);
@@ -7889,6 +7952,30 @@ function setupEventListeners() {
     });
   }
 
+  // Visualizer Mode Dropdown Binding
+  const selectVizEffect = document.getElementById('selectVizEffect');
+  if (selectVizEffect) {
+    selectVizEffect.addEventListener('change', (e) => {
+      if (e && e.target) {
+        setVisualizerMode(e.target.value);
+      }
+    });
+  }
+
+  // Restore Persisted Visualizer Mode on Startup
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['media_sentinel_viz_effect'], (items) => {
+        if (items && items.media_sentinel_viz_effect) {
+          setVisualizerMode(items.media_sentinel_viz_effect);
+        }
+      });
+    } else if (typeof localStorage !== 'undefined') {
+      const savedMode = localStorage.getItem('media_sentinel_viz_effect');
+      if (savedMode) setVisualizerMode(savedMode);
+    }
+  } catch (_) {}
+
   const btnVizModeBars = document.getElementById('btnVizModeBars');
   if (btnVizModeBars) {
     btnVizModeBars.addEventListener('click', (e) => {
@@ -7913,8 +8000,10 @@ function setupEventListeners() {
       if (viz) {
         const state = viz.getVisualizerState ? viz.getVisualizerState() : null;
         if (state) {
-          const nextMode = state.mode === 'bars' ? 'wave' : 'bars';
-          setVisualizerMode(nextMode);
+          const VIZ_CYCLE = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+          const currentIndex = VIZ_CYCLE.indexOf(state.mode);
+          const nextIndex = (currentIndex + 1) % VIZ_CYCLE.length;
+          setVisualizerMode(VIZ_CYCLE[nextIndex]);
         }
       }
     });
@@ -7928,6 +8017,9 @@ function setupEventListeners() {
 if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
   browserAPI.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
+      if (changes.media_sentinel_viz_effect && changes.media_sentinel_viz_effect.newValue) {
+        setVisualizerMode(changes.media_sentinel_viz_effect.newValue);
+      }
       if (changes.language && changes.language.newValue) {
         applyDashboardLanguage(changes.language.newValue);
       } else if (changes.media_sentinel_settings && changes.media_sentinel_settings.newValue && changes.media_sentinel_settings.newValue.language) {
@@ -8013,7 +8105,8 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         'starred_domains',
         'domain_annotations',
         'tracking_blacklist',
-        'domain_budgets'
+        'domain_budgets',
+        'media_sentinel_viz_effect'
       ], (res) => {
         let lang = 'en';
         if (res && res.language) {
@@ -8083,6 +8176,9 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         }
         if (res && res.domain_category_overrides && typeof res.domain_category_overrides === 'object') {
           domainCategoryOverrides = Object.assign({}, res.domain_category_overrides);
+        }
+        if (res && res.media_sentinel_viz_effect) {
+          setVisualizerMode(res.media_sentinel_viz_effect);
         }
         applyDashboardLanguage(lang);
         refreshDashboard();

@@ -957,12 +957,14 @@
       }
     }
 
+    const hasMedia = Boolean(primaryCandidate !== null || mediaNodes.length > 0 || anyPlaying);
+
     const currentState = {
       isTopFrame,
       domain: window.location.hostname,
       url: window.location.href,
       title: extractMediaTitle(),
-      hasMedia: mediaNodes.length > 0,
+      hasMedia,
       totalVideos,
       totalAudios,
       anyPlaying,
@@ -992,6 +994,25 @@
       }
 
       const now = Date.now();
+
+      // Guard for pages that have no media elements (e.g., WhatsApp Web, Google Drive, Google Search)
+      if (!currentState.hasMedia) {
+        // If the page never had media, suppress telemetry transmission completely
+        if (!lastReportedState || !lastReportedState.hasMedia) {
+          return;
+        }
+
+        // Page transitioned from having media to having NO media:
+        // Allow a single teardown broadcast so service worker can cleanly finalize session and purge tabMediaMap
+        lastReportedState = currentState;
+        lastProgressBroadcastTime = now;
+
+        safeSendMessage({
+          type: 'MEDIA_STATE_CHANGED',
+          payload: currentState
+        });
+        return;
+      }
 
       if (!force && lastReportedState) {
         const p1 = lastReportedState.primaryMedia;

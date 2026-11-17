@@ -66,11 +66,11 @@ assert(html.includes('id="vuBarRight"'), '#vuBarRight present');
 assert(html.includes('id="vuClipIndicator"'), '#vuClipIndicator present');
 console.log('  ✅ Stereo VU meters (L/R) & +0dB clipping indicator verified');
 
-// Verify #heroAudioEqCard is an independent Bento card (span-12)
+// Verify #heroAudioEqCard is an independent Bento card (span-12 or span-6)
 const eqCardMatch = html.match(/<div[^>]*id="heroAudioEqCard"[^>]*>/);
 assert(eqCardMatch, '#heroAudioEqCard element declaration must exist');
-assert(eqCardMatch[0].includes('bento-span-12'), '#heroAudioEqCard must declare bento-span-12');
-console.log('  ✅ #heroAudioEqCard verified as dedicated full-width Bento Studio Deck (.bento-span-12)');
+assert(eqCardMatch[0].includes('bento-span-12') || eqCardMatch[0].includes('bento-span-6'), '#heroAudioEqCard must declare bento-span-12 or bento-span-6');
+console.log('  ✅ #heroAudioEqCard verified as dedicated Bento Studio Deck (.bento-span-12 or .bento-span-6)');
 
 // Structural separation: #heroAudioEqCard NOT inside #visualizerPanel or #heroAudioLabStatus
 const vizPanelMatch = html.match(/<div[^>]*id="visualizerPanel"[\s\S]*?<\/div>\s*<\/div>/);

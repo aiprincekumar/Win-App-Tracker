@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Media Playback History Restoration (Phase 1 & Phase 2)
  * 
  * Verifies:

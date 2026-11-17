@@ -524,10 +524,11 @@ console.log('\nBattery 12: Dedicated 5-Band Graphic Equalizer Studio Deck Bento 
   const html = fs.readFileSync(dashHtmlPath, 'utf8');
   const css = fs.readFileSync(dashCssPath, 'utf8');
 
-  // Verify Dedicated Top-Level Bento Architecture (span-12)
+  // Verify Dedicated Top-Level Bento Architecture (span-12 or span-6)
   assert(
-    html.includes('id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12"'),
-    '#heroAudioEqCard must declare .audio-eq-widget .glass-card .bento-card .liquid-glass-card .bento-span-12'
+    html.includes('id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12"') ||
+    html.includes('id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-6"'),
+    '#heroAudioEqCard must declare .audio-eq-widget .glass-card .bento-card .liquid-glass-card .bento-span-12 or .bento-span-6'
   );
 
   // Structural Separation: Verify #heroAudioEqCard is NOT nested inside #heroAudioLabStatus

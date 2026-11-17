@@ -244,45 +244,43 @@ body.theme-light .audio-boost-slider {
 /* ========================================================================= */
 /* DEDICATED 5-BAND GRAPHIC EQUALIZER STUDIO DECK (.audio-eq-widget)         */
 /* ========================================================================= */
-.audio-eq-widget {
+/* ========================================================================= */
+/* DEDICATED SIBLING BENTO CARDS: EQUALIZER & AUDIO LAB (PURE SPLIT CARDS)   */
+/* ========================================================================= */
+#heroAudioEqCard,
+#heroAudioLabCard {
+  grid-column: span 6;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 1.75rem;
-  min-height: 280px;
+  justify-content: space-between;
+  min-height: 380px;
   position: relative;
   overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
 }
 
-/* 2-Column Split Deck: Equalizer on Left, Audio Lab Enhancements on Right */
-.audio-eq-split-deck {
-  display: grid;
-  grid-template-columns: 1.15fr 1fr;
-  gap: 24px;
-  align-items: stretch;
-  width: 100%;
+#heroAudioEqCard:hover,
+#heroAudioLabCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
-/* Left Pane: 5-Band Graphic Equalizer Column */
-.eq-deck-left-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-right: 1px solid var(--glass-card-border, rgba(255, 255, 255, 0.08));
-  padding-right: 24px;
-  position: relative;
+/* Equalizer Bento Card Internal Padding & Flow */
+.audio-eq-widget,
+#heroAudioEqCard.audio-eq-widget {
+  padding: 1.5rem 1.75rem;
 }
 
-/* Right Pane: Audio Lab & DSP Enhancements Column */
-.eq-deck-right-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+/* Audio Lab Bento Card Internal Padding & Flow */
+#heroAudioLabCard.audio-lab-widget {
+  padding: 1.5rem 1.75rem;
   gap: 14px;
-  position: relative;
 }
 
-/* Right Column Header: Audio Lab & DSP */
-.eq-deck-right-col .audio-lab-header {
+/* Audio Lab Bento Card Header */
+#heroAudioLabCard .audio-lab-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -293,13 +291,13 @@ body.theme-light .audio-boost-slider {
   border-bottom: 1px solid var(--glass-card-border, rgba(255, 255, 255, 0.08));
 }
 
-.eq-deck-right-col .audio-lab-title-group {
+#heroAudioLabCard .audio-lab-title-group {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.eq-deck-right-col .audio-lab-icon {
+#heroAudioLabCard .audio-lab-icon {
   font-size: 1.4rem;
   display: flex;
   align-items: center;
@@ -312,7 +310,7 @@ body.theme-light .audio-boost-slider {
   box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
 }
 
-.eq-deck-right-col .audio-lab-title-meta {
+#heroAudioLabCard .audio-lab-title-meta {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -326,7 +324,7 @@ body.theme-light .audio-boost-slider {
   letter-spacing: -0.015em;
 }
 
-.eq-deck-right-col .audio-lab-status-note {
+#heroAudioLabCard .audio-lab-status-note {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -334,22 +332,23 @@ body.theme-light .audio-boost-slider {
   color: var(--text-muted);
 }
 
-.eq-deck-right-col .audio-lab-badges {
+#heroAudioLabCard .audio-lab-badges {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.eq-deck-right-col .audio-boost-control {
-  margin-top: 2px;
+#heroAudioLabCard .audio-boost-control {
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
-.eq-deck-right-col .audio-enhancements-section {
-  margin-top: 2px;
+#heroAudioLabCard .audio-enhancements-section {
+  margin-top: auto;
 }
 
-.eq-deck-right-col .enhancements-grid {
+#heroAudioLabCard .enhancements-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
@@ -605,31 +604,23 @@ body.theme-light .eq-vertical-slider::-webkit-slider-runnable-track {
   opacity: 0.8;
 }
 
-/* Light Mode Overrides for Dedicated Equalizer Deck */
-body.theme-light .audio-eq-widget {
+/* Light Mode Overrides for Dedicated Sibling Equalizer & Audio Lab Bento Cards */
+body.theme-light .audio-eq-widget,
+body.theme-light #heroAudioEqCard,
+body.theme-light #heroAudioLabCard {
   background: var(--bg-card);
   border-color: var(--border-dim);
-}
-
-body.theme-light .eq-deck-left-col {
-  border-right-color: var(--border-dim, rgba(0, 0, 0, 0.08));
-}
-
-@media (max-width: 1024px) {
-  body.theme-light .eq-deck-left-col {
-    border-bottom-color: var(--border-dim, rgba(0, 0, 0, 0.08));
-  }
 }
 
 body.theme-light .audio-lab-heading {
   color: var(--text-primary);
 }
 
-body.theme-light .eq-deck-right-col .audio-lab-header {
+body.theme-light #heroAudioLabCard .audio-lab-header {
   border-bottom-color: var(--border-dim, rgba(0, 0, 0, 0.08));
 }
 
-body.theme-light .eq-deck-right-col .audio-lab-icon {
+body.theme-light #heroAudioLabCard .audio-lab-icon {
   background: rgba(6, 182, 212, 0.12);
   border-color: rgba(6, 182, 212, 0.3);
   box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
@@ -969,28 +960,28 @@ body.theme-light .switch-toggle .slider-round {
 }
 
 /* ========================================================================= */
-/* RESPONSIVE LAYOUT BREAKPOINTS FOR SPLIT DECK                              */
+/* RESPONSIVE LAYOUT BREAKPOINTS FOR SIBLING BENTO CARDS                     */
 /* ========================================================================= */
 @media (max-width: 1024px) {
-  .audio-eq-split-deck {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  #heroAudioEqCard,
+  #heroAudioLabCard {
+    grid-column: span 12;
+    min-height: auto;
   }
 
-  .eq-deck-left-col {
-    border-right: none;
-    border-bottom: 1px solid var(--glass-card-border, rgba(255, 255, 255, 0.08));
-    padding-right: 0;
-    padding-bottom: 20px;
-  }
-
-  .eq-deck-right-col {
-    padding-top: 4px;
+  #heroAudioLabCard .enhancements-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .eq-deck-right-col .enhancements-grid {
+  #heroAudioEqCard,
+  #heroAudioLabCard {
+    grid-column: span 12;
+    padding: 1rem 0.75rem;
+  }
+
+  #heroAudioLabCard .enhancements-grid {
     grid-template-columns: 1fr;
   }
 }

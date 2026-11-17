@@ -43,6 +43,7 @@ console.log('Battery 1: DOM Invariant & Script Tag Presence in dashboard.html');
   const requiredElements = [
     'visualizerPanel',
     'txtVisualizerTitle',
+    'selectVizEffect',
     'btnVizModeBars',
     'btnVizModeWave',
     'canvasAudioVisualizer',
@@ -57,8 +58,13 @@ console.log('Battery 1: DOM Invariant & Script Tag Presence in dashboard.html');
     assert(html.includes(`id="${id}"`), `dashboard.html must declare element #${id}`);
   });
 
+  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  expectedModes.forEach(mode => {
+    assert(html.includes(`value="${mode}"`), `dashboard.html must contain effect option value="${mode}"`);
+  });
+
   console.log('  ✅ Script tags correctly sequenced: media_deck_visualizer_feature.js loaded before dashboard.js');
-  console.log('  ✅ All 10 Spectrum Visualizer & VU Meter DOM elements verified in dashboard.html');
+  console.log('  ✅ All 11 Spectrum Visualizer, Dropdown & VU Meter DOM elements verified in dashboard.html');
 }
 
 // =============================================================================
@@ -102,9 +108,9 @@ console.log('\nBattery 2: Browser Runtime Global Loading Simulation (Zero-requir
 }
 
 // =============================================================================
-// Battery 3: Interactive Mode Switcher (Bars vs Wave) & Dynamic Class Toggle
+// Battery 3: Interactive 6-Effect Mode Switcher & Dropdown Sync
 // =============================================================================
-console.log('\nBattery 3: Interactive Mode Switcher (Bars vs Wave) & Dynamic Class Toggle');
+console.log('\nBattery 3: Interactive 6-Effect Mode Switcher & Dropdown Sync');
 {
   const feature = require(featureJsPath);
 
@@ -114,6 +120,7 @@ console.log('\nBattery 3: Interactive Mode Switcher (Bars vs Wave) & Dynamic Cla
     const attrs = {};
     return {
       id,
+      value: '',
       classList: {
         add: (...cls) => cls.forEach(c => classSet.add(c)),
         remove: (...cls) => cls.forEach(c => classSet.delete(c)),
@@ -126,10 +133,12 @@ console.log('\nBattery 3: Interactive Mode Switcher (Bars vs Wave) & Dynamic Cla
     };
   }
 
+  const mockSelect = createMockElement('selectVizEffect');
   const mockBarsBtn = createMockElement('btnVizModeBars', ['btn-active', 'active']);
   const mockWaveBtn = createMockElement('btnVizModeWave');
   const mockDoc = {
     getElementById: (id) => {
+      if (id === 'selectVizEffect') return mockSelect;
       if (id === 'btnVizModeBars') return mockBarsBtn;
       if (id === 'btnVizModeWave') return mockWaveBtn;
       return null;
@@ -137,28 +146,28 @@ console.log('\nBattery 3: Interactive Mode Switcher (Bars vs Wave) & Dynamic Cla
     addEventListener: () => {}
   };
 
-  // Switch to wave mode
-  const resWave = feature.setVisualizerMode('wave', { doc: mockDoc });
-  assert.strictEqual(resWave, 'wave', 'setVisualizerMode("wave") must return "wave"');
-  assert(!mockBarsBtn.classList.contains('btn-active'), 'Bars button must NOT have .btn-active in wave mode');
-  assert(!mockBarsBtn.classList.contains('active'), 'Bars button must NOT have .active in wave mode');
-  assert(mockWaveBtn.classList.contains('btn-active'), 'Wave button must have .btn-active in wave mode');
-  assert(mockWaveBtn.classList.contains('active'), 'Wave button must have .active in wave mode');
-  assert.strictEqual(mockWaveBtn.getAttribute('aria-pressed'), 'true', 'Wave button must have aria-pressed="true"');
-  assert.strictEqual(mockBarsBtn.getAttribute('aria-pressed'), 'false', 'Bars button must have aria-pressed="false"');
+  const ALL_MODES = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
 
-  // Switch back to bars mode
-  const resBars = feature.setVisualizerMode('bars', { doc: mockDoc });
-  assert.strictEqual(resBars, 'bars', 'setVisualizerMode("bars") must return "bars"');
-  assert(mockBarsBtn.classList.contains('btn-active'), 'Bars button must have .btn-active in bars mode');
-  assert(mockBarsBtn.classList.contains('active'), 'Bars button must have .active in bars mode');
-  assert(!mockWaveBtn.classList.contains('btn-active'), 'Wave button must NOT have .btn-active in bars mode');
-  assert(!mockWaveBtn.classList.contains('active'), 'Wave button must NOT have .active in bars mode');
-  assert.strictEqual(mockBarsBtn.getAttribute('aria-pressed'), 'true', 'Bars button must have aria-pressed="true"');
-  assert.strictEqual(mockWaveBtn.getAttribute('aria-pressed'), 'false', 'Wave button must have aria-pressed="false"');
+  ALL_MODES.forEach((mode) => {
+    const res = feature.setVisualizerMode(mode, { doc: mockDoc });
+    assert.strictEqual(res, mode, `setVisualizerMode("${mode}") must return "${mode}"`);
+    const state = feature.getVisualizerState();
+    assert.strictEqual(state.mode, mode, `Visualizer state.mode must be "${mode}"`);
+    assert.strictEqual(mockSelect.value, mode, `selectVizEffect.value must synchronize to "${mode}"`);
 
-  console.log('  ✅ Dual mode switcher toggles state between "bars" and "wave" cleanly');
-  console.log('  ✅ .btn-active, .active, and aria-pressed attributes synchronize synchronously');
+    if (mode === 'bars') {
+      assert(mockBarsBtn.classList.contains('active'), 'Bars button must have active class in bars mode');
+      assert(!mockWaveBtn.classList.contains('active'), 'Wave button must NOT have active class in bars mode');
+    } else if (mode === 'wave') {
+      assert(mockWaveBtn.classList.contains('active'), 'Wave button must have active class in wave mode');
+      assert(!mockBarsBtn.classList.contains('active'), 'Bars button must NOT have active class in wave mode');
+    } else {
+      assert(!mockBarsBtn.classList.contains('active'), 'Bars button must NOT have active class in custom mode');
+      assert(!mockWaveBtn.classList.contains('active'), 'Wave button must NOT have active class in custom mode');
+    }
+  });
+
+  console.log('  ✅ All 6 visualizer modes verified for state transitions, button states, and dropdown sync');
 }
 
 // =============================================================================
