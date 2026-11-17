@@ -949,6 +949,34 @@ function getFaviconUrl(domain) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
 }
 
+/**
+ * Extracts a canonical media identifier from a media or tab URL.
+ * Accurately isolates YouTube watch IDs (?v=...), Shorts (/shorts/...), and standard URLs.
+ * 
+ * @param {string} url Target URL
+ * @returns {string} Canonical ID or normalized URL pathname
+ */
+function extractCanonicalMediaId(url) {
+  if (!url || typeof url !== 'string') return '';
+  try {
+    const u = new URL(url);
+    if (u.searchParams && u.searchParams.has('v')) {
+      const v = u.searchParams.get('v');
+      if (v) return `yt_${v}`;
+    }
+    if (u.pathname && u.pathname.includes('/shorts/')) {
+      const parts = u.pathname.split('/shorts/')[1];
+      if (parts) {
+        const sid = parts.split('/')[0].split('?')[0];
+        if (sid) return `yt_shorts_${sid}`;
+      }
+    }
+    return `${u.hostname}${u.pathname}`;
+  } catch (_) {
+    return url;
+  }
+}
+
 // Storage Synchronization State
 let isStorageLoaded = false;
 let storageLoadPromise = null;
@@ -1056,8 +1084,9 @@ async function loadStorageData() {
     }
 
     if (res && Array.isArray(res[CONFIG.MEDIA_HISTORY_STORAGE_KEY])) {
+      const validItems = res[CONFIG.MEDIA_HISTORY_STORAGE_KEY].filter(m => m && typeof m === 'object' && m.id);
       const existingIds = new Set(mediaHistory.map(m => m.id));
-      const filtered = res[CONFIG.MEDIA_HISTORY_STORAGE_KEY].filter(m => !existingIds.has(m.id));
+      const filtered = validItems.filter(m => !existingIds.has(m.id));
       mediaHistory = [...mediaHistory, ...filtered].slice(0, CONFIG.MAX_MEDIA_HISTORY);
     } else if (!Array.isArray(mediaHistory)) {
       mediaHistory = [];
@@ -1483,7 +1512,7 @@ async function handleAutoPauseOnTabChange(newActiveOrCreatedTabId) {
 }
 
 /**
- * Flushes memory activity data to chrome.storage.local safely
+ * Flushes memory activity data and media history to chrome.storage.local atomically
  */
 async function saveStorageData() {
   if (!isStorageLoaded) return;
@@ -1491,10 +1520,18 @@ async function saveStorageData() {
   isSaving = true;
   try {
     activityData.lastUpdated = Date.now();
+    if (!Array.isArray(mediaHistory)) {
+      mediaHistory = [];
+    }
+    if (mediaHistory.length > CONFIG.MAX_MEDIA_HISTORY) {
+      mediaHistory = mediaHistory.slice(0, CONFIG.MAX_MEDIA_HISTORY);
+    }
     await browserAPI.storage.local.set({ 
       [CONFIG.STORAGE_KEY]: activityData,
+      [CONFIG.MEDIA_HISTORY_STORAGE_KEY]: mediaHistory,
       [`${CONFIG.STORAGE_KEY}_backup`]: {
         domainsCount: Object.keys(activityData.domains || {}).length,
+        mediaCount: mediaHistory.length,
         lastUpdated: activityData.lastUpdated
       }
     });
@@ -1529,6 +1566,7 @@ async function reinjectContentScripts() {
  */
 async function saveMediaHistory() {
   try {
+    if (!Array.isArray(mediaHistory)) mediaHistory = [];
     if (mediaHistory.length > CONFIG.MAX_MEDIA_HISTORY) {
       mediaHistory = mediaHistory.slice(0, CONFIG.MAX_MEDIA_HISTORY);
     }
@@ -1571,13 +1609,52 @@ function trackMediaSession(tabId, payload) {
   if (!settings.mediaTrackingEnabled) return;
   const pm = payload.primaryMedia;
   const now = Date.now();
-  const session = activeMediaSessions.get(tabId);
+  let session = activeMediaSessions.get(tabId);
 
   if (pm && pm.isPlaying) {
     const vol = Math.round((typeof pm.volume === 'number' ? pm.volume : 1) * 100);
     const domain = payload.domain || pm.domain || 'web';
     const title = pm.title || payload.title || 'Web Media';
     const resolution = pm.resolutionLabel || (pm.videoWidth && pm.videoHeight ? `${pm.videoWidth}x${pm.videoHeight}` : 'Audio / Standard');
+    const incomingUrl = payload.url || (pm && pm.url) || '';
+
+    if (session) {
+      // Check for in-tab SPA or video transition (e.g. YouTube next video, playlist auto-play, or route change)
+      const existingCanonical = extractCanonicalMediaId(session.url);
+      const incomingCanonical = extractCanonicalMediaId(incomingUrl);
+
+      const isUrlTransition = Boolean(
+        incomingUrl && session.url &&
+        incomingCanonical && existingCanonical &&
+        incomingCanonical !== existingCanonical
+      );
+
+      const isTitleTransition = Boolean(
+        !isUrlTransition &&
+        title && session.title &&
+        title !== 'Web Media' && session.title !== 'Web Media' &&
+        title !== 'Audio Playback' && session.title !== 'Audio Playback' &&
+        title !== 'No Media' && session.title !== 'No Media' &&
+        title.replace(/^\(\d+\)\s*/, '').trim() !== session.title.replace(/^\(\d+\)\s*/, '').trim()
+      );
+
+      if (isUrlTransition || isTitleTransition) {
+        // Commit trailing elapsed playback duration to preceding session
+        const elapsedMs = now - session.lastHeartbeat;
+        const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+        if (elapsedSec > 0 && session.isPlaying) {
+          session.watchDuration += elapsedSec;
+          session.lastHeartbeat += (elapsedSec * 1000);
+          const isForeground = (tabId === activeTabId && isBrowserFocused);
+          if (!isForeground) {
+            commitBackgroundMediaDelta(session.domain, elapsedSec);
+          }
+        }
+        // Finalize preceding session into mediaHistory & clean from active sessions
+        finalizeMediaSession(tabId);
+        session = null;
+      }
+    }
 
     if (session) {
       // Calculate elapsed playback duration with remainder preservation (avoids sub-second loss)
@@ -1602,6 +1679,7 @@ function trackMediaSession(tabId, payload) {
       if (title && title !== 'Web Media' && title !== 'No Media') session.title = title;
       if (resolution && resolution !== 'Unknown') session.resolution = resolution;
       if (pm.playbackRate) session.playbackRate = pm.playbackRate;
+      if (incomingUrl && (!session.url || session.url === '')) session.url = incomingUrl;
       session.isPlaying = true;
 
       // Update in mediaHistory in real time
@@ -1615,7 +1693,7 @@ function trackMediaSession(tabId, payload) {
         title,
         platform: domain,
         domain,
-        url: payload.url || pm.url || '',
+        url: incomingUrl || payload.url || (pm && pm.url) || '',
         mediaType: pm.mediaType || 'video',
         resolution,
         videoDuration: pm.duration || 0,
@@ -2103,6 +2181,21 @@ async function getAllActiveMediaStreams() {
     const currentTime = Number.isFinite(pm.currentTime) ? Number(pm.currentTime) : 0;
     const duration = Number.isFinite(pm.duration) ? Number(pm.duration) : 0;
     const volume = (typeof pm.volume === 'number' && Number.isFinite(pm.volume)) ? pm.volume : 1.0;
+    const isAudible = Boolean(mediaState.isAudible || isPlaying);
+
+    // Strictly filter out non-media tabs from tabMediaMap
+    const hasVerifiableMedia = Boolean(
+      mediaState.hasMedia === true ||
+      isPlaying ||
+      isAudible ||
+      (mediaState.totalVideos && mediaState.totalVideos > 0) ||
+      (mediaState.totalAudios && mediaState.totalAudios > 0) ||
+      (pm && (pm.src || (typeof pm.duration === 'number' && pm.duration > 0)))
+    );
+
+    if (!hasVerifiableMedia) {
+      continue; // Strictly omit non-media tabs!
+    }
 
     streamMap.set(Number(tabId), {
       tabId: Number(tabId),
@@ -2111,7 +2204,8 @@ async function getAllActiveMediaStreams() {
       domain: domain,
       title: title,
       favIconUrl: favIconUrl,
-      isAudible: Boolean(mediaState.isAudible || isPlaying),
+      hasMedia: true,
+      isAudible: isAudible,
       isMuted: isMuted,
       playbackState: isPlaying ? 'playing' : (isBuffering ? 'buffering' : 'paused'),
       currentTime: currentTime,
@@ -2133,6 +2227,7 @@ async function getAllActiveMediaStreams() {
           const existing = streamMap.get(numId);
           if (existing) {
             existing.isAudible = true;
+            existing.hasMedia = true;
             if (t.windowId) existing.windowId = t.windowId;
             if (t.title && (!existing.title || existing.title === 'Web Media')) existing.title = t.title;
             if (t.favIconUrl) existing.favIconUrl = t.favIconUrl;
@@ -2146,6 +2241,7 @@ async function getAllActiveMediaStreams() {
               domain: domain,
               title: t.title || domain || `Tab ${numId}`,
               favIconUrl: t.favIconUrl || '',
+              hasMedia: true,
               isAudible: true,
               isMuted: isMuted,
               playbackState: isMuted ? 'paused' : 'playing',
@@ -2189,7 +2285,18 @@ async function getAllActiveMediaStreams() {
         }
       }
     } catch (_) {}
-    result.push(streamInfo);
+
+    // Final defensive check: tab must have verifiable media or audio
+    const isVerifiableStream = Boolean(
+      streamInfo.isAudible === true ||
+      streamInfo.playbackState === 'playing' ||
+      (typeof streamInfo.duration === 'number' && streamInfo.duration > 0) ||
+      streamInfo.hasMedia === true
+    );
+
+    if (isVerifiableStream) {
+      result.push(streamInfo);
+    }
   }
 
   return result;
@@ -2571,6 +2678,12 @@ function scheduleWebSocketReconnect() {
 function cleanStaleTabMedia() {
   const now = Date.now();
   for (const [tabId, mediaState] of tabMediaMap.entries()) {
+    if (!mediaState || (!mediaState.hasMedia && !mediaState.anyPlaying && !mediaState.primaryMedia)) {
+      tabMediaMap.delete(tabId);
+      finalizeMediaSession(tabId);
+      sendMediaTelemetryToHUD();
+      continue;
+    }
     if (mediaState && mediaState.timestamp && (now - mediaState.timestamp > 15000)) {
       browserAPI.tabs.get(tabId, (tab) => {
         if (browserAPI.runtime.lastError || !tab) {
@@ -2647,16 +2760,34 @@ browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       switchActiveDomain(domain, false);
     }
   }
+
+  // Finalize active media session on URL navigation (e.g. SPA route or new video URL)
+  if (changeInfo.url && activeMediaSessions.has(tabId)) {
+    const existingSession = activeMediaSessions.get(tabId);
+    if (existingSession && existingSession.url) {
+      const prevKey = extractCanonicalMediaId(existingSession.url);
+      const newKey = extractCanonicalMediaId(changeInfo.url);
+      if (prevKey && newKey && prevKey !== newKey) {
+        finalizeMediaSession(tabId);
+      }
+    } else {
+      finalizeMediaSession(tabId);
+    }
+  }
+
   // Audio state change (tab.audible becomes true / false)
   if (changeInfo.audible !== undefined) {
     handleTabAudibleStateChange(tabId, changeInfo.audible, tab);
   }
+
   // Clear stale media state if tab reloads or navigates to a new page
-  if (changeInfo.status === 'loading' && changeInfo.url) {
+  if (changeInfo.status === 'loading') {
+    if (activeMediaSessions.has(tabId)) {
+      finalizeMediaSession(tabId);
+    }
     const existing = tabMediaMap.get(tabId);
     if (existing) {
       tabMediaMap.delete(tabId);
-      finalizeMediaSession(tabId);
       sendMediaTelemetryToHUD();
     }
   }
@@ -2748,6 +2879,19 @@ browserAPI.idle.onStateChanged.addListener(async (newState) => {
 // Service Worker Suspension Lifecycle Guard (Manifest V3 Standard)
 if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
   browserAPI.runtime.onSuspend.addListener(() => {
+    const now = Date.now();
+    for (const [, session] of activeMediaSessions.entries()) {
+      if (session && session.isPlaying) {
+        const elapsedMs = now - session.lastHeartbeat;
+        const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+        if (elapsedSec > 0) {
+          session.watchDuration += elapsedSec;
+          session.lastHeartbeat += (elapsedSec * 1000);
+          session.lastUpdated = now;
+          updateMediaHistoryEntry(session, false);
+        }
+      }
+    }
     commitActiveInterval();
     saveStorageData();
     saveMediaHistory();
@@ -2910,6 +3054,30 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
       }
 
+      // Check whether this payload actually contains verifiable media
+      const hasMediaContent = Boolean(
+        payload.hasMedia ||
+        payload.anyPlaying ||
+        (payload.totalVideos && payload.totalVideos > 0) ||
+        (payload.totalAudios && payload.totalAudios > 0) ||
+        (payload.primaryMedia && (payload.primaryMedia.isPlaying || payload.primaryMedia.src || (typeof payload.primaryMedia.duration === 'number' && payload.primaryMedia.duration > 0)))
+      );
+
+      // If page has NO media content, purge from tabMediaMap and finalize session
+      if (!hasMediaContent) {
+        if (tabMediaMap.has(tabId)) {
+          finalizeMediaSession(tabId);
+          tabMediaMap.delete(tabId);
+          sendMediaTelemetryToHUD();
+          safeSendRuntimeMessage({
+            type: 'LIVE_MEDIA_UPDATE',
+            payload: synthesizeGlobalMediaState()
+          });
+        }
+        sendResponse({ received: true, removed: true });
+        return true;
+      }
+
       // Stamp tabId and windowId on telemetry payload
       payload.tabId = tabId;
       payload.windowId = windowId;
@@ -2955,6 +3123,22 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await ensureStorageLoaded();
       commitActiveInterval();
       cleanStaleTabMedia();
+
+      // Synchronize all currently playing active media sessions into mediaHistory
+      const now = Date.now();
+      for (const [, session] of activeMediaSessions.entries()) {
+        if (session && session.isPlaying) {
+          const elapsedMs = now - session.lastHeartbeat;
+          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+          if (elapsedSec > 0) {
+            session.watchDuration += elapsedSec;
+            session.lastHeartbeat += (elapsedSec * 1000);
+            session.lastUpdated = now;
+          }
+          updateMediaHistoryEntry(session, false);
+        }
+      }
+
       scheduleStorageSave(false);
 
       if (message.forceRefresh) {
@@ -3952,29 +4136,26 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
       }
     } catch (_) {}
 
-    // 3. Commit background media sessions with remainder preservation
+    // 3. Commit media sessions with remainder preservation (foreground and background duration accumulation)
     const now = Date.now();
     for (const [tabId, session] of activeMediaSessions.entries()) {
       if (session && session.isPlaying) {
         const isForeground = (tabId === activeTabId && isBrowserFocused);
-        if (!isForeground) {
-          if (isTrackingPaused) {
-            // When time tracking is paused, freeze background media delta accumulation
-            session.lastHeartbeat = now;
-          } else {
-            const elapsedMs = now - session.lastHeartbeat;
-            const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
-            if (elapsedSec > 0) {
-              session.watchDuration += elapsedSec;
-              session.lastHeartbeat += (elapsedSec * 1000);
-              session.lastUpdated = now;
-              commitBackgroundMediaDelta(session.domain, elapsedSec);
-              updateMediaHistoryEntry(session, false);
-            }
-          }
-        } else {
-          // Tab is in foreground; keep lastHeartbeat synced with now
+        if (isTrackingPaused) {
+          // When time tracking is paused, freeze media delta accumulation
           session.lastHeartbeat = now;
+        } else {
+          const elapsedMs = now - session.lastHeartbeat;
+          const elapsedSec = Math.max(0, Math.min(30, Math.floor(elapsedMs / 1000)));
+          if (elapsedSec > 0) {
+            session.watchDuration += elapsedSec;
+            session.lastHeartbeat += (elapsedSec * 1000);
+            session.lastUpdated = now;
+            if (!isForeground) {
+              commitBackgroundMediaDelta(session.domain, elapsedSec);
+            }
+            updateMediaHistoryEntry(session, false);
+          }
         }
       }
     }
@@ -4000,6 +4181,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.commitActiveInterval = commitActiveInterval;
   globalThis.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
   globalThis.getActiveDomain = () => activeDomain;
+  globalThis.extractCanonicalMediaId = extractCanonicalMediaId;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
@@ -4016,6 +4198,7 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.commitActiveInterval = commitActiveInterval;
     globalThis.SentinelBackgroundModules.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
     globalThis.SentinelBackgroundModules.getActiveDomain = () => activeDomain;
+    globalThis.SentinelBackgroundModules.extractCanonicalMediaId = extractCanonicalMediaId;
   }
 }
 
