@@ -190,36 +190,41 @@ console.log('\nBattery 7: Coaxial Alignment & Intrinsic Circular Bead Geometry')
   assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*border-radius:\s*50%;/s.test(content), `${name}: moz thumb must have border-radius: 50%`);
   assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*border:\s*2px\s+solid\s+#ffffff;/s.test(content), `${name}: moz thumb must have border: 2px solid #ffffff`);
 
-  // 5. Coaxial Centering Alignment (AUTH-MGR-20261118-EQ-SLIDER-DOT-REALIGN-002)
+  // 5. Coaxial Centering Alignment (AUTH-MGR-20261118-EQ-SLIDER-DOT-REALIGN-003)
   assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*margin-left:\s*-5px;/s.test(content), `${name}: webkit thumb must declare margin-left: -5px`);
-  assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*transform:\s*translateX\(-5px\);/s.test(content), `${name}: webkit thumb must declare transform: translateX(-5px)`);
-  assert(/\.eq-vertical-slider::-webkit-slider-thumb:hover\s*\{[^}]*transform:\s*translateX\(-5px\)\s+scale\(1\.2\);/s.test(content), `${name}: webkit thumb hover must preserve translateX(-5px) with scale(1.2)`);
+  assert(!/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*transform:\s*translateX\(-5px\);/s.test(content), `${name}: webkit thumb must NOT declare redundant transform: translateX(-5px)`);
+  assert(/\.eq-vertical-slider::-webkit-slider-thumb:hover\s*\{[^}]*transform:\s*scale\(1\.2\);/s.test(content), `${name}: webkit thumb hover must declare transform: scale(1.2)`);
+  assert(!/\.eq-vertical-slider::-webkit-slider-thumb:hover\s*\{[^}]*translateX/s.test(content), `${name}: webkit thumb hover must NOT contain translateX`);
 
   // 6. Verification of Obsolete Oblong / Native Elements Removal
   assert(!/\.eq-vertical-slider\s*\{[^}]*appearance:\s*slider-vertical/s.test(content), `${name} must not contain appearance: slider-vertical on .eq-vertical-slider`);
   assert(!/\.eq-vertical-slider\s*\{[^}]*-webkit-appearance:\s*slider-vertical/s.test(content), `${name} must not contain -webkit-appearance: slider-vertical on .eq-vertical-slider`);
   assert(!/\.eq-vertical-slider::-[a-z-]+thumb\s*\{[^}]*width:\s*26px/s.test(content), `${name} must not contain obsolete 26px width thumb`);
 
-  console.log(`  ✅ ${name}: Coaxial track (8px), circular bead (18px × 18px, 50% radius), and translateX(-5px) centering certified`);
+  console.log(`  ✅ ${name}: Coaxial track (8px), circular bead (18px × 18px, 50% radius), and single margin-left: -5px centering certified`);
 });
 
 // ===========================================================================
-// Battery 8: Mathematical Verification of Coaxial Track & Thumb Alignment (TASK-EQ-SLIDER-DOT-REALIGN-002)
+// Battery 8: Mathematical Verification of Coaxial Track & Thumb Alignment (TASK-EQ-SLIDER-DOT-REALIGN-003)
 // ===========================================================================
 console.log('\nBattery 8: Mathematical Verification of Coaxial Track & Thumb Alignment');
 const trackWidth = 8;
 const thumbWidth = 18;
-const shiftX = -5;
+const marginLeftOffset = -5; // Single offset via margin-left (no additive transform shift)
 
 const trackCenter = trackWidth / 2; // 4px
 const unshiftedThumbCenter = thumbWidth / 2; // 9px
-const shiftedThumbCenter = unshiftedThumbCenter + shiftX; // 9 + (-5) = 4px
+const shiftedThumbCenter = unshiftedThumbCenter + marginLeftOffset; // 9 + (-5) = 4px
 const coaxialDelta = Math.abs(trackCenter - shiftedThumbCenter);
+const leftOverhang = Math.abs(marginLeftOffset); // 5px
+const rightOverhang = (thumbWidth + marginLeftOffset) - trackWidth; // (18 + (-5)) - 8 = 5px
 
 assert.strictEqual(trackCenter, 4, 'Track center must be at X = 4px');
 assert.strictEqual(shiftedThumbCenter, 4, 'Shifted thumb center must be at X = 4px');
 assert.strictEqual(coaxialDelta, 0, 'Coaxial alignment delta must be exactly 0px');
-console.log(`  ✅ Track Center: ${trackCenter}px | Thumb Center (with translateX(-5px)): ${shiftedThumbCenter}px | Delta: ${coaxialDelta}px (PERFECT COAXIAL ALIGNMENT)`);
+assert.strictEqual(leftOverhang, 5, 'Left overhang must be exactly 5px');
+assert.strictEqual(rightOverhang, 5, 'Right overhang must be exactly 5px');
+console.log(`  ✅ Track Center: ${trackCenter}px | Thumb Center (margin-left: -5px): ${shiftedThumbCenter}px | Delta: ${coaxialDelta}px (PERFECT COAXIAL ALIGNMENT: 5px overhang left/right)`);
 
 console.log('\n===========================================================================');
 console.log('🎉 ALL 8 BATTERIES IN PHASE 1 & 2 EQUALIZER PURE SPLIT SUITE PASSED (Grade A+)!');

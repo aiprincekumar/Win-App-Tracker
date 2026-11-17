@@ -4159,12 +4159,11 @@ body.theme-light .eq-vertical-slider::-webkit-slider-runnable-track {
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.7), 0 2px 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   margin-left: -5px;
-  transform: translateX(-5px);
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
 }
 
 .eq-vertical-slider::-webkit-slider-thumb:hover {
-  transform: translateX(-5px) scale(1.2);
+  transform: scale(1.2);
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.95), 0 0 4px #ffffff;
 }
 
