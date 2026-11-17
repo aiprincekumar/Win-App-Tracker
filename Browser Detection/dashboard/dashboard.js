@@ -4144,17 +4144,25 @@ function switchTab(tabKey) {
   const subEl = document.getElementById('topBarSubtitle');
 
   if (tabKey === 'tracking') {
-    titleEl.textContent = t('title_tracking');
-    subEl.textContent = t('sub_tracking');
+    if (titleEl) titleEl.textContent = t('title_tracking');
+    if (subEl) subEl.textContent = t('sub_tracking');
+    if (typeof renderTimeTrackingTab === 'function' && dashboardData) {
+      renderTimeTrackingTab(dashboardData);
+    }
   } else if (tabKey === 'media') {
-    titleEl.textContent = t('title_media');
-    subEl.textContent = t('sub_media');
+    if (titleEl) titleEl.textContent = t('title_media');
+    if (subEl) subEl.textContent = t('sub_media');
+    if (typeof renderMediaAnalyticsTab === 'function') {
+      renderMediaAnalyticsTab(dashboardData);
+    } else if (typeof renderMediaHistoryTable === 'function' && Array.isArray(mediaHistoryData)) {
+      renderMediaHistoryTable(mediaHistoryData);
+    }
   } else if (tabKey === 'wellbeing') {
-    titleEl.textContent = t('title_wellbeing');
-    subEl.textContent = t('sub_wellbeing');
+    if (titleEl) titleEl.textContent = t('title_wellbeing');
+    if (subEl) subEl.textContent = t('sub_wellbeing');
   } else if (tabKey === 'settings') {
-    titleEl.textContent = t('title_settings');
-    subEl.textContent = t('sub_settings');
+    if (titleEl) titleEl.textContent = t('title_settings');
+    if (subEl) subEl.textContent = t('sub_settings');
   }
 
   applyCardStaggerIndices();
@@ -5225,6 +5233,18 @@ function renderMediaHistoryTable(history) {
 
   if (!tbody) return;
 
+  // Synchronize mediaPlatformFilter with DOM element or default to 'all'
+  const platSelect = document.getElementById('tableMediaPlatformFilter');
+  if (platSelect) {
+    if (!platSelect.value) {
+      platSelect.value = mediaPlatformFilter || 'all';
+    } else {
+      mediaPlatformFilter = platSelect.value;
+    }
+  } else {
+    if (!mediaPlatformFilter) mediaPlatformFilter = 'all';
+  }
+
   const safeHistory = Array.isArray(history) ? history : [];
 
   let filtered = safeHistory.filter(item => {
@@ -6142,7 +6162,10 @@ function refreshDashboard(forceRefresh = false) {
 
       // Render active tabs
       renderTimeTrackingTab(response);
-      renderMediaAnalyticsTab(response);
+      renderMediaAnalyticsTab(dashboardData || response);
+      if (currentTab === 'media') {
+        renderMediaHistoryTable(mediaHistoryData);
+      }
       resolve(response);
     });
   });
@@ -8319,6 +8342,10 @@ function setupEventListeners() {
 
   const mediaPlatSelect = document.getElementById('tableMediaPlatformFilter');
   if (mediaPlatSelect) {
+    if (!mediaPlatSelect.value) {
+      mediaPlatSelect.value = 'all';
+    }
+    mediaPlatformFilter = mediaPlatSelect.value || 'all';
     mediaPlatSelect.addEventListener('change', (e) => {
       mediaPlatformFilter = e.target.value;
       if (dashboardData) {
@@ -8684,6 +8711,12 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
+
+    // Default Media Platform Filter initialization
+    const initialMediaPlat = document.getElementById('tableMediaPlatformFilter');
+    if (initialMediaPlat && !initialMediaPlat.value) {
+      initialMediaPlat.value = 'all';
+    }
 
     // Capture daily rolling snapshot on dashboard launch
     captureDailySnapshot().catch(() => {});

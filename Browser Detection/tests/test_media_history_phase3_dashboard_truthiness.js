@@ -379,4 +379,76 @@ console.log('\nTest 5: Search & Sort Event Listener Resilience');
   console.log('  ✅ Null safety: fallback to renderMediaHistoryTable(mediaHistoryData) verified');
 }
 
+// ---------------------------------------------------------------------------
+// Test 6: switchTab('media') Explicit Activation & Auto-Render Verification
+// ---------------------------------------------------------------------------
+console.log('\nTest 6: switchTab(\'media\') Explicit Activation & Auto-Render Verification');
+{
+  assert(
+    dashCode.includes("if (tabKey === 'media')") || dashCode.includes("else if (tabKey === 'media')"),
+    'switchTab must contain branch for tabKey === "media"'
+  );
+  assert(
+    dashCode.includes("renderMediaAnalyticsTab(dashboardData)"),
+    'switchTab("media") must call renderMediaAnalyticsTab(dashboardData)'
+  );
+
+  // In-memory verification of switchTab invoking render callback
+  let renderMediaTabCalled = false;
+  let renderHistoryTableCalled = false;
+  const mockContext = {
+    currentTab: 'tracking',
+    dashboardData: { mediaHistory: [{ id: '1', title: 'Video 1' }] },
+    mediaHistoryData: [{ id: '1', title: 'Video 1' }],
+    document: {
+      querySelectorAll: () => [],
+      getElementById: (id) => ({
+        classList: { add: () => {}, remove: () => {} },
+        setAttribute: () => {},
+        textContent: ''
+      })
+    },
+    t: (k) => k,
+    applyCardStaggerIndices: () => {},
+    renderMediaAnalyticsTab: (data) => {
+      renderMediaTabCalled = true;
+    },
+    renderMediaHistoryTable: (data) => {
+      renderHistoryTableCalled = true;
+    }
+  };
+
+  const switchTabMatch = dashCode.match(/function switchTab[\s\S]*?\n\}/);
+  assert(switchTabMatch, 'Could not extract switchTab from dashboard.js');
+  vm.runInNewContext(switchTabMatch[0], mockContext);
+  mockContext.switchTab('media');
+
+  assert.strictEqual(mockContext.currentTab, 'media', 'currentTab must be set to "media"');
+  assert.strictEqual(renderMediaTabCalled, true, 'switchTab("media") must invoke renderMediaAnalyticsTab');
+
+  console.log('  ✅ switchTab("media") explicitly activates and calls renderMediaAnalyticsTab(dashboardData)');
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: Default Platform Filter Synchronization & DOM Fallback Verification
+// ---------------------------------------------------------------------------
+console.log('\nTest 7: Default Platform Filter Synchronization & DOM Fallback Verification');
+{
+  assert(
+    dashCode.includes("const platSelect = document.getElementById('tableMediaPlatformFilter');"),
+    'renderMediaHistoryTable must synchronize with #tableMediaPlatformFilter'
+  );
+  assert(
+    dashCode.includes("platSelect.value = mediaPlatformFilter || 'all';"),
+    'renderMediaHistoryTable must set platSelect.value to mediaPlatformFilter or "all" when empty'
+  );
+  assert(
+    dashCode.includes("initialMediaPlat.value = 'all';"),
+    'DOMContentLoaded must initialize initialMediaPlat.value to "all"'
+  );
+
+  console.log('  ✅ Default platform filter initialized to "all" in DOMContentLoaded');
+  console.log('  ✅ renderMediaHistoryTable dynamically synchronizes with #tableMediaPlatformFilter');
+}
+
 console.log('\n🎉 ALL PHASE 3 VERIFICATION TESTS PASSED CLEANLY (Grade A+ Certified)!');
