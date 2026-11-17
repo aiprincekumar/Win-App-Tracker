@@ -245,10 +245,10 @@ const DASHBOARD_I18N = {
     viz_effect_flame: 'Neon Flame Peaks',
     viz_effect_stereo: 'Stereo Mirror Butterfly',
     viz_video_embed_toggle_title: 'Switch to Video Player (Embed Mode)',
-    viz_fullwindow_toggle_title: 'Full Window',
-    viz_fullwindow_exit_title: 'Exit Full Window',
-    viz_fullscreen_toggle_title: 'Full Screen (F)',
-    viz_fullscreen_exit_title: 'Exit Full Screen',
+    viz_fullwindow_toggle_title: 'Toggle Visualizer Full Window (Theater)',
+    viz_fullwindow_exit_title: 'Exit Visualizer Full Window (Theater)',
+    viz_fullscreen_toggle_title: 'Toggle Visualizer Fullscreen',
+    viz_fullscreen_exit_title: 'Exit Fullscreen Visualizer',
     toast_viz_embed_mode_active: 'Video Embed Mode active (Live stream playback preview)',
     toast_viz_embed_mode_inactive: 'Switched back to Spectrum Visualizer',
     toast_viz_fullwindow_entered: 'Visualizer entered Full Window Theater mode',
@@ -685,10 +685,10 @@ const DASHBOARD_I18N = {
     viz_effect_flame: 'नियॉन फ्लेम पीक्स',
     viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
     viz_video_embed_toggle_title: 'वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)',
-    viz_fullwindow_toggle_title: 'फुल विंडो',
-    viz_fullwindow_exit_title: 'फुल विंडो से बाहर निकलें',
-    viz_fullscreen_toggle_title: 'फ़ुल स्क्रीन (F)',
-    viz_fullscreen_exit_title: 'फ़ुल स्क्रीन से बाहर निकलें',
+    viz_fullwindow_toggle_title: 'विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें',
+    viz_fullwindow_exit_title: 'फुल विंडो (थिएटर) से बाहर निकलें',
+    viz_fullscreen_toggle_title: 'विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें',
+    viz_fullscreen_exit_title: 'फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें',
     toast_viz_embed_mode_active: 'वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय',
     toast_viz_embed_mode_inactive: 'स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया',
     toast_viz_fullwindow_entered: 'विज़ुअलाइज़र फुल विंडो थिएटर मोड में सक्रिय',
@@ -1068,10 +1068,10 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_flame: "Neon Flame Peaks",
     viz_effect_stereo: "Stereo Mirror Butterfly",
     viz_video_embed_toggle_title: "Switch to Video Player (Embed Mode)",
-    viz_fullwindow_toggle_title: "Full Window",
-    viz_fullwindow_exit_title: "Exit Full Window",
-    viz_fullscreen_toggle_title: "Full Screen (F)",
-    viz_fullscreen_exit_title: "Exit Full Screen",
+    viz_fullwindow_toggle_title: "Toggle Visualizer Full Window (Theater)",
+    viz_fullwindow_exit_title: "Exit Visualizer Full Window (Theater)",
+    viz_fullscreen_toggle_title: "Toggle Visualizer Fullscreen",
+    viz_fullscreen_exit_title: "Exit Fullscreen Visualizer",
     toast_viz_embed_mode_active: "Video Embed Mode active (Live stream playback preview)",
     toast_viz_embed_mode_inactive: "Switched back to Spectrum Visualizer",
     toast_viz_fullwindow_entered: "Visualizer entered Full Window Theater mode",
@@ -1145,10 +1145,10 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_flame: "नियॉन फ्लेम पीक्स",
     viz_effect_stereo: "स्टीरियो मिरर बटरफ्लाई",
     viz_video_embed_toggle_title: "वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)",
-    viz_fullwindow_toggle_title: "फुल विंडो",
-    viz_fullwindow_exit_title: "फुल विंडो से बाहर निकलें",
-    viz_fullscreen_toggle_title: "फ़ुल स्क्रीन (F)",
-    viz_fullscreen_exit_title: "फ़ुल स्क्रीन से बाहर निकलें",
+    viz_fullwindow_toggle_title: "विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें",
+    viz_fullwindow_exit_title: "फुल विंडो (थिएटर) से बाहर निकलें",
+    viz_fullscreen_toggle_title: "विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें",
+    viz_fullscreen_exit_title: "फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें",
     toast_viz_embed_mode_active: "वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय",
     toast_viz_embed_mode_inactive: "स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया",
     toast_viz_fullwindow_entered: "विज़ुअलाइज़र फुल विंडो थिएटर मोड में सक्रिय",
@@ -2463,8 +2463,8 @@ function setVisualizerFullWindowState(active) {
   if (btn) {
     btn.setAttribute('aria-expanded', isFw ? 'true' : 'false');
     const titleText = isFw
-      ? (typeof t === 'function' ? t('viz_fullwindow_exit_title') : 'Exit Full Window')
-      : (typeof t === 'function' ? t('viz_fullwindow_toggle_title') : 'Full Window');
+      ? (typeof t === 'function' ? t('viz_fullwindow_exit_title') : 'Exit Visualizer Full Window (Theater)')
+      : (typeof t === 'function' ? t('viz_fullwindow_toggle_title') : 'Toggle Visualizer Full Window (Theater)');
     btn.setAttribute('title', titleText);
     btn.setAttribute('aria-label', titleText);
     if (isFw) {
@@ -2533,8 +2533,8 @@ function syncFullscreenUI(isActive) {
   if (btn) {
     btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     const titleText = isActive
-      ? (typeof t === 'function' ? t('viz_fullscreen_exit_title') : 'Exit Full Screen')
-      : (typeof t === 'function' ? t('viz_fullscreen_toggle_title') : 'Full Screen (F)');
+      ? (typeof t === 'function' ? t('viz_fullscreen_exit_title') : 'Exit Fullscreen Visualizer')
+      : (typeof t === 'function' ? t('viz_fullscreen_toggle_title') : 'Toggle Visualizer Fullscreen');
     btn.setAttribute('title', titleText);
     btn.setAttribute('aria-label', titleText);
     if (isActive) {
@@ -9406,3 +9406,5 @@ function updateHeroVolumeUI(volumeFraction) {
     else volIcon.textContent = '🔊';
   }
 }
+
+
