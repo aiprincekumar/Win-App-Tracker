@@ -4682,9 +4682,82 @@ function renderDomainTable(items) {
 // TAB B: Media Analytics & Playback History
 // =============================================================================
 
+/**
+ * Resolves and merges media history from background storage and SQLite Data Hub
+ * Eliminates empty array truthiness bug and provides intelligent deduplication
+ *
+ * @param {Array} bgList - Media history array from background service worker (chrome.storage.local)
+ * @param {Array} hubList - Media history array from SQLite Data Hub or memory cache
+ * @returns {Array} Deduplicated, unified, and timestamp-sorted media history entries
+ */
+function resolveUnifiedMediaHistory(bgList, hubList) {
+  const hasBg = Array.isArray(bgList) && bgList.length > 0;
+  const hasHub = Array.isArray(hubList) && hubList.length > 0;
+
+  if (!hasBg && !hasHub) return [];
+  if (hasBg && !hasHub) return bgList.slice();
+  if (!hasBg && hasHub) return hubList.slice();
+
+  const mergedMap = new Map();
+
+  const getItemKey = (item) => {
+    if (!item) return null;
+    if (item.id) return String(item.id);
+    if (item.session_id) return String(item.session_id);
+    const domain = item.domain || item.platform || 'unknown';
+    const title = item.title || '';
+    const ts = item.timestamp || 0;
+    return `${domain}::${title}::${ts}`;
+  };
+
+  // Add Data Hub records first
+  for (const item of hubList) {
+    const key = getItemKey(item);
+    if (key) {
+      mergedMap.set(key, Object.assign({}, item));
+    }
+  }
+
+  // Overlay background records (richer realtime telemetry)
+  for (const item of bgList) {
+    const key = getItemKey(item);
+    if (key) {
+      const existing = mergedMap.get(key);
+      if (existing) {
+        const higherWatch = Math.max(item.watchDuration || 0, existing.watchDuration || 0);
+        const mostRecentTs = existing.timestamp || item.timestamp || 0;
+        const mostRecentUpdate = Math.max(item.lastUpdated || item.timestamp || 0, existing.lastUpdated || existing.timestamp || 0);
+
+        mergedMap.set(key, Object.assign({}, existing, item, {
+          watchDuration: higherWatch,
+          timestamp: mostRecentTs,
+          lastUpdated: mostRecentUpdate,
+          isPlaying: Boolean(item.isPlaying || existing.isPlaying)
+        }));
+      } else {
+        mergedMap.set(key, Object.assign({}, item));
+      }
+    }
+  }
+
+  return Array.from(mergedMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+}
+
 function renderMediaAnalyticsTab(data) {
-  const history = data.mediaHistory || mediaHistoryData || [];
-  const globalMedia = data.globalMediaState || {};
+  const safeData = data || dashboardData || {};
+  const rawBgHistory = Array.isArray(safeData.mediaHistory) ? safeData.mediaHistory : [];
+  const history = resolveUnifiedMediaHistory(rawBgHistory, mediaHistoryData);
+
+  // Synchronize in-memory datasets so re-renders, searches, and exports stay 100% in sync
+  mediaHistoryData = history;
+  if (data && typeof data === 'object') {
+    data.mediaHistory = history;
+  }
+  if (dashboardData && typeof dashboardData === 'object') {
+    dashboardData.mediaHistory = history;
+  }
+
+  const globalMedia = safeData.globalMediaState || {};
   const pm = globalMedia.primaryMedia;
 
   // 1. Compute Summary Metrics Cards
@@ -4892,9 +4965,11 @@ function renderMediaHistoryTable(history) {
 
   if (!tbody) return;
 
-  let filtered = history.filter(item => {
+  const safeHistory = Array.isArray(history) ? history : [];
+
+  let filtered = safeHistory.filter(item => {
     if (mediaPlatformFilter !== 'all') {
-      const p = (item.platform || '').toLowerCase();
+      const p = (item.platform || item.domain || '').toLowerCase();
       if (mediaPlatformFilter === 'youtube' && !p.includes('youtube')) return false;
       if (mediaPlatformFilter === 'netflix' && !p.includes('netflix')) return false;
       if (mediaPlatformFilter === 'vimeo' && !p.includes('vimeo')) return false;
@@ -4907,7 +4982,7 @@ function renderMediaHistoryTable(history) {
     if (mediaSearchQuery) {
       const q = mediaSearchQuery.toLowerCase();
       const matchTitle = (item.title || '').toLowerCase().includes(q);
-      const matchPlatform = (item.platform || '').toLowerCase().includes(q);
+      const matchPlatform = (item.platform || item.domain || '').toLowerCase().includes(q);
       if (!matchTitle && !matchPlatform) return false;
     }
 
@@ -4924,22 +4999,42 @@ function renderMediaHistoryTable(history) {
     filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   }
 
-  if (countBadge) countBadge.textContent = t('media_count_suffix', filtered.length);
+  if (countBadge) {
+    countBadge.textContent = typeof t === 'function' ? t('media_count_suffix', filtered.length) : `${filtered.length} records`;
+  }
+
+  // W3C Trusted Types: Safely remove all child nodes without innerHTML
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '';
-    if (emptyBox) emptyBox.classList.remove('hidden');
+    if (emptyBox) {
+      emptyBox.classList.remove('hidden');
+      emptyBox.style.display = 'block';
+    }
     return;
   }
 
-  if (emptyBox) emptyBox.classList.add('hidden');
-  tbody.innerHTML = '';
+  if (emptyBox) {
+    emptyBox.classList.add('hidden');
+    emptyBox.style.display = 'none';
+  }
+
+  const fragment = document.createDocumentFragment();
 
   filtered.forEach(it => {
     const tr = document.createElement('tr');
+    tr.setAttribute('role', 'row');
+    tr.tabIndex = 0;
+
+    if (it.isPlaying) {
+      tr.classList.add('session-live-active');
+      tr.style.borderLeft = '3px solid var(--accent-media, #38bdf8)';
+    }
 
     let platClass = '';
-    const platLow = (it.platform || '').toLowerCase();
+    const platLow = (it.platform || it.domain || '').toLowerCase();
     if (platLow.includes('youtube')) platClass = 'platform-youtube';
     else if (platLow.includes('netflix')) platClass = 'platform-netflix';
     else if (platLow.includes('vimeo')) platClass = 'platform-vimeo';
@@ -4954,49 +5049,182 @@ function renderMediaHistoryTable(history) {
     const peakVol = it.peakVolume !== undefined ? it.peakVolume : avgVol;
     const lowVol = it.lowVolume !== undefined ? it.lowVolume : avgVol;
 
-    let extraBadges = '';
-    if (it.playbackRate && it.playbackRate !== 1.0) {
-      extraBadges += `<span class="badge-tag" style="margin-left: 4px; font-size: 10.5px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">⚡ ${it.playbackRate}x</span>`;
-    }
-    if (it.lastWindowMode && it.lastWindowMode !== 'standard') {
-      const modeLabel = it.lastWindowMode === 'fullscreen' ? '⛶ Fullscreen' : (it.lastWindowMode === 'pip' ? '🪟 PiP' : '🎬 Theater');
-      extraBadges += `<span class="badge-tag" style="margin-left: 4px; font-size: 10.5px; background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3);">${modeLabel}</span>`;
+    // Col 1: Title & Icon
+    const tdTitle = document.createElement('td');
+    tdTitle.className = 'col-media-title';
+    tdTitle.setAttribute('role', 'cell');
+
+    const titleCell = document.createElement('div');
+    titleCell.className = 'media-title-cell';
+    titleCell.title = it.title || 'Web Video';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'media-icon-symbol';
+    iconSpan.textContent = it.mediaType === 'audio' ? '🎵' : '▶️';
+
+    const titleLink = document.createElement('span');
+    titleLink.className = 'media-title-link';
+    titleLink.textContent = it.title || 'Web Video';
+
+    titleCell.appendChild(iconSpan);
+    titleCell.appendChild(titleLink);
+
+    if (it.isPlaying) {
+      const livePulse = document.createElement('span');
+      livePulse.className = 'badge-live-pulse';
+      livePulse.style.marginLeft = '6px';
+      livePulse.style.fontSize = '10px';
+      livePulse.style.padding = '1px 6px';
+      livePulse.style.borderRadius = '999px';
+      livePulse.style.background = 'rgba(34, 197, 94, 0.2)';
+      livePulse.style.color = '#4ade80';
+      livePulse.style.fontWeight = '600';
+      livePulse.textContent = '● LIVE';
+      titleCell.appendChild(livePulse);
     }
 
-    tr.innerHTML = `
-      <td class="col-media-title">
-        <div class="media-title-cell" title="${escapeHtml(it.title)}">
-          <span class="media-icon-symbol">▶️</span>
-          <span class="media-title-link">${escapeHtml(it.title || 'Web Video')}</span>
-        </div>
-      </td>
-      <td class="col-media-platform">
-        <span class="badge-tag ${platClass}">${escapeHtml(it.platform || 'Web')}</span>
-      </td>
-      <td class="col-media-duration">
-        <span class="time-cell-main">${formatDuration(it.watchDuration)}</span>
-        <span class="time-cell-sub">(${it.watchDuration}s)</span>
-      </td>
-      <td class="col-media-volume">
-        <div class="volume-meter-wrapper">
-          <div class="volume-meter-track">
-            <div class="volume-meter-fill" style="width: ${avgVol}%;"></div>
-          </div>
-          <span class="volume-meter-text">${avgVol}%</span>
-        </div>
-        <div class="volume-extremes-sub" style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">
-          Peak: <span style="color: #fbbf24;">${peakVol}%</span> | Low: <span style="color: #a78bfa;">${lowVol}%</span>
-        </div>
-      </td>
-      <td class="col-media-res">
-        <span class="badge-tag ${resClass}">${escapeHtml(it.resolution || 'Standard')}</span>${extraBadges}
-      </td>
-      <td class="col-media-date">
-        <span class="time-last-active">${formatTimestamp(it.timestamp)}</span>
-      </td>
-    `;
-    tbody.appendChild(tr);
+    if (it.url) {
+      titleCell.style.cursor = 'pointer';
+      titleCell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          if (typeof browserAPI !== 'undefined' && browserAPI.tabs && browserAPI.tabs.create) {
+            browserAPI.tabs.create({ url: it.url });
+          } else if (typeof window !== 'undefined') {
+            window.open(it.url, '_blank', 'noopener,noreferrer');
+          }
+        } catch (_) {}
+      });
+    }
+
+    tdTitle.appendChild(titleCell);
+    tr.appendChild(tdTitle);
+
+    // Col 2: Platform
+    const tdPlat = document.createElement('td');
+    tdPlat.className = 'col-media-platform';
+    tdPlat.setAttribute('role', 'cell');
+
+    const platBadge = document.createElement('span');
+    platBadge.className = `badge-tag ${platClass}`.trim();
+    platBadge.textContent = it.platform || it.domain || 'Web';
+    tdPlat.appendChild(platBadge);
+    tr.appendChild(tdPlat);
+
+    // Col 3: Duration
+    const tdDuration = document.createElement('td');
+    tdDuration.className = 'col-media-duration';
+    tdDuration.setAttribute('role', 'cell');
+
+    const timeMain = document.createElement('span');
+    timeMain.className = 'time-cell-main';
+    timeMain.textContent = formatDuration(it.watchDuration || 0);
+
+    const timeSub = document.createElement('span');
+    timeSub.className = 'time-cell-sub';
+    timeSub.textContent = ` (${it.watchDuration || 0}s)`;
+
+    tdDuration.appendChild(timeMain);
+    tdDuration.appendChild(timeSub);
+    tr.appendChild(tdDuration);
+
+    // Col 4: Volume
+    const tdVolume = document.createElement('td');
+    tdVolume.className = 'col-media-volume';
+    tdVolume.setAttribute('role', 'cell');
+
+    const volWrapper = document.createElement('div');
+    volWrapper.className = 'volume-meter-wrapper';
+
+    const volTrack = document.createElement('div');
+    volTrack.className = 'volume-meter-track';
+
+    const volFill = document.createElement('div');
+    volFill.className = 'volume-meter-fill';
+    volFill.style.width = `${Math.min(100, Math.max(0, avgVol))}%`;
+    volTrack.appendChild(volFill);
+
+    const volText = document.createElement('span');
+    volText.className = 'volume-meter-text';
+    volText.textContent = `${avgVol}%`;
+
+    volWrapper.appendChild(volTrack);
+    volWrapper.appendChild(volText);
+
+    const volExtremes = document.createElement('div');
+    volExtremes.className = 'volume-extremes-sub';
+    volExtremes.style.fontSize = '10.5px';
+    volExtremes.style.color = 'var(--text-muted, #8b949e)';
+    volExtremes.style.marginTop = '3px';
+
+    const peakSpan = document.createElement('span');
+    peakSpan.style.color = '#fbbf24';
+    peakSpan.textContent = `${peakVol}%`;
+
+    const lowSpan = document.createElement('span');
+    lowSpan.style.color = '#a78bfa';
+    lowSpan.textContent = `${lowVol}%`;
+
+    volExtremes.appendChild(document.createTextNode('Peak: '));
+    volExtremes.appendChild(peakSpan);
+    volExtremes.appendChild(document.createTextNode(' | Low: '));
+    volExtremes.appendChild(lowSpan);
+
+    tdVolume.appendChild(volWrapper);
+    tdVolume.appendChild(volExtremes);
+    tr.appendChild(tdVolume);
+
+    // Col 5: Resolution & Extra Badges
+    const tdRes = document.createElement('td');
+    tdRes.className = 'col-media-res';
+    tdRes.setAttribute('role', 'cell');
+
+    const resBadge = document.createElement('span');
+    resBadge.className = `badge-tag ${resClass}`;
+    resBadge.textContent = it.resolution || 'Standard';
+    tdRes.appendChild(resBadge);
+
+    if (it.playbackRate && it.playbackRate !== 1.0) {
+      const rateBadge = document.createElement('span');
+      rateBadge.className = 'badge-tag';
+      rateBadge.style.marginLeft = '4px';
+      rateBadge.style.fontSize = '10.5px';
+      rateBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+      rateBadge.style.color = '#fbbf24';
+      rateBadge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+      rateBadge.textContent = `⚡ ${it.playbackRate}x`;
+      tdRes.appendChild(rateBadge);
+    }
+
+    if (it.lastWindowMode && it.lastWindowMode !== 'standard') {
+      const modeLabel = it.lastWindowMode === 'fullscreen' ? '⛶ Fullscreen' : (it.lastWindowMode === 'pip' ? '🪟 PiP' : '🎬 Theater');
+      const modeBadge = document.createElement('span');
+      modeBadge.className = 'badge-tag';
+      modeBadge.style.marginLeft = '4px';
+      modeBadge.style.fontSize = '10.5px';
+      modeBadge.style.background = 'rgba(139, 92, 246, 0.15)';
+      modeBadge.style.color = '#c4b5fd';
+      modeBadge.style.border = '1px solid rgba(139, 92, 246, 0.3)';
+      modeBadge.textContent = modeLabel;
+      tdRes.appendChild(modeBadge);
+    }
+    tr.appendChild(tdRes);
+
+    // Col 6: Date / Timestamp
+    const tdDate = document.createElement('td');
+    tdDate.className = 'col-media-date';
+    tdDate.setAttribute('role', 'cell');
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'time-last-active';
+    dateSpan.textContent = formatTimestamp(it.timestamp);
+    tdDate.appendChild(dateSpan);
+    tr.appendChild(tdDate);
+
+    fragment.appendChild(tr);
   });
+
+  tbody.appendChild(fragment);
 }
 
 // =============================================================================
@@ -5619,8 +5847,9 @@ function refreshDashboard(forceRefresh = false) {
       }
 
       // Media History Sync from Data Hub if available
+      let hubMediaSessions = [];
       if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.recent_media_sessions) && dataHubAnalytics.recent_media_sessions.length > 0) {
-        mediaHistoryData = dataHubAnalytics.recent_media_sessions.map(m => ({
+        hubMediaSessions = dataHubAnalytics.recent_media_sessions.map(m => ({
           id: m.session_id,
           title: m.title || 'Web Media',
           platform: m.domain,
@@ -5638,8 +5867,17 @@ function refreshDashboard(forceRefresh = false) {
           browser_type: m.browser_type,
           isPlaying: false
         }));
-      } else {
-        mediaHistoryData = response.mediaHistory || [];
+      }
+
+      // Unify extension storage history and SQLite Data Hub history
+      const unifiedHistory = resolveUnifiedMediaHistory(
+        response.mediaHistory,
+        hubMediaSessions.length > 0 ? hubMediaSessions : mediaHistoryData
+      );
+      mediaHistoryData = unifiedHistory;
+      response.mediaHistory = unifiedHistory;
+      if (dashboardData) {
+        dashboardData.mediaHistory = unifiedHistory;
       }
 
       // Render active tabs
