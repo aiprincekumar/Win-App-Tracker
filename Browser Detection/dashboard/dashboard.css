@@ -278,42 +278,61 @@ body.theme-dark {
   100% { transform: scale(0.9); opacity: 0.6; }
 }
 
-/* Sidebar HUD Widget Card (Minimalist Telemetry) */
+/* Sidebar HUD Cluster & Ultra-Compact Telemetry Cards */
+.sidebar-hud-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  margin-bottom: 10px;
+}
+
 .sidebar-hud-card {
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.65);
   border: 1px solid var(--border-dim);
-  border-radius: var(--radius-md);
-  padding: 0.65rem 0.85rem;
-  margin-bottom: 0.75rem;
+  border-radius: var(--radius-sm, 6px);
+  padding: 6px 10px;
+  margin-bottom: 0;
+  min-height: unset;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
 }
 
 .sidebar-hud-card:hover {
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .hud-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .hud-card-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-dot {
-  width: 8px;
-  height: 8px;
+  width: 7.5px;
+  height: 7.5px;
   border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .hud-dot.online {
@@ -371,20 +390,55 @@ button.spinning .refresh-spinner-icon,
 
 .hud-card-body {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.hud-address {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.sidebar-hud-card:hover .hud-address {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+.hud-micro-clock {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.hud-micro-mode {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hud-status-hidden,
+#dataHubSidebarLabel.hud-status-hidden,
+#hudStatusLabel.hud-status-hidden {
+  display: none !important;
 }
 
 .hud-status-text {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.hud-address {
-  font-size: 10.5px;
-  color: var(--text-muted);
-  font-family: monospace;
 }
 
 .btn-hud-reconnect {
@@ -4879,8 +4933,35 @@ body.light-theme .export-menu-item .menu-item-desc {
 }
 
 body.theme-light .sidebar-hud-card {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: var(--border-dim);
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+body.theme-light .sidebar-hud-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(203, 213, 225, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+body.theme-light .hud-card-title {
+  color: #64748b;
+}
+
+body.theme-light .hud-address {
+  color: #64748b;
+}
+
+body.theme-light .sidebar-hud-card:hover .hud-address {
+  color: #334155;
+}
+
+body.theme-light .hud-micro-clock {
+  color: #0f172a;
+}
+
+body.theme-light .hud-micro-mode {
+  color: #64748b;
 }
 
 body.theme-light .brand-title {
@@ -6589,21 +6670,10 @@ body.theme-light .conflict-modal-card {
   gap: 8px;
 }
 
+/* Ultra-compact telemetry HUD card baseline */
 .sidebar-hud-card {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius-md);
-  padding: 0.65rem 0.85rem;
-  margin-bottom: 0.75rem;
-  min-height: 56px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.sidebar-hud-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  min-height: unset;
+  margin-bottom: 0;
 }
 
 

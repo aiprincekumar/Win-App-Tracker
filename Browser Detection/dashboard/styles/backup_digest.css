@@ -58,25 +58,194 @@
 
 .quick-snapshot-buttons {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
+/* =============================================================================
+ * High-Craft Liquid-Glass Action Buttons & Interactive Controls (Dept 04 & 05)
+ * ============================================================================= */
+
+/* Base Button Utility inside Backup Hub */
+.backup-action-box .btn,
+.backup-actions-grid .btn,
+.btn {
+  font-family: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  text-align: center;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  line-height: 1.4;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Accessible Focus Ring */
+.backup-action-box .btn:focus-visible,
+.backup-actions-grid .btn:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: 2px;
+}
+
+/* Button Size Variants */
+.backup-action-box .btn-sm,
+.backup-actions-grid .btn-sm,
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.backup-action-box .btn-xs,
+.backup-actions-grid .btn-xs,
 .btn-xs {
-  font-size: 0.72rem;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Label Trigger Element */
+label.btn {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Primary Buttons: Liquid-glass emerald accent gradient */
+.backup-action-box .btn-primary,
+.backup-actions-grid .btn-primary,
+.btn-primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: #34d399;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.backup-action-box .btn-primary:hover,
+.backup-actions-grid .btn-primary:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.32), rgba(5, 150, 105, 0.22));
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #ffffff;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.backup-action-box .btn-primary:active,
+.backup-actions-grid .btn-primary:active,
+.btn-primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
+}
+
+/* Secondary Buttons: Refined liquid-glass surface */
+.backup-action-box .btn-secondary,
+.backup-actions-grid .btn-secondary,
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.backup-action-box .btn-secondary:hover,
+.backup-actions-grid .btn-secondary:hover,
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #f8fafc;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.backup-action-box .btn-secondary:active,
+.backup-actions-grid .btn-secondary:active,
+.btn-secondary:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ghost / Quick Rollback Buttons: Translucent frosted pills */
+.backup-action-box .btn-ghost,
+.backup-actions-grid .btn-ghost,
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.backup-action-box .btn-ghost:hover,
+.backup-actions-grid .btn-ghost:hover,
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #f1f5f9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.backup-action-box .btn-ghost:active,
+.backup-actions-grid .btn-ghost:active,
+.btn-ghost:active {
+  transform: scale(0.97);
+}
+
+/* Rolling Snapshot Select Control */
+.backup-action-box .select-snapshot,
 .select-snapshot {
   flex: 1;
   min-width: 150px;
   font-size: 0.82rem;
+  font-family: inherit;
   padding: 6px 10px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border-radius: 7px;
   color: #f1f5f9;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.backup-action-box .select-snapshot:hover,
+.select-snapshot:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.backup-action-box .select-snapshot:focus-visible,
+.select-snapshot:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: 2px;
+  border-color: rgba(56, 189, 248, 0.8);
 }
 
 /* Conflict Resolution Modal */
@@ -288,32 +457,126 @@
   }
 }
 
-/* Light Theme Overrides */
-body.theme-light .backup-action-box {
+/* =============================================================================
+ * Light Theme Overrides (WCAG AAA & High-Contrast Parity)
+ * ============================================================================= */
+
+body.theme-light .backup-action-box,
+body.light-theme .backup-action-box {
   background: #f8fafc;
   border-color: #e2e8f0;
 }
 
-body.theme-light .backup-action-box:hover {
+body.theme-light .backup-action-box:hover,
+body.light-theme .backup-action-box:hover {
   background: #f1f5f9;
   border-color: #10b981;
 }
 
-body.theme-light .backup-action-title {
+body.theme-light .backup-action-title,
+body.light-theme .backup-action-title {
   color: #0f172a;
 }
 
-body.theme-light .backup-action-desc {
+body.theme-light .backup-action-desc,
+body.light-theme .backup-action-desc {
   color: #64748b;
 }
 
-body.theme-light .select-snapshot {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
+/* Primary Button Light Mode */
+body.theme-light .backup-action-box .btn-primary,
+body.theme-light .backup-actions-grid .btn-primary,
+body.light-theme .backup-action-box .btn-primary,
+body.light-theme .backup-actions-grid .btn-primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(5, 150, 105, 0.26));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #065f46;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-body.theme-light .conflict-modal-card {
+body.theme-light .backup-action-box .btn-primary:hover,
+body.theme-light .backup-actions-grid .btn-primary:hover,
+body.light-theme .backup-action-box .btn-primary:hover,
+body.light-theme .backup-actions-grid .btn-primary:hover {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+/* Secondary Button Light Mode */
+body.theme-light .backup-action-box .btn-secondary,
+body.theme-light .backup-actions-grid .btn-secondary,
+body.light-theme .backup-action-box .btn-secondary,
+body.light-theme .backup-actions-grid .btn-secondary {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #1e293b;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+body.theme-light .backup-action-box .btn-secondary:hover,
+body.theme-light .backup-actions-grid .btn-secondary:hover,
+body.light-theme .backup-action-box .btn-secondary:hover,
+body.light-theme .backup-actions-grid .btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(2, 132, 199, 0.4);
+  color: #0f172a;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* Ghost Button Light Mode */
+body.theme-light .backup-action-box .btn-ghost,
+body.theme-light .backup-actions-grid .btn-ghost,
+body.light-theme .backup-action-box .btn-ghost,
+body.light-theme .backup-actions-grid .btn-ghost {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+  box-shadow: none;
+}
+
+body.theme-light .backup-action-box .btn-ghost:hover,
+body.theme-light .backup-actions-grid .btn-ghost:hover,
+body.light-theme .backup-action-box .btn-ghost:hover,
+body.light-theme .backup-actions-grid .btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(71, 85, 105, 0.25);
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Dropdown Select Light Mode */
+body.theme-light .select-snapshot,
+body.theme-light #selectSnapshotRollback,
+body.light-theme .select-snapshot,
+body.light-theme #selectSnapshotRollback {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .select-snapshot:hover,
+body.theme-light #selectSnapshotRollback:hover,
+body.light-theme .select-snapshot:hover,
+body.light-theme #selectSnapshotRollback:hover {
+  border-color: rgba(2, 132, 199, 0.5);
+}
+
+body.theme-light .select-snapshot:focus-visible,
+body.theme-light #selectSnapshotRollback:focus-visible,
+body.light-theme .select-snapshot:focus-visible,
+body.light-theme #selectSnapshotRollback:focus-visible {
+  outline: 2px solid rgba(2, 132, 199, 0.6);
+  outline-offset: 2px;
+  border-color: #0284c7;
+}
+
+body.theme-light .conflict-modal-card,
+body.light-theme .conflict-modal-card {
   background: #ffffff;
   border-color: #e2e8f0;
 }

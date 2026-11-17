@@ -72,39 +72,42 @@
 
 
 
-      <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
-      <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus Sentinel State" style="cursor: pointer;">
-        <div class="hud-card-header">
-          <span class="hud-card-title">🧘 Focus Sentinel</span>
-          <span id="wellbeingMicroStatusDot" class="hud-dot idle"></span>
+      <!-- Sidebar Compact Telemetry HUD Cluster -->
+      <div class="sidebar-hud-group" role="region" aria-label="Service Status Indicators">
+        <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
+        <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus Sentinel State (Click to switch to Focus &amp; Wellbeing)" style="cursor: pointer;">
+          <div class="hud-card-header">
+            <span class="hud-card-title">🧘 Focus Sentinel</span>
+            <span id="wellbeingMicroStatusDot" class="hud-dot idle" aria-label="Focus Sentinel Status"></span>
+          </div>
+          <div class="hud-card-body">
+            <span id="wellbeingMicroClock" class="hud-micro-clock">25:00</span>
+            <span id="wellbeingMicroMode" class="hud-micro-mode">Focus Idle</span>
+          </div>
         </div>
-        <div class="hud-card-body">
-          <span id="wellbeingMicroClock" class="hud-status-text">25:00</span>
-          <span id="wellbeingMicroMode" class="hud-address">Focus Idle</span>
-        </div>
-      </div>
 
-      <!-- Sidebar Footer Data Hub Status Widget (Minimalist Telemetry) -->
-      <div class="sidebar-hud-card" title="SQLite Data Hub (ws://127.0.0.1:65433 WAL)">
-        <div class="hud-card-header">
-          <span class="hud-card-title">SQLite Data Hub</span>
-          <span id="dataHubSidebarDot" class="hud-dot offline"></span>
+        <!-- Sidebar Footer Data Hub Status Widget (Minimalist Telemetry) -->
+        <div class="sidebar-hud-card" title="SQLite Data Hub (ws://127.0.0.1:65433 WAL)">
+          <div class="hud-card-header">
+            <span class="hud-card-title">SQLite Data Hub</span>
+            <span id="dataHubSidebarDot" class="hud-dot offline" aria-label="SQLite Data Hub Status"></span>
+          </div>
+          <div class="hud-card-body">
+            <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
+            <span id="dataHubSidebarLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">Hub Offline</span>
+          </div>
         </div>
-        <div class="hud-card-body">
-          <span id="dataHubSidebarLabel" class="hud-status-text">Hub Offline</span>
-          <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
-        </div>
-      </div>
 
-      <!-- Sidebar Footer HUD Status Widget (Minimalist Telemetry) -->
-      <div class="sidebar-hud-card" title="Video Detector HUD (ws://127.0.0.1:65432)">
-        <div class="hud-card-header">
-          <span class="hud-card-title">Video Detector HUD</span>
-          <span id="hudStatusDot" class="hud-dot offline"></span>
-        </div>
-        <div class="hud-card-body">
-          <span id="hudStatusLabel" class="hud-status-text">HUD Offline</span>
-          <span class="hud-address">ws://127.0.0.1:65432</span>
+        <!-- Sidebar Footer HUD Status Widget (Minimalist Telemetry) -->
+        <div class="sidebar-hud-card" title="Video Detector HUD (ws://127.0.0.1:65432)">
+          <div class="hud-card-header">
+            <span class="hud-card-title">Video Detector HUD</span>
+            <span id="hudStatusDot" class="hud-dot offline" aria-label="Video Detector HUD Status"></span>
+          </div>
+          <div class="hud-card-body">
+            <span class="hud-address">ws://127.0.0.1:65432</span>
+            <span id="hudStatusLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">HUD Offline</span>
+          </div>
         </div>
       </div>
 
@@ -719,20 +722,79 @@
             </div>
           </div>
 
-          <!-- Audio Lab & DSP Telemetry Widget -->
+          <!-- Real-Time Spectrum Visualizer & DSP Status Card -->
           <div id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2">
-            <div class="audio-lab-header">
-              <div class="audio-lab-title-group">
-                <span class="audio-lab-icon">🎛️</span>
-                <h3 id="audioLabTitle" class="audio-lab-title" data-i18n="audiolab_title">Audio Lab & DSP Telemetry</h3>
+            <div class="audio-lab-header visualizer-card-header">
+              <div class="audio-lab-title-group visualizer-title-group">
+                <span class="audio-lab-icon visualizer-icon">🎛️</span>
+                <h3 id="txtVisualizerTitle" class="visualizer-title" data-i18n="visualizer_title">Real-Time Spectrum Visualizer</h3>
+                <span id="audioLabTitle" class="audio-lab-title-sr sr-only" data-i18n="audiolab_title" style="display:none;">Audio Lab & DSP Telemetry</span>
+              </div>
+              <div class="audio-lab-status-note">
+                <span class="status-indicator-dot online"></span>
+                <span id="audioLabStatusText" class="audio-lab-note" data-i18n="audiolab_dsp_active">Offscreen Web Audio DSP Pipeline Active</span>
+              </div>
+            </div>
+            <div class="audio-lab-body visualizer-card-body">
+              <!-- Feature 4: Real-Time Audio Spectrum Visualizer & Frequency Analyzer -->
+              <div id="visualizerPanel" class="visualizer-panel">
+                <div class="visualizer-controls visualizer-controls-bar">
+                  <button type="button" id="btnVizModeBars" class="btn btn-xs btn-active btn-viz-mode active" data-viz-mode="bars" data-i18n="visualizer_mode_bars">32-Band FFT</button>
+                  <button type="button" id="btnVizModeWave" class="btn btn-xs btn-viz-mode" data-viz-mode="wave" data-i18n="visualizer_mode_wave">Waveform</button>
+                </div>
+                <div class="visualizer-canvas-container">
+                  <canvas id="canvasAudioVisualizer" width="600" height="120" role="img" aria-label="Audio frequency visualizer"></canvas>
+                </div>
+                <div class="vu-meters-container" role="region" aria-label="Audio Level Meters">
+                  <div class="vu-bar-wrapper">
+                    <span class="vu-label">L</span>
+                    <div class="vu-meter"><div id="vuBarLeft" class="vu-level" style="width: 0%;"></div></div>
+                    <span id="vuValLeft" class="vu-db-text">-∞dB</span>
+                  </div>
+                  <div class="vu-bar-wrapper">
+                    <span class="vu-label">R</span>
+                    <div class="vu-meter"><div id="vuBarRight" class="vu-level" style="width: 0%;"></div></div>
+                    <span id="vuValRight" class="vu-db-text">-∞dB</span>
+                  </div>
+                  <span id="vuClipIndicator" class="vu-clip-badge">0dB OK</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Card: Dedicated Studio Equalizer & DSP Lab Deck -->
+          <div id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12">
+            <div class="eq-card-header">
+              <div class="eq-title-group">
+                <span class="eq-icon">🎚️</span>
+                <div class="eq-title-meta">
+                  <h4 id="lblAudioEqTitle" class="eq-heading" data-i18n="audiolab_eq_title">5-Band Graphic Equalizer</h4>
+                  <span class="eq-badge-specs">Master Gain Boost • Audio Enhancements • 5-Band Biquad Peaking Filters</span>
+                </div>
               </div>
               <div class="audio-lab-badges">
                 <span id="audioLabPresetBadge" class="badge badge-preset">Flat</span>
                 <span id="audioLabVocalBadge" class="badge badge-feature">Vocal: OFF</span>
                 <span id="audioLabNightBadge" class="badge badge-feature">Night: OFF</span>
               </div>
+              <div class="eq-actions-group">
+                <select id="audioEqPresetSelect" class="eq-preset-dropdown" aria-label="Equalizer Preset">
+                  <option value="flat" data-i18n="eq_preset_flat" selected>Flat</option>
+                  <option value="bass_boost" data-i18n="eq_preset_bass_boost">Bass Boost</option>
+                  <option value="vocal_enhancer" data-i18n="eq_preset_vocal_enhancer">Vocal Enhancer</option>
+                  <option value="treble_boost" data-i18n="eq_preset_treble_boost">Treble Boost</option>
+                  <option value="electronic" data-i18n="eq_preset_electronic">Electronic</option>
+                  <option value="rock" data-i18n="eq_preset_rock">Rock</option>
+                  <option value="acoustic" data-i18n="eq_preset_acoustic">Acoustic</option>
+                  <option value="night_mode" data-i18n="eq_preset_night_mode">Night Mode</option>
+                  <option value="custom" data-i18n="eq_preset_custom">Custom</option>
+                </select>
+                <button type="button" id="btnResetEq" class="btn-reset-eq" aria-label="Reset Equalizer" data-i18n="audiolab_reset_eq">🔄 Reset EQ</button>
+              </div>
             </div>
-            <div class="audio-lab-body">
+
+            <!-- Studio Deck Body: Gain Shaping & Enhancements -->
+            <div class="eq-studio-top-deck">
               <!-- Master Boost Slider (0% to 200%) -->
               <div class="audio-boost-control">
                 <div class="boost-label-row">
@@ -753,10 +815,10 @@
               </div>
 
               <!-- Audio Enhancement Toggles -->
-              <div class="audio-enhancements-section">
+              <div class="audio-enhancements-section audio-enhancements-row">
                 <div class="enhancements-grid">
                   <!-- Vocal Clarity -->
-                  <div class="enhancement-card">
+                  <div class="enhancement-card enhancement-chip">
                     <div class="enhancement-card-header">
                       <span id="lblAudioVocalTitle" class="enhancement-title" data-i18n="audiolab_vocal_title">🗣️ Vocal Clarity</span>
                       <label class="switch-toggle" for="toggleVocalClarity">
@@ -768,7 +830,7 @@
                   </div>
 
                   <!-- Night Shield -->
-                  <div class="enhancement-card">
+                  <div class="enhancement-card enhancement-chip">
                     <div class="enhancement-card-header">
                       <span id="lblAudioNightTitle" class="enhancement-title" data-i18n="audiolab_night_title">🌙 Night Shield</span>
                       <label class="switch-toggle" for="toggleNightShield">
@@ -780,7 +842,7 @@
                   </div>
 
                   <!-- Audio-Only Mode -->
-                  <div class="enhancement-card">
+                  <div class="enhancement-card enhancement-chip">
                     <div class="enhancement-card-header">
                       <span id="lblAudioOnlyTitle" class="enhancement-title" data-i18n="audiolab_audio_only_title">📻 Audio-Only Mode</span>
                       <label class="switch-toggle" for="toggleAudioOnlyMode">
@@ -791,68 +853,6 @@
                     <span id="lblAudioOnlyDesc" class="enhancement-desc" data-i18n="audiolab_audio_only_desc">Save battery and CPU by suppressing video frames</span>
                   </div>
                 </div>
-              </div>
-
-              <div class="audio-lab-status-note">
-                <span class="status-indicator-dot online"></span>
-                <span id="audioLabStatusText" class="audio-lab-note" data-i18n="audiolab_dsp_active">Offscreen Web Audio DSP Pipeline Active</span>
-              </div>
-
-              <!-- Feature 4: Real-Time Audio Spectrum Visualizer & Frequency Analyzer -->
-              <div id="visualizerPanel" class="visualizer-panel">
-                <div class="visualizer-header">
-                  <div class="visualizer-title-wrap">
-                    <span class="visualizer-icon">🎛️</span>
-                    <span id="txtVisualizerTitle" class="visualizer-title" data-i18n="visualizer_title">🎛️ Real-Time Spectrum Visualizer</span>
-                  </div>
-                  <div class="visualizer-controls">
-                    <button id="btnVizModeBars" class="btn btn-xs btn-active" data-viz-mode="bars" data-i18n="visualizer_mode_bars">32-Band FFT</button>
-                    <button id="btnVizModeWave" class="btn btn-xs" data-viz-mode="wave" data-i18n="visualizer_mode_wave">Waveform</button>
-                  </div>
-                </div>
-                <div class="visualizer-canvas-container">
-                  <canvas id="canvasAudioVisualizer" width="600" height="120" role="img" aria-label="Audio frequency visualizer"></canvas>
-                </div>
-                <div class="vu-meters-container">
-                  <div class="vu-bar-wrapper">
-                    <span class="vu-label">L</span>
-                    <div class="vu-meter"><div id="vuBarLeft" class="vu-level" style="width: 0%;"></div></div>
-                    <span id="vuValLeft" class="vu-db-text">-∞dB</span>
-                  </div>
-                  <div class="vu-bar-wrapper">
-                    <span class="vu-label">R</span>
-                    <div class="vu-meter"><div id="vuBarRight" class="vu-level" style="width: 0%;"></div></div>
-                    <span id="vuValRight" class="vu-db-text">-∞dB</span>
-                  </div>
-                  <span id="vuClipIndicator" class="vu-clip-badge">0dB OK</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bento Card: Dedicated 5-Band Graphic Equalizer Studio Deck -->
-          <div id="heroAudioEqCard" class="audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12">
-            <div class="eq-card-header">
-              <div class="eq-title-group">
-                <span class="eq-icon">🎚️</span>
-                <div class="eq-title-meta">
-                  <h4 id="lblAudioEqTitle" class="eq-heading" data-i18n="audiolab_eq_title">5-Band Graphic Equalizer</h4>
-                  <span class="eq-badge-specs">Biquad Peaking Filters (Q=1.4) • [-12dB, +12dB]</span>
-                </div>
-              </div>
-              <div class="eq-actions-group">
-                <select id="audioEqPresetSelect" class="eq-preset-dropdown" aria-label="Equalizer Preset">
-                  <option value="flat" data-i18n="eq_preset_flat" selected>Flat</option>
-                  <option value="bass_boost" data-i18n="eq_preset_bass_boost">Bass Boost</option>
-                  <option value="vocal_enhancer" data-i18n="eq_preset_vocal_enhancer">Vocal Enhancer</option>
-                  <option value="treble_boost" data-i18n="eq_preset_treble_boost">Treble Boost</option>
-                  <option value="electronic" data-i18n="eq_preset_electronic">Electronic</option>
-                  <option value="rock" data-i18n="eq_preset_rock">Rock</option>
-                  <option value="acoustic" data-i18n="eq_preset_acoustic">Acoustic</option>
-                  <option value="night_mode" data-i18n="eq_preset_night_mode">Night Mode</option>
-                  <option value="custom" data-i18n="eq_preset_custom">Custom</option>
-                </select>
-                <button type="button" id="btnResetEq" class="btn-reset-eq" aria-label="Reset Equalizer" data-i18n="audiolab_reset_eq">🔄 Reset EQ</button>
               </div>
             </div>
 
@@ -1405,9 +1405,9 @@
             </div>
 
             <!-- Card: Local Services & Hardware Bridges -->
-            <div id="cardHardwareBridges" class="settings-card bento-card liquid-glass-card bento-span-6 settings-section-card">
+            <div id="cardHardwareBridges" class="settings-card bento-card liquid-glass-card bento-span-6 settings-section-card" role="region" aria-labelledby="headingHardwareBridges">
               <div class="settings-card-header">
-                <span class="settings-card-icon">🔌</span>
+                <span class="settings-card-icon" aria-hidden="true">🔌</span>
                 <div class="settings-card-title-group">
                   <h3 id="headingHardwareBridges" class="settings-card-title">Local Services & Hardware Bridges</h3>
                   <span id="subHardwareBridges" class="settings-card-sub">WebSocket daemons, SQLite storage engine, and peripheral telemetry</span>
@@ -1415,33 +1415,47 @@
               </div>
               <div class="settings-card-body">
                 <!-- Service 1: SQLite Data Hub Daemon -->
-                <div class="bridge-service-row">
+                <div class="bridge-service-row" id="rowBridgeHub">
                   <div class="bridge-service-meta">
                     <div class="bridge-service-name-wrap">
-                      <span class="bridge-service-icon">💾</span>
-                      <span class="bridge-service-name">SQLite Data Hub Daemon</span>
-                      <span class="bridge-port-badge">Port 65433 (WAL)</span>
+                      <span class="bridge-service-icon" aria-hidden="true">💾</span>
+                      <span id="nameBridgeHub" class="bridge-service-name">SQLite Data Hub Daemon</span>
+                      <span id="portBridgeHub" class="bridge-port-badge">Port 65433 (WAL)</span>
+                      <div id="bridgeHubStatusBadge" class="bridge-status-pill offline" role="status" aria-live="polite">
+                        <span id="bridgeHubStatusDot" class="bridge-status-dot" aria-hidden="true"></span>
+                        <span id="bridgeHubStatusText" class="bridge-status-text">Offline</span>
+                      </div>
                     </div>
-                    <span class="bridge-service-desc">Local high-concurrency event telemetry & persistent database store</span>
+                    <span id="descBridgeHub" class="bridge-service-desc">Local high-concurrency event telemetry & persistent database store</span>
                   </div>
-                  <button id="btnSidebarReconnectHub" class="btn-hud-reconnect btn-bridge-action" title="Reconnect to SQLite Data Hub">
-                    ⚡ Reconnect Hub
-                  </button>
+                  <div class="bridge-service-actions">
+                    <button id="btnSidebarReconnectHub" class="btn-hud-reconnect btn-bridge-action" type="button" title="Reconnect to SQLite Data Hub" aria-label="Reconnect to SQLite Data Hub">
+                      <span class="btn-bridge-icon" aria-hidden="true">⚡</span>
+                      <span class="btn-bridge-label">Reconnect Hub</span>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Service 2: Video Detector HUD Bridge -->
-                <div class="bridge-service-row">
+                <div class="bridge-service-row" id="rowBridgeHud">
                   <div class="bridge-service-meta">
                     <div class="bridge-service-name-wrap">
-                      <span class="bridge-service-icon">🖥️</span>
-                      <span class="bridge-service-name">Video Detector HUD Bridge</span>
-                      <span class="bridge-port-badge">Port 65432</span>
+                      <span class="bridge-service-icon" aria-hidden="true">🖥️</span>
+                      <span id="nameBridgeHud" class="bridge-service-name">Video Detector HUD Bridge</span>
+                      <span id="portBridgeHud" class="bridge-port-badge">Port 65432</span>
+                      <div id="bridgeHudStatusBadge" class="bridge-status-pill offline" role="status" aria-live="polite">
+                        <span id="bridgeHudStatusDot" class="bridge-status-dot" aria-hidden="true"></span>
+                        <span id="bridgeHudStatusText" class="bridge-status-text">Offline</span>
+                      </div>
                     </div>
-                    <span class="bridge-service-desc">Real-time overlay bridge for Windows desktop video sentinel</span>
+                    <span id="descBridgeHud" class="bridge-service-desc">Real-time overlay bridge for Windows desktop video sentinel</span>
                   </div>
-                  <button id="btnSidebarReconnect" class="btn-hud-reconnect btn-bridge-action" title="Reconnect to HUD">
-                    ⚡ Reconnect HUD
-                  </button>
+                  <div class="bridge-service-actions">
+                    <button id="btnSidebarReconnect" class="btn-hud-reconnect btn-bridge-action" type="button" title="Reconnect to Video Detector HUD" aria-label="Reconnect to Video Detector HUD">
+                      <span class="btn-bridge-icon" aria-hidden="true">⚡</span>
+                      <span class="btn-bridge-label">Reconnect HUD</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
