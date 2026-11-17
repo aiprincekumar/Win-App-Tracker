@@ -150,8 +150,9 @@ body.theme-light .btn-test-chime {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.06));
+  transition: background 0.2s ease;
 }
 
 .bridge-service-row:last-child {
@@ -183,6 +184,7 @@ body.theme-light .btn-test-chime {
   color: var(--text-primary, #f8fafc);
 }
 
+/* Port Badges */
 .bridge-port-badge {
   font-size: 0.72rem;
   font-family: var(--mono-font, 'JetBrains Mono', monospace);
@@ -194,12 +196,87 @@ body.theme-light .btn-test-chime {
   border-radius: 6px;
 }
 
+/* Status Pill Capsules */
+.bridge-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bridge-status-pill.online {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.bridge-status-pill.starting {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+.bridge-status-pill.offline {
+  background: rgba(239, 68, 68, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* LED Status Dots & Pulse Keyframes */
+.bridge-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.bridge-status-pill.online .bridge-status-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: bridgeDotPulse 2s infinite ease-in-out;
+}
+
+.bridge-status-pill.starting .bridge-status-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  animation: bridgeDotBlink 0.8s infinite ease-in-out;
+}
+
+.bridge-status-pill.offline .bridge-status-dot {
+  background: #64748b;
+}
+
+@keyframes bridgeDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.7; }
+}
+
+@keyframes bridgeDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 .bridge-service-desc {
   font-size: 0.8rem;
   color: var(--text-muted, #64748b);
   line-height: 1.35;
 }
 
+.bridge-service-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
 .btn-bridge-action {
   padding: 0.55rem 1.15rem;
   border-radius: 10px;
@@ -217,19 +294,67 @@ body.theme-light .btn-test-chime {
   backdrop-filter: blur(8px);
 }
 
+.btn-bridge-action:hover {
+  transform: translateY(-1.5px);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-bridge-action:active {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+.btn-bridge-action:focus-visible {
+  outline: 2px solid var(--accent-cyan, #06b6d4);
+  outline-offset: 2px;
+}
+
+/* Light Theme Parity (WCAG AAA Contrast >= 7.0:1) */
+body.theme-light .bridge-service-row {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .bridge-service-name {
+  color: #0f172a;
+}
+
+body.theme-light .bridge-service-desc {
+  color: #475569;
+}
+
+body.theme-light .bridge-port-badge {
+  background: rgba(8, 145, 178, 0.1);
+  border-color: rgba(8, 145, 178, 0.3);
+  color: #0891b2;
+}
+
+body.theme-light .bridge-status-pill.online {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+body.theme-light .bridge-status-pill.starting {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+body.theme-light .bridge-status-pill.offline {
+  background: rgba(100, 116, 139, 0.08);
+  color: #475569;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
 body.theme-light .btn-bridge-action {
   background: linear-gradient(135deg, rgba(5, 150, 105, 0.12), rgba(8, 145, 178, 0.12));
   border-color: rgba(5, 150, 105, 0.35);
   color: #0f172a;
 }
 
-.btn-bridge-action:hover {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
-  border-color: var(--accent-emerald, #10b981);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-}
-
-.btn-bridge-action:active {
-  transform: scale(0.97);
+body.theme-light .btn-bridge-action:hover {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.22), rgba(8, 145, 178, 0.22));
+  border-color: #059669;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
 }
