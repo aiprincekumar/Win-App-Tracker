@@ -2463,8 +2463,8 @@ function setVisualizerFullWindowState(active) {
   if (btn) {
     btn.setAttribute('aria-expanded', isFw ? 'true' : 'false');
     const titleText = isFw
-      ? (typeof t === 'function' ? t('viz_fullwindow_exit_title') : 'Exit Visualizer Full Window (Theater)')
-      : (typeof t === 'function' ? t('viz_fullwindow_toggle_title') : 'Toggle Visualizer Full Window (Theater)');
+      ? (typeof t === 'function' ? t('viz_fullwindow_exit_title') : 'Exit Full Window')
+      : (typeof t === 'function' ? t('viz_fullwindow_toggle_title') : 'Full Window');
     btn.setAttribute('title', titleText);
     btn.setAttribute('aria-label', titleText);
     if (isFw) {
@@ -2533,8 +2533,8 @@ function syncFullscreenUI(isActive) {
   if (btn) {
     btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     const titleText = isActive
-      ? (typeof t === 'function' ? t('viz_fullscreen_exit_title') : 'Exit Fullscreen Visualizer')
-      : (typeof t === 'function' ? t('viz_fullscreen_toggle_title') : 'Toggle Visualizer Fullscreen');
+      ? (typeof t === 'function' ? t('viz_fullscreen_exit_title') : 'Exit Full Screen')
+      : (typeof t === 'function' ? t('viz_fullscreen_toggle_title') : 'Full Screen (F)');
     btn.setAttribute('title', titleText);
     btn.setAttribute('aria-label', titleText);
     if (isActive) {
@@ -6397,9 +6397,28 @@ function triggerMediaMute() {
 }
 
 function triggerMediaFullscreen() {
-  const btn = document.getElementById('btnHeroFullscreen');
+  if (typeof isVisualizerFullscreenActive === 'function' && typeof toggleVisualizerFullscreen === 'function') {
+    if (isVisualizerFullscreenActive()) {
+      toggleVisualizerFullscreen();
+      return;
+    }
+  }
+  const vizPanel = (typeof document !== 'undefined') ? document.getElementById('visualizerPanel') : null;
+  const heroLab = (typeof document !== 'undefined') ? document.getElementById('heroAudioLabStatus') : null;
+  const isVizFocused = typeof document !== 'undefined' && document.activeElement && (
+    (vizPanel && vizPanel.contains(document.activeElement)) ||
+    (heroLab && heroLab.contains(document.activeElement))
+  );
+  if (isVizFocused && typeof toggleVisualizerFullscreen === 'function') {
+    toggleVisualizerFullscreen();
+    return;
+  }
+
+  const btn = (typeof document !== 'undefined') ? document.getElementById('btnHeroFullscreen') : null;
   if (btn) {
     btn.click();
+  } else if (typeof toggleVisualizerFullscreen === 'function') {
+    toggleVisualizerFullscreen();
   }
 }
 
