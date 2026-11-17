@@ -268,6 +268,83 @@ console.log('\nTest 7: UTF-8 BOM (0xEF, 0xBB, 0xBF) Standard Audit');
   });
 }
 
+// =============================================================================
+// Test 8: Radial Frequency Burst Dynamic Scaling in Fullscreen (TASK-004)
+// =============================================================================
+console.log('\nTest 8: Radial Frequency Burst Dynamic Scaling in Compact vs Fullscreen');
+{
+  const feature = require(featureJsPath);
+
+  let linesDrawn = [];
+  const mockCtx = {
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 1,
+    shadowBlur: 0,
+    shadowColor: '',
+    lineCap: '',
+    fillRect: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: (x, y) => { linesDrawn.push({ x, y }); },
+    arc: () => {},
+    stroke: () => {},
+    fill: () => {},
+    roundRect: () => {},
+    createLinearGradient: () => ({ addColorStop: () => {} })
+  };
+
+  const mockCanvas = {
+    width: 600,
+    height: 120,
+    parentElement: { getBoundingClientRect: () => ({ width: 600, height: 120 }) },
+    getContext: () => mockCtx,
+    dataset: {}
+  };
+
+  const mockDoc = { visibilityState: 'visible', getElementById: () => null, addEventListener: () => {} };
+  feature.initAudioVisualizer(mockCanvas, { doc: mockDoc });
+  feature.setVisualizerMode('radial');
+  feature.setAudioPlayingState(true);
+
+  // Moderate audio
+  feature.feedAudioTelemetry({
+    leftRms: 0.35,
+    rightRms: 0.35,
+    freqs: new Array(32).fill(0.4),
+    wave: new Array(32).fill(0)
+  });
+
+  // 1. Verify Compact bounds
+  for (let f = 0; f < 8; f++) {
+    linesDrawn = [];
+    feature.renderVisualizerFrame(5000 + f * 16, { doc: mockDoc });
+  }
+  let compactOuterMax = 0;
+  linesDrawn.forEach(pt => {
+    const d = Math.hypot(pt.x - 300, pt.y - 60);
+    if (d > compactOuterMax) compactOuterMax = d;
+  });
+  assert(compactOuterMax <= 60, `Compact radial outer radius (${compactOuterMax.toFixed(1)}px) must be <= 60px (no clipping)`);
+  console.log(`  ✅ Compact mode outer radius: ${compactOuterMax.toFixed(1)}px <= 60px (zero clipping)`);
+
+  // 2. Verify Fullscreen bounds (1400x600, minDim=600)
+  mockCanvas.width = 1400;
+  mockCanvas.height = 600;
+  for (let f = 0; f < 8; f++) {
+    linesDrawn = [];
+    feature.renderVisualizerFrame(6000 + f * 16, { doc: mockDoc });
+  }
+  let fullscreenOuterMax = 0;
+  linesDrawn.forEach(pt => {
+    const d = Math.hypot(pt.x - 700, pt.y - 300);
+    if (d > fullscreenOuterMax) fullscreenOuterMax = d;
+  });
+  assert(fullscreenOuterMax > 180, `Fullscreen radial outer radius (${fullscreenOuterMax.toFixed(1)}px) must be > 180px`);
+  assert(fullscreenOuterMax < 300, `Fullscreen radial outer radius (${fullscreenOuterMax.toFixed(1)}px) must fit within 300px half-height`);
+  console.log(`  ✅ Fullscreen mode outer radius: ${fullscreenOuterMax.toFixed(1)}px > 180px (dynamically scaled proportionally)`);
+}
+
 console.log('\n===========================================================================');
-console.log('🎉 ALL 7 TESTS IN COMPACT FULLSCREEN & EMBED SUITE PASSED (Exit Code 0)!');
+console.log('🎉 ALL 8 TESTS IN COMPACT FULLSCREEN & EMBED SUITE PASSED (Exit Code 0)!');
 console.log('===========================================================================\n');

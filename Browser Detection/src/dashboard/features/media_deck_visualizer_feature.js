@@ -967,21 +967,32 @@
     else if (visualizerMode === 'radial') {
       const cx = width / 2;
       const cy = height / 2;
-      const baseRadius = 22 + (telemetry.leftRms || 0) * 12;
+      const minDim = Math.min(width, height);
 
+      // Base circle occupies ~18% to 20% of minDim, dynamically pulsating with RMS audio energy
+      const baseRadiusMin = Math.max(16, minDim * 0.18);
+      const baseRadius = baseRadiusMin + (telemetry.leftRms || 0) * (minDim * 0.08);
+
+      // Inner glowing center core
       ctx.beginPath();
       ctx.arc(cx, cy, baseRadius * 0.6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
       ctx.fill();
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = Math.max(1, Math.min(3, minDim * 0.012));
       ctx.stroke();
 
-      ctx.lineWidth = 3;
+      // Dynamic Spoke Line Width
+      ctx.lineWidth = Math.max(2, Math.min(6, Math.round(minDim * 0.018)));
       ctx.lineCap = 'round';
+
+      // Dynamic Spoke Lengths
+      const spokeBaseLen = Math.max(3, minDim * 0.025);
+      const spokeMaxDynamic = minDim * 0.22;
+
       for (let i = 0; i < NUM_BANDS; i++) {
         currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
-        const spokeLen = 4 + currentBandValues[i] * 32;
+        const spokeLen = spokeBaseLen + currentBandValues[i] * spokeMaxDynamic;
         const angle = (i / NUM_BANDS) * Math.PI * 2 - Math.PI / 2;
         const x1 = cx + Math.cos(angle) * (baseRadius + 2);
         const y1 = cy + Math.sin(angle) * (baseRadius + 2);
