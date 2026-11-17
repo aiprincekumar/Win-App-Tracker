@@ -86,8 +86,14 @@
           </div>
         </div>
 
-        <!-- Sidebar Footer Data Hub Status Widget (Minimalist Telemetry) -->
-        <div class="sidebar-hud-card" title="SQLite Data Hub (ws://127.0.0.1:65433 WAL)">
+        <!-- Sidebar Footer Data Hub Status Widget (Interactive Telemetry) -->
+        <div id="sidebarDataHubCard"
+             class="sidebar-hud-card interactive-hud-card"
+             role="button"
+             tabindex="0"
+             title="SQLite Data Hub (ws://127.0.0.1:65433 WAL) - Click to manage or reconnect in Settings"
+             aria-label="SQLite Data Hub Status Indicator. Click or press Enter to configure in Settings"
+             aria-controls="cardHardwareBridges">
           <div class="hud-card-header">
             <span class="hud-card-title">SQLite Data Hub</span>
             <span id="dataHubSidebarDot" class="hud-dot offline" aria-label="SQLite Data Hub Status"></span>
@@ -98,8 +104,14 @@
           </div>
         </div>
 
-        <!-- Sidebar Footer HUD Status Widget (Minimalist Telemetry) -->
-        <div class="sidebar-hud-card" title="Video Detector HUD (ws://127.0.0.1:65432)">
+        <!-- Sidebar Footer HUD Status Widget (Interactive Telemetry) -->
+        <div id="sidebarHudCard"
+             class="sidebar-hud-card interactive-hud-card"
+             role="button"
+             tabindex="0"
+             title="Video Detector HUD (ws://127.0.0.1:65432) - Click to manage or reconnect in Settings"
+             aria-label="Video Detector HUD Status Indicator. Click or press Enter to configure in Settings"
+             aria-controls="cardHardwareBridges">
           <div class="hud-card-header">
             <span class="hud-card-title">Video Detector HUD</span>
             <span id="hudStatusDot" class="hud-dot offline" aria-label="Video Detector HUD Status"></span>
@@ -729,16 +741,12 @@
                 <span class="audio-lab-icon visualizer-icon">🎛️</span>
                 <h3 id="txtVisualizerTitle" class="visualizer-title" data-i18n="visualizer_title">Real-Time Spectrum Visualizer</h3>
               </div>
-              <div class="visualizer-status-note">
-                <span class="status-indicator-dot online"></span>
-                <span class="visualizer-note">60fps Live FFT</span>
-              </div>
             </div>
             <div class="audio-lab-body visualizer-card-body">
               <!-- Feature 4: Real-Time Audio Spectrum Visualizer & Frequency Analyzer -->
               <div id="visualizerPanel" class="visualizer-panel">
                 <div class="visualizer-controls visualizer-controls-bar">
-                  <label for="selectVizEffect" id="lblVizEffect" class="viz-dropdown-label" data-i18n="visualizer_effect_label">Effect:</label>
+                  <label for="selectVizEffect" id="lblVizEffect" class="viz-dropdown-label visually-hidden" data-i18n="visualizer_effect_label">Effect:</label>
                   <div class="viz-select-wrapper">
                     <select id="selectVizEffect" class="form-select visualizer-mode-select select-viz-effect glass-select" aria-label="Audio Visualizer Effect">
                       <option value="bars" data-i18n="viz_effect_bars">32-Band Spectrum</option>
@@ -749,6 +757,28 @@
                       <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
                     </select>
                   </div>
+                  <button type="button" id="btnVizVideoEmbedToggle" class="btn-viz-action-icon" title="Switch to Video Player (Embed Mode)" aria-label="Switch to Video Player (Embed Mode)" aria-pressed="false" tabindex="0">
+                    <svg class="viz-action-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <polygon points="10 8 16 11 10 14 10 8" fill="currentColor"></polygon>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                  </button>
+                  <button type="button" id="btnVizFullscreen" class="btn-viz-action-icon" title="Toggle Visualizer Fullscreen" aria-label="Toggle Visualizer Fullscreen" aria-expanded="false" tabindex="0">
+                    <svg class="viz-action-svg viz-icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <polyline points="9 21 3 21 3 15"></polyline>
+                      <line x1="21" y1="3" x2="14" y2="10"></line>
+                      <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                    <svg class="viz-action-svg viz-icon-compress visually-hidden" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="4 14 10 14 10 20"></polyline>
+                      <polyline points="20 10 14 10 14 4"></polyline>
+                      <line x1="14" y1="10" x2="21" y2="3"></line>
+                      <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                  </button>
                   <!-- Backward-compatible legacy mode buttons (hidden from visual flow, synced for API and test parity) -->
                   <div class="viz-legacy-buttons visually-hidden" aria-hidden="true" style="display: none;">
                     <button type="button" id="btnVizModeBars" class="btn btn-xs btn-active btn-viz-mode active" data-viz-mode="bars" data-i18n="visualizer_mode_bars" tabindex="-1">32-Band FFT</button>

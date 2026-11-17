@@ -152,6 +152,52 @@ assert(audioLabCss.includes('@media (max-width: 1024px)'), 'audio_lab.css must d
 assert(css.includes('@media (max-width: 1024px)'), 'dashboard.css must declare @media (max-width: 1024px)');
 console.log('  ✅ Responsive breakpoint @media (max-width: 1024px) verified in stylesheets');
 
+// ===========================================================================
+// Battery 7: Coaxial Alignment & Intrinsic Circular Bead Geometry (AUTH-MGR-20261118-EQ-DOT-ALIGN-001)
+// ===========================================================================
+console.log('\nBattery 7: Coaxial Alignment & Intrinsic Circular Bead Geometry');
+[
+  { name: 'audio_lab.css', content: audioLabCss },
+  { name: 'dashboard.css', content: css }
+].forEach(({ name, content }) => {
+  // 1. Column Centering
+  assert(content.includes('.eq-band-col'), `${name} must declare .eq-band-col`);
+  assert(/\.eq-band-col\s*\{[^}]*display:\s*flex;/s.test(content), `${name}: .eq-band-col must declare display: flex`);
+  assert(/\.eq-band-col\s*\{[^}]*flex-direction:\s*column;/s.test(content), `${name}: .eq-band-col must declare flex-direction: column`);
+  assert(/\.eq-band-col\s*\{[^}]*align-items:\s*center;/s.test(content), `${name}: .eq-band-col must declare align-items: center`);
+
+  // 2. Coaxial Slider Track Dimensions (8px wire track, centered, appearance: none)
+  assert(/\.eq-vertical-slider\s*\{[^}]*width:\s*8px;/s.test(content), `${name}: .eq-vertical-slider must have width: 8px`);
+  assert(/\.eq-vertical-slider\s*\{[^}]*margin:\s*0\s+auto;/s.test(content), `${name}: .eq-vertical-slider must have margin: 0 auto`);
+  assert(/\.eq-vertical-slider\s*\{[^}]*appearance:\s*none;/s.test(content), `${name}: .eq-vertical-slider must have appearance: none`);
+  assert(/\.eq-vertical-slider\s*\{[^}]*writing-mode:\s*vertical-lr;/s.test(content), `${name}: .eq-vertical-slider must have writing-mode: vertical-lr`);
+  assert(/\.eq-vertical-slider\s*\{[^}]*direction:\s*rtl;/s.test(content), `${name}: .eq-vertical-slider must have direction: rtl`);
+
+  // 3. WebKit & Moz Track Parity (8px width, transparent background)
+  assert(/\.eq-vertical-slider::-webkit-slider-runnable-track\s*\{[^}]*width:\s*8px;/s.test(content), `${name}: webkit track must have width: 8px`);
+  assert(/\.eq-vertical-slider::-webkit-slider-runnable-track\s*\{[^}]*background:\s*transparent;/s.test(content), `${name}: webkit track must have transparent background`);
+  assert(/\.eq-vertical-slider::-moz-range-track\s*\{[^}]*width:\s*8px;/s.test(content), `${name}: moz track must have width: 8px`);
+  assert(/\.eq-vertical-slider::-moz-range-track\s*\{[^}]*background:\s*transparent;/s.test(content), `${name}: moz track must have transparent background`);
+
+  // 4. Intrinsic Circular Bead Thumb Geometry (18px x 18px, border-radius: 50%, 2px solid #ffffff)
+  assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*width:\s*18px;/s.test(content), `${name}: webkit thumb must have width: 18px`);
+  assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*height:\s*18px;/s.test(content), `${name}: webkit thumb must have height: 18px`);
+  assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*border-radius:\s*50%;/s.test(content), `${name}: webkit thumb must have border-radius: 50%`);
+  assert(/\.eq-vertical-slider::-webkit-slider-thumb\s*\{[^}]*border:\s*2px\s+solid\s+#ffffff;/s.test(content), `${name}: webkit thumb must have border: 2px solid #ffffff`);
+
+  assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*width:\s*18px;/s.test(content), `${name}: moz thumb must have width: 18px`);
+  assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*height:\s*18px;/s.test(content), `${name}: moz thumb must have height: 18px`);
+  assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*border-radius:\s*50%;/s.test(content), `${name}: moz thumb must have border-radius: 50%`);
+  assert(/\.eq-vertical-slider::-moz-range-thumb\s*\{[^}]*border:\s*2px\s+solid\s+#ffffff;/s.test(content), `${name}: moz thumb must have border: 2px solid #ffffff`);
+
+  // 5. Verification of Obsolete Oblong / Native Elements Removal
+  assert(!/\.eq-vertical-slider\s*\{[^}]*appearance:\s*slider-vertical/s.test(content), `${name} must not contain appearance: slider-vertical on .eq-vertical-slider`);
+  assert(!/\.eq-vertical-slider\s*\{[^}]*-webkit-appearance:\s*slider-vertical/s.test(content), `${name} must not contain -webkit-appearance: slider-vertical on .eq-vertical-slider`);
+  assert(!/\.eq-vertical-slider::-[a-z-]+thumb\s*\{[^}]*width:\s*26px/s.test(content), `${name} must not contain obsolete 26px width thumb`);
+
+  console.log(`  ✅ ${name}: Coaxial track (8px) and circular bead (18px × 18px, 50% radius) certified`);
+});
+
 console.log('\n===========================================================================');
-console.log('🎉 ALL 6 BATTERIES IN PHASE 1 & 2 EQUALIZER PURE SPLIT SUITE PASSED (Grade A+)!');
+console.log('🎉 ALL 7 BATTERIES IN PHASE 1 & 2 EQUALIZER PURE SPLIT SUITE PASSED (Grade A+)!');
 console.log('===========================================================================\n');

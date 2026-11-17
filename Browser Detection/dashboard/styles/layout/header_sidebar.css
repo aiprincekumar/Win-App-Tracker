@@ -186,6 +186,41 @@ body.theme-light .sidebar-hud-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
 }
 
+/* ========================================================================= */
+/* Interactive Telemetry HUD Card Micro-Interactions                         */
+/* ========================================================================= */
+.sidebar-hud-card[role="button"],
+.sidebar-hud-card.interactive-hud-card {
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-hud-card[role="button"]:hover,
+.sidebar-hud-card.interactive-hud-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.sidebar-hud-card[role="button"]:active,
+.sidebar-hud-card.interactive-hud-card:active {
+  transform: scale(0.98);
+}
+
+.sidebar-hud-card[role="button"]:focus-visible,
+.sidebar-hud-card.interactive-hud-card:focus-visible {
+  outline: 2px solid var(--accent-primary, #6366f1);
+  outline-offset: 2px;
+}
+
+body.theme-light .sidebar-hud-card[role="button"]:hover,
+body.theme-light .sidebar-hud-card.interactive-hud-card:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
 .hud-card-header {
   display: flex;
   align-items: center;
