@@ -985,12 +985,21 @@ body.theme-light .hero-seek-slider {
   align-self: flex-end;
 }
 
+.deck-volume-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0 1px;
+}
+
 .deck-card-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
+  width: 100%;
 }
 
 .btn-deck-ctrl {
@@ -1007,16 +1016,33 @@ body.theme-light .hero-seek-slider {
   justify-content: center;
 }
 
+.deck-card-controls .btn-deck-ctrl {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 5px 6px;
+  text-align: center;
+}
+
 .btn-deck-ctrl:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.25);
 }
 
 .deck-volume-slider {
-  width: 55px;
+  width: 100%;
   height: 4px;
   accent-color: #10b981;
   cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.deck-volume-slider:hover {
+  opacity: 1;
 }
 
 .btn-deck-solo {
@@ -1582,6 +1608,11 @@ body.theme-light .media-deck-card {
   background: #ffffff;
   border-color: rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .deck-volume-slider {
+  background: rgba(0, 0, 0, 0.08);
+  accent-color: #059669;
 }
 
 body.theme-light .deck-card-title {

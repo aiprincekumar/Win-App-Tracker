@@ -137,12 +137,47 @@
 
   /**
    * Executes Solo Tab mode: un-mutes soloTabId and mutes all other open media streams.
+   * Supports two-way toggle: if soloTabId is already active solo, clicking it toggles solo off and un-mutes all tabs.
    */
   function handleSoloTab(soloTabId, options = {}) {
     const api = options.browserAPI || (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
     const targetId = Number(soloTabId);
     if (!targetId) return Promise.reject(new Error('Invalid soloTabId'));
 
+    const isAlreadySolo = (currentSoloTabId === targetId);
+
+    if (isAlreadySolo) {
+      // Deactivate Solo Mode (Two-Way Toggle Off)
+      currentSoloTabId = null;
+
+      // Optimistically unmute all cached streams
+      cachedStreams.forEach(s => {
+        s.isMuted = false;
+      });
+
+      if (options.containerEl && options.doc) {
+        renderMultiTabMediaDeck(cachedStreams, options.containerEl, options);
+      }
+
+      if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+        return new Promise((resolve) => {
+          try {
+            api.runtime.sendMessage({
+              action: 'MEDIA_STREAM_SOLO_CLEAR',
+              soloTabId: null
+            }, (res) => {
+              resolve(res || { success: true, cleared: true, soloTabId: null });
+            });
+          } catch (_) {
+            resolve({ success: true, cleared: true, simulated: true, soloTabId: null });
+          }
+        });
+      }
+
+      return Promise.resolve({ success: true, cleared: true, localOnly: true, soloTabId: null });
+    }
+
+    // Activate Solo Mode
     currentSoloTabId = targetId;
 
     // Optimistically update cached streams
@@ -462,6 +497,10 @@
         handleRemoteMediaCommand(stream.tabId, nextCmd, 0, options);
       });
 
+      // Dedicated Full-Width Volume Row
+      const volumeRow = doc.createElement('div');
+      volumeRow.className = 'deck-volume-row';
+
       // Volume Slider
       const volSlider = doc.createElement('input');
       volSlider.type = 'range';
@@ -486,6 +525,7 @@
         volSlider.setAttribute('aria-label', `Volume: ${volSlider.value}%`);
         handleRemoteMediaCommand(stream.tabId, 'set_volume', v, options);
       });
+      volumeRow.appendChild(volSlider);
 
       // Solo Tab Button
       const btnSolo = doc.createElement('button');
@@ -514,7 +554,6 @@
 
       controlsRow.appendChild(btnPlayPause);
       controlsRow.appendChild(btnMute);
-      controlsRow.appendChild(volSlider);
       controlsRow.appendChild(btnSolo);
       controlsRow.appendChild(btnSwitchTab);
 
@@ -522,6 +561,7 @@
       card.appendChild(topRow);
       card.appendChild(metaRow);
       card.appendChild(scrubberRow);
+      card.appendChild(volumeRow);
       card.appendChild(controlsRow);
 
       containerEl.appendChild(card);

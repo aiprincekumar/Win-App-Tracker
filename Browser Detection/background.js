@@ -2308,7 +2308,60 @@ async function getAllActiveMediaStreams() {
  * @param {number} soloTabId
  * @returns {Promise<{success: boolean, soloTabId: number, mutedCount: number}>}
  */
+/**
+ * Clears Solo Tab mode: un-mutes all open browser tabs and restores global media state.
+ * @returns {Promise<{success: boolean, cleared: boolean, soloTabId: null, unmutedCount: number}>}
+ */
+async function handleSoloTabClearExecution() {
+  let unmutedCount = 0;
+
+  // 1. Unmute all tabs in tabMediaMap
+  for (const [tId, mediaData] of tabMediaMap.entries()) {
+    const numId = Number(tId);
+    if (numId) {
+      try {
+        if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+          await browserAPI.tabs.update(numId, { muted: false }).catch(() => {});
+        }
+      } catch (_) {}
+      safeSendTabMessage(numId, { type: 'MEDIA_CONTROL', action: 'unmute' });
+      if (mediaData && mediaData.primaryMedia) {
+        mediaData.primaryMedia.isMuted = false;
+      }
+      unmutedCount++;
+    }
+  }
+
+  // 2. Query any other audible/muted tabs and unmute them
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const allTabs = await browserAPI.tabs.query({});
+      if (Array.isArray(allTabs)) {
+        for (const t of allTabs) {
+          if (t && t.id && t.mutedInfo && t.mutedInfo.muted) {
+            await browserAPI.tabs.update(t.id, { muted: false }).catch(() => {});
+            safeSendTabMessage(t.id, { type: 'MEDIA_CONTROL', action: 'unmute' });
+            unmutedCount++;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, cleared: true, soloTabId: null, unmutedCount };
+}
+
+/**
+ * Executes Solo Tab mode: un-mutes soloTabId and mutes all other open media streams.
+ * If soloTabId is null, empty, or 0, forwards to handleSoloTabClearExecution.
+ * @param {number|string|null} soloTabId
+ * @returns {Promise<{success: boolean, soloTabId?: number|null, mutedCount?: number, cleared?: boolean, error?: string}>}
+ */
 async function handleSoloTabExecution(soloTabId) {
+  if (soloTabId === null || soloTabId === undefined || soloTabId === 0 || soloTabId === '0' || soloTabId === '') {
+    return handleSoloTabClearExecution();
+  }
   const targetId = Number(soloTabId);
   if (!targetId) return { success: false, error: 'Invalid soloTabId' };
 
@@ -3927,10 +3980,25 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (msgType === 'MEDIA_STREAM_SOLO_CLEAR') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleSoloTabClearExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
   if (msgType === 'MEDIA_STREAM_SOLO') {
     (async () => {
       await ensureStorageLoaded();
-      const soloTabId = Number(message.soloTabId);
+      const rawSoloTabId = message.soloTabId;
+      if (rawSoloTabId === null || rawSoloTabId === undefined || rawSoloTabId === '' || rawSoloTabId === 0) {
+        const result = await handleSoloTabClearExecution();
+        sendResponse(result);
+        return;
+      }
+      const soloTabId = Number(rawSoloTabId);
       const result = await handleSoloTabExecution(soloTabId);
       sendResponse(result);
     })();
@@ -4220,6 +4288,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.setDoomscrollConsecutiveMinutes = (val) => { doomscrollConsecutiveMinutes = val; };
   globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
   globalThis.handleSoloTabExecution = handleSoloTabExecution;
+  globalThis.handleSoloTabClearExecution = handleSoloTabClearExecution;
   globalThis.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
   globalThis.activateAndFocusTab = activateAndFocusTab;
   globalThis.matchesTrackingBlacklist = matchesTrackingBlacklist;
@@ -4239,6 +4308,7 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
     globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
     globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
+    globalThis.SentinelBackgroundModules.handleSoloTabClearExecution = handleSoloTabClearExecution;
     globalThis.SentinelBackgroundModules.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
     globalThis.SentinelBackgroundModules.activateAndFocusTab = activateAndFocusTab;
     globalThis.SentinelBackgroundModules.matchesTrackingBlacklist = matchesTrackingBlacklist;
