@@ -350,8 +350,8 @@ body.theme-light .audio-boost-slider {
 
 #heroAudioLabCard .enhancements-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 /* Card Header & Metadata */
@@ -782,8 +782,8 @@ body.theme-light .eq-freq-sub {
 
 .audio-enhancements-row .enhancements-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   height: 100%;
 }
 
@@ -791,7 +791,11 @@ body.theme-light .eq-freq-sub {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0.85rem 1rem;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 10px);
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
   height: 100%;
   min-height: 80px;
 }
@@ -819,7 +823,9 @@ body.theme-light .eq-freq-sub {
 }
 
 @media (max-width: 640px) {
-  .audio-enhancements-row .enhancements-grid {
+  #heroAudioLabCard .enhancements-grid,
+  .audio-enhancements-row .enhancements-grid,
+  .enhancements-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -878,6 +884,7 @@ body.theme-light .enhancement-card:has(input:checked) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 
 .enhancement-title {
@@ -896,8 +903,8 @@ body.theme-light .enhancement-card:has(input:checked) {
 .switch-toggle {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 22px;
   flex-shrink: 0;
   cursor: pointer;
 }

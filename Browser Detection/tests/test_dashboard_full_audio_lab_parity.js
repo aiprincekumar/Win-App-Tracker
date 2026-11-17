@@ -104,10 +104,12 @@ console.log('\nBattery 2: Complete DOM Element & Interactive Control Presence in
   // Audio Enhancement Toggles
   assert(html.includes('id="toggleVocalClarity"'), 'dashboard.html must contain #toggleVocalClarity');
   assert(html.includes('id="toggleNightShield"'), 'dashboard.html must contain #toggleNightShield');
+  assert(html.includes('id="toggleBassBoost"'), 'dashboard.html must contain #toggleBassBoost');
   assert(html.includes('id="toggleAudioOnlyMode"'), 'dashboard.html must contain #toggleAudioOnlyMode');
 
   // Telemetry Badges
-  assert(html.includes('id="audioLabPresetBadge"'), 'dashboard.html must contain #audioLabPresetBadge');
+  assert(!html.includes('id="audioLabPresetBadge"'), 'dashboard.html must not contain duplicate #audioLabPresetBadge in header');
+  assert(html.includes('id="audioEqPresetSelect"'), 'dashboard.html must contain #audioEqPresetSelect');
   assert(html.includes('id="audioLabVocalBadge"'), 'dashboard.html must contain #audioLabVocalBadge');
   assert(html.includes('id="audioLabNightBadge"'), 'dashboard.html must contain #audioLabNightBadge');
 
@@ -120,7 +122,7 @@ console.log('\nBattery 2: Complete DOM Element & Interactive Control Presence in
   console.log('  ✅ Quick Reset Button (#btnResetEq) present');
   console.log('  ✅ EQ Preset Select (#audioEqPresetSelect) with all 9 options present');
   console.log('  ✅ 5-Band Biquad Equalizer sliders (#eqBand60-#eqBand16000) & badges present');
-  console.log('  ✅ All 3 Audio Enhancement switches (Vocal, Night, Audio-Only) present');
+  console.log('  ✅ All 4 Audio Enhancement switches (Vocal, Night, Bass, Audio-Only) present');
 }
 
 // ===========================================================================

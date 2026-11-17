@@ -34,7 +34,8 @@
       '16000': 0
     },
     vocal_clarity: false,
-    night_shield: false
+    night_shield: false,
+    bass_boost: false
   });
 
   function dispatchAudioLabSettings(settings, api = null, primaryMedia = null) {
@@ -174,6 +175,12 @@
     const toggleNight = documentObj.getElementById('toggleNightShield');
     if (toggleNight && toggleNight.checked !== isNight) {
       toggleNight.checked = isNight;
+    }
+
+    const isBass = Boolean(merged.bass_boost);
+    const toggleBass = documentObj.getElementById('toggleBassBoost');
+    if (toggleBass && toggleBass.checked !== isBass) {
+      toggleBass.checked = isBass;
     }
 
     const isAudioOnly = Boolean(merged.audio_only);

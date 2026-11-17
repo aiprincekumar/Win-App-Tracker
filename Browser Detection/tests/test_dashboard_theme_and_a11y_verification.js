@@ -462,7 +462,7 @@ console.log('\nBattery 6: Audio Lab DSP Widget Presence, Storage Hydration & Boo
   // Verify all DOM IDs in dashboard.html
   assert(html.includes('id="heroAudioLabStatus"'), 'dashboard.html must contain #heroAudioLabStatus');
   assert(html.includes('id="audioLabTitle"'), 'dashboard.html must contain #audioLabTitle');
-  assert(html.includes('id="audioLabPresetBadge"'), 'dashboard.html must contain #audioLabPresetBadge');
+  assert(!html.includes('id="audioLabPresetBadge"'), 'dashboard.html must not contain #audioLabPresetBadge');
   assert(html.includes('id="audioLabVocalBadge"'), 'dashboard.html must contain #audioLabVocalBadge');
   assert(html.includes('id="audioLabNightBadge"'), 'dashboard.html must contain #audioLabNightBadge');
   assert(html.includes('id="heroAudioBoostSlider"'), 'dashboard.html must contain #heroAudioBoostSlider');

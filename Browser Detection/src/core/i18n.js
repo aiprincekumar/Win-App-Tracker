@@ -26,7 +26,9 @@
       dailyAvg: 'Daily Avg',
       total: 'Total',
       volumeBoost: 'Volume Boost',
-      equalizer: '5-Band Equalizer'
+      equalizer: '5-Band Equalizer',
+      audiolab_bass_title: '🔊 Sub-Bass Boost',
+      audiolab_bass_desc: 'Deep low-frequency punch and warm bass enhancement'
     },
     hi: {
       appName: 'वेब एक्टिविटी और मीडिया प्रहरी',
@@ -45,7 +47,9 @@
       dailyAvg: 'दैनिक औसत',
       total: 'कुल',
       volumeBoost: 'वॉल्यूम बूस्ट',
-      equalizer: '5-बैंड इक्वलाइज़र'
+      equalizer: '5-बैंड इक्वलाइज़र',
+      audiolab_bass_title: '🔊 सब-बास बूस्ट',
+      audiolab_bass_desc: 'गहरा बेस व लो-फ़्रीक्वेंसी पंच उभारें'
     }
   };
 

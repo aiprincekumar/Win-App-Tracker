@@ -26,7 +26,8 @@
       '16000': 0
     },
     vocal_clarity: false,
-    night_shield: false
+    night_shield: false,
+    bass_boost: false
   };
 
   function ensureAudioContextResumed() {
@@ -166,9 +167,18 @@
         const base1k = (currentAudioSettings.eq_bands && Number(currentAudioSettings.eq_bands['1000'])) || 0;
         eqFilters[1000].gain.setValueAtTime(Math.min(12, base1k + 6), now);
       }
-      if (eqFilters[60] && eqFilters[60].gain) {
+      if (!currentAudioSettings.bass_boost && eqFilters[60] && eqFilters[60].gain) {
         const base60 = (currentAudioSettings.eq_bands && Number(currentAudioSettings.eq_bands['60'])) || 0;
         eqFilters[60].gain.setValueAtTime(Math.max(-12, base60 - 4), now);
+      }
+    }
+
+    if (currentAudioSettings.bass_boost) {
+      if (eqFilters[60] && eqFilters[60].gain) {
+        const base60 = (currentAudioSettings.eq_bands && Number(currentAudioSettings.eq_bands['60'])) || 0;
+        const vocalOffset = currentAudioSettings.vocal_clarity ? -4 : 0;
+        const targetGain = Math.max(-12, Math.min(12, base60 + 7 + vocalOffset));
+        eqFilters[60].gain.setValueAtTime(targetGain, now);
       }
     }
 

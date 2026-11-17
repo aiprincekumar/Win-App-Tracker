@@ -82,7 +82,6 @@ console.log('\nBattery 4: Dedicated Audio Lab Card (#heroAudioLabCard) Invariant
 const labRequiredIds = [
   'audioLabTitle',
   'audioLabStatusText',
-  'audioLabPresetBadge',
   'audioLabVocalBadge',
   'audioLabNightBadge',
   'lblAudioMasterBoost',
@@ -94,6 +93,9 @@ const labRequiredIds = [
   'toggleNightShield',
   'lblAudioNightTitle',
   'lblAudioNightDesc',
+  'toggleBassBoost',
+  'lblAudioBassTitle',
+  'lblAudioBassDesc',
   'toggleAudioOnlyMode',
   'lblAudioOnlyTitle',
   'lblAudioOnlyDesc'

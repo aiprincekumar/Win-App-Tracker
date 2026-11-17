@@ -226,7 +226,7 @@ console.log('\nBattery 7: DOM Invariant & Critical Selector Preservation Verific
     'heroProgressBar', 'heroProgressFill', 'heroVolumeBar', 'heroVolumeFill',
     'btnHeroFullscreen', 'btnHeroPip', 'btnHeroTheater', 'btnHeroSwitchTab',
     // Audio Lab & Equalizer Controls
-    'heroAudioLabStatus', 'heroAudioEqCard', 'audioLabTitle', 'audioLabPresetBadge', 'heroAudioBoostSlider', 'heroAudioBoostVal',
+    'heroAudioLabStatus', 'heroAudioEqCard', 'audioLabTitle', 'toggleBassBoost', 'heroAudioBoostSlider', 'heroAudioBoostVal',
     'audioEqPresetSelect', 'btnResetEq', 'eqBand60', 'eqBand250', 'eqBand1000', 'eqBand4000', 'eqBand16000',
     'toggleVocalClarity', 'toggleNightShield', 'toggleAudioOnlyMode',
     // Settings & Dialogs
