@@ -525,6 +525,7 @@
         volSlider.setAttribute('aria-label', `Volume: ${volSlider.value}%`);
         handleRemoteMediaCommand(stream.tabId, 'set_volume', v, options);
       });
+      volumeRow.appendChild(btnMute);
       volumeRow.appendChild(volSlider);
 
       // Solo Tab Button
@@ -553,7 +554,6 @@
       });
 
       controlsRow.appendChild(btnPlayPause);
-      controlsRow.appendChild(btnMute);
       controlsRow.appendChild(btnSolo);
       controlsRow.appendChild(btnSwitchTab);
 

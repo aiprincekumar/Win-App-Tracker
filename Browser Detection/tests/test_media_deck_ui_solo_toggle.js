@@ -19,16 +19,17 @@ const featureCode = fs.readFileSync(featurePath, 'utf8');
 // 1.1 Verify .deck-volume-row creation and styling
 assert(featureCode.includes("const volumeRow = doc.createElement('div')"), 'Must create volumeRow element via doc.createElement');
 assert(featureCode.includes("volumeRow.className = 'deck-volume-row'"), 'volumeRow must have class deck-volume-row');
+assert(featureCode.includes("volumeRow.appendChild(btnMute)"), 'btnMute must be appended into volumeRow');
 assert(featureCode.includes("volumeRow.appendChild(volSlider)"), 'volSlider must be appended into volumeRow');
-console.log('  ✅ volumeRow created with class .deck-volume-row and volSlider appended');
+console.log('  ✅ volumeRow created with class .deck-volume-row and btnMute & volSlider appended');
 
-// 1.2 Verify controlsRow contains only 4 action buttons (volSlider removed from controlsRow)
+// 1.2 Verify controlsRow contains strictly the 3 action buttons (btnMute moved to volumeRow, no volSlider)
 assert(featureCode.includes("controlsRow.appendChild(btnPlayPause)"), 'controlsRow must contain btnPlayPause');
-assert(featureCode.includes("controlsRow.appendChild(btnMute)"), 'controlsRow must contain btnMute');
+assert(!featureCode.includes("controlsRow.appendChild(btnMute)"), 'btnMute MUST NOT be appended into controlsRow');
 assert(featureCode.includes("controlsRow.appendChild(btnSolo)"), 'controlsRow must contain btnSolo');
 assert(featureCode.includes("controlsRow.appendChild(btnSwitchTab)"), 'controlsRow must contain btnSwitchTab');
 assert(!featureCode.includes("controlsRow.appendChild(volSlider)"), 'volSlider MUST NOT be appended into controlsRow');
-console.log('  ✅ controlsRow contains strictly the 4 action buttons (no volSlider)');
+console.log('  ✅ controlsRow contains strictly the 3 action buttons (btnMute moved to volumeRow, no volSlider)');
 
 // 1.3 Verify card assembly order: scrubberRow -> volumeRow -> controlsRow
 const scrubberIdx = featureCode.indexOf("card.appendChild(scrubberRow);");

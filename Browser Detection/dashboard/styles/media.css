@@ -988,9 +988,24 @@ body.theme-light .hero-seek-slider {
 .deck-volume-row {
   display: flex;
   align-items: center;
+  gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
   padding: 0 1px;
+}
+
+.deck-volume-row .btn-deck-mute {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  padding: 2px 4px;
+  cursor: pointer;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .deck-card-controls {
@@ -1019,11 +1034,16 @@ body.theme-light .hero-seek-slider {
 .deck-card-controls .btn-deck-ctrl {
   flex: 1 1 0;
   min-width: 0;
-  white-space: nowrap;
+  white-space: nowrap !important;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 5px 6px;
-  text-align: center;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .btn-deck-ctrl:hover {
@@ -1032,8 +1052,10 @@ body.theme-light .hero-seek-slider {
 }
 
 .deck-volume-slider {
-  width: 100%;
-  height: 4px;
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 5px;
   accent-color: #10b981;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.08);
