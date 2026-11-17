@@ -148,7 +148,7 @@ const DASHBOARD_I18N = {
     hud_connected: 'HUD Online (Connected)',
     hud_starting: 'Starting HUD...',
     btn_reconnect_hud: '⚡ Reconnect HUD',
-    btn_hud_connected: '🟢 HUD Connected',
+    btn_hud_connected: '✅ Connected',
     btn_starting_hud: '⏳ Starting HUD...',
     btn_refresh: 'Refresh',
     lang_btn_text: 'English',
@@ -569,7 +569,7 @@ const DASHBOARD_I18N = {
     hud_connected: 'HUD ऑनलाइन (कनेक्टेड)',
     hud_starting: 'HUD शुरू हो रहा है...',
     btn_reconnect_hud: '⚡ HUD रीकनेक्ट करें',
-    btn_hud_connected: '🟢 HUD कनेक्टेड है',
+    btn_hud_connected: '✅ कनेक्टेड',
     btn_starting_hud: '⏳ HUD शुरू हो रहा है...',
     btn_refresh: 'रीफ्रेश',
     lang_btn_text: 'हिंदी',
@@ -1927,6 +1927,8 @@ let mediaHistoryData = [];
 let selectedBrowser = 'all'; // 'all' | 'chrome' | 'edge' | 'brave' | 'opera'
 let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
 let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
+let hudLaunchInProgress = false;
+let hubConnectInProgress = false;
 
 // Feature 1 & 2 State: Temporal Engine & Productivity Classifier
 let domainCategoryOverrides = {};
@@ -3069,6 +3071,81 @@ function applyDashboardLanguage(lang) {
   const swatchAmber = document.getElementById('accentSwatchAmber');
   if (swatchAmber) swatchAmber.title = t('accent_amber');
 
+  // Local Services & Hardware Bridges Card
+  setTxt('headingHardwareBridges', 'hardware_bridges_title');
+  setTxt('subHardwareBridges', 'hardware_bridges_sub');
+  setTxt('nameBridgeHub', 'bridge_hub_name');
+  setTxt('portBridgeHub', 'bridge_hub_port');
+  setTxt('descBridgeHub', 'bridge_hub_desc');
+  setTxt('nameBridgeHud', 'bridge_hud_name');
+  setTxt('portBridgeHud', 'bridge_hud_port');
+  setTxt('descBridgeHud', 'bridge_hud_desc');
+
+  const hasClass = (el, cls) => el && ((el.classList && typeof el.classList.contains === 'function' && el.classList.contains(cls)) || (typeof el.className === 'string' && el.className.includes(cls)));
+  const bridgeHubBadge = document.getElementById('bridgeHubStatusBadge');
+  const bridgeHubText = document.getElementById('bridgeHubStatusText');
+  if (bridgeHubBadge && bridgeHubText) {
+    if (hasClass(bridgeHubBadge, 'online')) {
+      bridgeHubText.textContent = t('bridge_status_online');
+    } else if (hasClass(bridgeHubBadge, 'starting')) {
+      bridgeHubText.textContent = t('bridge_status_starting');
+    } else {
+      bridgeHubText.textContent = t('bridge_status_offline');
+    }
+  }
+
+  const bridgeHudBadge = document.getElementById('bridgeHudStatusBadge');
+  const bridgeHudText = document.getElementById('bridgeHudStatusText');
+  if (bridgeHudBadge && bridgeHudText) {
+    if (hasClass(bridgeHudBadge, 'online')) {
+      bridgeHudText.textContent = t('bridge_status_online');
+    } else if (hasClass(bridgeHudBadge, 'starting')) {
+      bridgeHudText.textContent = t('bridge_status_starting');
+    } else {
+      bridgeHudText.textContent = t('bridge_status_offline');
+    }
+  }
+
+  const btnReconnectHubEl = document.getElementById('btnSidebarReconnectHub');
+  if (btnReconnectHubEl) {
+    const lbl = typeof btnReconnectHubEl.querySelector === 'function' ? btnReconnectHubEl.querySelector('.btn-bridge-label') : null;
+    const icon = typeof btnReconnectHubEl.querySelector === 'function' ? btnReconnectHubEl.querySelector('.btn-bridge-icon') : null;
+    if (lbl) {
+      if (hubConnectInProgress) {
+        lbl.textContent = t('btn_connecting');
+        if (icon) icon.textContent = '⏳';
+      } else if (dataHubConnected) {
+        lbl.textContent = t('btn_hub_connected');
+        if (icon) icon.textContent = '✅';
+      } else {
+        lbl.textContent = t('btn_reconnect_hub');
+        if (icon) icon.textContent = '⚡';
+      }
+    } else {
+      btnReconnectHubEl.textContent = hubConnectInProgress ? t('btn_connecting') : (dataHubConnected ? t('btn_hub_connected') : t('btn_reconnect_hub'));
+    }
+  }
+
+  const btnReconnectHudEl = document.getElementById('btnSidebarReconnect');
+  if (btnReconnectHudEl) {
+    const lbl = typeof btnReconnectHudEl.querySelector === 'function' ? btnReconnectHudEl.querySelector('.btn-bridge-label') : null;
+    const icon = typeof btnReconnectHudEl.querySelector === 'function' ? btnReconnectHudEl.querySelector('.btn-bridge-icon') : null;
+    if (lbl) {
+      if (hudLaunchInProgress) {
+        lbl.textContent = t('btn_connecting');
+        if (icon) icon.textContent = '⏳';
+      } else if (dashboardData && dashboardData.wsConnected) {
+        lbl.textContent = t('btn_hud_connected');
+        if (icon) icon.textContent = '✅';
+      } else {
+        lbl.textContent = t('btn_reconnect_hud');
+        if (icon) icon.textContent = '⚡';
+      }
+    } else {
+      btnReconnectHudEl.textContent = hudLaunchInProgress ? t('btn_connecting') : ((dashboardData && dashboardData.wsConnected) ? t('btn_hud_connected') : t('btn_reconnect_hud'));
+    }
+  }
+
   // Re-render active views
   if (dashboardData) {
     updateHUDStatus(Boolean(dashboardData.wsConnected));
@@ -3519,32 +3596,87 @@ function updateHUDStatus(status) {
   const dot = document.getElementById('hudStatusDot');
   const label = document.getElementById('hudStatusLabel');
   const btn = document.getElementById('btnSidebarReconnect');
-  if (!dot || !label) return;
+  const bridgeHudBadge = document.getElementById('bridgeHudStatusBadge');
+  const bridgeHudDot = document.getElementById('bridgeHudStatusDot');
+  const bridgeHudText = document.getElementById('bridgeHudStatusText');
 
-  if (status === true || status === 'online') {
-    dot.className = 'hud-dot online';
-    label.textContent = t('hud_connected');
-    label.style.color = '#10b981';
-    if (btn) btn.textContent = t('btn_hud_connected');
-  } else if (status === 'starting') {
-    dot.className = 'hud-dot starting';
-    label.textContent = t('hud_starting');
-    label.style.color = '#f59e0b';
-    if (btn) btn.textContent = t('btn_starting_hud');
+  const isOnline = (status === true || status === 'online');
+  const isStarting = (status === 'starting');
+
+  if (isOnline) {
+    if (dot) dot.className = 'hud-dot online';
+    if (label) {
+      label.textContent = t('hud_connected');
+      label.style.color = '#10b981';
+    }
+    if (bridgeHudBadge) bridgeHudBadge.className = 'bridge-status-pill online';
+    if (bridgeHudText) bridgeHudText.textContent = t('bridge_status_online') || 'Connected';
+    if (btn) {
+      const lbl = btn.querySelector('.btn-bridge-label');
+      const icon = btn.querySelector('.btn-bridge-icon');
+      if (lbl) {
+        lbl.textContent = (t('btn_hud_connected') || 'Connected').replace(/^[^\w\s\u0900-\u097F]+/, '').trim();
+        if (icon) icon.textContent = '✅';
+      } else {
+        btn.textContent = t('btn_hud_connected');
+      }
+    }
+    const hapticEngine = (typeof window !== 'undefined' && window.sentinelHaptics) ||
+                         (typeof globalThis !== 'undefined' && globalThis.sentinelHaptics) ||
+                         (typeof sentinelHaptics !== 'undefined' ? sentinelHaptics : null);
+    if (hapticEngine && typeof hapticEngine.playSuccessChime === 'function') {
+      hapticEngine.playSuccessChime();
+    }
+  } else if (isStarting) {
+    if (dot) dot.className = 'hud-dot starting';
+    if (label) {
+      label.textContent = t('hud_starting');
+      label.style.color = '#f59e0b';
+    }
+    if (bridgeHudBadge) bridgeHudBadge.className = 'bridge-status-pill starting';
+    if (bridgeHudText) bridgeHudText.textContent = t('bridge_status_starting') || 'Connecting...';
+    if (btn) {
+      const lbl = btn.querySelector('.btn-bridge-label');
+      const icon = btn.querySelector('.btn-bridge-icon');
+      if (lbl) {
+        lbl.textContent = (t('btn_connecting') || 'Connecting...').replace(/^[^\w\s\u0900-\u097F]+/, '').trim();
+        if (icon) icon.textContent = '⏳';
+      } else {
+        btn.textContent = t('btn_starting_hud');
+      }
+    }
   } else {
-    dot.className = 'hud-dot offline';
-    label.textContent = t('hud_offline');
-    label.style.color = '#ef4444';
-    if (btn) btn.textContent = t('btn_reconnect_hud');
+    if (dot) dot.className = 'hud-dot offline';
+    if (label) {
+      label.textContent = t('hud_offline');
+      label.style.color = '#ef4444';
+    }
+    if (bridgeHudBadge) bridgeHudBadge.className = 'bridge-status-pill offline';
+    if (bridgeHudText) bridgeHudText.textContent = t('bridge_status_offline') || 'Offline';
+    if (btn) {
+      const lbl = btn.querySelector('.btn-bridge-label');
+      const icon = btn.querySelector('.btn-bridge-icon');
+      if (lbl) {
+        lbl.textContent = (t('btn_reconnect_hud') || 'Reconnect HUD').replace(/^[^\w\s\u0900-\u097F]+/, '').trim();
+        if (icon) icon.textContent = '⚡';
+      } else {
+        btn.textContent = t('btn_reconnect_hud');
+      }
+    }
   }
 }
 
 function updateDataHubStatus(isConnected, registeredBrowsers = []) {
+  const wasConnected = dataHubConnected;
   dataHubConnected = Boolean(isConnected);
   const badge = document.getElementById('dataHubBadge');
   const badgeText = document.getElementById('dataHubBadgeText');
   const sideDot = document.getElementById('dataHubSidebarDot');
   const sideLabel = document.getElementById('dataHubSidebarLabel');
+  const btn = document.getElementById('btnSidebarReconnectHub');
+  const bridgeHubBadge = document.getElementById('bridgeHubStatusBadge');
+  const bridgeHubDot = document.getElementById('bridgeHubStatusDot');
+  const bridgeHubText = document.getElementById('bridgeHubStatusText');
 
   if (isConnected) {
     hubReconnectAttempts = 0;
@@ -3564,6 +3696,24 @@ function updateDataHubStatus(isConnected, registeredBrowsers = []) {
       sideLabel.textContent = 'Hub Online';
       sideLabel.style.color = '#10b981';
     }
+    if (bridgeHubBadge) bridgeHubBadge.className = 'bridge-status-pill online';
+    if (bridgeHubText) bridgeHubText.textContent = t('bridge_status_online') || 'Connected';
+    if (btn) {
+      const lbl = btn.querySelector('.btn-bridge-label');
+      const icon = btn.querySelector('.btn-bridge-icon');
+      if (lbl) {
+        lbl.textContent = (t('btn_hub_connected') || 'Connected').replace(/^[^\w\s\u0900-\u097F]+/, '').trim();
+        if (icon) icon.textContent = '✅';
+      } else {
+        btn.textContent = t('btn_hub_connected') || 'Connected';
+      }
+    }
+    const hapticEngine = (typeof window !== 'undefined' && window.sentinelHaptics) ||
+                         (typeof globalThis !== 'undefined' && globalThis.sentinelHaptics) ||
+                         (typeof sentinelHaptics !== 'undefined' ? sentinelHaptics : null);
+    if (!wasConnected && hapticEngine && typeof hapticEngine.playSuccessChime === 'function') {
+      hapticEngine.playSuccessChime();
+    }
   } else {
     if (badge) {
       badge.className = 'datahub-status-badge offline';
@@ -3574,6 +3724,18 @@ function updateDataHubStatus(isConnected, registeredBrowsers = []) {
     if (sideLabel) {
       sideLabel.textContent = 'Hub Offline';
       sideLabel.style.color = '#ef4444';
+    }
+    if (bridgeHubBadge) bridgeHubBadge.className = 'bridge-status-pill offline';
+    if (bridgeHubText) bridgeHubText.textContent = t('bridge_status_offline') || 'Offline';
+    if (btn) {
+      const lbl = btn.querySelector('.btn-bridge-label');
+      const icon = btn.querySelector('.btn-bridge-icon');
+      if (lbl) {
+        lbl.textContent = (t('btn_reconnect_hub') || 'Reconnect Hub').replace(/^[^\w\s\u0900-\u097F]+/, '').trim();
+        if (icon) icon.textContent = '⚡';
+      } else {
+        btn.textContent = t('btn_reconnect_hub') || '⚡ Reconnect Hub';
+      }
     }
     scheduleDataHubAutoReconnect();
   }
@@ -5351,7 +5513,6 @@ function refreshDashboard(forceRefresh = false) {
 }
 
 // Standalone SQLite Data Hub Reconnect & Auto-Launch Engine
-let hubConnectInProgress = false;
 async function triggerDataHubConnectAndLaunch() {
   if (hubConnectInProgress) return;
   hubConnectInProgress = true;
@@ -5368,8 +5529,27 @@ async function triggerDataHubConnectAndLaunch() {
   const badgeText = document.getElementById('dataHubBadgeText');
   const sideDot = document.getElementById('dataHubSidebarDot');
   const sideLabel = document.getElementById('dataHubSidebarLabel');
+  const bridgeHubBadge = document.getElementById('bridgeHubStatusBadge');
+  const bridgeHubDot = document.getElementById('bridgeHubStatusDot');
+  const bridgeHubText = document.getElementById('bridgeHubStatusText');
 
-  if (btn) btn.textContent = '⏳ Connecting...';
+  const hapticEngine = (typeof window !== 'undefined' && window.sentinelHaptics) ||
+                       (typeof globalThis !== 'undefined' && globalThis.sentinelHaptics) ||
+                       (typeof sentinelHaptics !== 'undefined' ? sentinelHaptics : null);
+  if (hapticEngine && typeof hapticEngine.playClick === 'function') {
+    hapticEngine.playClick();
+  }
+
+  if (btn) {
+    const lbl = btn.querySelector('.btn-bridge-label');
+    const icon = btn.querySelector('.btn-bridge-icon');
+    if (lbl) {
+      lbl.textContent = t('btn_connecting') || 'Connecting...';
+      if (icon) icon.textContent = '⏳';
+    } else {
+      btn.textContent = '⏳ Connecting...';
+    }
+  }
   if (badge) badge.className = 'datahub-status-badge connecting';
   if (badgeText) badgeText.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
   if (sideDot) sideDot.className = 'hud-dot starting';
@@ -5377,6 +5557,8 @@ async function triggerDataHubConnectAndLaunch() {
     sideLabel.textContent = (currentLang === 'hi') ? 'कनेक्ट हो रहा है...' : 'Connecting...';
     sideLabel.style.color = '#f59e0b';
   }
+  if (bridgeHubBadge) bridgeHubBadge.className = 'bridge-status-pill starting';
+  if (bridgeHubText) bridgeHubText.textContent = t('bridge_status_starting') || 'Connecting...';
 
   showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) से कनेक्ट किया जा रहा है...' : 'Connecting to SQLite Data Hub (port 65433)...');
   safeRuntimeSendMessage({ type: 'LAUNCH_DATA_HUB' });
@@ -5393,12 +5575,34 @@ async function triggerDataHubConnectAndLaunch() {
         clearTimeout(hubReconnectTimer);
         hubReconnectTimer = null;
       }
-      if (btn) btn.textContent = '⚡ Reconnect Hub';
+      updateDataHubStatus(true, res.dataHubRegisteredBrowsers || []);
+      if (btn) {
+        const lbl = btn.querySelector('.btn-bridge-label');
+        const icon = btn.querySelector('.btn-bridge-icon');
+        if (lbl) {
+          lbl.textContent = t('btn_hub_connected') || 'Connected';
+          if (icon) icon.textContent = '✅';
+        } else {
+          btn.textContent = t('btn_hub_connected') || 'Connected';
+        }
+      }
+      if (hapticEngine && typeof hapticEngine.playSuccessChime === 'function') {
+        hapticEngine.playSuccessChime();
+      }
       showToast((currentLang === 'hi') ? 'SQLite Data Hub सफलतापूर्वक कनेक्ट हो गया!' : 'SQLite Data Hub connected successfully!');
     } else if (attempts >= 10) {
       clearInterval(pollInterval);
       hubConnectInProgress = false;
-      if (btn) btn.textContent = '⚡ Reconnect Hub';
+      if (btn) {
+        const lbl = btn.querySelector('.btn-bridge-label');
+        const icon = btn.querySelector('.btn-bridge-icon');
+        if (lbl) {
+          lbl.textContent = t('btn_reconnect_hub') || 'Reconnect Hub';
+          if (icon) icon.textContent = '⚡';
+        } else {
+          btn.textContent = t('btn_reconnect_hub') || '⚡ Reconnect Hub';
+        }
+      }
       if (!res || !res.dataHubConnected) {
         updateDataHubStatus(false);
         showToast((currentLang === 'hi') ? 'SQLite Data Hub (पोर्ट 65433) चालू नहीं है या कनेक्ट नहीं हुआ' : 'Could not connect to SQLite Data Hub (port 65433)', true);
@@ -6241,6 +6445,9 @@ function setupEventListeners() {
   const btnReconnectHub = document.getElementById('btnSidebarReconnectHub');
   if (btnReconnectHub) {
     btnReconnectHub.addEventListener('click', () => {
+      if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics && typeof sentinelHaptics.playClick === 'function') {
+        sentinelHaptics.playClick();
+      }
       hubReconnectAttempts = 0;
       if (hubReconnectTimer) {
         clearTimeout(hubReconnectTimer);
@@ -6337,8 +6544,6 @@ function setupEventListeners() {
   }
 
   // 4. Connect HUD
-  let hudLaunchInProgress = false;
-
   function handleConnectOrLaunchHUD() {
     if (dashboardData && dashboardData.wsConnected) {
       showToast(t('toast_hud_already'));
@@ -6346,6 +6551,9 @@ function setupEventListeners() {
     }
 
     if (hudLaunchInProgress) return;
+    if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics && typeof sentinelHaptics.playClick === 'function') {
+      sentinelHaptics.playClick();
+    }
     hudLaunchInProgress = true;
 
     updateHUDStatus('starting');
@@ -7898,6 +8106,7 @@ if (typeof module !== 'undefined' && module.exports) {
     HUB_RETRY_INTERVALS,
     scheduleDataHubAutoReconnect,
     updateDataHubStatus,
+    updateHUDStatus,
     triggerDataHubConnectAndLaunch,
     getHubReconnectAttempts: () => hubReconnectAttempts,
     setHubReconnectAttempts: (val) => { hubReconnectAttempts = val; },
@@ -8026,6 +8235,9 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 if (typeof window !== 'undefined') {
+  window.updateHUDStatus = updateHUDStatus;
+  window.updateDataHubStatus = updateDataHubStatus;
+  window.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
   window.aggregateChronoHeatmap = aggregateChronoHeatmap;
   window.renderChronoHeatmap = renderChronoHeatmap;
   window.calculateProductivityScore = calculateProductivityScore;
@@ -8076,6 +8288,9 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof globalThis !== 'undefined') {
+  globalThis.updateHUDStatus = updateHUDStatus;
+  globalThis.updateDataHubStatus = updateDataHubStatus;
+  globalThis.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
   globalThis.aggregateChronoHeatmap = aggregateChronoHeatmap;
   globalThis.renderChronoHeatmap = renderChronoHeatmap;
   globalThis.calculateProductivityScore = calculateProductivityScore;
