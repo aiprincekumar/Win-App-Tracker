@@ -1364,10 +1364,6 @@ body.theme-light #heroAudioLabStatus:-webkit-full-screen .visualizer-canvas-cont
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-  background-position: right 10px center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
 
 .select-viz-effect:hover,
 .visualizer-mode-select:hover,
