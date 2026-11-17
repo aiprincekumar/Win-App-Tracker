@@ -245,10 +245,14 @@ const DASHBOARD_I18N = {
     viz_effect_flame: 'Neon Flame Peaks',
     viz_effect_stereo: 'Stereo Mirror Butterfly',
     viz_video_embed_toggle_title: 'Switch to Video Player (Embed Mode)',
+    viz_fullwindow_toggle_title: 'Toggle Visualizer Full Window (Theater)',
+    viz_fullwindow_exit_title: 'Exit Visualizer Full Window (Theater)',
     viz_fullscreen_toggle_title: 'Toggle Visualizer Fullscreen',
     viz_fullscreen_exit_title: 'Exit Fullscreen Visualizer',
     toast_viz_embed_mode_active: 'Video Embed Mode active (Live stream playback preview)',
     toast_viz_embed_mode_inactive: 'Switched back to Spectrum Visualizer',
+    toast_viz_fullwindow_entered: 'Visualizer entered Full Window Theater mode',
+    toast_viz_fullwindow_exited: 'Visualizer exited Full Window mode',
     toast_viz_fullscreen_entered: 'Visualizer entered Fullscreen Theater mode',
     toast_viz_fullscreen_exited: 'Visualizer exited Fullscreen mode',
     active_streams_count: (count) => `${count} active stream${count === 1 ? '' : 's'}`,
@@ -681,10 +685,14 @@ const DASHBOARD_I18N = {
     viz_effect_flame: 'नियॉन फ्लेम पीक्स',
     viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
     viz_video_embed_toggle_title: 'वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)',
+    viz_fullwindow_toggle_title: 'विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें',
+    viz_fullwindow_exit_title: 'फुल विंडो (थिएटर) से बाहर निकलें',
     viz_fullscreen_toggle_title: 'विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें',
     viz_fullscreen_exit_title: 'फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें',
     toast_viz_embed_mode_active: 'वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय',
     toast_viz_embed_mode_inactive: 'स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया',
+    toast_viz_fullwindow_entered: 'विज़ुअलाइज़र फुल विंडो थिएटर मोड में सक्रिय',
+    toast_viz_fullwindow_exited: 'विज़ुअलाइज़र सामान्य विंडो पर वापस आया',
     toast_viz_fullscreen_entered: 'विज़ुअलाइज़र फ़ुलस्क्रीन थिएटर मोड में सक्रिय',
     toast_viz_fullscreen_exited: 'विज़ुअलाइज़र सामान्य दृश्य पर वापस आया',
     active_streams_count: (count) => `${count} सक्रिय स्ट्रीम`,
@@ -1060,10 +1068,14 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_flame: "Neon Flame Peaks",
     viz_effect_stereo: "Stereo Mirror Butterfly",
     viz_video_embed_toggle_title: "Switch to Video Player (Embed Mode)",
+    viz_fullwindow_toggle_title: "Toggle Visualizer Full Window (Theater)",
+    viz_fullwindow_exit_title: "Exit Visualizer Full Window (Theater)",
     viz_fullscreen_toggle_title: "Toggle Visualizer Fullscreen",
     viz_fullscreen_exit_title: "Exit Fullscreen Visualizer",
     toast_viz_embed_mode_active: "Video Embed Mode active (Live stream playback preview)",
     toast_viz_embed_mode_inactive: "Switched back to Spectrum Visualizer",
+    toast_viz_fullwindow_entered: "Visualizer entered Full Window Theater mode",
+    toast_viz_fullwindow_exited: "Visualizer exited Full Window mode",
     toast_viz_fullscreen_entered: "Visualizer entered Fullscreen Theater mode",
     toast_viz_fullscreen_exited: "Visualizer exited Fullscreen mode",
 
@@ -1133,10 +1145,14 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_flame: "नियॉन फ्लेम पीक्स",
     viz_effect_stereo: "स्टीरियो मिरर बटरफ्लाई",
     viz_video_embed_toggle_title: "वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)",
+    viz_fullwindow_toggle_title: "विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें",
+    viz_fullwindow_exit_title: "फुल विंडो (थिएटर) से बाहर निकलें",
     viz_fullscreen_toggle_title: "विज़ुअलाइज़र फ़ुलस्क्रीन टॉगल करें",
     viz_fullscreen_exit_title: "फ़ुलस्क्रीन विज़ुअलाइज़र से बाहर निकलें",
     toast_viz_embed_mode_active: "वीडियो प्लेयर (एम्बेडेड मोड) सक्रिय",
     toast_viz_embed_mode_inactive: "स्पेक्ट्रम विज़ुअलाइज़र पर वापस स्विच किया गया",
+    toast_viz_fullwindow_entered: "विज़ुअलाइज़र फुल विंडो थिएटर मोड में सक्रिय",
+    toast_viz_fullwindow_exited: "विज़ुअलाइज़र सामान्य विंडो पर वापस आया",
     toast_viz_fullscreen_entered: "विज़ुअलाइज़र फ़ुलस्क्रीन थिएटर मोड में सक्रिय",
     toast_viz_fullscreen_exited: "विज़ुअलाइज़र सामान्य दृश्य पर वापस आया",
 
@@ -2414,6 +2430,70 @@ function getVisualizerState() {
   return null;
 }
 
+function isVisualizerFullWindowActive() {
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.isVisualizerFullWindowActive === 'function') {
+    return viz.isVisualizerFullWindowActive();
+  }
+  const card = (typeof document !== 'undefined') ? document.getElementById('heroAudioLabStatus') : null;
+  if (!card) return false;
+  return Boolean(card.classList && typeof card.classList.contains === 'function' ? card.classList.contains('visualizer-theater-mode') : false);
+}
+
+function setVisualizerFullWindowState(active) {
+  const isFw = Boolean(active);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.setVisualizerFullWindowState === 'function') {
+    viz.setVisualizerFullWindowState(isFw);
+  }
+  if (typeof document === 'undefined') return isFw;
+  const card = document.getElementById('heroAudioLabStatus');
+  const btn = document.getElementById('btnVizFullWindow');
+
+  if (card) {
+    if (isFw) {
+      card.classList.add('visualizer-theater-mode');
+      if (document.body) document.body.classList.add('visualizer-theater-active');
+    } else {
+      card.classList.remove('visualizer-theater-mode');
+      if (document.body) document.body.classList.remove('visualizer-theater-active');
+    }
+  }
+
+  if (btn) {
+    btn.setAttribute('aria-expanded', isFw ? 'true' : 'false');
+    const titleText = isFw
+      ? (typeof t === 'function' ? t('viz_fullwindow_exit_title') : 'Exit Visualizer Full Window (Theater)')
+      : (typeof t === 'function' ? t('viz_fullwindow_toggle_title') : 'Toggle Visualizer Full Window (Theater)');
+    btn.setAttribute('title', titleText);
+    btn.setAttribute('aria-label', titleText);
+    if (isFw) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  }
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      updateVisualizerCanvasResolution();
+    });
+  } else {
+    updateVisualizerCanvasResolution();
+  }
+  return isFw;
+}
+
+function toggleVisualizerFullWindow() {
+  const next = !isVisualizerFullWindowActive();
+  setVisualizerFullWindowState(next);
+  if (typeof showToast === 'function') {
+    const msgKey = next ? 'toast_viz_fullwindow_entered' : 'toast_viz_fullwindow_exited';
+    showToast(typeof t === 'function' ? t(msgKey) : (next ? 'Visualizer entered Full Window Theater mode' : 'Visualizer exited Full Window mode'));
+  }
+  return next;
+}
+
 function isVisualizerFullscreenActive() {
   const card = (typeof document !== 'undefined') ? document.getElementById('heroAudioLabStatus') : null;
   if (!card) return false;
@@ -2421,7 +2501,8 @@ function isVisualizerFullscreenActive() {
     document.fullscreenElement === card ||
     document.webkitFullscreenElement === card ||
     document.mozFullScreenElement === card ||
-    document.msFullscreenElement === card
+    document.msFullscreenElement === card ||
+    (document.fullscreenElement && card.contains(document.fullscreenElement))
   );
   return isNative || Boolean(card.classList && typeof card.classList.contains === 'function' ? card.classList.contains('visualizer-theater-mode') : (card.classList && Array.isArray(card.classList) && card.classList.includes('visualizer-theater-mode')));
 }
@@ -2430,7 +2511,7 @@ function updateVisualizerCanvasResolution() {
   if (typeof document === 'undefined') return;
   const canvas = document.getElementById('canvasAudioVisualizer');
   if (!canvas) return;
-  const isFullscreen = isVisualizerFullscreenActive();
+  const isFullscreen = isVisualizerFullscreenActive() || isVisualizerFullWindowActive();
   if (isFullscreen) {
     const container = canvas.parentElement;
     const rect = (container && typeof container.getBoundingClientRect === 'function') ? container.getBoundingClientRect() : null;
@@ -2478,7 +2559,7 @@ function syncFullscreenUI(isActive) {
     if (isActive) {
       card.classList.add('visualizer-theater-mode');
       if (document.body) document.body.classList.add('visualizer-theater-active');
-    } else {
+    } else if (!isVisualizerFullWindowActive()) {
       card.classList.remove('visualizer-theater-mode');
       if (document.body) document.body.classList.remove('visualizer-theater-active');
     }
@@ -2496,36 +2577,43 @@ function syncFullscreenUI(isActive) {
 function setVisualizerFullscreenState(active) {
   if (typeof document === 'undefined') return;
   const card = document.getElementById('heroAudioLabStatus');
+  const canvasContainer = document.querySelector('.visualizer-canvas-container') || card;
   if (!card) return;
 
-  const currentlyActive = isVisualizerFullscreenActive();
-  if (active === currentlyActive) return;
+  const isFs = Boolean(active);
+  const currentlyFs = Boolean(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
 
-  if (active) {
-    // Request standard Fullscreen API if supported
-    if (typeof card.requestFullscreen === 'function') {
-      try {
-        const promise = card.requestFullscreen();
-        if (promise && typeof promise.then === 'function') {
-          promise.catch(() => {
-            // CSS fallback
-            syncFullscreenUI(true);
-          });
+  if (isFs) {
+    if (!currentlyFs && canvasContainer) {
+      if (typeof canvasContainer.requestFullscreen === 'function') {
+        try {
+          const promise = canvasContainer.requestFullscreen();
+          if (promise && typeof promise.then === 'function') {
+            promise.catch(() => {
+              setVisualizerFullWindowState(true);
+            });
+          }
+        } catch (_) {
+          setVisualizerFullWindowState(true);
         }
-      } catch (_) {
-        syncFullscreenUI(true);
-      }
-    } else if (typeof card.webkitRequestFullscreen === 'function') {
-      try {
-        card.webkitRequestFullscreen();
-      } catch (_) {
-        syncFullscreenUI(true);
+      } else if (typeof canvasContainer.webkitRequestFullscreen === 'function') {
+        try {
+          canvasContainer.webkitRequestFullscreen();
+        } catch (_) {
+          setVisualizerFullWindowState(true);
+        }
+      } else {
+        setVisualizerFullWindowState(true);
       }
     }
     syncFullscreenUI(true);
   } else {
-    // Exit native fullscreen if active
-    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+    if (currentlyFs) {
       try {
         if (typeof document.exitFullscreen === 'function') {
           document.exitFullscreen().catch(() => {});
@@ -2539,7 +2627,15 @@ function setVisualizerFullscreenState(active) {
 }
 
 function toggleVisualizerFullscreen() {
-  const next = !isVisualizerFullscreenActive();
+  const isCurrentlyFs = Boolean(
+    (typeof document !== 'undefined') && (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    )
+  );
+  const next = !isCurrentlyFs;
   setVisualizerFullscreenState(next);
   if (typeof showToast === 'function') {
     const msgKey = next ? 'toast_viz_fullscreen_entered' : 'toast_viz_fullscreen_exited';
@@ -3207,6 +3303,14 @@ function applyDashboardLanguage(lang) {
   if (btnVideoToggle) {
     btnVideoToggle.setAttribute('title', t('viz_video_embed_toggle_title'));
     btnVideoToggle.setAttribute('aria-label', t('viz_video_embed_toggle_title'));
+  }
+
+  const btnFullWindow = document.getElementById('btnVizFullWindow');
+  if (btnFullWindow) {
+    const isFw = isVisualizerFullWindowActive();
+    const fwKey = isFw ? 'viz_fullwindow_exit_title' : 'viz_fullwindow_toggle_title';
+    btnFullWindow.setAttribute('title', t(fwKey));
+    btnFullWindow.setAttribute('aria-label', t(fwKey));
   }
 
   const btnFullscreen = document.getElementById('btnVizFullscreen');
@@ -8579,6 +8683,15 @@ function setupEventListeners() {
     });
   }
 
+  // Full Window (Theater Mode) Button Binding
+  const btnVizFullWindow = document.getElementById('btnVizFullWindow');
+  if (btnVizFullWindow) {
+    btnVizFullWindow.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      toggleVisualizerFullWindow();
+    });
+  }
+
   // Fullscreen Visualizer Button Binding
   const btnVizFullscreen = document.getElementById('btnVizFullscreen');
   if (btnVizFullscreen) {
@@ -8608,10 +8721,15 @@ function setupEventListeners() {
     });
   }
 
-  // Escape key handler for fullscreen visualizer
+  // Escape key handler for fullscreen visualizer & full window
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-      if (isVisualizerFullscreenActive()) {
+      if (isVisualizerFullWindowActive()) {
+        setVisualizerFullWindowState(false);
+        if (typeof showToast === 'function') {
+          showToast(typeof t === 'function' ? t('toast_viz_fullwindow_exited') : 'Visualizer exited Full Window mode');
+        }
+      } else if (isVisualizerFullscreenActive()) {
         setVisualizerFullscreenState(false);
         if (typeof showToast === 'function') {
           showToast(typeof t === 'function' ? t('toast_viz_fullscreen_exited') : 'Visualizer exited Fullscreen mode');
@@ -8624,11 +8742,10 @@ function setupEventListeners() {
   ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach((evName) => {
     document.addEventListener(evName, () => {
       const card = document.getElementById('heroAudioLabStatus');
+      const canvasContainer = document.querySelector('.visualizer-canvas-container');
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
       const isNowNative = !!(
-        document.fullscreenElement === card ||
-        document.webkitFullscreenElement === card ||
-        document.mozFullScreenElement === card ||
-        document.msFullscreenElement === card
+        fsEl && (fsEl === card || fsEl === canvasContainer || (card && card.contains(fsEl)))
       );
       if (!isNowNative && card && !card.classList.contains('visualizer-theater-mode')) {
         syncFullscreenUI(false);
@@ -9055,6 +9172,9 @@ if (typeof module !== 'undefined' && module.exports) {
     handleMuteAllOthers,
     initAudioVisualizer,
     setVisualizerMode,
+    isVisualizerFullWindowActive,
+    setVisualizerFullWindowState,
+    toggleVisualizerFullWindow,
     isVisualizerFullscreenActive,
     setVisualizerFullscreenState,
     toggleVisualizerFullscreen,
@@ -9120,6 +9240,9 @@ if (typeof window !== 'undefined') {
   window.handleMuteAllOthers = handleMuteAllOthers;
   window.initAudioVisualizer = initAudioVisualizer;
   window.setVisualizerMode = setVisualizerMode;
+  window.isVisualizerFullWindowActive = isVisualizerFullWindowActive;
+  window.setVisualizerFullWindowState = setVisualizerFullWindowState;
+  window.toggleVisualizerFullWindow = toggleVisualizerFullWindow;
   window.isVisualizerFullscreenActive = isVisualizerFullscreenActive;
   window.setVisualizerFullscreenState = setVisualizerFullscreenState;
   window.toggleVisualizerFullscreen = toggleVisualizerFullscreen;

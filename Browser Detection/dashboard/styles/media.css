@@ -1159,16 +1159,26 @@ body.theme-light .hero-seek-slider {
 }
 
 .visualizer-controls-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  gap: 8px;
   background: rgba(15, 23, 42, 0.65);
-  padding: 2px 4px;
+  padding: 4px 8px;
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.viz-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 /* Compact Action Icon Buttons (Video Embed Toggle & Fullscreen) */
@@ -1248,7 +1258,9 @@ body.theme-light .btn-viz-action-icon[aria-expanded="true"] {
 /* Fullscreen & Theater Mode for Visualizer */
 #heroAudioLabStatus.visualizer-theater-mode,
 #heroAudioLabStatus:fullscreen,
-#heroAudioLabStatus:-webkit-full-screen {
+#heroAudioLabStatus:-webkit-full-screen,
+.visualizer-canvas-container:fullscreen,
+.visualizer-canvas-container:-webkit-full-screen {
   position: fixed !important;
   inset: 0 !important;
   top: 0 !important;

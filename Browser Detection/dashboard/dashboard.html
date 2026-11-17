@@ -757,28 +757,36 @@
                       <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
                     </select>
                   </div>
-                  <button type="button" id="btnVizVideoEmbedToggle" class="btn-viz-action-icon" title="Switch to Video Player (Embed Mode)" aria-label="Switch to Video Player (Embed Mode)" aria-pressed="false" tabindex="0">
-                    <svg class="viz-action-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                      <polygon points="10 8 16 11 10 14 10 8" fill="currentColor"></polygon>
-                      <line x1="8" y1="21" x2="16" y2="21"></line>
-                      <line x1="12" y1="17" x2="12" y2="21"></line>
-                    </svg>
-                  </button>
-                  <button type="button" id="btnVizFullscreen" class="btn-viz-action-icon" title="Toggle Visualizer Fullscreen" aria-label="Toggle Visualizer Fullscreen" aria-expanded="false" tabindex="0">
-                    <svg class="viz-action-svg viz-icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="15 3 21 3 21 9"></polyline>
-                      <polyline points="9 21 3 21 3 15"></polyline>
-                      <line x1="21" y1="3" x2="14" y2="10"></line>
-                      <line x1="3" y1="21" x2="10" y2="14"></line>
-                    </svg>
-                    <svg class="viz-action-svg viz-icon-compress visually-hidden" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="4 14 10 14 10 20"></polyline>
-                      <polyline points="20 10 14 10 14 4"></polyline>
-                      <line x1="14" y1="10" x2="21" y2="3"></line>
-                      <line x1="3" y1="21" x2="10" y2="14"></line>
-                    </svg>
-                  </button>
+                  <div class="viz-actions-group">
+                    <button type="button" id="btnVizVideoEmbedToggle" class="btn-viz-action-icon" title="Switch to Video Player (Embed Mode)" aria-label="Switch to Video Player (Embed Mode)" aria-pressed="false" tabindex="0">
+                      <svg class="viz-action-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <polygon points="10 8 16 11 10 14 10 8" fill="currentColor"></polygon>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                      </svg>
+                    </button>
+                    <button type="button" id="btnVizFullWindow" class="btn-viz-action-icon" title="Toggle Visualizer Full Window (Theater)" aria-label="Toggle Visualizer Full Window (Theater)" aria-expanded="false" tabindex="0">
+                      <svg class="viz-action-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                      </svg>
+                    </button>
+                    <button type="button" id="btnVizFullscreen" class="btn-viz-action-icon" title="Toggle Visualizer Fullscreen" aria-label="Toggle Visualizer Fullscreen" aria-expanded="false" tabindex="0">
+                      <svg class="viz-action-svg viz-icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                      </svg>
+                      <svg class="viz-action-svg viz-icon-compress visually-hidden" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="4 14 10 14 10 20"></polyline>
+                        <polyline points="20 10 14 10 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                      </svg>
+                    </button>
+                  </div>
                   <!-- Backward-compatible legacy mode buttons (hidden from visual flow, synced for API and test parity) -->
                   <div class="viz-legacy-buttons visually-hidden" aria-hidden="true" style="display: none;">
                     <button type="button" id="btnVizModeBars" class="btn btn-xs btn-active btn-viz-mode active" data-viz-mode="bars" data-i18n="visualizer_mode_bars" tabindex="-1">32-Band FFT</button>
