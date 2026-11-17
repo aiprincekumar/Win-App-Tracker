@@ -71,12 +71,15 @@
   line-height: 1;
 }
 
-.visualizer-card-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  justify-content: space-between;
-  gap: 12px;
+.visualizer-card-body,
+#heroAudioLabStatus .visualizer-card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
   padding-top: 0.5rem;
 }
 

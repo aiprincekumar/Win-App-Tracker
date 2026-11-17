@@ -183,34 +183,44 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 14px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 6px 10px;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-md);
   margin-top: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hero-advanced-row::-webkit-scrollbar {
+  display: none;
 }
 
 .adv-modes-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-adv-mode {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 4px;
+  padding: 4px 8px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: var(--transition);
 }
 
@@ -240,22 +250,24 @@
 .hero-quality-stepper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
-  padding: 3px 6px;
+  padding: 2px 6px;
+  flex-shrink: 0;
 }
 
 .btn-adv-mode-mini {
-  padding: 4px 10px;
+  padding: 3px 6px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: var(--transition);
 }
 
@@ -266,11 +278,11 @@
 }
 
 .hero-quality-val {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #38bdf8;
   padding: 0 4px;
-  min-width: 55px;
+  min-width: 48px;
   text-align: center;
   white-space: nowrap;
 }
@@ -988,24 +1000,43 @@ body.theme-light .hero-seek-slider {
 .deck-volume-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  margin-top: 6px;
-  margin-bottom: 2px;
+  margin: 6px 0 4px;
   padding: 0 1px;
 }
 
 .deck-volume-row .btn-deck-mute {
   flex: 0 0 auto;
-  background: transparent;
-  border: none;
-  font-size: 0.95rem;
-  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.85rem;
+  padding: 3px 6px;
   cursor: pointer;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.deck-volume-row .btn-deck-mute:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  transform: scale(1.08);
+}
+
+body.theme-light .deck-volume-row .btn-deck-mute {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #475569;
+}
+
+body.theme-light .deck-volume-row .btn-deck-mute:hover {
+  background: rgba(0, 0, 0, 0.09);
+  color: #0f172a;
 }
 
 .deck-card-controls {
@@ -1052,19 +1083,49 @@ body.theme-light .hero-seek-slider {
 }
 
 .deck-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
   flex: 1 1 0% !important;
   width: 100% !important;
   min-width: 0 !important;
   height: 5px;
-  accent-color: #10b981;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  outline: none;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  transition: opacity 0.2s ease;
+  accent-color: #10b981;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
 .deck-volume-slider:hover {
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.deck-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.deck-volume-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+}
+
+.deck-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  border: none;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  cursor: pointer;
 }
 
 .btn-deck-solo {
@@ -1129,27 +1190,31 @@ body.theme-light .hero-seek-slider {
 /* iOS 26 Liquid Glass Materiality & Audiophile Studio Deck Architecture     */
 /* ========================================================================= */
 
-.visualizer-panel {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 14px;
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.visualizer-card-body,
+#heroAudioLabStatus .visualizer-card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding-top: 0.5rem;
 }
 
-.visualizer-hero-card .visualizer-panel {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-top: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
+.visualizer-panel,
+.visualizer-hero-card .visualizer-panel,
+#heroAudioLabStatus .visualizer-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  gap: 8px !important;
 }
 
 .visualizer-header {
@@ -1559,10 +1624,12 @@ body.theme-light .visualizer-mode-select option {
 }
 
 /* Studio Obsidian Canvas Chassis */
-.visualizer-canvas-container {
-  width: 100%;
-  height: 130px;
-  min-height: 120px;
+.visualizer-canvas-container,
+#heroAudioLabStatus .visualizer-canvas-container {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 180px !important;
   background: var(--viz-canvas-bg, rgba(10, 15, 28, 0.85));
   border-radius: 10px;
   overflow: hidden;
@@ -1575,21 +1642,23 @@ body.theme-light .visualizer-mode-select option {
 }
 
 #canvasAudioVisualizer {
-  width: 100%;
-  height: 100%;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
 }
 
 /* Stereo VU Peak Level Meters & 0dB Headroom Indicator */
-.vu-meters-container {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
+.vu-meters-container,
+#heroAudioLabStatus .vu-meters-container {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
+  margin-top: auto !important;
   background: rgba(15, 23, 42, 0.5);
-  padding: 8px 12px;
+  padding: 6px 12px !important;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 4px !important;
 }
 
 .vu-bar-wrapper {
@@ -1668,8 +1737,17 @@ body.theme-light .media-deck-card {
 }
 
 body.theme-light .deck-volume-slider {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.1);
   accent-color: #059669;
+}
+
+body.theme-light .deck-volume-slider::-webkit-slider-thumb {
+  background: #059669;
+  box-shadow: 0 0 8px rgba(5, 150, 105, 0.5);
+}
+
+body.theme-light .deck-volume-slider::-moz-range-thumb {
+  background: #059669;
 }
 
 body.theme-light .deck-card-title {

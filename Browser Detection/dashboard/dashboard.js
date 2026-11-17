@@ -374,10 +374,10 @@ const DASHBOARD_I18N = {
     btn_unmute: '🔊 Unmute',
     live_volume: 'Live Volume:',
     fullscreen: 'Fullscreen',
-    pip: 'Pop-up PiP',
-    theater: 'Theater Mode',
-    switch_tab: 'Switch to Tab',
-    switch_tab_title: 'Focus active media tab',
+    pip: 'PiP',
+    theater: 'Theater',
+    switch_tab: 'Tab',
+    switch_tab_title: 'Switch to Media Tab',
     quality: 'Quality',
     idle_hero_heading: 'No Media Currently Playing',
     idle_hero_sub: 'Play YouTube, Netflix, Hotstar or any media in any browser tab. Live status and controls will appear here.',
@@ -816,9 +816,9 @@ const DASHBOARD_I18N = {
     btn_unmute: '🔊 अनम्यूट',
     live_volume: 'लाइव वॉल्यूम:',
     fullscreen: 'फुल स्क्रीन',
-    pip: 'पॉप-अप PiP',
-    theater: 'थिएटर मोड',
-    switch_tab: 'टैब पर जाएं',
+    pip: 'PiP',
+    theater: 'थिएटर',
+    switch_tab: 'टैब',
     switch_tab_title: 'सक्रिय मीडिया टैब पर स्विच करें',
     quality: 'क्वालिटी',
     idle_hero_heading: 'कोई लाइव मीडिया सक्रिय नहीं है',
@@ -2326,7 +2326,7 @@ function initAudioVisualizer(canvasEl, options = {}) {
   const canvas = canvasEl || (typeof document !== 'undefined' ? document.getElementById('canvasAudioVisualizer') : null);
   if (canvas) {
     if (!canvas.width) canvas.width = 600;
-    if (!canvas.height) canvas.height = 120;
+    if (!canvas.height || canvas.height <= 120) canvas.height = 220;
   }
   const opt = Object.assign({
     browserAPI,
@@ -2534,17 +2534,29 @@ function updateVisualizerCanvasResolution() {
   const canvas = document.getElementById('canvasAudioVisualizer');
   if (!canvas) return;
   const isFullscreen = isVisualizerFullscreenActive() || isVisualizerFullWindowActive();
+  const container = canvas.parentElement;
+  const rect = (container && typeof container.getBoundingClientRect === 'function') ? container.getBoundingClientRect() : null;
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+
   if (isFullscreen) {
-    const container = canvas.parentElement;
-    const rect = (container && typeof container.getBoundingClientRect === 'function') ? container.getBoundingClientRect() : null;
-    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
-    const targetW = (rect && rect.width > 0) ? Math.floor(rect.width * dpr) : (typeof window !== 'undefined' ? Math.floor(window.innerWidth * 0.9 * dpr) : 1200);
-    const targetH = (rect && rect.height > 0) ? Math.floor(rect.height * dpr) : (typeof window !== 'undefined' ? Math.floor((window.innerHeight - 180) * dpr) : 400);
-    canvas.width = Math.max(600, targetW);
-    canvas.height = Math.max(120, targetH);
+    if (rect && rect.width > 0 && rect.height > 0) {
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+    } else {
+      const targetW = typeof window !== 'undefined' ? Math.floor(window.innerWidth * 0.9 * dpr) : 1200;
+      const targetH = typeof window !== 'undefined' ? Math.floor((window.innerHeight - 180) * dpr) : 400;
+      canvas.width = Math.max(600, targetW);
+      canvas.height = Math.max(120, targetH);
+    }
   } else {
-    canvas.width = 600;
-    canvas.height = 120;
+    // Compact Mode: Auto-adapt to expanded container height
+    if (rect && rect.width > 0 && rect.height > 0) {
+      canvas.width = Math.round(rect.width);
+      canvas.height = Math.max(180, Math.round(rect.height));
+    } else {
+      canvas.width = 600;
+      canvas.height = 220;
+    }
   }
 }
 
@@ -8915,9 +8927,7 @@ function setupEventListeners() {
 
   // Window resize handler for canvas resolution adaptation
   window.addEventListener('resize', () => {
-    if (isVisualizerFullscreenActive()) {
-      updateVisualizerCanvasResolution();
-    }
+    updateVisualizerCanvasResolution();
   });
 
   // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
