@@ -47,9 +47,9 @@ In the previous implementation (`TASK-EQ-LAYOUT-SEPARATION-001`), both the 5-Ban
 
 | Phase # | Phase Name | Focus & Scope | Assigned Role | Status | Test Gate | QA Signoff |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1** | Pure DOM Restructuring | Break single wrapper into two pure top-level sibling Bento cards (`#heroAudioEqCard` and `#heroAudioLabCard`); eliminate `.audio-eq-split-deck` wrapper; preserve all 18 DOM IDs | Level 4 Frontend Engineer | READY | AST syntax check, DOM sibling verification | Pending Gate 1 |
-| **Phase 2** | CSS Refinement & Responsive Bento-Span-6 Layout | Style `#heroAudioEqCard` and `#heroAudioLabCard` as independent `bento-span-6` cards; ensure liquid glass styling, specular borders, and responsive <=1024px stacking | Level 4 CSS/Design Engineer | READY | Visual layout check, responsive reflow, WCAG contrast | Pending Gate 2 |
-| **Phase 3** | QA Verification & Test Suite Parity | Update test assertions to validate two independent sibling containers; run full 50-suite test battery (`node run_all_tests.js`); verify exit code 0 and gitleaks | Level 4 QA Verification Tester | READY | `node run_all_tests.js` (50/50 PASS) | Pending Gate 3 (Grade A+) |
+| **Phase 1** | Pure DOM Restructuring | Break single wrapper into two pure top-level sibling Bento cards (`#heroAudioEqCard` and `#heroAudioLabCard`); eliminate `.audio-eq-split-deck` wrapper; preserve all 18 DOM IDs | Level 4 Frontend Engineer | COMPLETED | AST syntax check, DOM sibling verification | Passed Gate 1 |
+| **Phase 2** | CSS Refinement & Responsive Bento-Span-6 Layout | Style `#heroAudioEqCard` and `#heroAudioLabCard` as independent `bento-span-6` cards; ensure liquid glass styling, specular borders, and responsive <=1024px stacking | Level 4 CSS/Design Engineer | COMPLETED | Visual layout check, responsive reflow, WCAG contrast | Passed Gate 2 |
+| **Phase 3** | QA Verification & Test Suite Parity | Update test assertions to validate two independent sibling containers; run full 53-suite test battery (`node run_all_tests.js`); verify exit code 0 and gitleaks | Level 4 QA Verification Tester | COMPLETED | `node run_all_tests.js` (53/53 PASS) | Certified Grade A+ |
 
 ---
 
