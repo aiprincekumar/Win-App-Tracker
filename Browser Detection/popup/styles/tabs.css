@@ -11,6 +11,7 @@
 @import './tabs/tab_automations.css';
 @import './tabs/tab_wellness.css';
 @import './tabs/tab_audio_lab.css';
+@import './tabs/tab_sleep.css';
 
 /* ==========================================================================
    Top Primary Multi-Tabs Navigation & View Panes (6-Tab Single-Word Architecture)
@@ -19,8 +20,9 @@
   display: grid;
   /* Legacy 4-column fallback for backwards compatibility */
   /* grid-template-columns: repeat(4, 1fr); */
-  grid-template-columns: repeat(6, 1fr);
-  gap: 3px;
+  /* grid-template-columns: repeat(6, 1fr); */
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
   background: rgba(255, 255, 255, 0.035);
   padding: 3px;
   border-radius: 10px;
@@ -39,9 +41,10 @@
   border: 1px solid transparent;
   border-radius: 7px;
   color: var(--text-secondary);
-  font-size: 10.5px;
+  /* Legacy font-size: 10.5px; fallback for backwards compatibility */
+  font-size: 9.8px;
   font-weight: 600;
-  padding: 6px 1px;
+  padding: 5px 1px;
   cursor: pointer;
   transition: all 0.18s ease;
   position: relative;

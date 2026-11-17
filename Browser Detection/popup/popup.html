@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web Activity & Media Sentinel</title>
   <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="styles/tabs/tab_sleep.css">
 </head>
 <body>
   <div class="sentinel-app">
@@ -88,6 +89,11 @@
       <button id="mainTabDomains" class="top-tab-btn" data-view="domains" role="tab" aria-selected="false" aria-controls="viewDomainsPane">
         <span class="top-tab-icon">🌐</span>
         <span id="topTabDomainsText" class="top-tab-label">Domains</span>
+      </button>
+      <button id="mainTabSleep" class="top-tab-btn" data-view="sleep" role="tab" aria-selected="false" aria-controls="viewSleepPane" title="Sleep Timer & Bedtime Automation">
+        <span class="top-tab-icon">🌙</span>
+        <span id="topTabSleepText" class="top-tab-label">Sleep</span>
+        <span id="tabSleepActiveDot" class="tab-live-dot hidden" title="Sleep Timer Active"></span>
       </button>
     </nav>
 
@@ -607,7 +613,151 @@
       </section>
     </div>
 
-    <!-- Action Footer Toolbar -->
+    <!-- TAB 7: Dedicated Sleep Timer View Pane -->
+    <div id="viewSleepPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabSleep">
+      
+      <!-- 1. Radial Bedtime Dial Hero Card -->
+      <section id="cardSleepHeroRing" class="sleep-hero-card">
+        <div class="sleep-hero-header">
+          <div class="sleep-hero-title-group">
+            <span class="sleep-moon-icon">🌙</span>
+            <span class="sleep-hero-title">BEDTIME SENTINEL</span>
+          </div>
+          <span id="sleepDialStatusBadge" class="sleep-status-badge idle">IDLE</span>
+        </div>
+
+        <!-- Center Radial Bedtime SVG Dial -->
+        <div class="sleep-dial-wrapper">
+          <svg id="sleepDialSvg" class="sleep-dial-svg" viewBox="0 0 140 140" width="140" height="140" aria-label="Sleep Timer Radial Countdown">
+            <!-- Background Track Ring -->
+            <circle class="sleep-dial-bg" cx="70" cy="70" r="54" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="8" />
+            <!-- Progress Glow Ring -->
+            <circle id="sleepDialProgress" class="sleep-dial-meter" cx="70" cy="70" r="54" fill="none" 
+                    stroke="url(#sleepGlowGradient)" stroke-width="8" stroke-linecap="round" 
+                    stroke-dasharray="339.292" stroke-dashoffset="0" transform="rotate(-90 70 70)" />
+            <defs>
+              <linearGradient id="sleepGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#818cf8" />
+                <stop offset="50%" stop-color="#a855f7" />
+                <stop offset="100%" stop-color="#c084fc" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <!-- Centered Telemetry Overlay -->
+          <div class="sleep-dial-content">
+            <div id="sleepDialCountdown" class="sleep-countdown-text"><span id="sleepDialCountdownTime">00:00</span></div>
+            <div id="sleepDialTargetTime" class="sleep-target-text"><span id="sleepDialFinishTime">No active timer</span></div>
+          </div>
+        </div>
+
+        <!-- Quick Action Button Row (Start/Pause, +5m, +15m, Cancel) -->
+        <div class="sleep-quick-actions-row">
+          <button id="btnSleepToggleRun" class="sleep-action-btn primary" title="Start or Pause Timer">
+            <span id="btnSleepPrimaryToggle" style="display:none;"></span>
+            <span id="btnSleepToggleRunIcon">▶</span>
+            <span id="btnSleepToggleRunText">Start</span>
+          </button>
+          <button id="btnSleepExtend5m" class="sleep-action-btn extend" title="Add 5 Minutes to Active Timer">
+            <span id="btnSleepExtend5" style="display:none;"></span>+5m
+          </button>
+          <button id="btnSleepExtend15m" class="sleep-action-btn extend" title="Add 15 Minutes to Active Timer">
+            <span id="btnSleepExtend15" style="display:none;"></span>+15m
+          </button>
+          <button id="btnSleepReset" class="sleep-action-btn reset" title="Cancel & Reset Timer">
+            ✕ Reset
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. Presets & Custom Duration Card -->
+      <section id="cardSleepPresetsAndCustom" class="sleep-section-card">
+        <div class="section-micro-header">
+          <span class="micro-icon">⏱️</span>
+          <span class="micro-heading">DURATION PRESETS</span>
+        </div>
+        <div class="sleep-tab-presets-grid">
+          <button class="sleep-tab-preset-btn" data-minutes="15">15m</button>
+          <button class="sleep-tab-preset-btn" data-minutes="30">30m</button>
+          <button class="sleep-tab-preset-btn" data-minutes="45">45m</button>
+          <button class="sleep-tab-preset-btn" data-minutes="60">60m</button>
+          <button class="sleep-tab-preset-btn" data-minutes="90">90m</button>
+          <button class="sleep-tab-preset-btn" data-minutes="120">120m</button>
+        </div>
+
+        <!-- Custom Minute Input Form -->
+        <div class="sleep-custom-input-row">
+          <label for="inputSleepCustomMinutes" class="sleep-custom-label">Custom Duration:</label>
+          <div class="sleep-custom-input-wrap">
+            <input type="number" id="inputSleepCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="sleep-custom-input">
+            <input type="hidden" id="sleepCustomMinutesInput">
+            <button id="btnSetSleepCustom" class="btn-sleep-set-custom">Set</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Smart Sleep Automations Card -->
+      <section id="cardSleepAutomations" class="sleep-section-card">
+        <div class="section-micro-header">
+          <span class="micro-icon">✨</span>
+          <span class="micro-heading">SLEEP AUTOMATIONS</span>
+        </div>
+
+        <!-- Toggle 1: End of Video Smart Pause -->
+        <div class="sleep-toggle-row">
+          <div class="sleep-toggle-info">
+            <span class="sleep-toggle-title">End of Current Video</span>
+            <span class="sleep-toggle-sub">Pause cleanly when active video ends</span>
+          </div>
+          <label class="switch-toggle-sm">
+            <input type="checkbox" id="toggleSleepEndOfVideo" checked>
+            <span class="slider-round-sm"></span>
+          </label>
+        </div>
+
+        <!-- Toggle 2: Audio Decibel Fade-out Curve -->
+        <div class="sleep-toggle-row">
+          <div class="sleep-toggle-info">
+            <span class="sleep-toggle-title">Audio Fade-Out Curve</span>
+            <span class="sleep-toggle-sub">30s gentle volume decrease</span>
+          </div>
+          <div class="sleep-toggle-controls" style="display:flex;align-items:center;gap:6px;">
+            <select id="selectSleepFadeCurve" class="setting-select-sm" aria-label="Fade Curve Duration" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:1px 3px;">
+              <option value="30" selected>30s</option>
+              <option value="60">60s</option>
+            </select>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleSleepFadeCurve" checked>
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Toggle 3: Inactivity Sentinel Auto-Sleep -->
+        <div class="sleep-toggle-row">
+          <div class="sleep-toggle-info">
+            <span class="sleep-toggle-title">Inactivity Auto-Sleep</span>
+            <span class="sleep-toggle-sub">Pause playback if idle for 15m</span>
+          </div>
+          <label class="switch-toggle-sm">
+            <input type="checkbox" id="toggleSleepInactivitySentinel">
+            <span class="slider-round-sm"></span>
+          </label>
+        </div>
+
+        <!-- Option: Sleep Timeout Action -->
+        <div class="sleep-toggle-row">
+          <div class="sleep-toggle-info">
+            <span class="sleep-toggle-title">On Timeout Action</span>
+            <span class="sleep-toggle-sub">Action when timer reaches zero</span>
+          </div>
+          <select id="selectSleepTimeoutAction" class="setting-select-sm" aria-label="Sleep Timeout Action" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:2px 4px;">
+            <option value="pause" selected>Pause Playback</option>
+            <option value="mute">Mute Audio</option>
+            <option value="close_tab">Close Media Tab</option>
+          </select>
+        </div>
+      </section>
+    </div>
     <footer class="footer">
       <!-- 1. Refresh Button -->
       <button id="btnRefresh" class="footer-btn toolbar-btn" title="Refresh Telemetry" aria-label="Refresh Telemetry">
@@ -747,6 +897,7 @@
             <option value="studio">📚 Studio</option>
             <option value="tracking">⏱️ Tracking</option>
             <option value="domains">🌐 Domains</option>
+            <option value="sleep">🌙 Sleep</option>
           </select>
         </div>
         <div class="setting-row">

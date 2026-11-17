@@ -138,6 +138,7 @@ const I18N_POPUP = {
     tab_studio: 'Studio',
     tab_tracking: 'Tracking',
     tab_domains: 'Domains',
+    tab_sleep: 'Sleep',
     tab_media_active_title: 'Media Active',
     
     // Headings
@@ -286,6 +287,7 @@ const I18N_POPUP = {
     tab_studio: 'स्टूडियो',
     tab_tracking: 'ट्रैकिंग',
     tab_domains: 'डोमेन',
+    tab_sleep: 'स्लीप',
     tab_media_active_title: 'मीडिया सक्रिय है',
     
     // Headings
@@ -559,6 +561,7 @@ function applyPopupLanguage(lang) {
   setTxt('topTabStudioText', 'tab_studio');
   setTxt('topTabTrackingText', 'tab_tracking');
   setTxt('topTabDomainsText', 'tab_domains');
+  setTxt('topTabSleepText', 'tab_sleep');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
 
   setTxt('lblTimeElapsed', 'watched');
@@ -914,7 +917,8 @@ function switchTopTab(tabName, isManual = false) {
     { id: 'mainTabTools', paneId: 'viewToolsPane', key: 'tools' },
     { id: 'mainTabStudio', paneId: 'viewStudioPane', key: 'studio' },
     { id: 'mainTabTracking', paneId: 'viewTrackingPane', key: 'tracking' },
-    { id: 'mainTabDomains', paneId: 'viewDomainsPane', key: 'domains' }
+    { id: 'mainTabDomains', paneId: 'viewDomainsPane', key: 'domains' },
+    { id: 'mainTabSleep', paneId: 'viewSleepPane', key: 'sleep' }
   ];
 
   tabs.forEach(t => {
@@ -2314,6 +2318,283 @@ let popupListenersAttached = false;
 /**
  * UI Event Listeners Setup
  */
+// =============================================================================
+// Sleep Timer & Bedtime Automation Core (Tab 7 & Popover Unified Engine)
+// =============================================================================
+const SLEEP_DIAL_CIRCUMFERENCE = 339.292; // 2 * Math.PI * 54
+let currentSleepTimer = null;
+let sleepTimerInterval = null;
+
+function updateRadialSleepDial(remainingMs, totalDurationMs, isRunning, isPaused, isFading) {
+  const progressCircle = document.getElementById('sleepDialProgress');
+  if (!progressCircle) return;
+
+  if (totalDurationMs <= 0 || remainingMs <= 0) {
+    progressCircle.style.strokeDashoffset = String(SLEEP_DIAL_CIRCUMFERENCE);
+    return;
+  }
+
+  const ratio = Math.max(0, Math.min(1, remainingMs / totalDurationMs));
+  const offset = SLEEP_DIAL_CIRCUMFERENCE * (1 - ratio);
+  progressCircle.style.strokeDashoffset = String(offset.toFixed(2));
+}
+
+function renderSleepTabState(timer) {
+  currentSleepTimer = timer || { state: 'IDLE' };
+  const countdownEl = document.getElementById('sleepDialCountdown');
+  const countdownTimeEl = document.getElementById('sleepDialCountdownTime');
+  const targetTimeEl = document.getElementById('sleepDialTargetTime');
+  const targetFinishEl = document.getElementById('sleepDialFinishTime');
+  const badgeEl = document.getElementById('sleepDialStatusBadge');
+  const toggleBtnText = document.getElementById('btnSleepToggleRunText');
+  const toggleBtnIcon = document.getElementById('btnSleepToggleRunIcon');
+  const activeDot = document.getElementById('tabSleepActiveDot');
+  const footerDot = document.getElementById('sleepTimerActiveDot');
+
+  const isIdle = !timer || timer.state === 'IDLE' || timer.state === 'CANCELLED' || !timer.targetTime;
+
+  if (isIdle) {
+    if (countdownTimeEl) countdownTimeEl.textContent = '00:00';
+    else if (countdownEl) countdownEl.textContent = '00:00';
+    if (targetFinishEl) targetFinishEl.textContent = 'No active timer';
+    else if (targetTimeEl) targetTimeEl.textContent = 'No active timer';
+
+    if (badgeEl) {
+      badgeEl.textContent = 'IDLE';
+      badgeEl.className = 'sleep-status-badge idle';
+    }
+    if (toggleBtnText) toggleBtnText.textContent = 'Start';
+    if (toggleBtnIcon) toggleBtnIcon.textContent = '▶';
+    if (activeDot) activeDot.classList.add('hidden');
+    if (footerDot) footerDot.classList.add('hidden');
+    updateRadialSleepDial(0, 1, false, false, false);
+
+    document.querySelectorAll('.sleep-tab-preset-btn').forEach(b => b.classList.remove('active'));
+    return;
+  }
+
+  const now = Date.now();
+  const isPaused = timer.state === 'PAUSED';
+  const remainingMs = isPaused 
+    ? (timer.remainingMs || Math.max(0, timer.targetTime - (timer.pausedAt || now)))
+    : Math.max(0, timer.targetTime - now);
+  const totalMs = timer.durationMs || (timer.durationMinutes * 60 * 1000) || 1;
+
+  const totalSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+  const hrs = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  const timeStr = hrs > 0
+    ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  if (countdownTimeEl) countdownTimeEl.textContent = timeStr;
+  else if (countdownEl) countdownEl.textContent = timeStr;
+
+  if (targetFinishEl || targetTimeEl) {
+    const projectedTarget = isPaused ? (now + remainingMs) : timer.targetTime;
+    const d = new Date(projectedTarget);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const finishStr = `Sleep at ${h}:${m} ${ampm}`;
+    if (targetFinishEl) targetFinishEl.textContent = finishStr;
+    else if (targetTimeEl) targetTimeEl.textContent = finishStr;
+  }
+
+  const isRunning = timer.state === 'RUNNING';
+  const isFading = timer.state === 'FADING';
+  if (badgeEl) {
+    badgeEl.textContent = timer.state;
+    badgeEl.className = `sleep-status-badge ${timer.state.toLowerCase()}`;
+  }
+
+  if (toggleBtnText && toggleBtnIcon) {
+    if (isRunning) {
+      toggleBtnText.textContent = 'Pause';
+      toggleBtnIcon.textContent = '⏸';
+    } else if (isPaused) {
+      toggleBtnText.textContent = 'Resume';
+      toggleBtnIcon.textContent = '▶';
+    } else {
+      toggleBtnText.textContent = 'Start';
+      toggleBtnIcon.textContent = '▶';
+    }
+  }
+
+  if (activeDot) activeDot.classList.toggle('hidden', isIdle);
+  if (footerDot) footerDot.classList.toggle('hidden', isIdle);
+
+  document.querySelectorAll('.sleep-tab-preset-btn').forEach(btn => {
+    const minsPreset = parseInt(btn.getAttribute('data-minutes'), 10);
+    btn.classList.toggle('active', minsPreset === timer.durationMinutes);
+  });
+
+  updateRadialSleepDial(remainingMs, totalMs, isRunning, isPaused, isFading);
+}
+
+function renderSleepTimerUI(timer) {
+  renderSleepTabState(timer);
+
+  const container = document.getElementById('activeCountdownContainer');
+  const presetsContainer = document.getElementById('sleepPresetsContainer');
+  const timeRemainingEl = document.getElementById('countdownTimeRemaining');
+  const badgeEl = document.getElementById('countdownStatusBadge');
+  const progressFill = document.getElementById('countdownProgressFill');
+  const activeDot = document.getElementById('sleepTimerActiveDot');
+
+  if (!timer || timer.state === 'IDLE' || timer.state === 'CANCELLED' || !timer.targetTime) {
+    if (container) container.classList.add('hidden');
+    if (presetsContainer) presetsContainer.classList.remove('hidden');
+    if (activeDot) activeDot.classList.add('hidden');
+    return;
+  }
+
+  const now = Date.now();
+  const isPaused = timer.state === 'PAUSED';
+  const remainingMs = isPaused
+    ? (timer.remainingMs || Math.max(0, timer.targetTime - (timer.pausedAt || now)))
+    : Math.max(0, timer.targetTime - now);
+  const totalMs = timer.durationMs || (timer.durationMinutes * 60 * 1000) || 1;
+  const ratio = Math.max(0, Math.min(1, remainingMs / totalMs));
+
+  const totalSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  if (container) container.classList.remove('hidden');
+  if (presetsContainer) presetsContainer.classList.add('hidden');
+  if (timeRemainingEl) timeRemainingEl.textContent = timeStr;
+  if (badgeEl) badgeEl.textContent = timer.state;
+  if (progressFill) progressFill.style.width = `${(ratio * 100).toFixed(1)}%`;
+  if (activeDot) activeDot.classList.remove('hidden');
+}
+
+function syncSleepTimerState() {
+  try {
+    browserAPI.storage.local.get(['sentinel_sleep_timer', 'sentinel_sleep_settings'], (res) => {
+      const timer = res && res.sentinel_sleep_timer;
+      renderSleepTimerUI(timer);
+
+      const settings = (res && res.sentinel_sleep_settings) || {};
+      const toggleEndOfVideo = document.getElementById('toggleSleepEndOfVideo');
+      if (toggleEndOfVideo && typeof settings.endOfVideo === 'boolean') {
+        toggleEndOfVideo.checked = settings.endOfVideo;
+      }
+      const toggleFade = document.getElementById('toggleSleepFadeCurve');
+      if (toggleFade && typeof settings.enableAudioFadeOut === 'boolean') {
+        toggleFade.checked = settings.enableAudioFadeOut;
+      }
+      const selectFade = document.getElementById('selectSleepFadeCurve');
+      if (selectFade && settings.fadeDurationSeconds) {
+        selectFade.value = String(settings.fadeDurationSeconds);
+      }
+      const toggleInactivity = document.getElementById('toggleSleepInactivitySentinel');
+      if (toggleInactivity && typeof settings.enableInactivityAutoSleep === 'boolean') {
+        toggleInactivity.checked = settings.enableInactivityAutoSleep;
+      }
+      const selectAction = document.getElementById('selectSleepTimeoutAction');
+      if (selectAction && settings.timeoutAction) {
+        selectAction.value = settings.timeoutAction;
+      }
+    });
+  } catch (_) {}
+}
+
+function extendSleepTimerMinutes(minsToAdd) {
+  const extraMs = minsToAdd * 60 * 1000;
+  browserAPI.storage.local.get(['sentinel_sleep_timer', 'sentinel_sleep_settings'], (res) => {
+    let timer = res.sentinel_sleep_timer;
+    const now = Date.now();
+    if (timer && (timer.state === 'RUNNING' || timer.state === 'FADING') && timer.targetTime > now) {
+      timer.durationMinutes = (timer.durationMinutes || 0) + minsToAdd;
+      timer.durationMs = (timer.durationMs || 0) + extraMs;
+      timer.targetTime += extraMs;
+      timer.lastUpdated = now;
+      if (timer.state === 'FADING') {
+        timer.state = 'RUNNING';
+      }
+    } else if (timer && timer.state === 'PAUSED') {
+      timer.durationMinutes = (timer.durationMinutes || 0) + minsToAdd;
+      timer.durationMs = (timer.durationMs || 0) + extraMs;
+      timer.remainingMs = (timer.remainingMs || 0) + extraMs;
+      timer.lastUpdated = now;
+    } else {
+      const fadeCurveEl = document.getElementById('toggleSleepFadeCurve');
+      const fadeSelectEl = document.getElementById('selectSleepFadeCurve');
+      const endVideoEl = document.getElementById('toggleSleepEndOfVideo');
+      timer = {
+        state: 'RUNNING',
+        durationMinutes: minsToAdd,
+        durationMs: extraMs,
+        startTime: now,
+        targetTime: now + extraMs,
+        pauseMedia: true,
+        pauseTracking: true,
+        enableFadeOut: fadeCurveEl ? fadeCurveEl.checked : true,
+        fadeDurationSeconds: fadeSelectEl ? (parseInt(fadeSelectEl.value, 10) || 30) : 30,
+        lastUpdated: now,
+        endOfVideo: endVideoEl ? endVideoEl.checked : false
+      };
+    }
+
+    browserAPI.storage.local.set({ sentinel_sleep_timer: timer }, () => {
+      try {
+        browserAPI.runtime.sendMessage({ action: 'EXTEND_SLEEP_TIMER', extraMinutes: minsToAdd });
+      } catch (e) {}
+      renderSleepTimerUI(timer);
+      showPopupToast(`Added +${minsToAdd}m to sleep timer`, 'success');
+    });
+  });
+}
+
+function startSleepTimerWithMinutes(minutes) {
+  const mins = Math.max(1, Math.min(1440, parseInt(minutes, 10) || 30));
+  const fadeCurveEl = document.getElementById('toggleSleepFadeCurve');
+  const enableFade = fadeCurveEl ? fadeCurveEl.checked : true;
+  const fadeSelectEl = document.getElementById('selectSleepFadeCurve');
+  const fadeSec = fadeSelectEl ? (parseInt(fadeSelectEl.value, 10) || 30) : 30;
+  const endVideoEl = document.getElementById('toggleSleepEndOfVideo');
+  const endVideo = endVideoEl ? endVideoEl.checked : false;
+
+  const now = Date.now();
+  const durationMs = mins * 60 * 1000;
+  const timer = {
+    state: 'RUNNING',
+    durationMinutes: mins,
+    durationMs: durationMs,
+    startTime: now,
+    targetTime: now + durationMs,
+    pauseMedia: true,
+    pauseTracking: true,
+    enableFadeOut: enableFade,
+    fadeDurationSeconds: fadeSec,
+    lastUpdated: now,
+    endOfVideo: endVideo
+  };
+
+  try {
+    const p = browserAPI.runtime.sendMessage({
+      type: 'SET_SLEEP_TIMER',
+      durationMinutes: mins,
+      enableFade: enableFade
+    }, (res) => {
+      const stateToRender = (res && res.success && res.state) ? res.state : timer;
+      renderSleepTimerUI(stateToRender);
+      showPopupToast(`Sleep timer set for ${mins}m`, 'success');
+    });
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) {
+    renderSleepTimerUI(timer);
+  }
+
+  try {
+    browserAPI.storage.local.set({ sentinel_sleep_timer: timer });
+  } catch (_) {}
+}
+
 function setupEventListeners() {
   if (popupListenersAttached) return;
   popupListenersAttached = true;
@@ -2360,6 +2641,13 @@ function setupEventListeners() {
   if (tabDomainsBtn) {
     tabDomainsBtn.addEventListener('click', () => {
       switchTopTab('domains', true);
+    });
+  }
+
+  const mainTabSleep = document.getElementById('mainTabSleep');
+  if (mainTabSleep) {
+    mainTabSleep.addEventListener('click', () => {
+      switchTopTab('sleep', true);
     });
   }
 
@@ -2416,7 +2704,8 @@ function setupEventListeners() {
 
   if (selectDefaultTab) {
     selectDefaultTab.addEventListener('change', () => {
-      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+      // Legacy 6-tab check: ['media', 'audio', 'tools', 'studio', 'tracking', 'domains']
+      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep'];
       const chosen = selectDefaultTab.value;
       quickSettings.default_tab = validTabs.includes(chosen) ? chosen : 'media';
       browserAPI.storage.local.set({ quick_settings: quickSettings });
@@ -3293,7 +3582,9 @@ function setupEventListeners() {
   if (btnSleepTrigger) {
     btnSleepTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      toggleSleepPopover();
+      // Smooth navigation to dedicated 7th Sleep Tab
+      switchTopTab('sleep', true);
+      toggleSleepPopover(false);
     });
   }
 
@@ -3395,6 +3686,134 @@ function setupEventListeners() {
       } catch (_) {}
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Dedicated Tab 7: Sleep Timer & Bedtime Automation Event Listeners
+  // ---------------------------------------------------------------------------
+  const btnSleepExtend5m = document.getElementById('btnSleepExtend5m') || document.getElementById('btnSleepExtend5');
+  if (btnSleepExtend5m) {
+    btnSleepExtend5m.addEventListener('click', () => extendSleepTimerMinutes(5));
+  }
+
+  const btnSleepExtend15m = document.getElementById('btnSleepExtend15m') || document.getElementById('btnSleepExtend15');
+  if (btnSleepExtend15m) {
+    btnSleepExtend15m.addEventListener('click', () => extendSleepTimerMinutes(15));
+  }
+
+  const btnSleepReset = document.getElementById('btnSleepReset');
+  if (btnSleepReset) {
+    btnSleepReset.addEventListener('click', () => {
+      try {
+        const p = browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER' }, (res) => {
+          renderSleepTimerUI({ state: 'IDLE' });
+          showPopupToast('Sleep timer cancelled', 'info');
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {
+        renderSleepTimerUI({ state: 'IDLE' });
+      }
+    });
+  }
+
+  const btnSleepToggleRun = document.getElementById('btnSleepToggleRun');
+  if (btnSleepToggleRun) {
+    btnSleepToggleRun.addEventListener('click', () => {
+      if (currentSleepTimer && currentSleepTimer.state === 'RUNNING') {
+        const now = Date.now();
+        const rem = Math.max(0, currentSleepTimer.targetTime - now);
+        currentSleepTimer.state = 'PAUSED';
+        currentSleepTimer.remainingMs = rem;
+        currentSleepTimer.pausedAt = now;
+        try {
+          browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
+            renderSleepTimerUI(currentSleepTimer);
+            showPopupToast('Sleep timer paused', 'info');
+          });
+        } catch (_) {
+          renderSleepTimerUI(currentSleepTimer);
+        }
+      } else if (currentSleepTimer && currentSleepTimer.state === 'PAUSED') {
+        const now = Date.now();
+        const rem = currentSleepTimer.remainingMs || 60000;
+        currentSleepTimer.state = 'RUNNING';
+        currentSleepTimer.targetTime = now + rem;
+        delete currentSleepTimer.remainingMs;
+        delete currentSleepTimer.pausedAt;
+        try {
+          browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
+            renderSleepTimerUI(currentSleepTimer);
+            showPopupToast('Sleep timer resumed', 'success');
+          });
+        } catch (_) {
+          renderSleepTimerUI(currentSleepTimer);
+        }
+      } else {
+        startSleepTimerWithMinutes(30);
+      }
+    });
+  }
+
+  // Presets on Dedicated Sleep Tab (15m, 30m, 45m, 60m, 90m, 120m)
+  document.querySelectorAll('.sleep-tab-preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const minutes = parseInt(btn.getAttribute('data-minutes'), 10) || 15;
+      startSleepTimerWithMinutes(minutes);
+    });
+  });
+
+  // Custom Duration on Dedicated Sleep Tab
+  const inputSleepCustom = document.getElementById('inputSleepCustomMinutes') || document.getElementById('sleepCustomMinutesInput');
+  const btnSetSleepCustom = document.getElementById('btnSetSleepCustom');
+  const handleSetTabCustomTimer = () => {
+    if (!inputSleepCustom) return;
+    const mins = parseInt(inputSleepCustom.value, 10);
+    if (isNaN(mins) || mins < 1 || mins > 1440) {
+      showPopupToast('Enter valid minutes (1-1440)', 'danger');
+      return;
+    }
+    startSleepTimerWithMinutes(mins);
+    inputSleepCustom.value = '';
+  };
+
+  if (btnSetSleepCustom) {
+    btnSetSleepCustom.addEventListener('click', handleSetTabCustomTimer);
+  }
+  if (inputSleepCustom) {
+    inputSleepCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSetTabCustomTimer();
+    });
+  }
+
+  // Sleep Automations Toggles & Selects
+  const persistSleepSettings = () => {
+    const endVideo = document.getElementById('toggleSleepEndOfVideo');
+    const fadeCurve = document.getElementById('toggleSleepFadeCurve');
+    const fadeSelect = document.getElementById('selectSleepFadeCurve');
+    const inactToggle = document.getElementById('toggleSleepInactivitySentinel');
+    const timeoutSelect = document.getElementById('selectSleepTimeoutAction');
+
+    const settingsUpdate = {
+      endOfVideo: endVideo ? endVideo.checked : false,
+      enableAudioFadeOut: fadeCurve ? fadeCurve.checked : true,
+      fadeDurationSeconds: fadeSelect ? (parseInt(fadeSelect.value, 10) || 30) : 30,
+      enableInactivityAutoSleep: inactToggle ? inactToggle.checked : false,
+      timeoutAction: timeoutSelect ? timeoutSelect.value : 'pause'
+    };
+
+    try {
+      browserAPI.storage.local.get(['sentinel_sleep_settings'], (res) => {
+        const merged = { ...((res && res.sentinel_sleep_settings) || {}), ...settingsUpdate };
+        browserAPI.storage.local.set({ sentinel_sleep_settings: merged });
+      });
+    } catch (_) {}
+  };
+
+  ['toggleSleepEndOfVideo', 'toggleSleepFadeCurve', 'selectSleepFadeCurve', 'toggleSleepInactivitySentinel', 'selectSleepTimeoutAction'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', persistSleepSettings);
+    }
+  });
 
   // Media Controls
   const handleTogglePlay = () => {
@@ -3949,6 +4368,21 @@ function setupEventListeners() {
 // Bootstrap Initialization
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
+  syncSleepTimerState();
+
+  if (!sleepTimerInterval) {
+    sleepTimerInterval = setInterval(() => {
+      if (currentSleepTimer && (currentSleepTimer.state === 'RUNNING' || currentSleepTimer.state === 'FADING')) {
+        const now = Date.now();
+        if (currentSleepTimer.targetTime <= now) {
+          currentSleepTimer.state = 'TRIGGERED';
+          renderSleepTimerUI(currentSleepTimer);
+        } else {
+          renderSleepTabState(currentSleepTimer);
+        }
+      }
+    }, 1000);
+  }
 
   // Initialize popup modular features
   try {
@@ -4031,7 +4465,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Hydrate 6-Tab Architecture States
-    const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+    // Legacy 6-tab check: ['media', 'audio', 'tools', 'studio', 'tracking', 'domains']
+    const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep'];
     if (res && res.active_popup_tab && validTabs.includes(res.active_popup_tab)) {
       switchTopTab(res.active_popup_tab, false);
     } else if (res && res.quick_settings && res.quick_settings.default_tab && validTabs.includes(res.quick_settings.default_tab)) {
@@ -4115,7 +4550,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (res && res.quick_settings) {
       quickSettings = { ...quickSettings, ...res.quick_settings };
       const sTab = document.getElementById('selectDefaultTab');
-      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains'];
+      // Legacy 6-tab check: ['media', 'audio', 'tools', 'studio', 'tracking', 'domains']
+      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep'];
       const defTab = validTabs.includes(quickSettings.default_tab) ? quickSettings.default_tab : 'media';
       if (sTab) sTab.value = defTab;
       if (defTab !== 'media') {
@@ -4171,6 +4607,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (changes.sentinel_tracking_paused) {
         isTrackingPaused = Boolean(changes.sentinel_tracking_paused.newValue);
         updateTrackingPauseButtonUI(isTrackingPaused);
+      }
+      if (changes.sentinel_sleep_timer) {
+        renderSleepTimerUI(changes.sentinel_sleep_timer.newValue);
+      }
+      if (changes.sentinel_sleep_settings) {
+        syncSleepTimerState();
       }
       if (changes.language && changes.language.newValue) {
         applyPopupLanguage(changes.language.newValue);
