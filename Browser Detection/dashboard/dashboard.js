@@ -8012,6 +8012,8 @@ function setupEventListeners() {
       mediaSearchQuery = e.target.value.trim();
       if (dashboardData) {
         renderMediaAnalyticsTab(dashboardData);
+      } else {
+        renderMediaHistoryTable(mediaHistoryData);
       }
     });
   }
@@ -8022,6 +8024,8 @@ function setupEventListeners() {
       mediaPlatformFilter = e.target.value;
       if (dashboardData) {
         renderMediaAnalyticsTab(dashboardData);
+      } else {
+        renderMediaHistoryTable(mediaHistoryData);
       }
     });
   }
@@ -8032,6 +8036,8 @@ function setupEventListeners() {
       mediaSortMode = e.target.value;
       if (dashboardData) {
         renderMediaAnalyticsTab(dashboardData);
+      } else {
+        renderMediaHistoryTable(mediaHistoryData);
       }
     });
   }
