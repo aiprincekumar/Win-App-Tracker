@@ -674,6 +674,16 @@
           );
           isNativeFullscreenActive = isFs;
           updateFullscreenButtonState(doc, isFs);
+          const card = doc.getElementById('heroAudioLabStatus');
+          if (card) {
+            if (isFs) {
+              card.classList.add('visualizer-theater-mode');
+              if (doc.body) doc.body.classList.add('visualizer-theater-active');
+            } else if (!isFullWindowActive) {
+              card.classList.remove('visualizer-theater-mode');
+              if (doc.body) doc.body.classList.remove('visualizer-theater-active');
+            }
+          }
           const canvas = visualizerCanvas || doc.getElementById('canvasAudioVisualizer');
           if (canvas) {
             resizeVisualizerCanvas(canvas, isFs || isFullWindowActive);
@@ -825,12 +835,12 @@
       btn.setAttribute('aria-expanded', isFullWindowActive ? 'true' : 'false');
       if (isFullWindowActive) {
         btn.classList.add('active');
-        btn.setAttribute('title', 'Exit Visualizer Full Window (Theater)');
-        btn.setAttribute('aria-label', 'Exit Visualizer Full Window (Theater)');
+        btn.setAttribute('title', 'Exit Full Window');
+        btn.setAttribute('aria-label', 'Exit Full Window');
       } else {
         btn.classList.remove('active');
-        btn.setAttribute('title', 'Toggle Visualizer Full Window (Theater)');
-        btn.setAttribute('aria-label', 'Toggle Visualizer Full Window (Theater)');
+        btn.setAttribute('title', 'Full Window');
+        btn.setAttribute('aria-label', 'Full Window');
       }
     }
 
@@ -852,12 +862,12 @@
     btn.setAttribute('aria-expanded', active ? 'true' : 'false');
     if (active) {
       btn.classList.add('active');
-      btn.setAttribute('title', 'Exit Fullscreen Visualizer');
-      btn.setAttribute('aria-label', 'Exit Fullscreen Visualizer');
+      btn.setAttribute('title', 'Exit Full Screen');
+      btn.setAttribute('aria-label', 'Exit Full Screen');
     } else {
       btn.classList.remove('active');
-      btn.setAttribute('title', 'Toggle Visualizer Fullscreen');
-      btn.setAttribute('aria-label', 'Toggle Visualizer Fullscreen');
+      btn.setAttribute('title', 'Full Screen (F)');
+      btn.setAttribute('aria-label', 'Full Screen (F)');
     }
     const iconExpand = btn.querySelector ? btn.querySelector('.viz-icon-expand') : null;
     const iconCompress = btn.querySelector ? btn.querySelector('.viz-icon-compress') : null;

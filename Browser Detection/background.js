@@ -817,6 +817,8 @@ function streamActivityDelta(domain, seconds, isNewSession = false, trackingType
  */
 function streamMediaSessionUpdate(session, action = 'update') {
   if (!session) return;
+  // Strictly filter out internal extension URLs and internal domains
+  if (isInternalDomain(session.domain) || isInternalUrl(session.url)) return;
   const isFinalize = action === 'finalize';
   const startedAtSec = (session.timestamp ? session.timestamp : Date.now()) / 1000.0;
   const endedAtSec = isFinalize ? (Date.now() / 1000.0) : null;
@@ -877,6 +879,8 @@ function isInternalDomain(domain) {
     d === 'newtab' ||
     d === 'dashboard' ||
     d === 'extension' ||
+    d === 'web' ||
+    d === 'unknown' ||
     hostWithoutPort === '127.0.0.1' ||
     hostWithoutPort === 'localhost' ||
     hostWithoutPort === '0.0.0.0' ||
@@ -893,6 +897,59 @@ function isInternalDomain(domain) {
     d.startsWith('moz-extension://') ||
     d.startsWith('extension:')
   );
+}
+
+/**
+ * Classifies if a URL represents an internal browser scheme, extension page, or dashboard
+ */
+function isInternalUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.trim().toLowerCase();
+  if (
+    u.startsWith('chrome-extension://') ||
+    u.startsWith('edge-extension://') ||
+    u.startsWith('moz-extension://') ||
+    u.startsWith('extension://') ||
+    u.startsWith('chrome://') ||
+    u.startsWith('edge://') ||
+    u.startsWith('about:') ||
+    u.startsWith('data:') ||
+    u.startsWith('blob:chrome-extension://') ||
+    u.startsWith('blob:edge-extension://') ||
+    u === 'newtab' ||
+    u === 'about:blank' ||
+    u === 'about:newtab'
+  ) {
+    return true;
+  }
+  // Check if it's the extension's dashboard HTML file
+  if (u.includes('dashboard/dashboard.html') || u.endsWith('/dashboard.html') || u.endsWith('dashboard.html')) {
+    if (!u.startsWith('http://') && !u.startsWith('https://')) {
+      return true;
+    }
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') {
+        return true;
+      }
+    } catch (_) {}
+  }
+  try {
+    const parsed = new URL(url);
+    if (
+      parsed.protocol === 'chrome-extension:' ||
+      parsed.protocol === 'edge-extension:' ||
+      parsed.protocol === 'moz-extension:' ||
+      parsed.protocol === 'extension:' ||
+      parsed.protocol === 'chrome:' ||
+      parsed.protocol === 'edge:' ||
+      parsed.protocol === 'about:'
+    ) {
+      return true;
+    }
+  } catch (_) {}
+  return false;
 }
 
 /**

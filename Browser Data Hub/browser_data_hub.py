@@ -1433,11 +1433,49 @@ setTimeout(() => {{ window.location.reload(); }}, 5000);
             has_video = bool(msg.get("has_video", True))
             action = str(msg.get("action", "update")).lower()
 
+            # Defense-in-depth: Strictly filter internal browser schemes & extension pages
+            clean_dom = domain.lower().strip()
+            raw_url = (url or "").lower().strip()
+            is_internal = (
+                clean_dom in ("dashboard", "extension", "web", "newtab", "chrome", "edge", "about", "localhost", "127.0.0.1", "0.0.0.0", "::1") or
+                clean_dom.startswith("chrome-extension://") or
+                clean_dom.startswith("edge-extension://") or
+                clean_dom.startswith("moz-extension://") or
+                raw_url.startswith("chrome-extension://") or
+                raw_url.startswith("edge-extension://") or
+                raw_url.startswith("moz-extension://") or
+                raw_url.startswith("chrome://") or
+                raw_url.startswith("edge://") or
+                raw_url.startswith("about:") or
+                "dashboard/dashboard.html" in raw_url or
+                raw_url.endswith("/dashboard.html")
+            )
+
+            if is_internal:
+                self.live_state.remove_media_stream(sid)
+                self._send_json(sock, {
+                    "type": "SYNC_MEDIA_RESPONSE",
+                    "success": True,
+                    "session_id": sid
+                })
+                return
+
             if action == "finalize":
                 if ended_at is None:
                     ended_at = time.time()
                 is_playing = False
                 self.live_state.remove_media_stream(sid)
+                if duration >= 5.0:
+                    self.db.upsert_media_session(
+                        sid, browser_type, domain, title, url, duration,
+                        peak_vol, avg_vol, res_label, started_at, ended_at
+                    )
+                else:
+                    # Discard sub-5-second transient playback from database
+                    with self.db._write_lock:
+                        conn = self.db._get_connection()
+                        with conn:
+                            conn.execute("DELETE FROM media_sessions WHERE session_id = ?", (sid,))
             else:
                 self.live_state.update_media_stream(sid, {
                     "session_id": sid,
@@ -1453,11 +1491,12 @@ setTimeout(() => {{ window.location.reload(); }}, 5000);
                     "has_video": has_video,
                     "started_at": started_at or time.time()
                 })
-
-            self.db.upsert_media_session(
-                sid, browser_type, domain, title, url, duration,
-                peak_vol, avg_vol, res_label, started_at, ended_at
-            )
+                # Only persist to SQLite if playback duration >= 5 seconds
+                if duration >= 5.0:
+                    self.db.upsert_media_session(
+                        sid, browser_type, domain, title, url, duration,
+                        peak_vol, avg_vol, res_label, started_at, ended_at
+                    )
 
             self._send_json(sock, {
                 "type": "SYNC_MEDIA_RESPONSE",

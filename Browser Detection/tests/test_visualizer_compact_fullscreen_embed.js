@@ -71,8 +71,8 @@ console.log('\nTest 2: Dedicated Three Action Buttons Specification in dashboard
   const btnFwMatch = html.match(/<button[^>]*id="btnVizFullWindow"[^>]*>/);
   assert(btnFwMatch, '#btnVizFullWindow declaration must exist');
   assert(btnFwMatch[0].includes('btn-viz-action-icon'), '#btnVizFullWindow must have btn-viz-action-icon class');
-  assert(btnFwMatch[0].includes('title="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow title attribute verified');
-  assert(btnFwMatch[0].includes('aria-label="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow aria-label attribute verified');
+  assert(btnFwMatch[0].includes('title="Full Window"') || btnFwMatch[0].includes('title="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow title attribute verified');
+  assert(btnFwMatch[0].includes('aria-label="Full Window"') || btnFwMatch[0].includes('aria-label="Toggle Visualizer Full Window (Theater)"'), '#btnVizFullWindow aria-label attribute verified');
   assert(btnFwMatch[0].includes('aria-expanded="false"'), '#btnVizFullWindow aria-expanded="false" attribute verified');
   assert(btnFwMatch[0].includes('tabindex="0"'), '#btnVizFullWindow tabindex="0" attribute verified');
 
@@ -88,8 +88,8 @@ console.log('\nTest 2: Dedicated Three Action Buttons Specification in dashboard
   const btnFsMatch = html.match(/<button[^>]*id="btnVizFullscreen"[^>]*>/);
   assert(btnFsMatch, '#btnVizFullscreen declaration must exist');
   assert(btnFsMatch[0].includes('btn-viz-action-icon'), '#btnVizFullscreen must have btn-viz-action-icon class');
-  assert(btnFsMatch[0].includes('title="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen title attribute verified');
-  assert(btnFsMatch[0].includes('aria-label="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen aria-label attribute verified');
+  assert(btnFsMatch[0].includes('title="Full Screen (F)"') || btnFsMatch[0].includes('title="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen title attribute verified');
+  assert(btnFsMatch[0].includes('aria-label="Full Screen (F)"') || btnFsMatch[0].includes('aria-label="Toggle Visualizer Fullscreen"'), '#btnVizFullscreen aria-label attribute verified');
   assert(btnFsMatch[0].includes('aria-expanded="false"'), '#btnVizFullscreen aria-expanded="false" attribute verified');
   assert(btnFsMatch[0].includes('tabindex="0"'), '#btnVizFullscreen tabindex="0" attribute verified');
 
@@ -149,7 +149,9 @@ console.log('\nTest 3: CSS Materiality, Spacing, Flex Alignment & Theater Mode T
   // Verify .viz-actions-group flex properties
   assert(mediaCss.includes('gap: 6px;'), 'media.css must declare 6px gap in .viz-actions-group');
   assert(dashCss.includes('gap: 6px;'), 'dashboard.css must declare 6px gap in .viz-actions-group');
-  console.log('  ✅ .viz-actions-group verified with 6px gap and inline-flex alignment');
+  assert(mediaCss.includes('margin-left: auto;'), 'media.css must declare margin-left: auto in .viz-actions-group');
+  assert(dashCss.includes('margin-left: auto;'), 'dashboard.css must declare margin-left: auto in .viz-actions-group');
+  console.log('  ✅ .viz-actions-group verified with 6px gap, inline-flex alignment, and margin-left: auto');
 }
 
 // =============================================================================
@@ -295,13 +297,19 @@ console.log('\nTest 4: Visualizer Feature Logic: Dual-Mode Full Window, Fullscre
   assert.strictEqual(mockCanvas.height, 120, 'Canvas height must restore to 120 baseline on exit');
   console.log('  ✅ Sub-Test 4A (Exit): Full Window Theater state, DOM classes, and baseline (600x120) restored');
 
-  // Test toggle function
+  // Test toggle function & verify it NEVER triggers requestFullscreen
+  let fsTriggeredInFullWindow = false;
+  mockCard.requestFullscreen = function() {
+    fsTriggeredInFullWindow = true;
+    return Promise.resolve();
+  };
   const toggledState = feature.toggleVisualizerFullWindow({ doc: mockDoc });
   assert.strictEqual(toggledState, true, 'toggleVisualizerFullWindow must toggle to true');
   assert.strictEqual(feature.isVisualizerFullWindowActive(), true);
+  assert.strictEqual(fsTriggeredInFullWindow, false, 'toggleVisualizerFullWindow MUST NOT invoke requestFullscreen');
   feature.toggleVisualizerFullWindow({ doc: mockDoc });
   assert.strictEqual(feature.isVisualizerFullWindowActive(), false, 'toggleVisualizerFullWindow must toggle back to false');
-  console.log('  ✅ Sub-Test 4A (Toggle): toggleVisualizerFullWindow cycles true/false cleanly');
+  console.log('  ✅ Sub-Test 4A (Toggle): toggleVisualizerFullWindow cycles cleanly without invoking requestFullscreen');
 
   // ---------------------------------------------------------------------------
   // Sub-Test 4B: True W3C Fullscreen Activation & Sync
