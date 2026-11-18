@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Focus Time Subsystem - Phase 1 (UI/UX Architecture & Layout)
  *
  * Verifies:
