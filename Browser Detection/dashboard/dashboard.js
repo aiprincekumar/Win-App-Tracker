@@ -246,6 +246,7 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'Matrix Digital Dots',
     viz_effect_flame: 'Neon Flame Peaks',
     viz_effect_stereo: 'Stereo Mirror Butterfly',
+    viz_settings_toggle_title: 'Toggle Acoustic Graticule & Telemetry Settings',
     viz_video_embed_toggle_title: 'Switch to Video Player (Embed Mode)',
     viz_fullwindow_toggle_title: 'Toggle Visualizer Full Window (Theater)',
     viz_fullwindow_exit_title: 'Exit Visualizer Full Window (Theater)',
@@ -690,6 +691,7 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'मैट्रिक्स डिजिटल डॉट्स',
     viz_effect_flame: 'नियॉन फ्लेम पीक्स',
     viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
+    viz_settings_toggle_title: 'अकॉस्टिक ग्रेटिक्यूल और टेलीमेट्री सेटिंग्स टॉगल करें',
     viz_video_embed_toggle_title: 'वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)',
     viz_fullwindow_toggle_title: 'विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें',
     viz_fullwindow_exit_title: 'फुल विंडो (थिएटर) से बाहर निकलें',
@@ -2389,6 +2391,38 @@ function setVisualizerMode(mode, options = {}) {
       }
     }
 
+    // Synchronize compact pill trigger and popover options
+    const VIZ_MODE_META = {
+      bars: { icon: '⚡', label: '32-Band FFT' },
+      wave: { icon: '🌊', label: 'Oscilloscope' },
+      radial: { icon: '✨', label: 'Radial Burst' },
+      matrix_dots: { icon: '🟢', label: 'Matrix Dots' },
+      flame: { icon: '🔥', label: 'Flame Peaks' },
+      stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' }
+    };
+    const pillLabel = doc.getElementById('vizPillLabel');
+    const pillIcon = doc.getElementById('vizPillIcon');
+    if (VIZ_MODE_META[mode]) {
+      if (pillLabel) pillLabel.textContent = VIZ_MODE_META[mode].label;
+      if (pillIcon) pillIcon.textContent = VIZ_MODE_META[mode].icon;
+    }
+    const popoverOptions = doc.querySelectorAll ? doc.querySelectorAll('.viz-popover-option') : [];
+    if (popoverOptions && popoverOptions.forEach) {
+      popoverOptions.forEach(opt => {
+        const isSelected = opt.getAttribute && opt.getAttribute('data-effect') === mode;
+        if (opt.classList) {
+          if (isSelected) {
+            opt.classList.add('active');
+          } else {
+            opt.classList.remove('active');
+          }
+        }
+        if (typeof opt.setAttribute === 'function') {
+          opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        }
+      });
+    }
+
     const canvasEl = doc.getElementById('canvasAudioVisualizer') || doc.getElementById('mediaDeckVisualizerCanvas');
     if (canvasEl) {
       if (!canvasEl.dataset) canvasEl.dataset = {};
@@ -3349,6 +3383,13 @@ function applyDashboardLanguage(lang) {
     flame: 'viz_effect_flame',
     stereo_mirror: 'viz_effect_stereo'
   });
+
+  const btnSettingsToggle = document.getElementById('btnVizSettingsToggle');
+  if (btnSettingsToggle) {
+    const sTitle = t('viz_settings_toggle_title');
+    btnSettingsToggle.setAttribute('title', sTitle);
+    btnSettingsToggle.setAttribute('aria-label', sTitle);
+  }
 
   const btnVideoToggle = document.getElementById('btnVizVideoEmbedToggle');
   if (btnVideoToggle) {
@@ -8896,6 +8937,9 @@ function setupEventListeners() {
     });
   }
 
+  // Phase 1 Visualizer UI/UX Ergonomics & Modular Wiring
+  initVisualizerErgonomicsUI(document);
+
   // Escape key handler for fullscreen visualizer & full window
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
@@ -8910,6 +8954,18 @@ function setupEventListeners() {
         if (typeof showToast === 'function') {
           showToast(typeof t === 'function' ? t('toast_viz_fullwindow_exited') : 'Visualizer exited Full Window mode');
         }
+      }
+      const pm = document.getElementById('vizPillPopoverMenu');
+      if (pm && !pm.hasAttribute('hidden')) {
+        pm.setAttribute('hidden', '');
+        const pt = document.getElementById('btnVizPillTrigger');
+        if (pt) pt.setAttribute('aria-expanded', 'false');
+      }
+      const sd = document.getElementById('vizSettingsDrawer');
+      if (sd && !sd.hasAttribute('hidden')) {
+        sd.setAttribute('hidden', '');
+        const sb = document.getElementById('btnVizSettingsToggle');
+        if (sb) sb.setAttribute('aria-expanded', 'false');
       }
     }
   });
@@ -8938,6 +8994,150 @@ function setupEventListeners() {
 
   // 16. Phase 3: Backup, Snapshots, SQLite Hub & Executive Digest Handlers
   initBackupAndDigestHandlers();
+}
+
+// =============================================================================
+// Phase 1 Visualizer UI/UX Ergonomics & Modular Wiring
+// =============================================================================
+
+function initVisualizerSettingsDrawer(doc) {
+  if (!doc) return;
+  const btnVizSettingsToggle = doc.getElementById('btnVizSettingsToggle');
+  const vizSettingsDrawer = doc.getElementById('vizSettingsDrawer');
+  const btnVizDrawerClose = doc.getElementById('btnVizDrawerClose');
+
+  if (btnVizSettingsToggle && !btnVizSettingsToggle.__vizBound) {
+    btnVizSettingsToggle.__vizBound = true;
+    btnVizSettingsToggle.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (!vizSettingsDrawer) return;
+      const isHidden = vizSettingsDrawer.hasAttribute('hidden');
+      if (isHidden) {
+        vizSettingsDrawer.removeAttribute('hidden');
+        btnVizSettingsToggle.setAttribute('aria-expanded', 'true');
+      } else {
+        vizSettingsDrawer.setAttribute('hidden', '');
+        btnVizSettingsToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  if (btnVizDrawerClose && !btnVizDrawerClose.__vizBound) {
+    btnVizDrawerClose.__vizBound = true;
+    btnVizDrawerClose.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (vizSettingsDrawer) vizSettingsDrawer.setAttribute('hidden', '');
+      if (btnVizSettingsToggle) btnVizSettingsToggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+}
+
+function initVisualizerGraticuleAndDecay(doc) {
+  if (!doc) return;
+  const chkGraticuleToggle = doc.getElementById('chkGraticuleToggle');
+  if (chkGraticuleToggle && !chkGraticuleToggle.__vizBound) {
+    chkGraticuleToggle.__vizBound = true;
+    chkGraticuleToggle.addEventListener('change', (e) => {
+      const viz = getResolvedVisualizer();
+      if (viz && typeof viz.setGraticuleEnabled === 'function') {
+        viz.setGraticuleEnabled(e.target.checked);
+      }
+      const labelsHud = doc.getElementById('vizHudGraticuleLabels');
+      if (labelsHud) {
+        labelsHud.style.display = e.target.checked ? 'flex' : 'none';
+      }
+    });
+  }
+
+  const vizSegButtons = doc.querySelectorAll ? doc.querySelectorAll('.viz-seg-btn') : [];
+  if (vizSegButtons && vizSegButtons.length > 0) {
+    vizSegButtons.forEach((btn) => {
+      if (!btn.__vizBound) {
+        btn.__vizBound = true;
+        btn.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          vizSegButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const decayMode = btn.getAttribute('data-decay');
+          const decayRates = { slow: 0.015, normal: 0.03, fast: 0.06 };
+          const rate = decayRates[decayMode] || 0.03;
+          const viz = getResolvedVisualizer();
+          if (viz && typeof viz.setPeakDecayRate === 'function') {
+            viz.setPeakDecayRate(rate);
+          }
+        });
+      }
+    });
+  }
+}
+
+function initVisualizerPillSelector(doc) {
+  if (!doc) return;
+  const btnVizPillTrigger = doc.getElementById('btnVizPillTrigger');
+  const vizPillPopoverMenu = doc.getElementById('vizPillPopoverMenu');
+  const vizPillSelectorWrapper = doc.getElementById('vizPillSelectorWrapper');
+
+  if (btnVizPillTrigger && !btnVizPillTrigger.__vizBound) {
+    btnVizPillTrigger.__vizBound = true;
+    btnVizPillTrigger.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (!vizPillPopoverMenu) return;
+      const isHidden = vizPillPopoverMenu.hasAttribute('hidden');
+      if (isHidden) {
+        vizPillPopoverMenu.removeAttribute('hidden');
+        btnVizPillTrigger.setAttribute('aria-expanded', 'true');
+      } else {
+        vizPillPopoverMenu.setAttribute('hidden', '');
+        btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  const vizPopoverOptions = doc.querySelectorAll ? doc.querySelectorAll('.viz-popover-option') : [];
+  if (vizPopoverOptions && vizPopoverOptions.length > 0) {
+    vizPopoverOptions.forEach((btnOpt) => {
+      if (!btnOpt.__vizBound) {
+        btnOpt.__vizBound = true;
+        btnOpt.addEventListener('click', (e) => {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          const effect = btnOpt.getAttribute('data-effect');
+          if (effect) {
+            setVisualizerMode(effect, { doc });
+            const selectEl = doc.getElementById('selectVizEffect');
+            if (selectEl && selectEl.value !== effect) {
+              selectEl.value = effect;
+              try {
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+              } catch (_) {}
+            }
+          }
+          if (vizPillPopoverMenu) vizPillPopoverMenu.setAttribute('hidden', '');
+          if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+  }
+
+  if (!doc.__vizPopoverDismissBound && typeof doc.addEventListener === 'function') {
+    doc.__vizPopoverDismissBound = true;
+    doc.addEventListener('click', (e) => {
+      if (vizPillPopoverMenu && !vizPillPopoverMenu.hasAttribute('hidden')) {
+        if (vizPillSelectorWrapper && !vizPillSelectorWrapper.contains(e.target)) {
+          vizPillPopoverMenu.setAttribute('hidden', '');
+          if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  }
+}
+
+function initVisualizerErgonomicsUI(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc) return null;
+  initVisualizerSettingsDrawer(doc);
+  initVisualizerGraticuleAndDecay(doc);
+  initVisualizerPillSelector(doc);
+  return { initialized: true };
 }
 
 // Reactively synchronize configuration changes from chrome.storage
@@ -9740,6 +9940,7 @@ if (typeof module !== 'undefined' && module.exports) {
     stopVisualizerLoop,
     setAudioPlayingState,
     getVisualizerState,
+    initVisualizerErgonomicsUI,
     get MediaDeckVisualizerFeature() {
       return getResolvedVisualizer();
     },
@@ -9808,6 +10009,7 @@ if (typeof window !== 'undefined') {
   window.stopVisualizerLoop = stopVisualizerLoop;
   window.setAudioPlayingState = setAudioPlayingState;
   window.getVisualizerState = getVisualizerState;
+  window.initVisualizerErgonomicsUI = initVisualizerErgonomicsUI;
   window.validateBackupSchemaV2 = validateBackupSchemaV2;
   window.resolveBackupConflict = resolveBackupConflict;
   window.captureDailySnapshot = captureDailySnapshot;
@@ -9857,6 +10059,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.triggerPrintPdf = triggerPrintPdf;
   globalThis.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
   globalThis.BackupHubDigestFeature = _BackupHubDigest;
+  globalThis.initVisualizerErgonomicsUI = initVisualizerErgonomicsUI;
 }
 
 // ============================================================================

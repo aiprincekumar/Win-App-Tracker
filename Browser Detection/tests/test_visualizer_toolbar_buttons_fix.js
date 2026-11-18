@@ -229,7 +229,7 @@ console.log('\nTest 4: Defect 2 - Full Window Single-Source Binding & Toggle Ver
   // Verify Escape key prioritization: fullscreen checked BEFORE full window
   const escIndex = dashCode.indexOf("if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27)");
   assert(escIndex !== -1, 'dashboard.js must contain visualizer Escape key handler');
-  const escBlock = dashCode.substring(escIndex, escIndex + 600);
+  const escBlock = dashCode.substring(escIndex, escIndex + 1200);
   const fsPos = escBlock.indexOf('isVisualizerFullscreenActive()');
   const fwPos = escBlock.indexOf('isVisualizerFullWindowActive()');
   assert(fsPos !== -1, 'Escape block must check isVisualizerFullscreenActive()');

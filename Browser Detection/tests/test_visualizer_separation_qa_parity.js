@@ -50,10 +50,10 @@ console.log('Gate 2: Structural Independence & Architecture Separation');
 assert(html.includes('id="visualizerPanel"'), '#visualizerPanel must exist');
 assert(html.includes('id="canvasAudioVisualizer"'), '#canvasAudioVisualizer must exist');
 
-// Verify canvas resolution attributes (600x120)
+// Verify canvas resolution attributes (600x120 or expanded 600x180)
 assert(html.includes('width="600"'), 'Canvas must specify width="600"');
-assert(html.includes('height="120"'), 'Canvas must specify height="120"');
-console.log('  ✅ Canvas element 600x120 resolution attributes verified');
+assert(html.includes('height="120"') || html.includes('height="180"'), 'Canvas must specify height="120" or "180"');
+console.log('  ✅ Canvas element resolution attributes verified');
 
 // Verify visualizer mode buttons declare aria-pressed and semantic styling
 assert(html.includes('id="btnVizModeBars"'), '#btnVizModeBars present');

@@ -183,7 +183,11 @@ console.log('\nBattery 6: HTML Bento Grid Architecture & Card Materiality Classe
   // Media Tab Spans
   assert(html.includes('metric-card bento-card liquid-glass-card bento-span-4'), 'Media metrics must use .bento-card .liquid-glass-card .bento-span-4');
   assert(html.includes('id="heroMediaPlayerCard" class="live-player-hero-card bento-card liquid-glass-card bento-span-8 bento-row-span-2"'), '#heroMediaPlayerCard must use .bento-span-8 .bento-row-span-2');
-  assert(html.includes('id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2"'), '#heroAudioLabStatus must use .bento-span-4 .bento-row-span-2');
+  assert(
+    html.includes('id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2"') ||
+    html.includes('id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2 visualizer-hero-card"'),
+    '#heroAudioLabStatus must use .bento-span-4 .bento-row-span-2'
+  );
   assert(
     html.includes('id="heroAudioEqCard"') &&
     (html.includes('audio-eq-widget glass-card bento-card liquid-glass-card bento-span-12') ||

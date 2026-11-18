@@ -1,0 +1,427 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Visualizer Deck Modular Styles
+ * File: dashboard/styles/media/visualizer_deck.css
+ * Phase 1: Real-Time Spectrum Visualizer UI/UX Ergonomics & Zero-Expansion Layout
+ * Strict Universal Rule 28 Compliance: Dedicated modular stylesheet (< 450 lines)
+ * Certified UTF-8 with BOM (0xEF, 0xBB, 0xBF) Encoded
+ */
+
+/* ========================================================================= */
+/* 1. STREAMLINED CONTROLS BAR & HEADER PULSE PILL                           */
+/* ========================================================================= */
+.visualizer-controls-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 4px 8px !important;
+  margin-bottom: 6px !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  flex-shrink: 0 !important;
+}
+
+.viz-header-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.viz-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.viz-live-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: vizPulseLiveDot 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes vizPulseLiveDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(1.15); }
+}
+
+.viz-live-text {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.62rem;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+/* ========================================================================= */
+/* 2. COMPACT GLASS PILL SELECTOR & FLOATING POPOVER MENU                    */
+/* ========================================================================= */
+.viz-pill-selector-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.viz-pill-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 14px;
+  padding: 3px 10px;
+  color: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  user-select: none;
+}
+
+.viz-pill-trigger:hover,
+.viz-pill-trigger[aria-expanded="true"] {
+  background: rgba(49, 46, 129, 0.7);
+  border-color: rgba(129, 140, 248, 0.6);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.viz-pill-trigger:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 1px;
+}
+
+.viz-pill-icon { font-size: 0.8rem; line-height: 1; }
+.viz-pill-label { line-height: 1.2; }
+.viz-pill-chevron { transition: transform 0.2s ease; }
+.viz-pill-trigger[aria-expanded="true"] .viz-pill-chevron { transform: rotate(180deg); }
+
+.viz-pill-popover-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  min-width: 190px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(99, 102, 241, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: vizPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.viz-pill-popover-menu[hidden] { display: none !important; }
+
+@keyframes vizPopoverFadeIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.viz-popover-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.viz-popover-option:hover,
+.viz-popover-option:focus-visible {
+  background: rgba(99, 102, 241, 0.2);
+  color: #ffffff;
+  outline: none;
+}
+
+.viz-popover-option.active {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.35), rgba(6, 182, 212, 0.25));
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* ========================================================================= */
+/* 3. CANVAS CHASSIS, HUD OVERLAY & SLIDING SETTINGS DRAWER                  */
+/* ========================================================================= */
+.visualizer-canvas-container {
+  position: relative !important;
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 180px !important;
+  background: var(--viz-canvas-bg, rgba(8, 12, 22, 0.95)) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.05) !important;
+}
+
+.viz-canvas-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  z-index: 10;
+telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.6rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+.viz-hud-fps { color: #10b981; border-color: rgba(16, 185, 129, 0.25); }
+.viz-hud-rate { color: #38bdf8; border-color: rgba(56, 189, 248, 0.25); graticule-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px 2px 4px;
+  pointer-events: none;
+  position: relative;
+  height: 16px;
+}
+
+.viz-scale-label {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(148, 163, 184, 0.45);
+  user-select: none;
+}
+
+.viz-settings-drawer {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  padding: 10px 14px;
+  z-index: 20;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  transform: translateY(0);
+  opacity: 1;
+}
+.viz-settings-drawer[hidden] {
+  display: none !important;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.viz-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+.viz-drawer-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #38bdf8;
+drawer-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.btn-viz-drawer-close:hover { color: #f43f5e; }
+.btn-viz-drawer-close:focus-visible { outline: 2px solid #818cf8; border-radius: 4px; }
+
+.viz-drawer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.viz-drawer-row:last-child { margin-bottom: 0; }
+.viz-drawer-label { font-size: 0.68rem; color: #cbd5e1; }
+
+.viz-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+.viz-toggle-switch input { opacity: 0; width: 0; height: 0; }
+.viz-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #334155;
+  border-radius: 18px;
+  transition: 0.2s;
+}
+.viz-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.viz-toggle-switch input:checked + .viz-toggle-slider { background: #6366f1; }
+.viz-toggle-switch input:checked + .viz-toggle-slider:before { transform: translateX(14px); }
+.viz-toggle-switch input:focus-visible + .viz-toggle-slider { box-shadow: 0 0 0 2px #818cf8; }
+
+.viz-btn-segmented {
+  display: inline-flex;
+  background: rgba(30, 41, 59, 0.7);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.viz-seg-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 2px 8px;
+  font-size: 0.62rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.viz-seg-btn:hover { color: #ffffff; }
+.viz-seg-btn:focus-visible { outline: 2px solid #818cf8; }
+.viz-seg-btn.active { background: #4f46e5; color: #ffffff; font-weight: 600; }
+
+/* ========================================================================= */
+/* 4. STUDIO PEAK-HOLD STEREO VU METERS                                      */
+/* ========================================================================= */
+.vu-meters-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: 6px 10px !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  margin-top: 6px !important;
+  flex-shrink: 0 !important;
+bar-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #38bdf8;
+  width: 12px;
+  text-align: center;
+meter-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+level-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #10b981 0%, #10b981 65%, #f59e0b 85%, #ef4444 100%);
+  transition: width 0.04s ease-out;
+peak-indicator {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 4px #ffffff;
+  border-radius: 1px;
+  pointer-events: none;
+  transition: left 0.02s linear;
+db-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #94a3b8;
+  width: 44px;
+  text-align: right;
+status-cluster {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+clip-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+  letter-spacing: 0.5px;
+}
+
+/* ========================================================================= */
+/* 5. LIGHT THEME HARMONIZATION                                              */
+/* ========================================================================= */
+body.theme-light .visualizer-controls-bar {
+  background: rgba(241, 245, 249, 0.8) !important;
+  border-color: rgba(203, 213, 225, 0.8) !important;
+ .viz-pill-trigger {
+  background: #ffffff;
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+ .viz-pill-popover-menu {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+ .viz-popover-option { color: #334155; }
+body.theme-light .viz-popover-option:hover { background: rgba(99, 102, 241, 0.1); color: #1e1b4b; }
+body.theme-light .viz-settings-drawer {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(203, 213, 225, 0.8);
+}
+body.theme-light .viz-drawer-label { color: #334155; }
+body.theme-light .vu-meters-container {
+  background: rgba(241, 245, 249, 0.8) !important;
+  border-color: rgba(203, 213, 225, 0.8) !important;
+}

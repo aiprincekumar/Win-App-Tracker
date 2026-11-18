@@ -490,6 +490,11 @@ function matchesTrackingBlacklist(urlOrDomain) {
 // Media Map: tabId -> Media State Payload
 const tabMediaMap = new Map();
 
+// Snapshot Maps for Bidirectional Tab Audio Muting (Solo, Mute All Others, Mute All)
+const soloPreviousMuteStates = new Map();
+const muteOthersPreviousMuteStates = new Map();
+const muteAllPreviousMuteStates = new Map();
+
 // WebSocket Connection State (Video Detector HUD on port 65432)
 let ws = null;
 let wsConnected = false;
@@ -2632,44 +2637,137 @@ async function getAllActiveMediaStreams() {
  * @returns {Promise<{success: boolean, soloTabId: number, mutedCount: number}>}
  */
 /**
- * Clears Solo Tab mode: un-mutes all open browser tabs and restores global media state.
- * @returns {Promise<{success: boolean, cleared: boolean, soloTabId: null, unmutedCount: number}>}
+ * Captures current mute state of all tabs into the specified snapshot map.
+ * @param {Map} snapshotMap
  */
-async function handleSoloTabClearExecution() {
-  let unmutedCount = 0;
-
-  // 1. Unmute all tabs in tabMediaMap
+async function capturePreMuteSnapshot(snapshotMap) {
+  if (!snapshotMap || typeof snapshotMap.set !== 'function') return;
+  snapshotMap.clear();
   for (const [tId, mediaData] of tabMediaMap.entries()) {
     const numId = Number(tId);
     if (numId) {
-      try {
-        if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
-          await browserAPI.tabs.update(numId, { muted: false }).catch(() => {});
-        }
-      } catch (_) {}
-      safeSendTabMessage(numId, { type: 'MEDIA_CONTROL', action: 'unmute' });
-      if (mediaData && mediaData.primaryMedia) {
-        mediaData.primaryMedia.isMuted = false;
-      }
-      unmutedCount++;
+      snapshotMap.set(numId, Boolean(mediaData && mediaData.primaryMedia && mediaData.primaryMedia.isMuted));
     }
   }
-
-  // 2. Query any other audible/muted tabs and unmute them
   try {
     if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
       const allTabs = await browserAPI.tabs.query({});
       if (Array.isArray(allTabs)) {
         for (const t of allTabs) {
-          if (t && t.id && t.mutedInfo && t.mutedInfo.muted) {
-            await browserAPI.tabs.update(t.id, { muted: false }).catch(() => {});
-            safeSendTabMessage(t.id, { type: 'MEDIA_CONTROL', action: 'unmute' });
-            unmutedCount++;
+          if (t && t.id) {
+            snapshotMap.set(t.id, Boolean(t.mutedInfo && t.mutedInfo.muted));
           }
         }
       }
     }
   } catch (_) {}
+}
+
+/**
+ * Collects candidate tab IDs to mute, optionally excluding a specific tab.
+ * @param {number|null} [excludeId]
+ * @returns {Promise<Set<number>>}
+ */
+async function collectCandidateTabs(excludeId = null) {
+  const tabs = new Set();
+  for (const [tId] of tabMediaMap.entries()) {
+    const numId = Number(tId);
+    if (numId && numId !== excludeId) {
+      tabs.add(numId);
+    }
+  }
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const allTabs = await browserAPI.tabs.query({});
+      if (Array.isArray(allTabs)) {
+        for (const t of allTabs) {
+          if (t && t.id && t.id !== excludeId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
+            tabs.add(t.id);
+          }
+        }
+      }
+    }
+  } catch (_) {}
+  return tabs;
+}
+
+/**
+ * Restores tabs from a snapshot map or un-mutes tabs as fallback.
+ * @param {Map} snapshotMap
+ * @param {number|null} [excludeId]
+ * @returns {Promise<number>} count of restored/unmuted tabs
+ */
+async function restoreMuteSnapshot(snapshotMap, excludeId = null) {
+  let count = 0;
+  const targetEntries = [];
+
+  if (snapshotMap && typeof snapshotMap.entries === 'function' && snapshotMap.size > 0) {
+    for (const [tId, wasMuted] of snapshotMap.entries()) {
+      targetEntries.push([Number(tId), wasMuted]);
+    }
+    snapshotMap.clear();
+  } else {
+    for (const [tId] of tabMediaMap.entries()) {
+      targetEntries.push([Number(tId), false]);
+    }
+  }
+
+  for (const [numId, wasMuted] of targetEntries) {
+    if (!numId || numId === excludeId) continue;
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(numId, { muted: wasMuted }).catch(() => {});
+      }
+    } catch (_) {}
+    safeSendTabMessage(numId, { type: 'MEDIA_CONTROL', action: wasMuted ? 'mute' : 'unmute' });
+    const m = tabMediaMap.get(numId);
+    if (m && m.primaryMedia) m.primaryMedia.isMuted = wasMuted;
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Clears Solo Tab mode: un-mutes all open browser tabs and restores global media state.
+ * @returns {Promise<{success: boolean, cleared: boolean, soloTabId: null, unmutedCount: number}>}
+ */
+async function handleSoloTabClearExecution() {
+  let unmutedCount = 0;
+  const snapshot = (typeof soloPreviousMuteStates !== 'undefined' && typeof soloPreviousMuteStates?.get === 'function')
+    ? soloPreviousMuteStates : null;
+  const targets = [];
+
+  if (snapshot && snapshot.size > 0) {
+    for (const [tId, wasMuted] of snapshot.entries()) {
+      targets.push([Number(tId), wasMuted]);
+    }
+    snapshot.clear();
+  } else {
+    for (const [tId] of tabMediaMap.entries()) targets.push([Number(tId), false]);
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+        const allTabs = await browserAPI.tabs.query({});
+        if (Array.isArray(allTabs)) {
+          for (const t of allTabs) {
+            if (t && t.id && t.mutedInfo && t.mutedInfo.muted) targets.push([t.id, false]);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  for (const [numId, wasMuted] of targets) {
+    if (!numId) continue;
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(numId, { muted: wasMuted }).catch(() => {});
+      }
+    } catch (_) {}
+    safeSendTabMessage(numId, { type: 'MEDIA_CONTROL', action: wasMuted ? 'mute' : 'unmute' });
+    const m = tabMediaMap.get(numId) || tabMediaMap.get(String(numId));
+    if (m && m.primaryMedia) m.primaryMedia.isMuted = wasMuted;
+    if (!wasMuted) unmutedCount++;
+  }
 
   safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
   return { success: true, cleared: true, soloTabId: null, unmutedCount };
@@ -2688,7 +2786,7 @@ async function handleSoloTabExecution(soloTabId) {
   const targetId = Number(soloTabId);
   if (!targetId) return { success: false, error: 'Invalid soloTabId' };
 
-  let mutedCount = 0;
+  await capturePreMuteSnapshot(soloPreviousMuteStates);
 
   // 1. Unmute target tab
   try {
@@ -2702,30 +2800,10 @@ async function handleSoloTabExecution(soloTabId) {
     targetMedia.primaryMedia.isMuted = false;
   }
 
-  // 2. Query all other audible tabs and active tabs to mute them
-  const tabsToMute = new Set();
+  // 2. Mute all other candidate tabs
+  const tabsToMute = await collectCandidateTabs(targetId);
+  let mutedCount = 0;
 
-  for (const [tId] of tabMediaMap.entries()) {
-    const numId = Number(tId);
-    if (numId && numId !== targetId) {
-      tabsToMute.add(numId);
-    }
-  }
-
-  try {
-    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-      const allTabs = await browserAPI.tabs.query({});
-      if (Array.isArray(allTabs)) {
-        for (const t of allTabs) {
-          if (t && t.id && t.id !== targetId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
-            tabsToMute.add(t.id);
-          }
-        }
-      }
-    }
-  } catch (_) {}
-
-  // 3. Mute all other candidate tabs
   for (const muteId of tabsToMute) {
     try {
       if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
@@ -2742,6 +2820,86 @@ async function handleSoloTabExecution(soloTabId) {
 
   safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
   return { success: true, soloTabId: targetId, mutedCount };
+}
+
+/**
+ * Executes Mute All Others mode: mutes all open media streams except primaryTabId,
+ * preserving prior mute states in muteOthersPreviousMuteStates.
+ * @param {number|string} primaryTabId
+ * @returns {Promise<{success: boolean, primaryTabId?: number, mutedCount?: number, error?: string}>}
+ */
+async function handleMuteAllOthersExecution(primaryTabId) {
+  const targetId = Number(primaryTabId);
+  if (!targetId) return { success: false, error: 'Invalid primaryTabId' };
+
+  await capturePreMuteSnapshot(muteOthersPreviousMuteStates);
+  const tabsToMute = await collectCandidateTabs(targetId);
+  let mutedCount = 0;
+
+  for (const muteId of tabsToMute) {
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(muteId, { muted: true }).catch(() => {});
+      }
+    } catch (_) {}
+    safeSendTabMessage(muteId, { type: 'MEDIA_CONTROL', action: 'mute' });
+    const m = tabMediaMap.get(muteId);
+    if (m && m.primaryMedia) {
+      m.primaryMedia.isMuted = true;
+    }
+    mutedCount++;
+  }
+
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, primaryTabId: targetId, mutedCount };
+}
+
+/**
+ * Clears Mute All Others mode: restores prior mute states for all non-primary tabs.
+ * @returns {Promise<{success: boolean, cleared: boolean, restoredCount: number}>}
+ */
+async function handleMuteAllOthersClearExecution() {
+  const restoredCount = await restoreMuteSnapshot(muteOthersPreviousMuteStates);
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, cleared: true, restoredCount };
+}
+
+/**
+ * Executes Mute All mode: mutes all open media streams across all tabs,
+ * capturing previous mute states in muteAllPreviousMuteStates.
+ * @returns {Promise<{success: boolean, mutedCount: number}>}
+ */
+async function handleMuteAllExecution() {
+  await capturePreMuteSnapshot(muteAllPreviousMuteStates);
+  const tabsToMute = await collectCandidateTabs();
+  let mutedCount = 0;
+
+  for (const muteId of tabsToMute) {
+    try {
+      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+        await browserAPI.tabs.update(muteId, { muted: true }).catch(() => {});
+      }
+    } catch (_) {}
+    safeSendTabMessage(muteId, { type: 'MEDIA_CONTROL', action: 'mute' });
+    const m = tabMediaMap.get(muteId);
+    if (m && m.primaryMedia) {
+      m.primaryMedia.isMuted = true;
+    }
+    mutedCount++;
+  }
+
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, mutedCount };
+}
+
+/**
+ * Clears Mute All mode: restores prior mute states for all tabs.
+ * @returns {Promise<{success: boolean, cleared: boolean, restoredCount: number}>}
+ */
+async function handleMuteAllClearExecution() {
+  const restoredCount = await restoreMuteSnapshot(muteAllPreviousMuteStates);
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  return { success: true, cleared: true, restoredCount };
 }
 
 /**
@@ -2797,6 +2955,22 @@ async function handleRemoteMediaCommandExecution(tabId, command, value, options 
 
   if (command === 'solo') {
     return await handleSoloTabExecution(targetId);
+  }
+
+  if (command === 'mute_others' || command === 'mute_all_others') {
+    return await handleMuteAllOthersExecution(targetId);
+  }
+
+  if (command === 'mute_others_clear' || command === 'mute_all_others_clear') {
+    return await handleMuteAllOthersClearExecution();
+  }
+
+  if (command === 'mute_all') {
+    return await handleMuteAllExecution();
+  }
+
+  if (command === 'mute_all_clear' || command === 'unmute_all') {
+    return await handleMuteAllClearExecution();
   }
 
   if (command === 'switch_tab' || command === 'focus_tab') {
@@ -4365,6 +4539,43 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (msgType === 'MEDIA_STREAM_MUTE_ALL_OTHERS') {
+    (async () => {
+      await ensureStorageLoaded();
+      const primaryTabId = message.primaryTabId || message.tabId;
+      const result = await handleMuteAllOthersExecution(primaryTabId);
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllOthersClearExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'MEDIA_STREAM_MUTE_ALL') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'MEDIA_STREAM_MUTE_ALL_CLEAR') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllClearExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
   if (msgType === 'DASHBOARD_REMOTE_MEDIA_CMD') {
     (async () => {
       await ensureStorageLoaded();
@@ -4660,6 +4871,13 @@ if (typeof globalThis !== 'undefined') {
   globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
   globalThis.handleSoloTabExecution = handleSoloTabExecution;
   globalThis.handleSoloTabClearExecution = handleSoloTabClearExecution;
+  globalThis.handleMuteAllOthersExecution = handleMuteAllOthersExecution;
+  globalThis.handleMuteAllOthersClearExecution = handleMuteAllOthersClearExecution;
+  globalThis.handleMuteAllExecution = handleMuteAllExecution;
+  globalThis.handleMuteAllClearExecution = handleMuteAllClearExecution;
+  globalThis.soloPreviousMuteStates = soloPreviousMuteStates;
+  globalThis.muteOthersPreviousMuteStates = muteOthersPreviousMuteStates;
+  globalThis.muteAllPreviousMuteStates = muteAllPreviousMuteStates;
   globalThis.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
   globalThis.activateAndFocusTab = activateAndFocusTab;
   globalThis.matchesTrackingBlacklist = matchesTrackingBlacklist;
@@ -4688,6 +4906,13 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
     globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
     globalThis.SentinelBackgroundModules.handleSoloTabClearExecution = handleSoloTabClearExecution;
+    globalThis.SentinelBackgroundModules.handleMuteAllOthersExecution = handleMuteAllOthersExecution;
+    globalThis.SentinelBackgroundModules.handleMuteAllOthersClearExecution = handleMuteAllOthersClearExecution;
+    globalThis.SentinelBackgroundModules.handleMuteAllExecution = handleMuteAllExecution;
+    globalThis.SentinelBackgroundModules.handleMuteAllClearExecution = handleMuteAllClearExecution;
+    globalThis.SentinelBackgroundModules.soloPreviousMuteStates = soloPreviousMuteStates;
+    globalThis.SentinelBackgroundModules.muteOthersPreviousMuteStates = muteOthersPreviousMuteStates;
+    globalThis.SentinelBackgroundModules.muteAllPreviousMuteStates = muteAllPreviousMuteStates;
     globalThis.SentinelBackgroundModules.handleRemoteMediaCommandExecution = handleRemoteMediaCommandExecution;
     globalThis.SentinelBackgroundModules.activateAndFocusTab = activateAndFocusTab;
     globalThis.SentinelBackgroundModules.matchesTrackingBlacklist = matchesTrackingBlacklist;
@@ -4721,7 +4946,16 @@ if (typeof module !== 'undefined' && module.exports) {
     setSleepTimer,
     cancelSleepTimer,
     getSleepTimerState: () => sleepTimerState,
-    getSleepTimerSettings: () => sleepTimerSettings
+    getSleepTimerSettings: () => sleepTimerSettings,
+    handleSoloTabExecution,
+    handleSoloTabClearExecution,
+    handleMuteAllOthersExecution,
+    handleMuteAllOthersClearExecution,
+    handleMuteAllExecution,
+    handleMuteAllClearExecution,
+    soloPreviousMuteStates,
+    muteOthersPreviousMuteStates,
+    muteAllPreviousMuteStates
   };
 }
 

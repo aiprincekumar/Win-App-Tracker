@@ -18,9 +18,12 @@
 
 The **Real-Time Spectrum Visualizer** embedded inside the Bento Media Dashboard is currently experiencing severe spatial crowding in its top header controls bar (`.visualizer-controls-bar`). The standard HTML native dropdown (`<select id="selectVizEffect">`), mode labels, and window action buttons (video embed toggle, theater mode, fullscreen) compete for limited horizontal width within the 4-column Bento grid card (`bento-span-4 bento-row-span-2`).
 
-**Phase 1 Executive Scope:**
-1. **Zero-Expansion Spatial Ergonomics:** Completely redesign and streamline the visualizer's internal layout without increasing the outer widget dimensions (width, height, or grid footprint of `#heroAudioLabStatus` / `.audio-lab-widget`).
-2. **Compact Dropdown Pill Selector:** Replace the bulky standard HTML `<select>` dropdown with an ultra-compact, floating glass pill badge (`.viz-pill-selector`) that opens a frosted glass popover menu while maintaining strict bidirectional synchronization with the underlying `#selectVizEffect` for full test and API backward compatibility.
+**Phase 1 Executive Scope (Developer's Hybrid Layout Directive):**
+1. **Zero-Expansion Spatial Ergonomics & 3-Tier Layout:** Completely redesign and streamline the visualizer's internal layout without increasing the outer widget dimensions (width, height, or grid footprint of `#heroAudioLabStatus` / `.audio-lab-widget` in `bento-span-4 bento-row-span-2`). Implement a clean 3-tier vertical hierarchy:
+   - **Tier 1 (Top Clean Action Bar):** Clean row containing only the 4 action buttons (Settings Drawer ⚙️, PiP/Embed 🎦, Full Window 🪟, Fullscreen ⛶) and visually hidden legacy mode buttons (`#btnVizModeBars`, `#btnVizModeWave`). Zero crowding from dropdowns or mode switches.
+   - **Tier 2 (Middle Canvas Chassis):** Canvas chassis (`#vizCanvasContainer`) housing `#canvasAudioVisualizer` (600x120), hardware-accelerated HUD overlay (`#vizCanvasHud`), and sliding micro-settings glass drawer (`#vizSettingsDrawer`).
+   - **Tier 3 (Sub-Canvas Lower Deck):** Dedicated horizontal lower deck (`.viz-subcanvas-deck`) cleanly housing the relocated compact glass pill selector (`#vizSelectWrapper` with `#vizPillSelectorWrapper` + backward-compatible `#selectVizEffect`) alongside the high-visibility stereo VU meters (`#vuMetersContainer`).
+2. **Compact Dropdown Pill Selector (Relocated to Sub-Canvas Deck):** Replace the bulky standard HTML `<select>` dropdown with an ultra-compact, floating glass pill badge (`.viz-pill-selector`) situated in the lower deck that opens a frosted glass popover menu while maintaining strict bidirectional synchronization with the underlying `#selectVizEffect` for full test and API backward compatibility.
 3. **Canvas HUD Overlay Layer:** Introduce a lightweight, hardware-accelerated Head-Up Display (HUD) overlay directly positioned over the 2D canvas (`.visualizer-canvas-container`) displaying real-time stream telemetry (live FPS badge, active audio stream state) and non-obtrusive micro-controls.
 4. **Settings Glass Drawer / Sliding Flyout Overlay:** Implement a slide-out or flip-down micro-drawer (`.viz-settings-drawer`) anchored inside the visualizer panel that smoothly reveals secondary controls (graticule toggle, peak hold decay speed, sensitivity slider) and tucks away cleanly when dismissed, eliminating vertical clutter.
 5. **High-Visibility Studio Peak-Hold VU Meters:** Upgrade the existing stereo VU bar footer into high-contrast studio-grade level meters with floating peak decay indicators (`.vu-peak-indicator`) adhering to professional broadcast meter dynamics (instant attack, 400ms peak hold, exponential falloff).
@@ -82,57 +85,15 @@ In [`dashboard/dashboard.html#L737-L815`](file:///c:/Users/Atul%20Verma/Desktop/
   <div class="audio-lab-body visualizer-card-body">
     <div id="visualizerPanel" class="visualizer-panel">
       
-      <!-- Streamlined Controls Bar with Compact Pill Selector -->
+      <!-- Streamlined Controls Bar (Clean Top Action Bar) -->
       <div class="visualizer-controls visualizer-controls-bar">
-        <!-- Custom Compact Glass Pill Selector -->
-        <div class="viz-pill-selector-wrapper" id="vizPillSelectorWrapper">
-          <button type="button" id="btnVizPillTrigger" class="viz-pill-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Audio Visualizer Effect">
-            <span class="viz-pill-icon" id="vizPillIcon" aria-hidden="true">⚡</span>
-            <span class="viz-pill-label" id="vizPillLabel">32-Band FFT</span>
-            <svg class="viz-pill-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <!-- Floating Glass Popover Menu -->
-          <div id="vizPillPopoverMenu" class="viz-pill-popover-menu" role="listbox" aria-label="Visualizer Effects" tabindex="-1" hidden>
-            <button type="button" role="option" class="viz-popover-option active" data-effect="bars" aria-selected="true">
-              <span class="viz-opt-icon">⚡</span><span class="viz-opt-text" data-i18n="viz_effect_bars">32-Band Spectrum</span>
-            </button>
-            <button type="button" role="option" class="viz-popover-option" data-effect="wave" aria-selected="false">
-              <span class="viz-opt-icon">🌊</span><span class="viz-opt-text" data-i18n="viz_effect_wave">Oscilloscope Wave</span>
-            </button>
-            <button type="button" role="option" class="viz-popover-option" data-effect="radial" aria-selected="false">
-              <span class="viz-opt-icon">✨</span><span class="viz-opt-text" data-i18n="viz_effect_radial">Radial Frequency Burst</span>
-            </button>
-            <button type="button" role="option" class="viz-popover-option" data-effect="matrix_dots" aria-selected="false">
-              <span class="viz-opt-icon">🟢</span><span class="viz-opt-text" data-i18n="viz_effect_matrix">Matrix Digital Dots</span>
-            </button>
-            <button type="button" role="option" class="viz-popover-option" data-effect="flame" aria-selected="false">
-              <span class="viz-opt-icon">🔥</span><span class="viz-opt-text" data-i18n="viz_effect_flame">Neon Flame Peaks</span>
-            </button>
-            <button type="button" role="option" class="viz-popover-option" data-effect="stereo_mirror" aria-selected="false">
-              <span class="viz-opt-icon">🦋</span><span class="viz-opt-text" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Hidden Backward-Compatible Native Select (synced for API & tests) -->
-        <select id="selectVizEffect" class="visually-hidden" aria-hidden="true" tabindex="-1" style="display: none;">
-          <option value="bars">32-Band Spectrum</option>
-          <option value="wave">Oscilloscope Wave</option>
-          <option value="radial">Radial Frequency Burst</option>
-          <option value="matrix_dots">Matrix Digital Dots</option>
-          <option value="flame">Neon Flame Peaks</option>
-          <option value="stereo_mirror">Stereo Mirror Butterfly</option>
-        </select>
-
         <!-- Right Side Action Group -->
         <div class="viz-actions-group">
           <!-- Settings Drawer Toggle Button -->
-          <button type="button" id="btnVizSettingsToggle" class="btn-viz-action-icon" title="Open Visualizer Settings" aria-label="Open Visualizer Settings" aria-expanded="false" tabindex="0">
+          <button type="button" id="btnVizSettingsToggle" class="btn-viz-action-icon" title="Toggle Acoustic Graticule & Telemetry Settings" aria-label="Toggle Acoustic Graticule & Telemetry Settings" aria-expanded="false" tabindex="0">
             <svg class="viz-action-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </button>
 
@@ -170,12 +131,18 @@ In [`dashboard/dashboard.html#L737-L815`](file:///c:/Users/Atul%20Verma/Desktop/
             </svg>
           </button>
         </div>
+
+        <!-- Backward-compatible legacy mode buttons (hidden from visual flow, synced for API and test parity) -->
+        <div class="viz-legacy-buttons visually-hidden" aria-hidden="true" style="display: none;">
+          <button type="button" id="btnVizModeBars" class="btn btn-xs btn-active btn-viz-mode active" data-viz-mode="bars" data-i18n="visualizer_mode_bars" tabindex="-1">32-Band FFT</button>
+          <button type="button" id="btnVizModeWave" class="btn btn-xs btn-viz-mode" data-viz-mode="wave" data-i18n="visualizer_mode_wave" tabindex="-1">Waveform</button>
+        </div>
       </div>
 
       <!-- Canvas Chassis with Embedded HUD Overlay and Settings Drawer -->
       <div class="visualizer-canvas-container" id="vizCanvasContainer">
         <!-- HTML5 Canvas Surface -->
-        <canvas id="canvasAudioVisualizer" width="600" height="180" role="img" aria-label="Real-time audio frequency spectrum and waveform visualizer"></canvas>
+        <canvas id="canvasAudioVisualizer" width="600" height="120" role="img" aria-label="Real-time audio frequency spectrum and waveform visualizer"></canvas>
 
         <!-- Canvas HUD Overlay Layer (Pointer Events: None for non-interactive elements) -->
         <div class="viz-canvas-hud" id="vizCanvasHud" aria-hidden="true">
@@ -225,29 +192,77 @@ In [`dashboard/dashboard.html#L737-L815`](file:///c:/Users/Atul%20Verma/Desktop/
         </div>
       </div>
 
-      <!-- High-Visibility Dual Stereo VU Peak Level Meters -->
-      <div class="vu-meters-container" id="vuMetersContainer" role="region" aria-label="Stereo Audio Level Meters">
-        <!-- Left Channel -->
-        <div class="vu-bar-wrapper">
-          <span class="vu-label" id="lblVuLeft">L</span>
-          <div class="vu-meter-track" aria-hidden="true">
-            <div id="vuBarLeft" class="vu-level-fill" style="width: 0%;"></div>
-            <div id="vuPeakLeft" class="vu-peak-indicator" style="left: 0%;"></div>
+      <!-- Sub-Canvas Lower Deck: Effect Pill Selector & Dual Stereo VU Meters -->
+      <div class="viz-subcanvas-deck" id="vizSubcanvasDeck">
+        <!-- Custom Compact Glass Pill Selector & Backward-Compatible Select -->
+        <div class="viz-select-wrapper" id="vizSelectWrapper">
+          <div class="viz-pill-selector-wrapper" id="vizPillSelectorWrapper">
+            <button type="button" id="btnVizPillTrigger" class="viz-pill-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Audio Visualizer Effect">
+              <span class="viz-pill-icon" id="vizPillIcon" aria-hidden="true">⚡</span>
+              <span class="viz-pill-label" id="vizPillLabel">32-Band FFT</span>
+              <svg class="viz-pill-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <!-- Floating Glass Popover Menu -->
+            <div id="vizPillPopoverMenu" class="viz-pill-popover-menu" role="listbox" aria-label="Visualizer Effects" tabindex="-1" hidden>
+              <button type="button" role="option" class="viz-popover-option active" data-effect="bars" aria-selected="true">
+                <span class="viz-opt-icon">⚡</span><span class="viz-opt-text" data-i18n="viz_effect_bars">32-Band Spectrum</span>
+              </button>
+              <button type="button" role="option" class="viz-popover-option" data-effect="wave" aria-selected="false">
+                <span class="viz-opt-icon">🌊</span><span class="viz-opt-text" data-i18n="viz_effect_wave">Oscilloscope Wave</span>
+              </button>
+              <button type="button" role="option" class="viz-popover-option" data-effect="radial" aria-selected="false">
+                <span class="viz-opt-icon">✨</span><span class="viz-opt-text" data-i18n="viz_effect_radial">Radial Frequency Burst</span>
+              </button>
+              <button type="button" role="option" class="viz-popover-option" data-effect="matrix_dots" aria-selected="false">
+                <span class="viz-opt-icon">🟢</span><span class="viz-opt-text" data-i18n="viz_effect_matrix">Matrix Digital Dots</span>
+              </button>
+              <button type="button" role="option" class="viz-popover-option" data-effect="flame" aria-selected="false">
+                <span class="viz-opt-icon">🔥</span><span class="viz-opt-text" data-i18n="viz_effect_flame">Neon Flame Peaks</span>
+              </button>
+              <button type="button" role="option" class="viz-popover-option" data-effect="stereo_mirror" aria-selected="false">
+                <span class="viz-opt-icon">🦋</span><span class="viz-opt-text" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</span>
+              </button>
+            </div>
           </div>
-          <span id="vuValLeft" class="vu-db-text" aria-live="off">-∞dB</span>
+
+          <!-- Hidden Backward-Compatible Native Select (synced for API & tests) -->
+          <label for="selectVizEffect" id="lblVizEffect" class="viz-dropdown-label visually-hidden" data-i18n="visualizer_effect_label">Effect:</label>
+          <select id="selectVizEffect" class="form-select visualizer-mode-select select-viz-effect glass-select visually-hidden" aria-hidden="true" tabindex="-1" style="display: none;">
+            <option value="bars" data-i18n="viz_effect_bars">32-Band Spectrum</option>
+            <option value="wave" data-i18n="viz_effect_wave">Oscilloscope Wave</option>
+            <option value="radial" data-i18n="viz_effect_radial">Radial Frequency Burst</option>
+            <option value="matrix_dots" data-i18n="viz_effect_matrix">Matrix Digital Dots</option>
+            <option value="flame" data-i18n="viz_effect_flame">Neon Flame Peaks</option>
+            <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
+          </select>
         </div>
-        <!-- Right Channel -->
-        <div class="vu-bar-wrapper">
-          <span class="vu-label" id="lblVuRight">R</span>
-          <div class="vu-meter-track" aria-hidden="true">
-            <div id="vuBarRight" class="vu-level-fill" style="width: 0%;"></div>
-            <div id="vuPeakRight" class="vu-peak-indicator" style="left: 0%;"></div>
+
+        <!-- High-Visibility Dual Stereo VU Peak Level Meters -->
+        <div class="vu-meters-container" id="vuMetersContainer" role="region" aria-label="Stereo Audio Level Meters">
+          <!-- Left Channel -->
+          <div class="vu-bar-wrapper">
+            <span class="vu-label" id="lblVuLeft">L</span>
+            <div class="vu-meter vu-meter-track" aria-hidden="true">
+              <div id="vuBarLeft" class="vu-level vu-level-fill" style="width: 0%;"></div>
+              <div id="vuPeakLeft" class="vu-peak-indicator" style="left: 0%;"></div>
+            </div>
+            <span id="vuValLeft" class="vu-db-text" aria-live="off">-∞dB</span>
           </div>
-          <span id="vuValRight" class="vu-db-text" aria-live="off">-∞dB</span>
-        </div>
-        <!-- 0dB Headroom & Overload Indicator -->
-        <div class="vu-status-cluster">
-          <span id="vuClipIndicator" class="vu-clip-badge" title="0dB Headroom Status">0dB OK</span>
+          <!-- Right Channel -->
+          <div class="vu-bar-wrapper">
+            <span class="vu-label" id="lblVuRight">R</span>
+            <div class="vu-meter vu-meter-track" aria-hidden="true">
+              <div id="vuBarRight" class="vu-level vu-level-fill" style="width: 0%;"></div>
+              <div id="vuPeakRight" class="vu-peak-indicator" style="left: 0%;"></div>
+            </div>
+            <span id="vuValRight" class="vu-db-text" aria-live="off">-∞dB</span>
+          </div>
+          <!-- 0dB Headroom & Overload Indicator -->
+          <div class="vu-status-cluster">
+            <span id="vuClipIndicator" class="vu-clip-badge" title="0dB Headroom Status">0dB OK</span>
+          </div>
         </div>
       </div>
 
@@ -281,6 +296,30 @@ Append or update the following rules inside [`dashboard/styles/media.css#L1240-L
   min-height: 34px !important;
   max-height: 34px !important;
   flex-shrink: 0 !important;
+}
+
+/* Sub-Canvas Lower Deck: Houses Pill Selector & Dual Stereo VU Meters */
+.viz-subcanvas-deck {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+.viz-subcanvas-deck .viz-select-wrapper {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.viz-subcanvas-deck .vu-meters-container {
+  flex: 1 1 auto;
+  margin-top: 0 !important;
 }
 
 /* Compact Glass Pill Selector */
@@ -759,6 +798,10 @@ body.theme-light .viz-drawer-label {
   color: #334155;
 }
 
+body.theme-light .viz-subcanvas-deck {
+  border-color: rgba(203, 213, 225, 0.8) !important;
+}
+
 body.theme-light .vu-meters-container {
   background: rgba(241, 245, 249, 0.8) !important;
   border-color: rgba(203, 213, 225, 0.8) !important;
@@ -881,11 +924,14 @@ In [`dashboard/dashboard.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20
      - Update underlying hidden `#selectVizEffect.value = effect` and dispatch `change` event.
      - Close popover.
    - On outside click or `Escape` key, close popover.
-2. **Settings Drawer Interactivity:**
+2. **Settings Drawer Interactivity & Bilingual Parity:**
    - On `#btnVizSettingsToggle` click, toggle `#vizSettingsDrawer` `hidden` attribute and update `aria-expanded`.
    - On `#btnVizDrawerClose` click or `Escape` key, close drawer.
    - On `#chkGraticuleToggle` change, update `setGraticuleEnabled(e.target.checked)`.
    - On `.viz-seg-btn` click, set peak decay rate (`slow` = 0.015, `normal` = 0.03, `fast` = 0.06).
+   - Ensure `viz_settings_toggle_title` bilingual i18n parity in `dashboard.js`:
+     - English: `'Toggle Acoustic Graticule & Telemetry Settings'`
+     - Hindi: `'अकॉस्टिक ग्रेटिक्यूल और टेलीमेट्री सेटिंग्स टॉगल करें'`
 
 ---
 
@@ -906,7 +952,7 @@ In [`dashboard/dashboard.js`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20
 
 | S.No | Deliverable | File Path | Scope of Changes |
 | :--- | :--- | :--- | :--- |
-| 1 | **Dashboard Markup** | `dashboard/dashboard.html` | Replaced crowded controls bar with Pill Selector, Canvas HUD, Settings Drawer, and Dual Peak-Hold VU meters |
+| 1 | **Dashboard Markup** | `dashboard/dashboard.html` | Implemented Developer's Hybrid Layout Directive: Top clean action buttons row, middle canvas HUD & drawer chassis, lower sub-canvas deck housing relocated pill selector and dual stereo VU meters |
 | 2 | **Styles & Layout** | `dashboard/styles/media.css` | Added styling for Pill Selector, Popover Menu, Canvas HUD, Settings Drawer, and Peak-Hold Indicators |
 | 3 | **Visualizer Engine** | `src/dashboard/features/media_deck_visualizer_feature.js` | Added acoustic graticule drawing, peak decay state machine, and pill/drawer sync methods |
 | 4 | **Dashboard Controller** | `dashboard/dashboard.js` | Added click-outside, keyboard navigation, and drawer toggle event bindings |

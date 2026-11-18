@@ -845,10 +845,10 @@
       rightPeakVal = Math.max(0, rightPeakVal - decayStep);
     }
 
-    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
-    if (doc) {
-      if (!vuPeakLeftEl) vuPeakLeftEl = doc.getElementById('vuPeakLeft');
-      if (!vuPeakRightEl) vuPeakRightEl = doc.getElementById('vuPeakRight');
+    const doc = (options && options.doc) || (typeof document !== 'undefined' ? document : null);
+    if (doc && typeof doc.getElementById === 'function') {
+      vuPeakLeftEl = doc.getElementById('vuPeakLeft');
+      vuPeakRightEl = doc.getElementById('vuPeakRight');
     }
 
     if (vuPeakLeftEl) {
@@ -1461,6 +1461,15 @@
     }
 
     if (!visualizerCanvas || !visualizerCtx) {
+      if (doc && typeof doc.getElementById === 'function') {
+        const c = doc.getElementById('canvasAudioVisualizer') || doc.getElementById('mediaDeckVisualizerCanvas');
+        if (c) {
+          visualizerCanvas = c;
+          visualizerCtx = typeof c.getContext === 'function' ? c.getContext('2d') : null;
+        }
+      }
+    }
+    if (!visualizerCanvas || !visualizerCtx) {
       return { rendered: false };
     }
 
@@ -1694,7 +1703,7 @@
     const rightPct = dbToPercent(rightDb);
 
     // Studio Peak-Hold Decay dynamics
-    updateVuPeakHoldDecay(leftPct, rightPct, timestamp, options);
+    updateVuPeakHoldDecay(leftPct, rightPct, timestamp, { ...options, doc });
 
     if (!vuLeftBarEl && doc) vuLeftBarEl = doc.getElementById('vuBarLeft');
     if (!vuRightBarEl && doc) vuRightBarEl = doc.getElementById('vuBarRight');
