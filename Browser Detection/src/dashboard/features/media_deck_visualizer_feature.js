@@ -275,6 +275,309 @@
   }
 
   /**
+   * Helper: Builds the top header row with favicon, platform badge, and status pill.
+   */
+  function buildDeckTopRow(doc, stream, options, translate, statusPill) {
+    const topRow = doc.createElement('div');
+    topRow.className = 'deck-card-top';
+    topRow.style.cursor = 'pointer';
+    topRow.setAttribute('title', translate('toast_switched_tab') || 'Switch to this tab in browser');
+    topRow.setAttribute('role', 'button');
+    topRow.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
+    topRow.addEventListener('click', () => {
+      handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
+    });
+
+    const favicon = doc.createElement('img');
+    favicon.className = 'deck-card-favicon';
+    favicon.src = stream.favIconUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>';
+    favicon.alt = '';
+    favicon.addEventListener('error', () => {
+      favicon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>';
+    });
+
+    const platformBadge = doc.createElement('span');
+    platformBadge.className = 'tag-platform badge-accent';
+    platformBadge.textContent = getPlatformFromUrl(stream.url, stream.domain);
+
+    topRow.appendChild(favicon);
+    topRow.appendChild(platformBadge);
+    topRow.appendChild(statusPill);
+    return topRow;
+  }
+
+  /**
+   * Helper: Builds the interactive mini scrubber and timing display row.
+   */
+  function buildDeckScrubberRow(doc, stream, options) {
+    const scrubberRow = doc.createElement('div');
+    scrubberRow.className = 'deck-scrubber-row';
+
+    const miniScrubber = doc.createElement('div');
+    miniScrubber.className = 'deck-mini-scrubber';
+    miniScrubber.style.cursor = 'pointer';
+    miniScrubber.setAttribute('role', 'slider');
+    miniScrubber.setAttribute('aria-label', `Timeline for ${stream.title || 'Tab'}`);
+    miniScrubber.setAttribute('aria-valuemin', '0');
+    miniScrubber.setAttribute('aria-valuemax', '100');
+
+    const progress = doc.createElement('div');
+    progress.className = 'deck-scrubber-progress';
+    const pct = (stream.duration > 0 && stream.currentTime >= 0)
+      ? Math.min(100, Math.max(0, (stream.currentTime / stream.duration) * 100))
+      : 0;
+    progress.style.width = `${pct.toFixed(1)}%`;
+    miniScrubber.setAttribute('aria-valuenow', String(Math.round(pct)));
+    miniScrubber.appendChild(progress);
+
+    const timeSpan = doc.createElement('span');
+    timeSpan.className = 'deck-time-display';
+    const curFormatted = formatDurationSec(stream.currentTime);
+    const durFormatted = formatDurationSec(stream.duration);
+    timeSpan.textContent = `${curFormatted} / ${durFormatted}`;
+
+    miniScrubber.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rect = miniScrubber.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const ratio = clickX / rect.width;
+      const dur = (typeof stream.duration === 'number' && Number.isFinite(stream.duration) && stream.duration > 0)
+        ? stream.duration
+        : 0;
+      if (dur <= 0) return;
+
+      const targetSeconds = Math.max(0, Math.min(dur, ratio * dur));
+      progress.style.width = `${(ratio * 100).toFixed(1)}%`;
+      timeSpan.textContent = `${formatDurationSec(targetSeconds)} / ${formatDurationSec(dur)}`;
+      miniScrubber.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+
+      handleRemoteMediaCommand(stream.tabId, 'seek_to', targetSeconds, options);
+    });
+
+    scrubberRow.appendChild(miniScrubber);
+    scrubberRow.appendChild(timeSpan);
+    return scrubberRow;
+  }
+
+  /**
+   * Helper: Builds the full-width dedicated volume slider row (contains ONLY volSlider).
+   */
+  function buildDeckVolumeRow(doc, stream, options) {
+    const volumeRow = doc.createElement('div');
+    volumeRow.className = 'deck-volume-row';
+
+    const volSlider = doc.createElement('input');
+    volSlider.type = 'range';
+    volSlider.min = '0';
+    volSlider.max = '100';
+    volSlider.setAttribute('data-slider-tab-id', String(stream.tabId));
+    const isCurrentActiveSlider = doc.activeElement &&
+      doc.activeElement.classList &&
+      doc.activeElement.classList.contains('deck-volume-slider') &&
+      doc.activeElement.getAttribute('data-slider-tab-id') === String(stream.tabId);
+    const currentVolPct = isCurrentActiveSlider
+      ? Math.round(Number(doc.activeElement.value) || 0)
+      : Math.round((typeof stream.volume === 'number' ? stream.volume : 1.0) * 100);
+    volSlider.value = String(currentVolPct);
+    volSlider.className = 'deck-volume-slider';
+    volSlider.setAttribute('title', `Volume: ${currentVolPct}%`);
+    volSlider.setAttribute('aria-label', `Volume: ${currentVolPct}%`);
+    volSlider.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const v = Number(volSlider.value) / 100;
+      volSlider.setAttribute('title', `Volume: ${volSlider.value}%`);
+      volSlider.setAttribute('aria-label', `Volume: ${volSlider.value}%`);
+      handleRemoteMediaCommand(stream.tabId, 'set_volume', v, options);
+    });
+
+    volumeRow.appendChild(volSlider);
+    return volumeRow;
+  }
+
+  /**
+   * Helper: Builds Play/Pause button for controls row.
+   */
+  function buildDeckPlayPauseButton(doc, stream, options, translate, statusPill) {
+    const btnPlayPause = doc.createElement('button');
+    btnPlayPause.className = 'btn-deck-ctrl btn-deck-play';
+    let isPlay = stream.playbackState === 'playing';
+    btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
+    btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
+    btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
+    btnPlayPause.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isPlay = !isPlay;
+      btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
+      btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
+      btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
+      if (isPlay) {
+        statusPill.classList.remove('paused');
+        statusPill.classList.add('playing');
+        statusPill.textContent = translate('status_playing') || '🟢 Playing';
+      } else {
+        statusPill.classList.remove('playing');
+        statusPill.classList.add('paused');
+        statusPill.textContent = translate('status_paused') || '⏸️ Paused';
+      }
+      handleRemoteMediaCommand(stream.tabId, isPlay ? 'play' : 'pause', 0, options);
+    });
+    return btnPlayPause;
+  }
+
+  /**
+   * Helper: Builds Mute/Unmute button for controls row.
+   */
+  function buildDeckMuteButton(doc, stream, options, translate, statusPill) {
+    const btnMute = doc.createElement('button');
+    btnMute.className = 'btn-deck-ctrl btn-deck-mute';
+    let isMutedState = Boolean(stream.isMuted);
+    btnMute.textContent = isMutedState ? '🔇' : '🔊';
+    btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+    btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+    btnMute.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isMutedState = !isMutedState;
+      btnMute.textContent = isMutedState ? '🔇' : '🔊';
+      btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+      btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
+      if (isMutedState) {
+        statusPill.classList.add('muted');
+        statusPill.textContent = translate('status_muted') || '🔇 Muted';
+      } else {
+        statusPill.classList.remove('muted');
+        if (stream.playbackState === 'playing' || stream.isAudible) {
+          statusPill.classList.add('playing');
+          statusPill.textContent = translate('status_playing') || '🟢 Playing';
+        } else {
+          statusPill.classList.add('paused');
+          statusPill.textContent = translate('status_paused') || '⏸️ Paused';
+        }
+      }
+      const nextCmd = isMutedState ? 'mute' : 'unmute';
+      handleRemoteMediaCommand(stream.tabId, nextCmd, 0, options);
+    });
+    return btnMute;
+  }
+
+  /**
+   * Helper: Builds the 4-button action controls row:
+   * [ ▶ Play/Pause ] [ 🔊 Mute ] [ 🎧 Solo (Icon Only) ] [ 🎯 Switch Tab ]
+   */
+  function buildDeckControlsRow(doc, stream, options, translate, statusPill, containerEl) {
+    const controlsRow = doc.createElement('div');
+    controlsRow.className = 'deck-card-controls';
+
+    // 1. Play / Pause Button
+    const btnPlayPause = buildDeckPlayPauseButton(doc, stream, options, translate, statusPill);
+
+    // 2. Mute / Unmute Button (Relocated right next to Play/Pause)
+    const btnMute = buildDeckMuteButton(doc, stream, options, translate, statusPill);
+
+    // 3. Solo Tab Button (Icon Only 🎧)
+    const btnSolo = doc.createElement('button');
+    btnSolo.className = 'btn-deck-ctrl btn-deck-solo';
+    btnSolo.id = `btnSoloTab_${stream.tabId}`;
+    if (currentSoloTabId === stream.tabId && !stream.isMuted) {
+      btnSolo.classList.add('solo-active');
+    }
+    btnSolo.textContent = '🎧';
+    btnSolo.setAttribute('title', 'Mute all other tabs and solo this audio');
+    btnSolo.setAttribute('aria-label', `Solo Tab ${stream.tabId}`);
+    btnSolo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleSoloTab(stream.tabId, Object.assign({}, options, { containerEl }));
+    });
+
+    // 4. Switch to Tab Button
+    const btnSwitchTab = doc.createElement('button');
+    btnSwitchTab.className = 'btn-deck-ctrl btn-deck-switch-tab';
+    btnSwitchTab.textContent = translate('btn_switch_tab') || '🎯 Switch Tab';
+    btnSwitchTab.setAttribute('title', 'Switch to this media tab in browser');
+    btnSwitchTab.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
+    btnSwitchTab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
+    });
+
+    controlsRow.appendChild(btnPlayPause);
+    controlsRow.appendChild(btnMute);
+    controlsRow.appendChild(btnSolo);
+    controlsRow.appendChild(btnSwitchTab);
+    return controlsRow;
+  }
+
+  /**
+   * Helper: Builds a single complete media deck card DOM node.
+   */
+  function buildMediaDeckCard(doc, stream, options, translate, containerEl) {
+    const card = doc.createElement('div');
+    card.className = 'media-deck-card liquid-glass-card';
+    card.setAttribute('data-tab-id', String(stream.tabId));
+
+    // Status Pill (referenced by topRow and controlsRow)
+    const statusPill = doc.createElement('span');
+    statusPill.className = 'deck-status-pill';
+    if (stream.isMuted) {
+      statusPill.classList.add('muted');
+      statusPill.textContent = translate('status_muted') || '🔇 Muted';
+    } else if (stream.playbackState === 'playing' || stream.isAudible) {
+      statusPill.classList.add('playing');
+      statusPill.textContent = translate('status_playing') || '🟢 Playing';
+    } else {
+      statusPill.classList.add('paused');
+      statusPill.textContent = translate('status_paused') || '⏸️ Paused';
+    }
+
+    // 1. Top Header Row: favicon, platformBadge, statusPill
+    const topRow = buildDeckTopRow(doc, stream, options, translate, statusPill);
+
+    // 2. Video Title: dedicated title line above scrubber
+    const titleSpan = doc.createElement('span');
+    titleSpan.className = 'deck-card-title text-truncate';
+    titleSpan.textContent = stream.title || stream.domain || `Tab ${stream.tabId}`;
+    titleSpan.setAttribute('title', stream.title || '');
+
+    // 3. Mini Scrubber & Timing Row
+    const scrubberRow = buildDeckScrubberRow(doc, stream, options);
+
+    // 4. Dedicated Full-Width Volume Row (volSlider only)
+    const volumeRow = buildDeckVolumeRow(doc, stream, options);
+
+    // 5. Bottom Controls Row: Play/Pause, Mute, Solo, Switch Tab
+    const controlsRow = buildDeckControlsRow(doc, stream, options, translate, statusPill, containerEl);
+
+    // Assembly Order: topRow -> titleSpan -> scrubberRow -> volumeRow -> controlsRow
+    card.appendChild(topRow);
+    card.appendChild(titleSpan);
+    card.appendChild(scrubberRow);
+    card.appendChild(volumeRow);
+    card.appendChild(controlsRow);
+
+    return card;
+  }
+
+  /**
+   * Helper: Builds empty state container when no active media streams exist.
+   */
+  function buildDeckEmptyState(doc, translate) {
+    const emptyBox = doc.createElement('div');
+    emptyBox.className = 'deck-empty-state';
+
+    const icon = doc.createElement('span');
+    icon.className = 'deck-empty-icon';
+    icon.textContent = '🎧';
+
+    const text = doc.createElement('p');
+    text.className = 'deck-empty-text';
+    text.textContent = translate('no_media_streams') || 'No active media streams detected across open tabs';
+
+    emptyBox.appendChild(icon);
+    emptyBox.appendChild(text);
+    return emptyBox;
+  }
+
+  /**
    * 100% W3C Trusted Types Safe DOM Builder for Multi-Tab Media Deck
    * Constructs DOM nodes using document.createElement (Zero innerHTML).
    */
@@ -310,260 +613,13 @@
 
     // Empty state
     if (streams.length === 0) {
-      const emptyBox = doc.createElement('div');
-      emptyBox.className = 'deck-empty-state';
-
-      const icon = doc.createElement('span');
-      icon.className = 'deck-empty-icon';
-      icon.textContent = '🎧';
-
-      const text = doc.createElement('p');
-      text.className = 'deck-empty-text';
-      text.textContent = translate('no_media_streams') || 'No active media streams detected across open tabs';
-
-      emptyBox.appendChild(icon);
-      emptyBox.appendChild(text);
-      containerEl.appendChild(emptyBox);
+      containerEl.appendChild(buildDeckEmptyState(doc, translate));
       return;
     }
 
     // Render cards
     streams.forEach((stream) => {
-      const card = doc.createElement('div');
-      card.className = 'media-deck-card liquid-glass-card';
-      card.setAttribute('data-tab-id', String(stream.tabId));
-
-      // 1. Card Top Bar (Favicon, Title, Platform Tag)
-      const topRow = doc.createElement('div');
-      topRow.className = 'deck-card-top';
-      topRow.style.cursor = 'pointer';
-      topRow.setAttribute('title', translate('toast_switched_tab') || 'Switch to this tab in browser');
-      topRow.setAttribute('role', 'button');
-      topRow.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
-      topRow.addEventListener('click', () => {
-        handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
-      });
-
-      const favicon = doc.createElement('img');
-      favicon.className = 'deck-card-favicon';
-      favicon.src = stream.favIconUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>';
-      favicon.alt = '';
-      favicon.addEventListener('error', () => {
-        favicon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">🌐</text></svg>';
-      });
-
-      const titleSpan = doc.createElement('span');
-      titleSpan.className = 'deck-card-title text-truncate';
-      titleSpan.textContent = stream.title || stream.domain || `Tab ${stream.tabId}`;
-      titleSpan.setAttribute('title', stream.title || '');
-
-      const platformBadge = doc.createElement('span');
-      platformBadge.className = 'tag-platform badge-accent';
-      platformBadge.textContent = getPlatformFromUrl(stream.url, stream.domain);
-
-      topRow.appendChild(favicon);
-      topRow.appendChild(titleSpan);
-      topRow.appendChild(platformBadge);
-
-      // 2. Metadata & Live Status Row
-      const metaRow = doc.createElement('div');
-      metaRow.className = 'deck-card-meta';
-
-      const statusPill = doc.createElement('span');
-      statusPill.className = 'deck-status-pill';
-      if (stream.isMuted) {
-        statusPill.classList.add('muted');
-        statusPill.textContent = translate('status_muted') || '🔇 Muted';
-      } else if (stream.playbackState === 'playing' || stream.isAudible) {
-        statusPill.classList.add('playing');
-        statusPill.textContent = translate('status_playing') || '🟢 Playing';
-      } else {
-        statusPill.classList.add('paused');
-        statusPill.textContent = translate('status_paused') || '⏸️ Paused';
-      }
-
-      const domainSpan = doc.createElement('span');
-      domainSpan.className = 'badge-dim';
-      domainSpan.textContent = stream.domain || 'web';
-
-      metaRow.appendChild(statusPill);
-      metaRow.appendChild(domainSpan);
-
-      // 3. Mini Scrubber & Timing Row
-      const scrubberRow = doc.createElement('div');
-      scrubberRow.className = 'deck-scrubber-row';
-
-      const miniScrubber = doc.createElement('div');
-      miniScrubber.className = 'deck-mini-scrubber';
-      miniScrubber.style.cursor = 'pointer';
-      miniScrubber.setAttribute('role', 'slider');
-      miniScrubber.setAttribute('aria-label', `Timeline for ${stream.title || 'Tab'}`);
-      miniScrubber.setAttribute('aria-valuemin', '0');
-      miniScrubber.setAttribute('aria-valuemax', '100');
-
-      const progress = doc.createElement('div');
-      progress.className = 'deck-scrubber-progress';
-      const pct = (stream.duration > 0 && stream.currentTime >= 0)
-        ? Math.min(100, Math.max(0, (stream.currentTime / stream.duration) * 100))
-        : 0;
-      progress.style.width = `${pct.toFixed(1)}%`;
-      miniScrubber.setAttribute('aria-valuenow', String(Math.round(pct)));
-      miniScrubber.appendChild(progress);
-
-      const timeSpan = doc.createElement('span');
-      timeSpan.className = 'deck-time-display';
-      const curFormatted = formatDurationSec(stream.currentTime);
-      const durFormatted = formatDurationSec(stream.duration);
-      timeSpan.textContent = `${curFormatted} / ${durFormatted}`;
-
-      miniScrubber.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const rect = miniScrubber.getBoundingClientRect();
-        if (rect.width <= 0) return;
-        const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-        const ratio = clickX / rect.width;
-        const dur = (typeof stream.duration === 'number' && Number.isFinite(stream.duration) && stream.duration > 0)
-          ? stream.duration
-          : 0;
-        if (dur <= 0) return;
-
-        const targetSeconds = Math.max(0, Math.min(dur, ratio * dur));
-        progress.style.width = `${(ratio * 100).toFixed(1)}%`;
-        timeSpan.textContent = `${formatDurationSec(targetSeconds)} / ${formatDurationSec(dur)}`;
-        miniScrubber.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
-
-        handleRemoteMediaCommand(stream.tabId, 'seek_to', targetSeconds, options);
-      });
-
-      scrubberRow.appendChild(miniScrubber);
-      scrubberRow.appendChild(timeSpan);
-
-      // 4. Remote Controls Row
-      const controlsRow = doc.createElement('div');
-      controlsRow.className = 'deck-card-controls';
-
-      // Play / Pause Toggle Button
-      const btnPlayPause = doc.createElement('button');
-      btnPlayPause.className = 'btn-deck-ctrl btn-deck-play';
-      let isPlay = stream.playbackState === 'playing';
-      btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
-      btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
-      btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
-      btnPlayPause.addEventListener('click', (e) => {
-        e.stopPropagation();
-        isPlay = !isPlay;
-        btnPlayPause.textContent = isPlay ? '⏸️' : '▶';
-        btnPlayPause.setAttribute('title', isPlay ? 'Pause Tab' : 'Play Tab');
-        btnPlayPause.setAttribute('aria-label', isPlay ? 'Pause Tab' : 'Play Tab');
-        if (isPlay) {
-          statusPill.classList.remove('paused');
-          statusPill.classList.add('playing');
-          statusPill.textContent = translate('status_playing') || '🟢 Playing';
-        } else {
-          statusPill.classList.remove('playing');
-          statusPill.classList.add('paused');
-          statusPill.textContent = translate('status_paused') || '⏸️ Paused';
-        }
-        handleRemoteMediaCommand(stream.tabId, isPlay ? 'play' : 'pause', 0, options);
-      });
-
-      // Mute / Unmute Toggle Button
-      const btnMute = doc.createElement('button');
-      btnMute.className = 'btn-deck-ctrl btn-deck-mute';
-      let isMutedState = Boolean(stream.isMuted);
-      btnMute.textContent = isMutedState ? '🔇' : '🔊';
-      btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
-      btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
-      btnMute.addEventListener('click', (e) => {
-        e.stopPropagation();
-        isMutedState = !isMutedState;
-        btnMute.textContent = isMutedState ? '🔇' : '🔊';
-        btnMute.setAttribute('title', isMutedState ? 'Unmute Tab' : 'Mute Tab');
-        btnMute.setAttribute('aria-label', isMutedState ? 'Unmute Tab' : 'Mute Tab');
-        if (isMutedState) {
-          statusPill.classList.add('muted');
-          statusPill.textContent = translate('status_muted') || '🔇 Muted';
-        } else {
-          statusPill.classList.remove('muted');
-          if (stream.playbackState === 'playing' || stream.isAudible) {
-            statusPill.classList.add('playing');
-            statusPill.textContent = translate('status_playing') || '🟢 Playing';
-          } else {
-            statusPill.classList.add('paused');
-            statusPill.textContent = translate('status_paused') || '⏸️ Paused';
-          }
-        }
-        const nextCmd = isMutedState ? 'mute' : 'unmute';
-        handleRemoteMediaCommand(stream.tabId, nextCmd, 0, options);
-      });
-
-      // Dedicated Full-Width Volume Row
-      const volumeRow = doc.createElement('div');
-      volumeRow.className = 'deck-volume-row';
-
-      // Volume Slider
-      const volSlider = doc.createElement('input');
-      volSlider.type = 'range';
-      volSlider.min = '0';
-      volSlider.max = '100';
-      volSlider.setAttribute('data-slider-tab-id', String(stream.tabId));
-      const isCurrentActiveSlider = doc.activeElement &&
-        doc.activeElement.classList &&
-        doc.activeElement.classList.contains('deck-volume-slider') &&
-        doc.activeElement.getAttribute('data-slider-tab-id') === String(stream.tabId);
-      const currentVolPct = isCurrentActiveSlider
-        ? Math.round(Number(doc.activeElement.value) || 0)
-        : Math.round((typeof stream.volume === 'number' ? stream.volume : 1.0) * 100);
-      volSlider.value = String(currentVolPct);
-      volSlider.className = 'deck-volume-slider';
-      volSlider.setAttribute('title', `Volume: ${currentVolPct}%`);
-      volSlider.setAttribute('aria-label', `Volume: ${currentVolPct}%`);
-      volSlider.addEventListener('input', (e) => {
-        e.stopPropagation();
-        const v = Number(volSlider.value) / 100;
-        volSlider.setAttribute('title', `Volume: ${volSlider.value}%`);
-        volSlider.setAttribute('aria-label', `Volume: ${volSlider.value}%`);
-        handleRemoteMediaCommand(stream.tabId, 'set_volume', v, options);
-      });
-      volumeRow.appendChild(btnMute);
-      volumeRow.appendChild(volSlider);
-
-      // Solo Tab Button
-      const btnSolo = doc.createElement('button');
-      btnSolo.className = 'btn-deck-ctrl btn-deck-solo';
-      btnSolo.id = `btnSoloTab_${stream.tabId}`;
-      if (currentSoloTabId === stream.tabId && !stream.isMuted) {
-        btnSolo.classList.add('solo-active');
-      }
-      btnSolo.textContent = translate('btn_solo_tab') || '🎧 Solo Tab';
-      btnSolo.setAttribute('title', 'Mute all other tabs and solo this audio');
-      btnSolo.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleSoloTab(stream.tabId, Object.assign({}, options, { containerEl }));
-      });
-
-      // Switch to Tab Button
-      const btnSwitchTab = doc.createElement('button');
-      btnSwitchTab.className = 'btn-deck-ctrl btn-deck-switch-tab';
-      btnSwitchTab.textContent = translate('btn_switch_tab') || '🎯 Switch Tab';
-      btnSwitchTab.setAttribute('title', 'Switch to this media tab in browser');
-      btnSwitchTab.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
-      btnSwitchTab.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleRemoteMediaCommand(stream.tabId, 'switch_tab', 0, options);
-      });
-
-      controlsRow.appendChild(btnPlayPause);
-      controlsRow.appendChild(btnSolo);
-      controlsRow.appendChild(btnSwitchTab);
-
-      // Assemble card
-      card.appendChild(topRow);
-      card.appendChild(metaRow);
-      card.appendChild(scrubberRow);
-      card.appendChild(volumeRow);
-      card.appendChild(controlsRow);
-
+      const card = buildMediaDeckCard(doc, stream, options, translate, containerEl);
       containerEl.appendChild(card);
     });
   }

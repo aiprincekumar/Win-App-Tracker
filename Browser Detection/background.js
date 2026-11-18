@@ -15,9 +15,53 @@
 
 'use strict';
 
-const browserAPI = typeof globalThis.browser !== 'undefined' && globalThis.browser.runtime 
+const createSafeBrowserAPIFallback = () => {
+  const dummyListener = { addListener: () => {}, removeListener: () => {}, hasListener: () => false };
+  return {
+    action: { setBadgeText: () => {}, setBadgeBackgroundColor: () => {} },
+    alarms: { onAlarm: dummyListener, clear: async () => {}, create: () => {}, get: async () => null },
+    idle: { onStateChanged: dummyListener, setDetectionInterval: () => {}, queryState: (_, cb) => cb && cb('active') },
+    notifications: { create: () => {} },
+    runtime: {
+      id: 'node_env',
+      lastError: null,
+      onMessage: dummyListener,
+      onSuspend: dummyListener,
+      onInstalled: dummyListener,
+      sendMessage: () => Promise.resolve(),
+      sendNativeMessage: () => {},
+      getManifest: () => ({ version: '2.5.0' })
+    },
+    scripting: { executeScript: async () => [] },
+    storage: {
+      local: { get: async () => ({}), set: async () => ({}) },
+      onChanged: dummyListener
+    },
+    tabs: {
+      onActivated: dummyListener,
+      onCreated: dummyListener,
+      onRemoved: dummyListener,
+      onUpdated: dummyListener,
+      get: async () => null,
+      query: async () => [],
+      sendMessage: () => Promise.resolve(),
+      update: async () => null
+    },
+    windows: {
+      onFocusChanged: dummyListener,
+      getCurrent: async () => null,
+      get: async () => null,
+      update: async () => null,
+      WINDOW_ID_NONE: -1
+    }
+  };
+};
+
+const browserAPI = (typeof globalThis.browser !== 'undefined' && globalThis.browser && globalThis.browser.runtime)
   ? globalThis.browser 
-  : globalThis.chrome;
+  : ((typeof globalThis.chrome !== 'undefined' && globalThis.chrome)
+    ? globalThis.chrome
+    : createSafeBrowserAPIFallback());
 
 // =============================================================================
 // Domain-Driven Layered Modular Subsystems (src/shared/ & src/background/)
@@ -1365,6 +1409,7 @@ async function setSleepTimer(durationMinutes, options = {}) {
     pauseTracking: options.pauseTracking !== undefined ? !!options.pauseTracking : true,
     enableFadeOut: options.enableFadeOut !== undefined ? !!options.enableFadeOut : sleepTimerSettings.enableAudioFadeOut,
     fadeDurationSeconds: options.fadeDurationSeconds || sleepTimerSettings.fadeDurationSeconds,
+    endOfVideo: options.endOfVideo !== undefined ? !!options.endOfVideo : (sleepTimerSettings.endOfVideo || false),
     lastUpdated: now
   };
 
@@ -1373,6 +1418,13 @@ async function setSleepTimer(durationMinutes, options = {}) {
   if (sleepTimerSettings.showBadgeCountdown) {
     updateActionBadge(durationMs, durationMs);
   }
+
+  safeSendRuntimeMessage({
+    type: 'SLEEP_TIMER_STATE_CHANGED',
+    action: 'SLEEP_TIMER_STATE_CHANGED',
+    state: sleepTimerState
+  });
+
   return sleepTimerState;
 }
 
@@ -1392,7 +1444,147 @@ async function cancelSleepTimer() {
   };
   await saveSleepTimerState();
   clearActionBadge();
+
+  safeSendRuntimeMessage({
+    type: 'SLEEP_TIMER_STATE_CHANGED',
+    action: 'SLEEP_TIMER_STATE_CHANGED',
+    state: sleepTimerState
+  });
+
   return { success: true, state: sleepTimerState };
+}
+
+/**
+ * Pauses active sleep timer, preserves remaining time, and cancels pending alarms
+ */
+async function pauseSleepTimer() {
+  await ensureStorageLoaded();
+  if (sleepTimerState.state !== 'RUNNING' && sleepTimerState.state !== 'FADING') {
+    return { success: false, error: 'Timer is not active', state: sleepTimerState };
+  }
+
+  const now = Date.now();
+  const remainingMs = Math.max(0, sleepTimerState.targetTime - now);
+
+  try {
+    await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
+    await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
+  } catch (_) {}
+
+  sleepTimerState = {
+    ...sleepTimerState,
+    state: 'PAUSED',
+    remainingMs: remainingMs,
+    pausedAt: now,
+    lastUpdated: now
+  };
+
+  await saveSleepTimerState();
+  clearActionBadge();
+
+  safeSendRuntimeMessage({
+    type: 'SLEEP_TIMER_STATE_CHANGED',
+    action: 'SLEEP_TIMER_STATE_CHANGED',
+    state: sleepTimerState
+  });
+
+  return { success: true, state: sleepTimerState };
+}
+
+/**
+ * Resumes paused sleep timer, calculates new target epoch, and reschedules alarms
+ */
+async function resumeSleepTimer() {
+  await ensureStorageLoaded();
+  if (sleepTimerState.state !== 'PAUSED') {
+    return { success: false, error: 'Timer is not paused', state: sleepTimerState };
+  }
+
+  const now = Date.now();
+  const remainingMs = sleepTimerState.remainingMs || (sleepTimerState.durationMinutes * 60 * 1000) || 60000;
+  const newTargetTime = now + remainingMs;
+
+  sleepTimerState = {
+    ...sleepTimerState,
+    state: 'RUNNING',
+    startTime: now - ((sleepTimerState.durationMs || 1800000) - remainingMs),
+    targetTime: newTargetTime,
+    lastUpdated: now
+  };
+  delete sleepTimerState.remainingMs;
+  delete sleepTimerState.pausedAt;
+
+  await saveSleepTimerState();
+  await scheduleSleepTimerAlarms(sleepTimerState);
+
+  if (sleepTimerSettings.showBadgeCountdown) {
+    updateActionBadge(remainingMs, sleepTimerState.durationMs || remainingMs);
+  }
+
+  safeSendRuntimeMessage({
+    type: 'SLEEP_TIMER_STATE_CHANGED',
+    action: 'SLEEP_TIMER_STATE_CHANGED',
+    state: sleepTimerState
+  });
+
+  return { success: true, state: sleepTimerState };
+}
+
+/**
+ * Extends active or paused sleep timer by extra minutes and reschedules alarms
+ */
+async function extendSleepTimer(extraMinutes) {
+  await ensureStorageLoaded();
+  const minsToAdd = parseInt(extraMinutes, 10);
+  if (isNaN(minsToAdd) || minsToAdd <= 0) {
+    return { success: false, error: 'Invalid extraMinutes', state: sleepTimerState };
+  }
+  const extraMs = minsToAdd * 60 * 1000;
+  const now = Date.now();
+
+  if (sleepTimerState.state === 'RUNNING' || sleepTimerState.state === 'FADING') {
+    sleepTimerState.durationMinutes = (sleepTimerState.durationMinutes || 0) + minsToAdd;
+    sleepTimerState.durationMs = (sleepTimerState.durationMs || 0) + extraMs;
+    sleepTimerState.targetTime += extraMs;
+    sleepTimerState.lastUpdated = now;
+    if (sleepTimerState.state === 'FADING') {
+      sleepTimerState.state = 'RUNNING'; // Return to running if extension pushes out past fade window
+    }
+    await saveSleepTimerState();
+    await scheduleSleepTimerAlarms(sleepTimerState);
+  } else if (sleepTimerState.state === 'PAUSED') {
+    sleepTimerState.durationMinutes = (sleepTimerState.durationMinutes || 0) + minsToAdd;
+    sleepTimerState.durationMs = (sleepTimerState.durationMs || 0) + extraMs;
+    sleepTimerState.remainingMs = (sleepTimerState.remainingMs || 0) + extraMs;
+    sleepTimerState.lastUpdated = now;
+    await saveSleepTimerState();
+  } else {
+    // If IDLE or CANCELLED, start new timer with minsToAdd
+    return await setSleepTimer(minsToAdd);
+  }
+
+  safeSendRuntimeMessage({
+    type: 'SLEEP_TIMER_STATE_CHANGED',
+    action: 'SLEEP_TIMER_STATE_CHANGED',
+    state: sleepTimerState
+  });
+
+  return { success: true, state: sleepTimerState };
+}
+
+/**
+ * Triggers immediate sleep expiration if timer has endOfVideo enabled
+ */
+async function handleEndOfVideoTrigger(tabId) {
+  await ensureStorageLoaded();
+  if (sleepTimerState.state === 'RUNNING' || sleepTimerState.state === 'FADING') {
+    if (sleepTimerState.endOfVideo || sleepTimerSettings.endOfVideo) {
+      console.info(`[MediaSentinel] 🎬 End of video reached on tab ${tabId}. Triggering sleep cutoff.`);
+      await triggerSleepTimerExpiration();
+      return { success: true, triggered: true, state: sleepTimerState };
+    }
+  }
+  return { success: false, triggered: false, state: sleepTimerState };
 }
 
 /**
@@ -4031,6 +4223,43 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (msgType === 'PAUSE_SLEEP_TIMER' || message.action === 'PAUSE_SLEEP_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await pauseSleepTimer();
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'RESUME_SLEEP_TIMER' || message.action === 'RESUME_SLEEP_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await resumeSleepTimer();
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'EXTEND_SLEEP_TIMER' || message.action === 'EXTEND_SLEEP_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const mins = message.extraMinutes || message.minutes || 15;
+      const res = await extendSleepTimer(mins);
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'END_OF_VIDEO' || message.action === 'END_OF_VIDEO') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await handleEndOfVideoTrigger(sender.tab ? sender.tab.id : null);
+      sendResponse(res);
+    })();
+    return true;
+  }
+
   if (msgType === 'GET_SLEEP_TIMER_STATE') {
     (async () => {
       await ensureStorageLoaded();
@@ -4418,6 +4647,9 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
       }
     }
   }, CONFIG.DELTA_BATCH_INTERVAL_MS);
+  if (deltaCommitTicker && typeof deltaCommitTicker.unref === 'function') {
+    deltaCommitTicker.unref();
+  }
 })();
 
 if (typeof globalThis !== 'undefined') {
@@ -4442,6 +4674,14 @@ if (typeof globalThis !== 'undefined') {
   globalThis.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
   globalThis.getActiveDomain = () => activeDomain;
   globalThis.extractCanonicalMediaId = extractCanonicalMediaId;
+  globalThis.pauseSleepTimer = pauseSleepTimer;
+  globalThis.resumeSleepTimer = resumeSleepTimer;
+  globalThis.extendSleepTimer = extendSleepTimer;
+  globalThis.handleEndOfVideoTrigger = handleEndOfVideoTrigger;
+  globalThis.setSleepTimer = setSleepTimer;
+  globalThis.cancelSleepTimer = cancelSleepTimer;
+  globalThis.getSleepTimerState = () => sleepTimerState;
+  globalThis.getSleepTimerSettings = () => sleepTimerSettings;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
@@ -4461,6 +4701,27 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.commitBackgroundMediaDelta = commitBackgroundMediaDelta;
     globalThis.SentinelBackgroundModules.getActiveDomain = () => activeDomain;
     globalThis.SentinelBackgroundModules.extractCanonicalMediaId = extractCanonicalMediaId;
+    globalThis.SentinelBackgroundModules.pauseSleepTimer = pauseSleepTimer;
+    globalThis.SentinelBackgroundModules.resumeSleepTimer = resumeSleepTimer;
+    globalThis.SentinelBackgroundModules.extendSleepTimer = extendSleepTimer;
+    globalThis.SentinelBackgroundModules.handleEndOfVideoTrigger = handleEndOfVideoTrigger;
+    globalThis.SentinelBackgroundModules.setSleepTimer = setSleepTimer;
+    globalThis.SentinelBackgroundModules.cancelSleepTimer = cancelSleepTimer;
+    globalThis.SentinelBackgroundModules.getSleepTimerState = () => sleepTimerState;
+    globalThis.SentinelBackgroundModules.getSleepTimerSettings = () => sleepTimerSettings;
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    pauseSleepTimer,
+    resumeSleepTimer,
+    extendSleepTimer,
+    handleEndOfVideoTrigger,
+    setSleepTimer,
+    cancelSleepTimer,
+    getSleepTimerState: () => sleepTimerState,
+    getSleepTimerSettings: () => sleepTimerSettings
+  };
 }
 

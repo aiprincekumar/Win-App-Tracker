@@ -9,49 +9,73 @@ const assert = require('assert');
 console.log('🧪 Starting Multi-Tab Live Media Deck UI & Two-Way Solo Toggle Verification Suite...\n');
 
 // ---------------------------------------------------------------------------
-// Battery 1: Media Deck DOM Node Structure & Layout Refactor (Phase 1)
+// Battery 1: Media Deck DOM Node Structure & Layout Refactor (Phase 1 & Reorganization)
 // ---------------------------------------------------------------------------
-console.log('Battery 1: Media Deck DOM Node Structure & Layout Refactor (Phase 1)');
+console.log('Battery 1: Media Deck DOM Node Structure & Layout Refactor (Phase 1 & Reorganization)');
 
 const featurePath = path.join(__dirname, '..', 'src', 'dashboard', 'features', 'media_deck_visualizer_feature.js');
 const featureCode = fs.readFileSync(featurePath, 'utf8');
 
-// 1.1 Verify .deck-volume-row creation and styling
+// 1.1 Verify .deck-volume-row creation and styling (Now contains ONLY volSlider)
 assert(featureCode.includes("const volumeRow = doc.createElement('div')"), 'Must create volumeRow element via doc.createElement');
 assert(featureCode.includes("volumeRow.className = 'deck-volume-row'"), 'volumeRow must have class deck-volume-row');
-assert(featureCode.includes("volumeRow.appendChild(btnMute)"), 'btnMute must be appended into volumeRow');
+assert(!featureCode.includes("volumeRow.appendChild(btnMute)"), 'btnMute MUST NOT be appended into volumeRow');
 assert(featureCode.includes("volumeRow.appendChild(volSlider)"), 'volSlider must be appended into volumeRow');
-console.log('  ✅ volumeRow created with class .deck-volume-row and btnMute & volSlider appended');
+console.log('  ✅ volumeRow created with class .deck-volume-row and contains strictly volSlider (100% width)');
 
-// 1.2 Verify controlsRow contains strictly the 3 action buttons (btnMute moved to volumeRow, no volSlider)
+// 1.2 Verify controlsRow contains all 4 action buttons (btnMute relocated next to btnPlayPause)
 assert(featureCode.includes("controlsRow.appendChild(btnPlayPause)"), 'controlsRow must contain btnPlayPause');
-assert(!featureCode.includes("controlsRow.appendChild(btnMute)"), 'btnMute MUST NOT be appended into controlsRow');
+assert(featureCode.includes("controlsRow.appendChild(btnMute)"), 'btnMute MUST be appended into controlsRow');
 assert(featureCode.includes("controlsRow.appendChild(btnSolo)"), 'controlsRow must contain btnSolo');
 assert(featureCode.includes("controlsRow.appendChild(btnSwitchTab)"), 'controlsRow must contain btnSwitchTab');
 assert(!featureCode.includes("controlsRow.appendChild(volSlider)"), 'volSlider MUST NOT be appended into controlsRow');
-console.log('  ✅ controlsRow contains strictly the 3 action buttons (btnMute moved to volumeRow, no volSlider)');
+console.log('  ✅ controlsRow contains all 4 action buttons in order: Play/Pause, Mute, Solo, Switch Tab');
 
-// 1.3 Verify card assembly order: scrubberRow -> volumeRow -> controlsRow
+// 1.3 Verify card assembly order: topRow -> titleSpan -> scrubberRow -> volumeRow -> controlsRow
+const topIdx = featureCode.indexOf("card.appendChild(topRow);");
+const titleIdx = featureCode.indexOf("card.appendChild(titleSpan);");
 const scrubberIdx = featureCode.indexOf("card.appendChild(scrubberRow);");
 const volumeIdx = featureCode.indexOf("card.appendChild(volumeRow);");
 const controlsIdx = featureCode.indexOf("card.appendChild(controlsRow);");
+assert(topIdx !== -1, 'card.appendChild(topRow) must exist');
+assert(titleIdx !== -1, 'card.appendChild(titleSpan) must exist');
 assert(scrubberIdx !== -1, 'card.appendChild(scrubberRow) must exist');
 assert(volumeIdx !== -1, 'card.appendChild(volumeRow) must exist');
 assert(controlsIdx !== -1, 'card.appendChild(controlsRow) must exist');
+assert(topIdx < titleIdx, 'topRow must be appended before titleSpan');
+assert(titleIdx < scrubberIdx, 'titleSpan must be appended before scrubberRow');
 assert(scrubberIdx < volumeIdx, 'scrubberRow must be appended before volumeRow');
 assert(volumeIdx < controlsIdx, 'volumeRow must be appended before controlsRow');
-console.log('  ✅ Card node assembly order verified: scrubberRow -> volumeRow -> controlsRow');
+console.log('  ✅ Card node assembly order verified: topRow -> titleSpan -> scrubberRow -> volumeRow -> controlsRow');
 
-// 1.4 Active slider focus/drag guard preserved
+// 1.4 Verify Solo Tab Button is Icon Only (🎧) with full accessibility
+assert(featureCode.includes("btnSolo.textContent = '🎧'"), 'btnSolo must be ICON ONLY (🎧)');
+assert(featureCode.includes("btnSolo.setAttribute('title', 'Mute all other tabs and solo this audio')"), 'btnSolo must maintain title attribute');
+assert(featureCode.includes("btnSolo.setAttribute('aria-label', `Solo Tab ${stream.tabId}`)"), 'btnSolo must maintain aria-label attribute');
+assert(featureCode.includes("btnSolo.classList.add('solo-active')"), 'btnSolo must maintain solo-active dynamic styling on toggle');
+console.log('  ✅ Solo Tab button verified ICON ONLY (🎧) with full accessibility titles & ARIA');
+
+// 1.5 Verify Complete Removal of Domain Badge and metaRow Container
+assert(!featureCode.includes("deck-card-meta"), 'metaRow container must be completely removed from DOM');
+assert(!featureCode.includes("domainSpan"), 'domainSpan badge must be completely removed from DOM');
+console.log('  ✅ Complete removal of domainSpan badge and metaRow container from DOM verified');
+
+// 1.6 Verify Top Header Row Reorganization (favicon -> platformBadge -> statusPill)
+assert(featureCode.includes("topRow.appendChild(favicon)"), 'topRow must append favicon on left');
+assert(featureCode.includes("topRow.appendChild(platformBadge)"), 'topRow must append platformBadge next to favicon');
+assert(featureCode.includes("topRow.appendChild(statusPill)"), 'topRow must append statusPill on right of top row');
+console.log('  ✅ Top header row verified: favicon (left), platformBadge (left-center), statusPill (right)');
+
+// 1.7 Active slider focus/drag guard preserved
 assert(featureCode.includes("isCurrentActiveSlider"), 'Active slider focus guard preserved');
 assert(featureCode.includes("data-slider-tab-id"), 'Volume slider data-slider-tab-id attribute preserved');
 assert(featureCode.includes("aria-label"), 'Volume slider accessibility aria-label preserved');
 console.log('  ✅ Active slider focus/drag guard & accessibility attributes preserved\n');
 
 // ---------------------------------------------------------------------------
-// Battery 2: CSS Layout & Auto-Fit Styling (Phase 1)
+// Battery 2: CSS Layout & Auto-Fit Styling (Phase 1 & Reorganization)
 // ---------------------------------------------------------------------------
-console.log('Battery 2: CSS Layout & Auto-Fit Styling (Phase 1)');
+console.log('Battery 2: CSS Layout & Auto-Fit Styling (Phase 1 & Reorganization)');
 
 const cssPath = path.join(__dirname, '..', 'dashboard', 'styles', 'media.css');
 const cssCode = fs.readFileSync(cssPath, 'utf8');
@@ -72,9 +96,16 @@ assert(/\.deck-card-controls\s*\.btn-deck-ctrl\s*\{[^}]*min-width:\s*0/s.test(cs
 assert(/\.deck-card-controls\s*\.btn-deck-ctrl\s*\{[^}]*text-overflow:\s*ellipsis/s.test(cssCode), '.btn-deck-ctrl must have text-overflow: ellipsis');
 console.log('  ✅ .deck-card-controls flex: 1 1 0 auto-fit and ellipsis verified');
 
-// 2.4 Verify Light Theme Overrides
+// 2.4 Verify .btn-deck-mute and .deck-card-top CSS
+assert(cssCode.includes(".btn-deck-mute {"), 'media.css must define .btn-deck-mute');
+assert(cssCode.includes(".deck-card-top .deck-status-pill"), 'media.css must align status pill on right of topRow');
+assert(cssCode.includes(".deck-card-title {"), 'media.css must define .deck-card-title as dedicated title row');
+console.log('  ✅ .btn-deck-mute, .deck-card-top .deck-status-pill right alignment, and .deck-card-title verified');
+
+// 2.5 Verify Light Theme Overrides
 assert(cssCode.includes("body.theme-light .deck-volume-slider"), 'media.css must include body.theme-light .deck-volume-slider');
-console.log('  ✅ Light theme parity for deck volume slider verified\n');
+assert(cssCode.includes("body.theme-light .btn-deck-mute"), 'media.css must include body.theme-light .btn-deck-mute');
+console.log('  ✅ Light theme parity for deck volume slider and mute button verified\n');
 
 // ---------------------------------------------------------------------------
 // Battery 3: Two-Way Solo Tab Toggle Logic (Phase 2 - Feature Module)
@@ -252,6 +283,7 @@ function runBattery5() {
   const targetFiles = [
     path.join('src', 'dashboard', 'features', 'media_deck_visualizer_feature.js'),
     path.join('dashboard', 'styles', 'media.css'),
+    path.join('dashboard', 'dashboard.css'),
     'background.js'
   ];
 
