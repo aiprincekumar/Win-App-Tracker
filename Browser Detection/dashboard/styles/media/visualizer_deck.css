@@ -193,6 +193,11 @@
   width: 100% !important;
   z-index: 9999 !important;
   min-width: 190px !important;
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent !important;
   background: rgba(15, 23, 42, 0.95) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
@@ -205,6 +210,15 @@
   gap: 2px !important;
   animation: vizPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
+
+#vizPillPopoverMenu::-webkit-scrollbar,
+.viz-pill-popover-menu::-webkit-scrollbar { width: 4px !important; }
+#vizPillPopoverMenu::-webkit-scrollbar-track,
+.viz-pill-popover-menu::-webkit-scrollbar-track { background: transparent !important; }
+#vizPillPopoverMenu::-webkit-scrollbar-thumb,
+.viz-pill-popover-menu::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4) !important; border-radius: 4px !important; }
+#vizPillPopoverMenu::-webkit-scrollbar-thumb:hover,
+.viz-pill-popover-menu::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.7) !important; }
 
 #vizPillPopoverMenu[hidden],
 .viz-pill-popover-menu[hidden] {
@@ -642,47 +656,12 @@
 /* ========================================================================= */
 /* 4. LIGHT THEME HARMONIZATION                                              */
 /* ========================================================================= */
-body.theme-light .visualizer-controls-bar {
-  background: rgba(241, 245, 249, 0.8) !important;
-  border-color: rgba(203, 213, 225, 0.8) !important;
-}
-
-body.theme-light .viz-pill-trigger {
-  background: #ffffff !important;
-  border-color: rgba(99, 102, 241, 0.4) !important;
-  color: #0f172a !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-}
-
-body.theme-light .viz-pill-popover-menu {
-  background: rgba(255, 255, 255, 0.98) !important;
-  border-color: rgba(99, 102, 241, 0.3) !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
-}
-
-body.theme-light .viz-popover-option {
-  color: #334155 !important;
-}
-
-body.theme-light .viz-popover-option:hover {
-  background: rgba(99, 102, 241, 0.1) !important;
-  color: #4338ca !important;
-}
-
-body.theme-light .viz-settings-drawer {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-bottom-color: rgba(99, 102, 241, 0.3) !important;
-}
-
-body.theme-light .viz-drawer-label {
-  color: #334155 !important;
-}
-
-body.theme-light .viz-subcanvas-deck {
-  border-color: rgba(203, 213, 225, 0.8) !important;
-}
-
-body.theme-light .vu-meters-container {
-  background: rgba(241, 245, 249, 0.8) !important;
-  border-color: rgba(203, 213, 225, 0.8) !important;
-}
+body.theme-light .visualizer-controls-bar { background: rgba(241, 245, 249, 0.8) !important; border-color: rgba(203, 213, 225, 0.8) !important; }
+body.theme-light .viz-pill-trigger { background: #ffffff !important; border-color: rgba(99, 102, 241, 0.4) !important; color: #0f172a !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important; }
+body.theme-light .viz-pill-popover-menu { background: rgba(255, 255, 255, 0.98) !important; border-color: rgba(99, 102, 241, 0.3) !important; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important; }
+body.theme-light .viz-popover-option { color: #334155 !important; }
+body.theme-light .viz-popover-option:hover { background: rgba(99, 102, 241, 0.1) !important; color: #4338ca !important; }
+body.theme-light .viz-settings-drawer { background: rgba(255, 255, 255, 0.95) !important; border-bottom-color: rgba(99, 102, 241, 0.3) !important; }
+body.theme-light .viz-drawer-label { color: #334155 !important; }
+body.theme-light .viz-subcanvas-deck { border-color: rgba(203, 213, 225, 0.8) !important; }
+body.theme-light .vu-meters-container { background: rgba(241, 245, 249, 0.8) !important; border-color: rgba(203, 213, 225, 0.8) !important; }

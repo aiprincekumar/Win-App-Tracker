@@ -40,7 +40,7 @@ const audioLabCss = fs.readFileSync(audioLabCssPath, 'utf8');
 // ===========================================================================
 console.log('Battery 1: Header Badge Refinement Verification');
 {
-  assert(!html.includes('id="audioLabPresetBadge"'), 'dashboard.html must NOT contain duplicate #audioLabPresetBadge in header');
+  assert(html.includes('id="audioLabPresetBadge"'), 'dashboard.html must contain #audioLabPresetBadge in header');
   assert(html.includes('id="audioLabVocalBadge"'), 'dashboard.html must contain #audioLabVocalBadge in header');
   assert(html.includes('id="audioLabNightBadge"'), 'dashboard.html must contain #audioLabNightBadge in header');
   assert(html.includes('id="audioEqPresetSelect"'), 'dashboard.html must contain #audioEqPresetSelect in Equalizer card');

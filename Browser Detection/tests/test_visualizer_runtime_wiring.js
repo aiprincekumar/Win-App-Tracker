@@ -58,7 +58,10 @@ console.log('Battery 1: DOM Invariant & Script Tag Presence in dashboard.html');
     assert(html.includes(`id="${id}"`), `dashboard.html must declare element #${id}`);
   });
 
-  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const expectedModes = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
   expectedModes.forEach(mode => {
     assert(html.includes(`value="${mode}"`), `dashboard.html must contain effect option value="${mode}"`);
   });
@@ -146,7 +149,10 @@ console.log('\nBattery 3: Interactive 6-Effect Mode Switcher & Dropdown Sync');
     addEventListener: () => {}
   };
 
-  const ALL_MODES = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const ALL_MODES = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
 
   ALL_MODES.forEach((mode) => {
     const res = feature.setVisualizerMode(mode, { doc: mockDoc });

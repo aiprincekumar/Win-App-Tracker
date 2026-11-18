@@ -3230,12 +3230,14 @@ function setupEventListeners() {
     }
   } catch (_) {}
 
-  let popupFocusState = {
-    status: 'idle', // 'idle' | 'running' | 'paused'
+  let popupFocusBackendState = {
+    state: 'IDLE',
+    mode: 'focus',
+    durationMinutes: 25,
     remainingSeconds: 25 * 60,
-    totalSeconds: 25 * 60,
-    timerId: null
+    targetTime: null
   };
+  let popupFocusTicker = null;
 
   function formatPopupFocusClock(sec) {
     const s = Math.max(0, Math.floor(sec || 0));
@@ -3244,61 +3246,101 @@ function setupEventListeners() {
     return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
   }
 
-  function updatePopupFocusUI() {
-    if (popupFocusClock) {
-      popupFocusClock.textContent = formatPopupFocusClock(popupFocusState.remainingSeconds);
+  function renderPopupFocusTick() {
+    let remaining = popupFocusBackendState.remainingSeconds;
+    const isRunning = (popupFocusBackendState.state === 'RUNNING_FOCUS' || popupFocusBackendState.state === 'RUNNING_BREAK');
+    if (isRunning && popupFocusBackendState.targetTime) {
+      remaining = Math.max(0, Math.round((popupFocusBackendState.targetTime - Date.now()) / 1000));
     }
+    if (popupFocusClock) {
+      popupFocusClock.textContent = formatPopupFocusClock(remaining);
+    }
+  }
+
+  function syncPopupFocusState(bgState) {
+    if (!bgState) return;
+    popupFocusBackendState = { ...popupFocusBackendState, ...bgState };
+    const isRunning = (popupFocusBackendState.state === 'RUNNING_FOCUS' || popupFocusBackendState.state === 'RUNNING_BREAK');
+    const isPaused = (popupFocusBackendState.state === 'PAUSED_FOCUS' || popupFocusBackendState.state === 'PAUSED_BREAK');
+    const status = isRunning ? 'running' : (isPaused ? 'paused' : 'idle');
+
+    let remaining = popupFocusBackendState.remainingSeconds;
+    if (isRunning && popupFocusBackendState.targetTime) {
+      remaining = Math.max(0, Math.round((popupFocusBackendState.targetTime - Date.now()) / 1000));
+    } else if (remaining === undefined || remaining === null) {
+      remaining = (popupFocusBackendState.durationMinutes || 25) * 60;
+    }
+
+    if (popupFocusClock) {
+      popupFocusClock.textContent = formatPopupFocusClock(remaining);
+    }
+
     if (popupFocusBadge) {
-      popupFocusBadge.className = 'popup-focus-badge ' + popupFocusState.status;
-      if (popupFocusState.status === 'running') {
-        popupFocusBadge.textContent = 'Active';
-      } else if (popupFocusState.status === 'paused') {
+      popupFocusBadge.className = 'popup-focus-badge ' + status;
+      if (isRunning) {
+        popupFocusBadge.textContent = popupFocusBackendState.mode === 'break' ? 'Break' : 'Active';
+      } else if (isPaused) {
         popupFocusBadge.textContent = 'Paused';
       } else {
-        popupFocusBadge.textContent = '25m';
+        const mins = popupFocusBackendState.durationMinutes || 25;
+        popupFocusBadge.textContent = `${mins}m`;
       }
     }
+
     if (btnPopupFocusToggle) {
-      if (popupFocusState.status === 'running') {
+      if (isRunning) {
         btnPopupFocusToggle.textContent = '⏸️';
         btnPopupFocusToggle.title = 'Pause Focus';
+      } else if (isPaused) {
+        btnPopupFocusToggle.textContent = '▶️';
+        btnPopupFocusToggle.title = 'Resume Focus';
       } else {
         btnPopupFocusToggle.textContent = '▶️';
         btnPopupFocusToggle.title = 'Start Focus';
       }
     }
+
+    if (isRunning) {
+      if (!popupFocusTicker) {
+        popupFocusTicker = setInterval(renderPopupFocusTick, 1000);
+      }
+    } else {
+      if (popupFocusTicker) {
+        clearInterval(popupFocusTicker);
+        popupFocusTicker = null;
+      }
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.syncPopupFocusState = syncPopupFocusState;
   }
 
   if (btnPopupFocusToggle) {
     btnPopupFocusToggle.addEventListener('click', () => {
-      if (popupFocusState.status === 'running') {
-        popupFocusState.status = 'paused';
-        if (popupFocusState.timerId) {
-          clearInterval(popupFocusState.timerId);
-          popupFocusState.timerId = null;
+      const isRunning = (popupFocusBackendState.state === 'RUNNING_FOCUS' || popupFocusBackendState.state === 'RUNNING_BREAK');
+      const isPaused = (popupFocusBackendState.state === 'PAUSED_FOCUS' || popupFocusBackendState.state === 'PAUSED_BREAK');
+
+      if (isRunning) {
+        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+          browserAPI.runtime.sendMessage({ action: 'PAUSE_FOCUS_TIMER' }, (res) => {
+            if (res && res.state) syncPopupFocusState(res.state);
+          });
         }
-        updatePopupFocusUI();
         showPopupToast('Focus timer paused');
+      } else if (isPaused) {
+        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+          browserAPI.runtime.sendMessage({ action: 'RESUME_FOCUS_TIMER' }, (res) => {
+            if (res && res.state) syncPopupFocusState(res.state);
+          });
+        }
+        showPopupToast('Focus timer resumed');
       } else {
-        popupFocusState.status = 'running';
-        if (popupFocusState.timerId) clearInterval(popupFocusState.timerId);
-        popupFocusState.timerId = setInterval(() => {
-          if (popupFocusState.remainingSeconds > 0) {
-            popupFocusState.remainingSeconds--;
-            updatePopupFocusUI();
-          } else {
-            popupFocusState.status = 'idle';
-            popupFocusState.remainingSeconds = popupFocusState.totalSeconds;
-            if (popupFocusState.timerId) {
-              clearInterval(popupFocusState.timerId);
-              popupFocusState.timerId = null;
-            }
-            updatePopupFocusUI();
-            showPopupToast('🧘 Focus cycle complete!');
-            playNotificationChime();
-          }
-        }, 1000);
-        updatePopupFocusUI();
+        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+          browserAPI.runtime.sendMessage({ action: 'START_FOCUS_TIMER', durationMinutes: 25, mode: 'focus' }, (res) => {
+            if (res && res.state) syncPopupFocusState(res.state);
+          });
+        }
         showPopupToast('Focus timer started (25m)');
       }
     });
@@ -3306,15 +3348,23 @@ function setupEventListeners() {
 
   if (btnPopupFocusReset) {
     btnPopupFocusReset.addEventListener('click', () => {
-      popupFocusState.status = 'idle';
-      popupFocusState.remainingSeconds = popupFocusState.totalSeconds;
-      if (popupFocusState.timerId) {
-        clearInterval(popupFocusState.timerId);
-        popupFocusState.timerId = null;
+      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+        browserAPI.runtime.sendMessage({ action: 'RESET_FOCUS_TIMER' }, (res) => {
+          if (res && res.state) syncPopupFocusState(res.state);
+        });
       }
-      updatePopupFocusUI();
       showPopupToast('Focus timer reset');
     });
+  }
+
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    try {
+      browserAPI.runtime.sendMessage({ action: 'GET_FOCUS_TIMER_STATE' }, (res) => {
+        if (res && res.success && res.state) {
+          syncPopupFocusState(res.state);
+        }
+      });
+    } catch (_) {}
   }
 
   if (btnGoToTracking) {
@@ -4736,6 +4786,22 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (message && message.type === 'TRACKING_PAUSE_CHANGED') {
       isTrackingPaused = Boolean(message.isTrackingPaused);
       updateTrackingPauseButtonUI(isTrackingPaused);
+    } else if (message && (message.type === 'FOCUS_TIMER_STATE_CHANGED' || message.action === 'FOCUS_TIMER_STATE_CHANGED')) {
+      if (message.state && typeof syncPopupFocusState === 'function') {
+        syncPopupFocusState(message.state);
+      }
+    } else if (message && (message.type === 'FOCUS_TIMER_COMPLETED' || message.action === 'FOCUS_TIMER_COMPLETED')) {
+      showPopupToast('🧘 Focus cycle complete!');
+      if (typeof playNotificationChime === 'function') playNotificationChime();
+      if (message.state && typeof syncPopupFocusState === 'function') {
+        syncPopupFocusState(message.state);
+      }
+    } else if (message && (message.type === 'FOCUS_BREAK_COMPLETED' || message.action === 'FOCUS_BREAK_COMPLETED')) {
+      showPopupToast('⚡ Break finished!');
+      if (typeof playNotificationChime === 'function') playNotificationChime();
+      if (message.state && typeof syncPopupFocusState === 'function') {
+        syncPopupFocusState(message.state);
+      }
     }
   });
 
@@ -4745,6 +4811,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (changes.sentinel_tracking_paused) {
         isTrackingPaused = Boolean(changes.sentinel_tracking_paused.newValue);
         updateTrackingPauseButtonUI(isTrackingPaused);
+      }
+      if (changes.sentinel_focus_timer && changes.sentinel_focus_timer.newValue) {
+        if (typeof syncPopupFocusState === 'function') {
+          syncPopupFocusState(changes.sentinel_focus_timer.newValue);
+        }
       }
       if (changes.sentinel_sleep_timer) {
         renderSleepTimerUI(changes.sentinel_sleep_timer.newValue);

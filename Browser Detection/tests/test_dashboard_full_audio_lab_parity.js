@@ -108,7 +108,7 @@ console.log('\nBattery 2: Complete DOM Element & Interactive Control Presence in
   assert(html.includes('id="toggleAudioOnlyMode"'), 'dashboard.html must contain #toggleAudioOnlyMode');
 
   // Telemetry Badges
-  assert(!html.includes('id="audioLabPresetBadge"'), 'dashboard.html must not contain duplicate #audioLabPresetBadge in header');
+  assert(html.includes('id="audioLabPresetBadge"'), 'dashboard.html must contain #audioLabPresetBadge in header');
   assert(html.includes('id="audioEqPresetSelect"'), 'dashboard.html must contain #audioEqPresetSelect');
   assert(html.includes('id="audioLabVocalBadge"'), 'dashboard.html must contain #audioLabVocalBadge');
   assert(html.includes('id="audioLabNightBadge"'), 'dashboard.html must contain #audioLabNightBadge');

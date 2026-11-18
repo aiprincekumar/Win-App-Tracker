@@ -416,6 +416,40 @@ let sleepTimerSettings = { ...DEFAULT_SLEEP_SETTINGS };
 const SLEEP_ALARM_NAME = 'sentinel_sleep_timer_alarm';
 const SLEEP_FADE_ALARM_NAME = 'sentinel_sleep_fade_alarm';
 
+// Focus Sentinel & Pomodoro Subsystem Schemas (Phase 2)
+const FOCUS_TIMER_ALARM_NAME = 'sentinel_focus_timer_alarm';
+const FOCUS_BREAK_ALARM_NAME = 'sentinel_focus_break_alarm';
+
+const DEFAULT_FOCUS_SETTINGS = Object.freeze({
+  focusDurationMinutes: 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  sessionsBeforeLongBreak: 4,
+  autoPauseMedia: true,
+  soundChime: true,
+  autoStartBreak: false,
+  autoStartNextFocus: false,
+  showBadgeCountdown: true
+});
+
+const INITIAL_FOCUS_TIMER_STATE = Object.freeze({
+  state: 'IDLE', // 'IDLE' | 'RUNNING_FOCUS' | 'PAUSED_FOCUS' | 'RUNNING_BREAK' | 'PAUSED_BREAK' | 'COMPLETED'
+  mode: 'focus', // 'focus' | 'break'
+  durationMinutes: 25,
+  remainingSeconds: 1500,
+  targetTime: null,
+  sessionStartedAt: null,
+  pausedAt: null,
+  completedSessionsToday: 0,
+  autoPauseMedia: true,
+  soundChime: true,
+  updatedAt: Date.now()
+});
+
+let focusTimerState = { ...INITIAL_FOCUS_TIMER_STATE };
+let focusTimerSettings = { ...DEFAULT_FOCUS_SETTINGS };
+let dailyFocusMetrics = {};
+
 // Digital Wellness & Doomscroll Breaker Alarm Subsystem (Phase 3: Defect 12)
 const DOOMSCROLL_ENTERTAINMENT_HOSTS = ['youtube.com', 'instagram.com', 'tiktok.com', 'twitter.com', 'x.com', 'reddit.com', 'netflix.com'];
 const DOOMSCROLL_ALARM_NAME = 'DOOMSCROLL_CHECK_ALARM';
@@ -1135,6 +1169,9 @@ async function loadStorageData() {
       'language',
       'sentinel_sleep_timer',
       'sentinel_sleep_settings',
+      'sentinel_focus_timer',
+      'sentinel_focus_settings',
+      'daily_focus_metrics',
       'sentinel_tracking_paused',
       'tracking_blacklist',
       'domain_budgets'
@@ -1236,6 +1273,35 @@ async function loadStorageData() {
       } else if (sleepTimerState.state === 'RUNNING') {
         const remainingMs = sleepTimerState.targetTime - now;
         updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      }
+    }
+
+    // Hydrate Focus Sentinel & Timer Settings from persistent storage
+    if (res && res.sentinel_focus_settings) {
+      focusTimerSettings = { ...DEFAULT_FOCUS_SETTINGS, ...res.sentinel_focus_settings };
+    }
+    if (res && res.daily_focus_metrics && typeof res.daily_focus_metrics === 'object') {
+      dailyFocusMetrics = res.daily_focus_metrics;
+    }
+    if (res && res.sentinel_focus_timer) {
+      focusTimerState = { ...INITIAL_FOCUS_TIMER_STATE, ...res.sentinel_focus_timer };
+      const now = Date.now();
+      if ((focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') && focusTimerState.targetTime) {
+        if (focusTimerState.targetTime <= now) {
+          if (focusTimerState.mode === 'focus') {
+            await handleFocusTimerExpired();
+          } else {
+            await handleFocusBreakExpired();
+          }
+        } else {
+          focusTimerState.remainingSeconds = Math.max(0, Math.round((focusTimerState.targetTime - now) / 1000));
+          try {
+            browserAPI.alarms.create(focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: focusTimerState.targetTime });
+          } catch (_) {}
+          if (focusTimerSettings.showBadgeCountdown) {
+            updateFocusActionBadge(focusTimerState.targetTime - now);
+          }
+        }
       }
     }
 
@@ -1345,7 +1411,7 @@ async function scheduleSleepTimerAlarms(state) {
  */
 async function triggerSleepTimerExpiration() {
   await ensureStorageLoaded();
-  console.info('[MediaSentinel] 🌙 Sleep timer expired! Pausing media streams and freezing counters.');
+  console.info('[MediaSentinel] 🌙 Sleep timer expired! Triggering configured timeout action.');
 
   sleepTimerState.state = 'TRIGGERED';
   sleepTimerState.triggeredAt = Date.now();
@@ -1353,9 +1419,26 @@ async function triggerSleepTimerExpiration() {
 
   clearActionBadge();
 
-  // Broadcast global pause to all media tabs
-  if (sleepTimerState.pauseMedia) {
-    await dispatchGlobalMediaAction('PAUSE_ALL');
+  const action = String(
+    sleepTimerState.timeoutAction || 
+    sleepTimerState.timeout_action || 
+    (typeof sleepTimerSettings !== 'undefined' && (sleepTimerSettings.timeoutAction || sleepTimerSettings.timeout_action)) || 
+    (sleepTimerState.pauseMedia ? 'pause' : 'none')
+  ).toLowerCase();
+
+  if (action === 'mute') {
+    if (typeof handleMuteAllExecution === 'function') {
+      await handleMuteAllExecution();
+    }
+  } else if (action === 'close' || action === 'close_tab') {
+    if (typeof dispatchGlobalMediaAction === 'function') {
+      await dispatchGlobalMediaAction('PAUSE_ALL').catch(() => {});
+    }
+    await closeAllMediaTabs();
+  } else if (action === 'pause' || sleepTimerState.pauseMedia) {
+    if (typeof dispatchGlobalMediaAction === 'function') {
+      await dispatchGlobalMediaAction('PAUSE_ALL');
+    }
   }
 
   // Freeze active tracking intervals
@@ -1370,6 +1453,30 @@ async function triggerSleepTimerExpiration() {
     type: 'SLEEP_TIMER_EXPIRED',
     state: sleepTimerState
   });
+}
+
+/**
+ * Closes all candidate media tabs when sleep timer expires with action 'close'
+ * @returns {Promise<{success: boolean, closedCount: number}>}
+ */
+async function closeAllMediaTabs() {
+  let tabsToClose = [];
+  if (typeof collectCandidateTabs === 'function') {
+    tabsToClose = await collectCandidateTabs();
+  } else if (browserAPI && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    const all = await browserAPI.tabs.query({}).catch(() => []);
+    tabsToClose = (all || []).map(t => t.id).filter(Boolean);
+  }
+  let closedCount = 0;
+  for (const tabId of tabsToClose) {
+    try {
+      if (browserAPI && browserAPI.tabs && typeof browserAPI.tabs.remove === 'function') {
+        await browserAPI.tabs.remove(tabId).catch(() => {});
+        closedCount++;
+      }
+    } catch (_) {}
+  }
+  return { success: true, closedCount };
 }
 
 /**
@@ -1651,6 +1758,25 @@ function clearActionBadge() {
 }
 
 /**
+ * Updates extension action toolbar badge text and background color for Focus Timer
+ */
+function updateFocusActionBadge(remainingMs) {
+  if (!browserAPI.action || typeof browserAPI.action.setBadgeText !== 'function') return;
+  if (sleepTimerState && sleepTimerState.state === 'RUNNING') return;
+  if (!focusTimerSettings.showBadgeCountdown || remainingMs <= 0) {
+    clearActionBadge();
+    return;
+  }
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  const text = remainingSec >= 60 ? `${Math.ceil(remainingSec / 60)}m` : `${remainingSec}s`;
+  const color = focusTimerState.mode === 'focus' ? '#10b981' : '#f59e0b';
+  try {
+    browserAPI.action.setBadgeText({ text });
+    browserAPI.action.setBadgeBackgroundColor({ color });
+  } catch (_) {}
+}
+
+/**
  * Dispatches global play/pause/resume across all active media tabs and sessions
  */
 async function dispatchGlobalMediaAction(command = 'TOGGLE') {
@@ -1697,6 +1823,392 @@ async function dispatchGlobalMediaAction(command = 'TOGGLE') {
     isPlaying: targetAction === 'RESUME',
     activeCount: targetTabs.size
   };
+}
+
+// =============================================================================
+// Focus Sentinel & Pomodoro Subsystem (Phase 2): Storage, FSM, Alarms & Metrics
+// =============================================================================
+
+/**
+ * Persists focus timer state to chrome.storage.local
+ */
+async function saveFocusTimerState() {
+  try {
+    focusTimerState.updatedAt = Date.now();
+    await browserAPI.storage.local.set({ sentinel_focus_timer: focusTimerState });
+  } catch (err) {
+    console.error('[FocusSentinel] Failed to save focus timer state:', err);
+  }
+}
+
+/**
+ * Persists user focus settings to chrome.storage.local
+ */
+async function saveFocusSettings(newSettings) {
+  try {
+    focusTimerSettings = { ...DEFAULT_FOCUS_SETTINGS, ...focusTimerSettings, ...newSettings };
+    await browserAPI.storage.local.set({ sentinel_focus_settings: focusTimerSettings });
+    if (!focusTimerSettings.showBadgeCountdown) {
+      if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+        clearActionBadge();
+      }
+    } else if (focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') {
+      if (focusTimerState.targetTime) {
+        updateFocusActionBadge(focusTimerState.targetTime - Date.now());
+      }
+    }
+  } catch (err) {
+    console.error('[FocusSentinel] Failed to save focus settings:', err);
+  }
+}
+
+/**
+ * Persists daily focus metrics to chrome.storage.local
+ */
+async function saveDailyFocusMetrics() {
+  try {
+    await browserAPI.storage.local.set({ daily_focus_metrics: dailyFocusMetrics });
+  } catch (err) {
+    console.error('[FocusSentinel] Failed to save daily focus metrics:', err);
+  }
+}
+
+/**
+ * Broadcasts focus timer state to open extension views (dashboard, popup)
+ */
+function broadcastFocusTimerState(eventType = 'FOCUS_TIMER_STATE_CHANGED') {
+  safeSendRuntimeMessage({
+    type: eventType,
+    action: eventType,
+    state: focusTimerState,
+    settings: focusTimerSettings
+  });
+}
+
+/**
+ * Dispatches pause commands to all active media tabs
+ */
+async function pauseAllMediaTabs() {
+  try {
+    await dispatchGlobalMediaAction('PAUSE_ALL');
+    const tabs = await browserAPI.tabs.query({});
+    for (const tab of tabs) {
+      if (!tab.id || !tab.url || isRestrictedTabUrl(tab.url)) continue;
+      safeSendTabMessage(tab.id, { action: 'PAUSE', type: 'PAUSE' });
+    }
+  } catch (err) {
+    console.warn('[FocusSentinel] Media pause dispatch error:', err);
+  }
+}
+
+/**
+ * Starts a new focus or break session with specified duration
+ */
+async function startFocusTimer(durationMinutes, mode = 'focus') {
+  await ensureStorageLoaded();
+  const rawMins = parseInt(durationMinutes, 10);
+  const defMins = (mode === 'focus')
+    ? (focusTimerSettings.focusDurationMinutes || 25)
+    : (focusTimerSettings.shortBreakMinutes || 5);
+  const mins = (!isNaN(rawMins) && rawMins > 0) ? rawMins : defMins;
+
+  const now = Date.now();
+  const durationMs = mins * 60 * 1000;
+  const targetTime = now + durationMs;
+
+  try {
+    await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
+    await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
+  } catch (_) {}
+
+  focusTimerState = {
+    ...focusTimerState,
+    state: mode === 'focus' ? 'RUNNING_FOCUS' : 'RUNNING_BREAK',
+    mode,
+    durationMinutes: mins,
+    remainingSeconds: mins * 60,
+    targetTime,
+    sessionStartedAt: now,
+    pausedAt: null,
+    updatedAt: now
+  };
+
+  try {
+    browserAPI.alarms.create(mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: targetTime });
+  } catch (_) {}
+
+  if (focusTimerState.autoPauseMedia && mode === 'focus') {
+    await pauseAllMediaTabs();
+  }
+
+  if (focusTimerSettings.showBadgeCountdown) {
+    updateFocusActionBadge(durationMs);
+  }
+
+  await saveFocusTimerState();
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+
+  return { success: true, state: focusTimerState };
+}
+
+/**
+ * Pauses active focus or break timer
+ */
+async function pauseFocusTimer() {
+  await ensureStorageLoaded();
+  if (focusTimerState.state !== 'RUNNING_FOCUS' && focusTimerState.state !== 'RUNNING_BREAK') {
+    return { success: false, error: 'Timer is not running', state: focusTimerState };
+  }
+
+  const now = Date.now();
+  const remainingSeconds = Math.max(0, Math.round(((focusTimerState.targetTime || now) - now) / 1000));
+
+  try {
+    await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
+    await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
+  } catch (_) {}
+
+  focusTimerState = {
+    ...focusTimerState,
+    state: focusTimerState.mode === 'focus' ? 'PAUSED_FOCUS' : 'PAUSED_BREAK',
+    pausedAt: now,
+    remainingSeconds: remainingSeconds,
+    targetTime: null,
+    updatedAt: now
+  };
+
+  if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+    clearActionBadge();
+  }
+
+  await saveFocusTimerState();
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+
+  return { success: true, state: focusTimerState };
+}
+
+/**
+ * Resumes paused focus or break timer
+ */
+async function resumeFocusTimer() {
+  await ensureStorageLoaded();
+  if (focusTimerState.state !== 'PAUSED_FOCUS' && focusTimerState.state !== 'PAUSED_BREAK') {
+    return { success: false, error: 'Timer is not paused', state: focusTimerState };
+  }
+
+  const now = Date.now();
+  const remainingSec = focusTimerState.remainingSeconds || (focusTimerState.durationMinutes * 60) || 1500;
+  const targetTime = now + (remainingSec * 1000);
+
+  focusTimerState = {
+    ...focusTimerState,
+    state: focusTimerState.mode === 'focus' ? 'RUNNING_FOCUS' : 'RUNNING_BREAK',
+    targetTime,
+    pausedAt: null,
+    updatedAt: now
+  };
+
+  try {
+    await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
+    await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
+  } catch (_) {}
+
+  try {
+    browserAPI.alarms.create(focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: targetTime });
+  } catch (_) {}
+
+  if (focusTimerSettings.showBadgeCountdown) {
+    updateFocusActionBadge(remainingSec * 1000);
+  }
+
+  await saveFocusTimerState();
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+
+  return { success: true, state: focusTimerState };
+}
+
+/**
+ * Extends active or paused focus timer by extra minutes
+ */
+async function extendFocusTimer(extraMinutes = 5) {
+  await ensureStorageLoaded();
+  const minsToAdd = parseInt(extraMinutes, 10);
+  if (isNaN(minsToAdd) || minsToAdd <= 0) {
+    return { success: false, error: 'Invalid extraMinutes', state: focusTimerState };
+  }
+
+  const extraSec = minsToAdd * 60;
+  focusTimerState.remainingSeconds = (focusTimerState.remainingSeconds || 0) + extraSec;
+  focusTimerState.durationMinutes = (focusTimerState.durationMinutes || 25) + minsToAdd;
+
+  const now = Date.now();
+  if (focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') {
+    focusTimerState.targetTime = (focusTimerState.targetTime || now) + (minsToAdd * 60000);
+    try {
+      await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
+      await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
+    } catch (_) {}
+    try {
+      browserAPI.alarms.create(focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: focusTimerState.targetTime });
+    } catch (_) {}
+    if (focusTimerSettings.showBadgeCountdown) {
+      updateFocusActionBadge(focusTimerState.targetTime - now);
+    }
+  }
+
+  focusTimerState.updatedAt = now;
+  await saveFocusTimerState();
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+
+  return { success: true, state: focusTimerState };
+}
+
+/**
+ * Resets focus timer to initial idle state
+ */
+async function resetFocusTimer() {
+  await ensureStorageLoaded();
+  try {
+    await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
+    await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
+  } catch (_) {}
+
+  const defMins = focusTimerSettings.focusDurationMinutes || 25;
+  focusTimerState = {
+    ...INITIAL_FOCUS_TIMER_STATE,
+    durationMinutes: defMins,
+    remainingSeconds: defMins * 60,
+    completedSessionsToday: focusTimerState.completedSessionsToday || 0,
+    updatedAt: Date.now()
+  };
+
+  if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+    clearActionBadge();
+  }
+
+  await saveFocusTimerState();
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+
+  return { success: true, state: focusTimerState };
+}
+
+/**
+ * Handles expiration of a focus block
+ */
+async function handleFocusTimerExpired() {
+  await ensureStorageLoaded();
+  console.info('[FocusSentinel] 🧘 Focus block completed! Incrementing metrics and updating state.');
+
+  const now = Date.now();
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  if (!dailyFocusMetrics[todayKey]) {
+    dailyFocusMetrics[todayKey] = {
+      date: todayKey,
+      totalFocusSeconds: 0,
+      completedSessions: 0,
+      interruptedSessions: 0,
+      sessionHistory: []
+    };
+  }
+
+  const sessionDurationSec = (focusTimerState.durationMinutes || 25) * 60;
+  dailyFocusMetrics[todayKey].totalFocusSeconds += sessionDurationSec;
+  dailyFocusMetrics[todayKey].completedSessions += 1;
+  dailyFocusMetrics[todayKey].sessionHistory.push({
+    startedAt: focusTimerState.sessionStartedAt || (now - sessionDurationSec * 1000),
+    completedAt: now,
+    durationMinutes: focusTimerState.durationMinutes || 25,
+    mode: 'focus'
+  });
+
+  focusTimerState.completedSessionsToday = dailyFocusMetrics[todayKey].completedSessions;
+
+  await saveDailyFocusMetrics();
+
+  // Create native desktop notification if enabled
+  try {
+    if (browserAPI.notifications && typeof browserAPI.notifications.create === 'function') {
+      browserAPI.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: '🧘 Focus Block Completed!',
+        message: 'Great job! Time to take a restful break.'
+      });
+    }
+  } catch (_) {}
+
+  if (focusTimerSettings.autoStartBreak) {
+    const isLong = (dailyFocusMetrics[todayKey].completedSessions % (focusTimerSettings.sessionsBeforeLongBreak || 4)) === 0;
+    const breakMins = isLong ? (focusTimerSettings.longBreakMinutes || 15) : (focusTimerSettings.shortBreakMinutes || 5);
+    await startFocusTimer(breakMins, 'break');
+  } else {
+    focusTimerState = {
+      ...focusTimerState,
+      state: 'COMPLETED',
+      remainingSeconds: 0,
+      targetTime: null,
+      updatedAt: now
+    };
+    if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+      clearActionBadge();
+    }
+    await saveFocusTimerState();
+  }
+
+  safeSendRuntimeMessage({
+    type: 'FOCUS_TIMER_COMPLETED',
+    action: 'FOCUS_TIMER_COMPLETED',
+    state: focusTimerState,
+    todayMetrics: dailyFocusMetrics[todayKey]
+  });
+
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
+}
+
+/**
+ * Handles expiration of a break block
+ */
+async function handleFocusBreakExpired() {
+  await ensureStorageLoaded();
+  console.info('[FocusSentinel] ⚡ Break completed! Ready for next focus block.');
+  const now = Date.now();
+
+  try {
+    if (browserAPI.notifications && typeof browserAPI.notifications.create === 'function') {
+      browserAPI.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: '⚡ Break Finished!',
+        message: 'Break is over. Ready to begin your next focus block!'
+      });
+    }
+  } catch (_) {}
+
+  if (focusTimerSettings.autoStartNextFocus) {
+    await startFocusTimer(focusTimerSettings.focusDurationMinutes || 25, 'focus');
+  } else {
+    const defMins = focusTimerSettings.focusDurationMinutes || 25;
+    focusTimerState = {
+      ...INITIAL_FOCUS_TIMER_STATE,
+      durationMinutes: defMins,
+      remainingSeconds: defMins * 60,
+      completedSessionsToday: focusTimerState.completedSessionsToday || 0,
+      updatedAt: now
+    };
+    if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+      clearActionBadge();
+    }
+    await saveFocusTimerState();
+  }
+
+  safeSendRuntimeMessage({
+    type: 'FOCUS_BREAK_COMPLETED',
+    action: 'FOCUS_BREAK_COMPLETED',
+    state: focusTimerState
+  });
+
+  broadcastFocusTimerState('FOCUS_TIMER_STATE_CHANGED');
 }
 
 /**
@@ -2835,37 +3347,85 @@ async function handleSoloTabExecution(soloTabId) {
 }
 
 /**
+ * Resolves candidate primary media tab using 5-tier waterfall selection.
+ * @param {number|string|null} [primaryTabId]
+ * @param {object} [bApi]
+ * @param {Map} [tMap]
+ * @param {Map} [aSessions]
+ * @param {Array} [mHistory]
+ * @returns {Promise<number>}
+ */
+async function resolveCandidatePrimaryTab(primaryTabId, bApi, tMap, aSessions, mHistory) {
+  let targetId = Number(primaryTabId) || 0;
+  if (targetId > 0) return targetId;
+  const b = bApi || (typeof browserAPI !== 'undefined' ? browserAPI : null);
+  const tm = tMap || (typeof tabMediaMap !== 'undefined' ? tabMediaMap : null);
+  const am = aSessions || (typeof activeMediaSessions !== 'undefined' ? activeMediaSessions : null);
+  const mh = mHistory || (typeof mediaHistory !== 'undefined' ? mediaHistory : []);
+  if (tm && typeof tm.entries === 'function') {
+    for (const [tId, d] of tm.entries()) {
+      if (d?.anyPlaying || d?.primaryMedia?.isPlaying || d?.audible) return Number(tId);
+    }
+  }
+  if (am && typeof am.entries === 'function') {
+    for (const [tId, s] of am.entries()) {
+      if (s?.isPlaying || s?.playbackState === 'playing' || s?.isAudible) return Number(s?.tabId || tId);
+    }
+  }
+  if (b?.tabs?.query) {
+    const audible = await b.tabs.query({ audible: true }).catch(() => []);
+    const cand = (audible || []).find(t => t?.id && (typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
+    if (cand?.id) return cand.id;
+  }
+  let bestTime = 0, bestId = 0;
+  const consider = (id, time) => { const n = Number(id); if (n > 0 && time > bestTime) { bestTime = time; bestId = n; } };
+  if (am && typeof am.forEach === 'function') {
+    am.forEach((s, t) => consider(s?.tabId || t, Math.max(s?.lastPlaybackTimestamp || 0, s?.lastActiveTime || 0, s?.lastUpdated || 0, s?.lastHeartbeat || 0, s?.timestamp || 0)));
+  }
+  if (Array.isArray(mh)) {
+    mh.forEach(m => consider(m?.tabId, Math.max(m?.lastPlaybackTimestamp || 0, m?.lastActiveTime || 0, m?.lastUpdated || 0, m?.timestamp || 0)));
+  }
+  if (bestId > 0 && (!tm || tm.size === 0 || tm.has(bestId) || tm.has(String(bestId)))) return bestId;
+  if (b?.tabs?.query) {
+    const active = await b.tabs.query({ active: true, lastFocusedWindow: true }).catch(() => []);
+    const cand = (active || []).find(t => t?.id && (typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
+    if (cand?.id) return cand.id;
+  }
+  if (tm && tm.size > 0) {
+    const first = Number(tm.keys().next().value);
+    if (first > 0) return first;
+  }
+  if (b?.tabs?.query) {
+    const all = await b.tabs.query({}).catch(() => []);
+    const cand = (all || []).find(t => t?.id && (typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
+    if (cand?.id) return cand.id;
+  }
+  return 0;
+}
+
+/**
  * Executes Mute All Others mode: mutes all open media streams except primaryTabId,
  * preserving prior mute states in muteOthersPreviousMuteStates.
- * @param {number|string} primaryTabId
- * @returns {Promise<{success: boolean, primaryTabId?: number, mutedCount?: number, error?: string}>}
+ * @param {number|string} [primaryTabId]
+ * @returns {Promise<{success: boolean, primaryTabId?: number, mutedCount?: number, timestamp?: number, error?: string}>}
  */
 async function handleMuteAllOthersExecution(primaryTabId) {
-  let targetId = Number(primaryTabId) || 0;
+  let targetId = (typeof resolveCandidatePrimaryTab === 'function')
+    ? await resolveCandidatePrimaryTab(primaryTabId)
+    : (Number(primaryTabId) || 0);
   if (!targetId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
     try {
       const active = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
-      if (active && active[0] && active[0].id) targetId = active[0].id;
-    } catch (_) {}
-  }
-  if (!targetId && tabMediaMap && tabMediaMap.size > 0) {
-    targetId = Number(tabMediaMap.keys().next().value) || 0;
-  }
-  if (!targetId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-    try {
-      const all = await browserAPI.tabs.query({});
-      const cand = (all || []).find(t => t && t.id && (!t.url || typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
-      if (cand) targetId = cand.id;
+      const cand = (active || []).find(t => t && t.id && (typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
+      if (cand && cand.id) targetId = Number(cand.id);
     } catch (_) {}
   }
   if (!targetId) return { success: false, error: 'Invalid primaryTabId' };
 
   await capturePreMuteSnapshot(muteOthersPreviousMuteStates);
-  try {
-    if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
-      await browserAPI.tabs.update(targetId, { muted: false }).catch(() => {});
-    }
-  } catch (_) {}
+  if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+    await browserAPI.tabs.update(targetId, { muted: false }).catch(() => {});
+  }
   safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'unmute' });
   const targetMedia = tabMediaMap.get(targetId) || tabMediaMap.get(String(targetId));
   if (targetMedia && targetMedia.primaryMedia) targetMedia.primaryMedia.isMuted = false;
@@ -2873,18 +3433,17 @@ async function handleMuteAllOthersExecution(primaryTabId) {
   const tabsToMute = await collectCandidateTabs(targetId);
   let mutedCount = 0;
   for (const muteId of tabsToMute) {
-    try {
-      if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
-        await browserAPI.tabs.update(muteId, { muted: true }).catch(() => {});
-      }
-    } catch (_) {}
+    if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+      await browserAPI.tabs.update(muteId, { muted: true }).catch(() => {});
+    }
     safeSendTabMessage(muteId, { type: 'MEDIA_CONTROL', action: 'mute' });
     const m = tabMediaMap.get(muteId) || tabMediaMap.get(String(muteId));
     if (m && m.primaryMedia) m.primaryMedia.isMuted = true;
     mutedCount++;
   }
+
   safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
-  return { success: true, primaryTabId: targetId, mutedCount };
+  return { success: true, primaryTabId: targetId, mutedCount, timestamp: Date.now() };
 }
 
 /**
@@ -3626,6 +4185,14 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
     await handleDoomscrollCheck();
     return;
   }
+  if (alarm.name === FOCUS_TIMER_ALARM_NAME) {
+    await handleFocusTimerExpired();
+    return;
+  }
+  if (alarm.name === FOCUS_BREAK_ALARM_NAME) {
+    await handleFocusBreakExpired();
+    return;
+  }
   if (alarm.name === SLEEP_ALARM_NAME) {
     await triggerSleepTimerExpiration();
     return;
@@ -3665,6 +4232,23 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
         await triggerSleepTimerExpiration();
       } else {
         updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      }
+    }
+
+    // Focus Timer periodic check & badge countdown update
+    if (focusTimerState && (focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') && focusTimerState.targetTime) {
+      const remainingMs = focusTimerState.targetTime - now;
+      if (remainingMs <= 0) {
+        if (focusTimerState.mode === 'focus') {
+          await handleFocusTimerExpired();
+        } else {
+          await handleFocusBreakExpired();
+        }
+      } else {
+        focusTimerState.remainingSeconds = Math.max(0, Math.round(remainingMs / 1000));
+        if (focusTimerSettings.showBadgeCountdown) {
+          updateFocusActionBadge(remainingMs);
+        }
       }
     }
 
@@ -4508,6 +5092,99 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // Focus Sentinel & Pomodoro IPC Message Handlers (Phase 2)
+  // ---------------------------------------------------------------------------
+
+  if (msgType === 'START_FOCUS_TIMER' || message.action === 'START_FOCUS_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await startFocusTimer(message.durationMinutes, message.mode || 'focus');
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'PAUSE_FOCUS_TIMER' || message.action === 'PAUSE_FOCUS_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await pauseFocusTimer();
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'RESUME_FOCUS_TIMER' || message.action === 'RESUME_FOCUS_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await resumeFocusTimer();
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'RESET_FOCUS_TIMER' || message.action === 'RESET_FOCUS_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const res = await resetFocusTimer();
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'EXTEND_FOCUS_TIMER' || message.action === 'EXTEND_FOCUS_TIMER') {
+    (async () => {
+      await ensureStorageLoaded();
+      const mins = message.extraMinutes || message.minutes || 5;
+      const res = await extendFocusTimer(mins);
+      sendResponse(res);
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_FOCUS_TIMER_STATE' || message.action === 'GET_FOCUS_TIMER_STATE') {
+    (async () => {
+      await ensureStorageLoaded();
+      const now = Date.now();
+      if ((focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') && focusTimerState.targetTime) {
+        if (focusTimerState.targetTime <= now) {
+          if (focusTimerState.mode === 'focus') {
+            await handleFocusTimerExpired();
+          } else {
+            await handleFocusBreakExpired();
+          }
+        } else {
+          focusTimerState.remainingSeconds = Math.max(0, Math.round((focusTimerState.targetTime - now) / 1000));
+        }
+      }
+      const todayKey = new Date().toISOString().split('T')[0];
+      sendResponse({
+        success: true,
+        state: focusTimerState,
+        settings: focusTimerSettings,
+        todayMetrics: dailyFocusMetrics[todayKey] || { totalFocusSeconds: 0, completedSessions: 0, sessionHistory: [] }
+      });
+    })();
+    return true;
+  }
+
+  if (msgType === 'SAVE_FOCUS_SETTINGS' || message.action === 'SAVE_FOCUS_SETTINGS') {
+    (async () => {
+      await ensureStorageLoaded();
+      await saveFocusSettings(message.settings || {});
+      sendResponse({ success: true, settings: focusTimerSettings });
+    })();
+    return true;
+  }
+
+  if (msgType === 'GET_FOCUS_METRICS' || message.action === 'GET_FOCUS_METRICS') {
+    (async () => {
+      await ensureStorageLoaded();
+      sendResponse({ success: true, metrics: dailyFocusMetrics });
+    })();
+    return true;
+  }
+
   // Get current time tracking pause state
   if (msgType === 'GET_TRACKING_PAUSE_STATE') {
     (async () => {
@@ -4940,6 +5617,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.getDoomscrollConsecutiveMinutes = () => doomscrollConsecutiveMinutes;
   globalThis.setDoomscrollConsecutiveMinutes = (val) => { doomscrollConsecutiveMinutes = val; };
   globalThis.getAllActiveMediaStreams = getAllActiveMediaStreams;
+  globalThis.resolveCandidatePrimaryTab = resolveCandidatePrimaryTab;
   globalThis.handleSoloTabExecution = handleSoloTabExecution;
   globalThis.handleSoloTabClearExecution = handleSoloTabClearExecution;
   globalThis.handleMuteAllOthersExecution = handleMuteAllOthersExecution;
@@ -4971,10 +5649,31 @@ if (typeof globalThis !== 'undefined') {
   globalThis.cancelSleepTimer = cancelSleepTimer;
   globalThis.getSleepTimerState = () => sleepTimerState;
   globalThis.getSleepTimerSettings = () => sleepTimerSettings;
+  globalThis.triggerSleepTimerExpiration = triggerSleepTimerExpiration;
+  globalThis.closeAllMediaTabs = closeAllMediaTabs;
+  // Focus Sentinel & Pomodoro Subsystem exports
+  globalThis.startFocusTimer = startFocusTimer;
+  globalThis.pauseFocusTimer = pauseFocusTimer;
+  globalThis.resumeFocusTimer = resumeFocusTimer;
+  globalThis.resetFocusTimer = resetFocusTimer;
+  globalThis.extendFocusTimer = extendFocusTimer;
+  globalThis.handleFocusTimerExpired = handleFocusTimerExpired;
+  globalThis.handleFocusBreakExpired = handleFocusBreakExpired;
+  globalThis.getFocusTimerState = () => focusTimerState;
+  globalThis.getFocusTimerSettings = () => focusTimerSettings;
+  globalThis.getDailyFocusMetrics = () => dailyFocusMetrics;
+  globalThis.saveFocusTimerState = saveFocusTimerState;
+  globalThis.saveFocusSettings = saveFocusSettings;
+  globalThis.saveDailyFocusMetrics = saveDailyFocusMetrics;
+  globalThis.FOCUS_TIMER_ALARM_NAME = FOCUS_TIMER_ALARM_NAME;
+  globalThis.FOCUS_BREAK_ALARM_NAME = FOCUS_BREAK_ALARM_NAME;
+  globalThis.DEFAULT_FOCUS_SETTINGS = DEFAULT_FOCUS_SETTINGS;
+  globalThis.INITIAL_FOCUS_TIMER_STATE = INITIAL_FOCUS_TIMER_STATE;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
     globalThis.SentinelBackgroundModules.getAllActiveMediaStreams = getAllActiveMediaStreams;
+    globalThis.SentinelBackgroundModules.resolveCandidatePrimaryTab = resolveCandidatePrimaryTab;
     globalThis.SentinelBackgroundModules.handleSoloTabExecution = handleSoloTabExecution;
     globalThis.SentinelBackgroundModules.handleSoloTabClearExecution = handleSoloTabClearExecution;
     globalThis.SentinelBackgroundModules.handleMuteAllOthersExecution = handleMuteAllOthersExecution;
@@ -5005,6 +5704,26 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.cancelSleepTimer = cancelSleepTimer;
     globalThis.SentinelBackgroundModules.getSleepTimerState = () => sleepTimerState;
     globalThis.SentinelBackgroundModules.getSleepTimerSettings = () => sleepTimerSettings;
+    globalThis.SentinelBackgroundModules.triggerSleepTimerExpiration = triggerSleepTimerExpiration;
+    globalThis.SentinelBackgroundModules.closeAllMediaTabs = closeAllMediaTabs;
+    // Focus Sentinel & Pomodoro Subsystem exports
+    globalThis.SentinelBackgroundModules.startFocusTimer = startFocusTimer;
+    globalThis.SentinelBackgroundModules.pauseFocusTimer = pauseFocusTimer;
+    globalThis.SentinelBackgroundModules.resumeFocusTimer = resumeFocusTimer;
+    globalThis.SentinelBackgroundModules.resetFocusTimer = resetFocusTimer;
+    globalThis.SentinelBackgroundModules.extendFocusTimer = extendFocusTimer;
+    globalThis.SentinelBackgroundModules.handleFocusTimerExpired = handleFocusTimerExpired;
+    globalThis.SentinelBackgroundModules.handleFocusBreakExpired = handleFocusBreakExpired;
+    globalThis.SentinelBackgroundModules.getFocusTimerState = () => focusTimerState;
+    globalThis.SentinelBackgroundModules.getFocusTimerSettings = () => focusTimerSettings;
+    globalThis.SentinelBackgroundModules.getDailyFocusMetrics = () => dailyFocusMetrics;
+    globalThis.SentinelBackgroundModules.saveFocusTimerState = saveFocusTimerState;
+    globalThis.SentinelBackgroundModules.saveFocusSettings = saveFocusSettings;
+    globalThis.SentinelBackgroundModules.saveDailyFocusMetrics = saveDailyFocusMetrics;
+    globalThis.SentinelBackgroundModules.FOCUS_TIMER_ALARM_NAME = FOCUS_TIMER_ALARM_NAME;
+    globalThis.SentinelBackgroundModules.FOCUS_BREAK_ALARM_NAME = FOCUS_BREAK_ALARM_NAME;
+    globalThis.SentinelBackgroundModules.DEFAULT_FOCUS_SETTINGS = DEFAULT_FOCUS_SETTINGS;
+    globalThis.SentinelBackgroundModules.INITIAL_FOCUS_TIMER_STATE = INITIAL_FOCUS_TIMER_STATE;
   }
 }
 
@@ -5018,6 +5737,26 @@ if (typeof module !== 'undefined' && module.exports) {
     cancelSleepTimer,
     getSleepTimerState: () => sleepTimerState,
     getSleepTimerSettings: () => sleepTimerSettings,
+    triggerSleepTimerExpiration,
+    closeAllMediaTabs,
+    startFocusTimer,
+    pauseFocusTimer,
+    resumeFocusTimer,
+    resetFocusTimer,
+    extendFocusTimer,
+    handleFocusTimerExpired,
+    handleFocusBreakExpired,
+    getFocusTimerState: () => focusTimerState,
+    getFocusTimerSettings: () => focusTimerSettings,
+    getDailyFocusMetrics: () => dailyFocusMetrics,
+    saveFocusTimerState,
+    saveFocusSettings,
+    saveDailyFocusMetrics,
+    FOCUS_TIMER_ALARM_NAME,
+    FOCUS_BREAK_ALARM_NAME,
+    DEFAULT_FOCUS_SETTINGS,
+    INITIAL_FOCUS_TIMER_STATE,
+    resolveCandidatePrimaryTab,
     handleSoloTabExecution,
     handleSoloTabClearExecution,
     handleMuteAllOthersExecution,

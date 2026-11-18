@@ -751,10 +751,13 @@
   const MIN_DB = -40;
   const MAX_DB = 6;
 
-  const VALID_VIZ_MODES = [
-    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+  const VALID_VIZ_MODES = Object.freeze([
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'
+  ]);
+  const EXTENDED_VIZ_MODES = Object.freeze([
     'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
-  ];
+  ]);
+  const ALL_VIZ_MODES = Object.freeze([...VALID_VIZ_MODES, ...EXTENDED_VIZ_MODES]);
 
   let visualizerCanvas = null;
   let visualizerCtx = null;
@@ -1100,7 +1103,7 @@
    * Toggles visualization style across all supported 60fps canvas visualizer effects.
    */
   function setVisualizerMode(mode, options = {}) {
-    if (!VALID_VIZ_MODES.includes(mode)) return visualizerMode;
+    if (!ALL_VIZ_MODES.includes(mode)) return visualizerMode;
     visualizerMode = mode;
 
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
@@ -1722,7 +1725,7 @@
           if (a === 0) ctx.moveTo(vx, vy);
           else ctx.lineTo(vx, vy);
         }
-        ctx.closePath();
+        if (typeof ctx.closePath === 'function') ctx.closePath();
 
         if (energy > 0.15) {
           ctx.fillStyle = energy > 0.6 ? `rgba(244, 63, 94, ${energy * 0.8})` : `rgba(6, 182, 212, ${energy * 0.7})`;
@@ -1868,7 +1871,7 @@
       ctx.lineTo(x, y);
     }
     ctx.lineTo(width, height);
-    ctx.closePath();
+    if (typeof ctx.closePath === 'function') ctx.closePath();
     ctx.fillStyle = 'rgba(99, 102, 241, 0.35)';
     ctx.fill();
 
@@ -1888,7 +1891,7 @@
       else ctx.lineTo(x, y);
     }
     ctx.lineTo(width, height);
-    ctx.closePath();
+    if (typeof ctx.closePath === 'function') ctx.closePath();
     ctx.fillStyle = grad;
     ctx.fill();
 
@@ -2136,6 +2139,8 @@
     toggleVisualizerVideoEmbed,
     VALID_VIZ_MODES,
     validModes: VALID_VIZ_MODES,
+    EXTENDED_VIZ_MODES,
+    ALL_VIZ_MODES,
     VIZ_MODE_META,
     setGraticuleEnabled,
     isGraticuleActive,

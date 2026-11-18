@@ -714,6 +714,12 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'मैट्रिक्स डिजिटल डॉट्स',
     viz_effect_flame: 'नियॉन फ्लेम पीक्स',
     viz_effect_stereo: 'स्टीरियो मिरर बटरफ्लाई',
+    viz_effect_lissajous: 'लिसेजस स्टीरियो स्कोप',
+    viz_effect_hex_grid: 'साइबरपंक हेक्सागोन ग्रिड',
+    viz_effect_particles: 'स्टारफ़ील्ड पार्टिकल वॉरप',
+    viz_effect_retro_grid: '3D सिंथवेव रेट्रो ग्रिड',
+    viz_effect_vinyl_rings: 'विनाइल ग्रूव संकेंद्रित छल्ले',
+    viz_effect_liquid_wave: 'लिक्विड मरकरी वेव',
     viz_settings_toggle_title: 'अकॉस्टिक ग्रेटिक्यूल और टेलीमेट्री सेटिंग्स टॉगल करें',
     viz_video_embed_toggle_title: 'वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)',
     viz_fullwindow_toggle_title: 'विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें',
@@ -1111,6 +1117,12 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_matrix: "Matrix Digital Dots",
     viz_effect_flame: "Neon Flame Peaks",
     viz_effect_stereo: "Stereo Mirror Butterfly",
+    viz_effect_lissajous: "Lissajous Stereo Scope",
+    viz_effect_hex_grid: "Cyberpunk Hexagon Grid",
+    viz_effect_particles: "Starfield Particle Warp",
+    viz_effect_retro_grid: "3D Synthwave Retro Grid",
+    viz_effect_vinyl_rings: "Vinyl Groove Concentric Rings",
+    viz_effect_liquid_wave: "Liquid Mercury Wave",
     viz_video_embed_toggle_title: "Switch to Video Player (Embed Mode)",
     viz_fullwindow_toggle_title: "Toggle Visualizer Full Window (Theater)",
     viz_fullwindow_exit_title: "Exit Visualizer Full Window (Theater)",
@@ -1188,6 +1200,12 @@ const DASHBOARD_UIUX_I18N = {
     viz_effect_matrix: "मैट्रिक्स डिजिटल डॉट्स",
     viz_effect_flame: "नियॉन फ्लेम पीक्स",
     viz_effect_stereo: "स्टीरियो मिरर बटरफ्लाई",
+    viz_effect_lissajous: "लिसेजस स्टीरियो स्कोप",
+    viz_effect_hex_grid: "साइबरपंक हेक्सागोन ग्रिड",
+    viz_effect_particles: "स्टारफ़ील्ड पार्टिकल वॉरप",
+    viz_effect_retro_grid: "3D सिंथवेव रेट्रो ग्रिड",
+    viz_effect_vinyl_rings: "विनाइल ग्रूव संकेंद्रित छल्ले",
+    viz_effect_liquid_wave: "लिक्विड मरकरी वेव",
     viz_video_embed_toggle_title: "वीडियो प्लेयर पर स्विच करें (एम्बेडेड मोड)",
     viz_fullwindow_toggle_title: "विज़ुअलाइज़र फुल विंडो (थिएटर) टॉगल करें",
     viz_fullwindow_exit_title: "फुल विंडो (थिएटर) से बाहर निकलें",
@@ -2455,7 +2473,13 @@ function setVisualizerMode(mode, options = {}) {
       radial: { icon: '✨', label: 'Radial Burst' },
       matrix_dots: { icon: '🟢', label: 'Matrix Dots' },
       flame: { icon: '🔥', label: 'Flame Peaks' },
-      stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' }
+      stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' },
+      lissajous: { icon: '🎛️', label: 'Lissajous Scope' },
+      hex_grid: { icon: '⬡', label: 'Hex Grid' },
+      particles: { icon: '🌌', label: 'Starfield Warp' },
+      retro_grid: { icon: '🕹️', label: 'Synthwave Grid' },
+      vinyl_rings: { icon: '💿', label: 'Vinyl Rings' },
+      liquid_wave: { icon: '💧', label: 'Liquid Wave' }
     };
     const pillLabel = doc.getElementById('vizPillLabel');
     const pillIcon = doc.getElementById('vizPillIcon');
@@ -3460,7 +3484,13 @@ function applyDashboardLanguage(lang) {
     radial: 'viz_effect_radial',
     matrix_dots: 'viz_effect_matrix',
     flame: 'viz_effect_flame',
-    stereo_mirror: 'viz_effect_stereo'
+    stereo_mirror: 'viz_effect_stereo',
+    lissajous: 'viz_effect_lissajous',
+    hex_grid: 'viz_effect_hex_grid',
+    particles: 'viz_effect_particles',
+    retro_grid: 'viz_effect_retro_grid',
+    vinyl_rings: 'viz_effect_vinyl_rings',
+    liquid_wave: 'viz_effect_liquid_wave'
   });
 
   const btnSettingsToggle = document.getElementById('btnVizSettingsToggle');
@@ -9960,7 +9990,10 @@ function setupEventListeners() {
       if (viz) {
         const state = viz.getVisualizerState ? viz.getVisualizerState() : null;
         if (state) {
-          const VIZ_CYCLE = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+          const VIZ_CYCLE = [
+            'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+            'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+          ];
           const currentIndex = VIZ_CYCLE.indexOf(state.mode);
           const nextIndex = (currentIndex + 1) % VIZ_CYCLE.length;
           setVisualizerMode(VIZ_CYCLE[nextIndex]);

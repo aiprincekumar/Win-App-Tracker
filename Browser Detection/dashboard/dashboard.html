@@ -801,6 +801,24 @@
                         <button type="button" role="option" class="viz-popover-option" data-effect="stereo_mirror" aria-selected="false">
                           <span class="viz-opt-icon">🦋</span><span class="viz-opt-text" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</span>
                         </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="lissajous" aria-selected="false">
+                          <span class="viz-opt-icon">🎛️</span><span class="viz-opt-text" data-i18n="viz_effect_lissajous">Lissajous Stereo Scope</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="hex_grid" aria-selected="false">
+                          <span class="viz-opt-icon">⬡</span><span class="viz-opt-text" data-i18n="viz_effect_hex_grid">Cyberpunk Hexagon Grid</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="particles" aria-selected="false">
+                          <span class="viz-opt-icon">🌌</span><span class="viz-opt-text" data-i18n="viz_effect_particles">Starfield Particle Warp</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="retro_grid" aria-selected="false">
+                          <span class="viz-opt-icon">🕹️</span><span class="viz-opt-text" data-i18n="viz_effect_retro_grid">3D Synthwave Retro Grid</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="vinyl_rings" aria-selected="false">
+                          <span class="viz-opt-icon">💿</span><span class="viz-opt-text" data-i18n="viz_effect_vinyl_rings">Vinyl Groove Concentric Rings</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="liquid_wave" aria-selected="false">
+                          <span class="viz-opt-icon">💧</span><span class="viz-opt-text" data-i18n="viz_effect_liquid_wave">Liquid Mercury Wave</span>
+                        </button>
                       </div>
                     </div>
 
@@ -813,6 +831,12 @@
                       <option value="matrix_dots" data-i18n="viz_effect_matrix">Matrix Digital Dots</option>
                       <option value="flame" data-i18n="viz_effect_flame">Neon Flame Peaks</option>
                       <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
+                      <option value="lissajous" data-i18n="viz_effect_lissajous">Lissajous Stereo Scope</option>
+                      <option value="hex_grid" data-i18n="viz_effect_hex_grid">Cyberpunk Hexagon Grid</option>
+                      <option value="particles" data-i18n="viz_effect_particles">Starfield Particle Warp</option>
+                      <option value="retro_grid" data-i18n="viz_effect_retro_grid">3D Synthwave Retro Grid</option>
+                      <option value="vinyl_rings" data-i18n="viz_effect_vinyl_rings">Vinyl Groove Concentric Rings</option>
+                      <option value="liquid_wave" data-i18n="viz_effect_liquid_wave">Liquid Mercury Wave</option>
                     </select>
                   </div>
 
@@ -965,6 +989,7 @@
                 </div>
               </div>
               <div class="eq-actions-group">
+                <span id="audioLabPresetBadge" class="badge-eq-preset" aria-label="Active Equalizer Preset">Flat</span>
                 <select id="audioEqPresetSelect" class="eq-preset-dropdown" aria-label="Equalizer Preset">
                   <option value="flat" data-i18n="eq_preset_flat" selected>Flat</option>
                   <option value="bass_boost" data-i18n="eq_preset_bass_boost">Bass Boost</option>

@@ -149,7 +149,7 @@
         action: () => {
           switchTabFn('tracking');
           if (this.document) {
-            const searchInput = this.document.getElementById('domainSearchInput');
+            const searchInput = this.document.getElementById('tableDomainSearch') || this.document.getElementById('domainSearchInput');
             if (searchInput) {
               searchInput.value = domain;
               searchInput.dispatchEvent(new Event('input'));

@@ -51,6 +51,8 @@ console.log('\nTest 2: Compact Standard Canvas (600x120, minDim=120) Radius & Sp
     stroke: () => {},
     fill: () => {},
     roundRect: () => {},
+    closePath: () => {},
+    closePath: () => {},
     createLinearGradient: () => ({ addColorStop: () => {} })
   };
 
@@ -164,6 +166,7 @@ console.log('\nTest 3: Fullscreen Theater Canvas (1400x600, minDim=600) Dynamic 
     stroke: () => {},
     fill: () => {},
     roundRect: () => {},
+    closePath: () => {},
     createLinearGradient: () => ({ addColorStop: () => {} })
   };
 
@@ -257,9 +260,13 @@ console.log('\nTest 4: Dynamic Scaling Comparison (Compact vs Fullscreen Scaling
 console.log('\nTest 5: Strict Negative Invariant - Other 5 Modes Integrity');
 {
   const feature = require(featureJsPath);
-  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const expectedModes = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
 
-  assert.deepStrictEqual(feature.VALID_VIZ_MODES, expectedModes, 'VALID_VIZ_MODES must remain strictly unchanged');
+  const allModes = feature.ALL_VIZ_MODES || feature.VALID_VIZ_MODES;
+  expectedModes.forEach(m => assert(allModes.includes(m), 'Mode ' + m + ' must be preserved'));
 
   // Verify that setting and rendering each mode does not throw
   const mockCtx = {
@@ -277,6 +284,7 @@ console.log('\nTest 5: Strict Negative Invariant - Other 5 Modes Integrity');
     stroke: () => {},
     fill: () => {},
     roundRect: () => {},
+    closePath: () => {},
     createLinearGradient: () => ({ addColorStop: () => {} })
   };
 

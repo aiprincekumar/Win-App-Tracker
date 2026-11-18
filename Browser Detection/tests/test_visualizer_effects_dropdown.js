@@ -27,7 +27,10 @@ console.log('Test 1: DOM Dropdown Specification & Legacy Buttons Preservation');
   assert(html.includes('for="selectVizEffect"'), 'Accessible label for selectVizEffect must exist');
   assert(html.includes('id="lblVizEffect"'), '#lblVizEffect label ID must exist');
 
-  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const expectedModes = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
   expectedModes.forEach(mode => {
     assert(html.includes(`value="${mode}"`), `Option value="${mode}" must be declared in selectVizEffect`);
     console.log(`  ✅ Mode "${mode}" option verified in dropdown`);
@@ -41,17 +44,21 @@ console.log('Test 1: DOM Dropdown Specification & Legacy Buttons Preservation');
 }
 
 // =============================================================================
-// Test 2: Engine Support for All 6 Effects in media_deck_visualizer_feature.js
+// Test 2: Engine Support for All 12 Effects in media_deck_visualizer_feature.js
 // =============================================================================
-console.log('\nTest 2: Engine Support for All 6 Visualizer Effects');
+console.log('\nTest 2: Engine Support for All 12 Visualizer Effects');
 {
   const feature = require(featureJsPath);
-  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const expectedModes = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
 
-  assert(Array.isArray(feature.VALID_VIZ_MODES), 'VALID_VIZ_MODES array must be exported');
-  assert.strictEqual(feature.VALID_VIZ_MODES.length, 6, 'Must define exactly 6 visualizer modes');
+  const allModes = feature.ALL_VIZ_MODES || feature.VALID_VIZ_MODES;
+  assert(Array.isArray(allModes), 'ALL_VIZ_MODES array must be exported');
+  assert.strictEqual(allModes.length, 12, 'Must define exactly 12 visualizer modes');
   expectedModes.forEach(m => {
-    assert(feature.VALID_VIZ_MODES.includes(m), `Mode "${m}" must be in VALID_VIZ_MODES`);
+    assert(allModes.includes(m), `Mode "${m}" must be in ALL_VIZ_MODES`);
   });
 
   // Mock Canvas & 2D Context
@@ -70,6 +77,7 @@ console.log('\nTest 2: Engine Support for All 6 Visualizer Effects');
     stroke: () => drawOps.push({ op: 'stroke' }),
     fill: () => drawOps.push({ op: 'fill' }),
     arc: (x, y, r, sa, ea) => drawOps.push({ op: 'arc', x, y, r }),
+    closePath: () => drawOps.push({ op: 'closePath' }),
     roundRect: (x, y, w, h, radii) => drawOps.push({ op: 'roundRect', x, y, w, h, radii }),
     createLinearGradient: () => ({
       addColorStop: () => {}
@@ -148,16 +156,19 @@ console.log('\nTest 2: Engine Support for All 6 Visualizer Effects');
 // =============================================================================
 // Test 3: Sequential Click-to-Cycle on Visualizer Canvas
 // =============================================================================
-console.log('\nTest 3: Canvas Sequential Click-to-Cycle (All 6 Modes)');
+console.log('\nTest 3: Canvas Sequential Click-to-Cycle (All 12 Modes)');
 {
-  const expectedModes = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const expectedModes = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
   for (let i = 0; i < expectedModes.length; i++) {
     const current = expectedModes[i];
     const expectedNext = expectedModes[(i + 1) % expectedModes.length];
     const nextCalculated = expectedModes[(expectedModes.indexOf(current) + 1) % expectedModes.length];
     assert.strictEqual(nextCalculated, expectedNext, `Cycling from "${current}" must yield "${expectedNext}"`);
   }
-  console.log('  ✅ Sequential cycle [bars -> wave -> radial -> matrix_dots -> flame -> stereo_mirror -> bars] verified');
+  console.log('  ✅ Sequential cycle across all 12 visualizer modes verified');
 }
 
 // =============================================================================
@@ -179,7 +190,7 @@ console.log('\nTest 4: CSS Materiality & Dropdown Select Styling');
 }
 
 // =============================================================================
-// Test 5: Bilingual i18n Parity for All 6 Effects
+// Test 5: Bilingual i18n Parity for All 12 Effects
 // =============================================================================
 console.log('\nTest 5: Bilingual i18n Parity for Visualizer Effects');
 {
@@ -195,7 +206,13 @@ console.log('\nTest 5: Bilingual i18n Parity for Visualizer Effects');
     'viz_effect_radial',
     'viz_effect_matrix',
     'viz_effect_flame',
-    'viz_effect_stereo'
+    'viz_effect_stereo',
+    'viz_effect_lissajous',
+    'viz_effect_hex_grid',
+    'viz_effect_particles',
+    'viz_effect_retro_grid',
+    'viz_effect_vinyl_rings',
+    'viz_effect_liquid_wave'
   ];
 
   effectKeys.forEach(k => {
