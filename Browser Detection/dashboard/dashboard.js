@@ -3587,6 +3587,9 @@ function applyDashboardLanguage(lang) {
   setTxt('subPlayerIdle', 'idle_hero_sub');
 
   setTxt('headingMediaHistory', 'media_history_heading');
+  setTitle('btnMediaScrollToTop', 'media_scroll_to_top');
+  const scrollBtn = document.getElementById('btnMediaScrollToTop');
+  if (scrollBtn) scrollBtn.setAttribute('aria-label', t('media_scroll_to_top'));
   const mediaSearch = document.getElementById('tableMediaSearch');
   if (mediaSearch) mediaSearch.placeholder = t('search_media_placeholder');
   setTxt('lblMediaPlatform', 'lbl_platform');
@@ -5573,6 +5576,19 @@ function switchTab(tabKey) {
       }
     }
   });
+
+  // Hide Media Scroll to Top button when leaving Media tab
+  if (tabKey !== 'media') {
+    if (typeof setMediaScrollToTopVisible === 'function') {
+      setMediaScrollToTopVisible(false);
+    } else {
+      const scrollBtn = document.getElementById('btnMediaScrollToTop');
+      if (scrollBtn) {
+        scrollBtn.classList.add('hidden');
+        scrollBtn.classList.remove('visible');
+      }
+    }
+  }
 
   // Top Bar Headers
   const titleEl = document.getElementById('topBarTitle');
@@ -11173,6 +11189,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     setupEventListeners();
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
+    initMediaScrollToTop();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
     initSleepSentinelHub();
 
