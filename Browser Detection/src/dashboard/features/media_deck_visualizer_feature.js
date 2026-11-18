@@ -165,20 +165,46 @@
   /**
    * Helper: Dispatches media IPC action to service worker with graceful fallbacks.
    */
-  function dispatchMediaIpc(api, action, payload = {}) {
+  function dispatchMediaIpc(apiOrPayload, actionOrPayload, payload = {}) {
+    let api = null;
+    let action = '';
+    let data = {};
+
+    if (apiOrPayload && (apiOrPayload.runtime || typeof apiOrPayload.sendMessage === 'function')) {
+      api = apiOrPayload;
+      action = typeof actionOrPayload === 'string' ? actionOrPayload : '';
+      data = (payload && typeof payload === 'object') ? payload : {};
+    } else if (apiOrPayload && typeof apiOrPayload === 'object' && (apiOrPayload.action || apiOrPayload.type)) {
+      data = Object.assign({}, apiOrPayload);
+      action = data.action || data.type || '';
+      api = (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
+    } else {
+      action = typeof actionOrPayload === 'string' ? actionOrPayload : '';
+      data = (payload && typeof payload === 'object') ? payload : {};
+      api = (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
+    }
+
+    const actionMap = {
+      'media:mute_all_others': 'MEDIA_STREAM_MUTE_ALL_OTHERS',
+      'media:unmute_all_others': 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR',
+      'media:mute_all': 'MEDIA_STREAM_MUTE_ALL',
+      'media:unmute_all': 'MEDIA_STREAM_MUTE_ALL_CLEAR'
+    };
+    const canonicalAction = actionMap[action] || action;
+
     if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
       return new Promise((resolve) => {
         try {
-          const msg = Object.assign({ action, type: action }, payload);
+          const msg = Object.assign({ action: canonicalAction, type: canonicalAction, mediaAction: action }, data);
           api.runtime.sendMessage(msg, (res) => {
-            resolve(res || Object.assign({ success: true }, payload));
+            resolve(res || Object.assign({ success: true }, data));
           });
         } catch (_) {
-          resolve(Object.assign({ success: true, simulated: true }, payload));
+          resolve(Object.assign({ success: true, simulated: true }, data));
         }
       });
     }
-    return Promise.resolve(Object.assign({ success: true, localOnly: true }, payload));
+    return Promise.resolve(Object.assign({ success: true, localOnly: true }, data));
   }
 
   /**
@@ -201,31 +227,39 @@
    * Executes Global Mute Others: Mutes all media streams except the primary/specified active stream.
    * Supports bidirectional toggle: if already active, toggles off and restores unmuted state.
    */
-  function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
+  async function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
     const api = options.browserAPI || (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
     const containerEl = options.containerEl || (doc ? doc.getElementById('mediaDeckGrid') : null);
     const list = Array.isArray(streamsList) ? streamsList : cachedStreams;
-    const targetId = Number(primaryTabId || currentSoloTabId || (list[0] && list[0].tabId) || 0);
     const btnEl = options.btnMuteAllOthers || (doc ? doc.getElementById('btnMuteAllOthers') : null);
     const translate = typeof options.t === 'function' ? options.t : (k) => k;
 
-    isMuteAllOthersActive = !isMuteAllOthersActive;
-    list.forEach(s => {
-      s.isMuted = isMuteAllOthersActive ? (s.tabId !== targetId) : false;
-      const cached = cachedStreams.find(c => c.tabId === s.tabId);
-      if (cached) cached.isMuted = s.isMuted;
-    });
+    const isMuted = Boolean(isMuteAllOthersActive);
+    let targetId = Number(primaryTabId || currentSoloTabId || (list.find(s => s && s.tabId) ? list.find(s => s && s.tabId).tabId : 0) || 0);
 
-    updateBtnMuteAllOthersUI(btnEl, isMuteAllOthersActive, translate);
+    const action = isMuted ? 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR' : 'MEDIA_STREAM_MUTE_ALL_OTHERS';
+    const mediaAction = isMuted ? 'media:unmute_all_others' : 'media:mute_all_others';
+    const payload = isMuted ? { cleared: true, mediaAction } : { primaryTabId: targetId, mediaAction };
 
-    if (containerEl && doc) {
-      renderMultiTabMediaDeck(list, containerEl, options);
+    const res = await dispatchMediaIpc(api, action, payload);
+
+    if (res && (res.success || res.cleared || res.mutedCount !== undefined)) {
+      isMuteAllOthersActive = !isMuted;
+      const actualTargetId = Number(res.primaryTabId || targetId);
+      list.forEach(s => {
+        s.isMuted = isMuteAllOthersActive ? (s.tabId !== actualTargetId) : false;
+        const cached = cachedStreams.find(c => c.tabId === s.tabId);
+        if (cached) cached.isMuted = s.isMuted;
+      });
+
+      updateBtnMuteAllOthersUI(btnEl, isMuteAllOthersActive, translate);
+
+      if (containerEl && doc) {
+        renderMultiTabMediaDeck(list, containerEl, options);
+      }
     }
-
-    const action = isMuteAllOthersActive ? 'MEDIA_STREAM_MUTE_ALL_OTHERS' : 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR';
-    const payload = isMuteAllOthersActive ? { primaryTabId: targetId } : { cleared: true };
-    return dispatchMediaIpc(api, action, payload);
+    return res || { success: true, primaryTabId: targetId };
   }
 
   /**
@@ -248,7 +282,7 @@
    * Executes Global Mute All mode: Mutes all media streams across all tabs.
    * Supports bidirectional toggle: if already active, toggles off and restores unmuted state.
    */
-  function handleMuteAll(streamsList, options = {}) {
+  async function handleMuteAll(streamsList, options = {}) {
     const api = options.browserAPI || (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
     const containerEl = options.containerEl || (doc ? doc.getElementById('mediaDeckGrid') : null);
@@ -256,22 +290,28 @@
     const btnEl = options.btnMuteAll || (doc ? doc.getElementById('btnMuteAll') : null);
     const translate = typeof options.t === 'function' ? options.t : (k) => k;
 
-    isMuteAllActive = !isMuteAllActive;
-    list.forEach(s => {
-      s.isMuted = isMuteAllActive;
-      const cached = cachedStreams.find(c => c.tabId === s.tabId);
-      if (cached) cached.isMuted = s.isMuted;
-    });
+    const isMuted = Boolean(isMuteAllActive);
+    const action = isMuted ? 'MEDIA_STREAM_MUTE_ALL_CLEAR' : 'MEDIA_STREAM_MUTE_ALL';
+    const mediaAction = isMuted ? 'media:unmute_all' : 'media:mute_all';
+    const payload = isMuted ? { cleared: true, mediaAction } : { mediaAction };
 
-    updateBtnMuteAllUI(btnEl, isMuteAllActive, translate);
+    const res = await dispatchMediaIpc(api, action, payload);
 
-    if (containerEl && doc) {
-      renderMultiTabMediaDeck(list, containerEl, options);
+    if (res && (res.success || res.cleared || res.mutedCount !== undefined)) {
+      isMuteAllActive = !isMuted;
+      list.forEach(s => {
+        s.isMuted = isMuteAllActive;
+        const cached = cachedStreams.find(c => c.tabId === s.tabId);
+        if (cached) cached.isMuted = s.isMuted;
+      });
+
+      updateBtnMuteAllUI(btnEl, isMuteAllActive, translate);
+
+      if (containerEl && doc) {
+        renderMultiTabMediaDeck(list, containerEl, options);
+      }
     }
-
-    const action = isMuteAllActive ? 'MEDIA_STREAM_MUTE_ALL' : 'MEDIA_STREAM_MUTE_ALL_CLEAR';
-    const payload = isMuteAllActive ? {} : { cleared: true };
-    return dispatchMediaIpc(api, action, payload);
+    return res || { success: true };
   }
 
   /**

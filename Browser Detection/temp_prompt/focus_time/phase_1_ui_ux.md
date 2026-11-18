@@ -45,9 +45,26 @@ Replace the existing basic `#widgetPomodoroSentinel` contents with the full Focu
    - Icon: `<span class="card-icon settings-card-icon">🧘</span>`
    - Title: `<h3 id="txtPomodoroTitle" class="card-heading settings-card-title">Focus Sentinel & Pomodoro</h3>`
    - Subtitle: `<span class="settings-card-sub">Deep work intervals, automated media cutoff & break recovery</span>`
-   - Mode & Status Badge: `<span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>`
-   - Status Dot: `<span id="dashFocusActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>`
-3. **Hero Body & Radial Dial Layout:**
+   - Header Controls Group:
+     * Mode & Status Badge: `<span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>`
+     * Status Dot: `<span id="dashFocusActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>`
+     * Zen Immersion Expand Button: `<button type="button" id="btnFocusZenExpand" class="btn-zen-expand" title="Enter Full-Screen Zen Mode (ESC to exit)" aria-label="Enter Full-Screen Zen Mode">🧘 Zen Mode</button>`
+3. **Mode Selector Tabs (Focus, Short Break, Long Break):**
+   - Mode Tabs Container: `<div class="focus-mode-tabs-row" role="tablist">`
+     * `<button type="button" class="focus-mode-tab active" data-mode="focus" id="tabModeFocus">🎯 Focus (25m)</button>`
+     * `<button type="button" class="focus-mode-tab" data-mode="shortBreak" id="tabModeShortBreak">☕ Short Break (5m)</button>`
+     * `<button type="button" class="focus-mode-tab" data-mode="longBreak" id="tabModeLongBreak">🌿 Long Break (15m)</button>`
+4. **4-Stage Pomodoro Cycle Indicator & Daily Streak:**
+   - Cycle Indicator Container: `<div class="focus-cycle-progress-row">`
+     * Cycle Dots: `<div id="focusCycleDotsContainer" class="focus-cycle-dots"><span class="cycle-dot active" data-cycle="1"></span><span class="cycle-dot" data-cycle="2"></span><span class="cycle-dot" data-cycle="3"></span><span class="cycle-dot" data-cycle="4"></span></div>`
+     * Cycle Readout: `<span id="focusCycleText" class="focus-cycle-text">Session 1 of 4</span>`
+     * Streak Badge: `<span id="focusDailyStreakBadge" class="focus-streak-badge" title="Consecutive daily focus streak">🔥 1-Day Streak</span>`
+     * Target Goal Progress Bar: `<div class="focus-target-progress-bar"><div id="focusTargetProgressFill" class="target-progress-fill" style="width: 35%;"></div></div><span id="focusTargetGoalText" class="target-goal-text">Goal: 0h 45m / 3h 00m</span>`
+5. **Task Intent / Goal Input:**
+   - Goal Row: `<div class="focus-goal-input-row">`
+     * Input: `<input type="text" id="inputFocusGoal" class="styled-input focus-goal-input" placeholder="🎯 What are you focusing on? (e.g. Code Review, Research)...">`
+     * Active Task Chip: `<div id="chipActiveFocusGoal" class="chip-active-focus-goal hidden"><span class="chip-icon">🎯</span><span id="txtActiveFocusGoal" class="chip-text"></span><button type="button" id="btnClearFocusGoal" class="chip-clear" title="Clear task">✕</button></div>`
+6. **Hero Body & Radial Dial Layout:**
    - Dial Wrapper: `<div class="dash-focus-dial-wrapper">`
    - SVG Dial: Width `140`, Height `140`, viewBox `0 0 120 120`.
    - Dial Track Circle: `cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="8"` (class `dash-focus-dial-track`).
@@ -55,24 +72,40 @@ Replace the existing basic `#widgetPomodoroSentinel` contents with the full Focu
    - Dial Center Readout:
      - Digital Clock: `<div id="pomodoroTimeDisplay" class="focus-big-clock" aria-live="polite">25:00</div>`
      - Finish Time: `<div id="pomodoroFinishTime" class="focus-finish-time">Target: --:--</div>`
-4. **Quick Duration Presets Grid:**
-   - Label: `<span class="focus-section-label">Quick Presets</span>`
+     - Dial Goal Preview: `<div id="pomodoroDialTaskPreview" class="focus-dial-task-preview hidden"></div>`
+7. **Quick Presets & Custom Duration Stepper:**
+   - Label: `<span class="focus-section-label">Duration & Presets</span>`
    - Presets Container: `<div class="dash-focus-presets-grid">`
-   - Buttons:
      * `<button type="button" class="dash-focus-preset-btn" data-minutes="15">15m</button>`
      * `<button type="button" class="dash-focus-preset-btn active" data-minutes="25">25m</button>`
      * `<button type="button" class="dash-focus-preset-btn" data-minutes="45">45m</button>`
      * `<button type="button" class="dash-focus-preset-btn" data-minutes="60">60m</button>`
-5. **Quick Extenders & Actions Panel:**
+   - Custom Minute Input Stepper:
+     * `<div class="focus-custom-minute-stepper"><label for="inputFocusCustomMinutes" class="stepper-label">Custom:</label><input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25"><span class="stepper-unit">min</span><button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply">Set</button></div>`
+8. **Quick Extenders & Actions Panel:**
    - Extender Buttons:
      * `<button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>`
      * `<button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>`
    - Primary Actions:
      * Start/Pause Toggle: `<button type="button" id="btnStartPomodoro" class="btn-focus-primary"><span id="btnFocusToggleIcon">▶️</span><span id="btnFocusToggleText">Start Focus</span></button>`
      * Reset Button: `<button type="button" id="btnResetPomodoro" class="btn-focus-secondary"><span>🔄</span><span>Reset</span></button>`
-6. **Feature Toggles Row:**
-   - Auto-pause toggle: Checkbox `<input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>` with label "Auto-pause media during focus".
-   - Sound chime toggle: Checkbox `<input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>` with label "Sound chime on cycle completion".
+9. **Ambient Soundscapes Generator Bar:**
+   - Soundscape Container: `<div class="focus-soundscape-panel">`
+     * Title & Selector: `<div class="soundscape-header"><span class="soundscape-title">🎧 Ambient Soundscapes</span><select id="selectFocusSoundscape" class="styled-select soundscape-select"><option value="none" selected>Off (Silent)</option><option value="rain">🌧️ Gentle Rain</option><option value="cafe">☕ Coffee Shop</option><option value="ocean">🌊 Ocean Waves</option><option value="forest">🌲 Forest Birds</option><option value="whitenoise">💨 Pink/White Noise</option></select><button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button></div>`
+     * Soundscape Volume Slider: `<div class="soundscape-volume-row"><span class="volume-icon">🔈</span><input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume"><span id="txtSoundscapeVolume" class="volume-num">50%</span></div>`
+10. **Acoustic Chime Selector with Preview Button:**
+    - Chime Row: `<div class="focus-chime-selector-row">`
+      * Label: `<span class="chime-label">🔔 Completion Chime:</span>`
+      * Dropdown: `<select id="selectFocusChimeTone" class="styled-select chime-select"><option value="solfeggio528" selected>Solfeggio Harmonic (528Hz / 660Hz)</option><option value="tibetan">Tibetan Singing Bowl (432Hz)</option><option value="bell">Digital Bell Synthesizer</option><option value="gong">Zen Temple Gong</option></select>`
+      * Preview Button: `<button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime sound">▶ Test</button>`
+11. **Feature Toggles Row:**
+    - Auto-pause media: `<input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>` ("Auto-pause media during focus")
+    - Sound chime toggle: `<input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>` ("Play chime on completion")
+    - Strict Shield / Distraction Blocker Preview toggle: `<input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">` ("🛡️ Strict Shield (Nudge on distracting domains)")
+12. **Full-Screen Zen Mode Overlay Template (in DOM, hidden by default):**
+    - Overlay Container: `<div id="focusZenImmersionOverlay" class="focus-zen-overlay hidden" role="dialog" aria-modal="true" aria-label="Full-Screen Zen Focus Mode">`
+      * Exit Button: `<button type="button" id="btnExitZenMode" class="btn-exit-zen" title="Exit Zen Mode (ESC)">✕ Exit Zen</button>`
+      * Ambient Zen Centerpiece: SVG dial, big clock, active task intent display, inspirational mindfulness quote (`#txtZenQuote`).
 
 ---
 

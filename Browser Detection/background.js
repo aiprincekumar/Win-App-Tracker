@@ -2654,6 +2654,7 @@ async function capturePreMuteSnapshot(snapshotMap) {
     const allTabs = await browserAPI.tabs.query({});
     (allTabs || []).forEach(t => {
       if (t && t.id) {
+        if (typeof isRestrictedTabUrl === 'function' && t.url && isRestrictedTabUrl(t.url)) return;
         snapshotMap.set(t.id, Boolean(t.mutedInfo && t.mutedInfo.muted));
       }
     });
@@ -2667,21 +2668,29 @@ async function capturePreMuteSnapshot(snapshotMap) {
  */
 async function collectCandidateTabs(excludeId = null) {
   const tabs = new Set();
+  const restrictedIds = new Set();
+  if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    try {
+      const allTabs = await browserAPI.tabs.query({});
+      (allTabs || []).forEach(t => {
+        if (!t || !t.id) return;
+        if (typeof isRestrictedTabUrl === 'function' && t.url && isRestrictedTabUrl(t.url)) {
+          restrictedIds.add(t.id);
+          return;
+        }
+        const hasMedia = tabMediaMap.has(t.id) || tabMediaMap.has(String(t.id));
+        if (t.id !== excludeId && (t.audible || hasMedia || (t.mutedInfo && !t.mutedInfo.muted))) {
+          tabs.add(t.id);
+        }
+      });
+    } catch (_) {}
+  }
   for (const [tId] of tabMediaMap.entries()) {
     const numId = Number(tId);
-    if (numId && numId !== excludeId) {
+    if (numId && numId !== excludeId && !restrictedIds.has(numId)) {
       tabs.add(numId);
     }
   }
-  if (!browserAPI.tabs || typeof browserAPI.tabs.query !== 'function') return tabs;
-  try {
-    const allTabs = await browserAPI.tabs.query({});
-    (allTabs || []).forEach(t => {
-      if (t && t.id && t.id !== excludeId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
-        tabs.add(t.id);
-      }
-    });
-  } catch (_) {}
   return tabs;
 }
 
@@ -2708,7 +2717,10 @@ async function restoreMuteSnapshot(snapshotMap, excludeId = null) {
     try {
       const allTabs = (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') ? await browserAPI.tabs.query({}) : [];
       (allTabs || []).forEach(t => {
-        if (t && t.id && t.mutedInfo && t.mutedInfo.muted) targetEntries.push([t.id, false]);
+        if (t && t.id && t.mutedInfo && t.mutedInfo.muted) {
+          if (typeof isRestrictedTabUrl === 'function' && t.url && isRestrictedTabUrl(t.url)) return;
+          targetEntries.push([t.id, false]);
+        }
       });
     } catch (_) {}
   }
@@ -2721,7 +2733,7 @@ async function restoreMuteSnapshot(snapshotMap, excludeId = null) {
       }
     } catch (_) {}
     safeSendTabMessage(numId, { type: 'MEDIA_CONTROL', action: wasMuted ? 'mute' : 'unmute' });
-    const m = tabMediaMap.get(numId);
+    const m = tabMediaMap.get(numId) || tabMediaMap.get(String(numId));
     if (m && m.primaryMedia) m.primaryMedia.isMuted = wasMuted;
     count++;
   }
@@ -2829,13 +2841,37 @@ async function handleSoloTabExecution(soloTabId) {
  * @returns {Promise<{success: boolean, primaryTabId?: number, mutedCount?: number, error?: string}>}
  */
 async function handleMuteAllOthersExecution(primaryTabId) {
-  const targetId = Number(primaryTabId);
+  let targetId = Number(primaryTabId) || 0;
+  if (!targetId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    try {
+      const active = await browserAPI.tabs.query({ active: true, lastFocusedWindow: true });
+      if (active && active[0] && active[0].id) targetId = active[0].id;
+    } catch (_) {}
+  }
+  if (!targetId && tabMediaMap && tabMediaMap.size > 0) {
+    targetId = Number(tabMediaMap.keys().next().value) || 0;
+  }
+  if (!targetId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+    try {
+      const all = await browserAPI.tabs.query({});
+      const cand = (all || []).find(t => t && t.id && (!t.url || typeof isRestrictedTabUrl !== 'function' || !isRestrictedTabUrl(t.url)));
+      if (cand) targetId = cand.id;
+    } catch (_) {}
+  }
   if (!targetId) return { success: false, error: 'Invalid primaryTabId' };
 
   await capturePreMuteSnapshot(muteOthersPreviousMuteStates);
+  try {
+    if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
+      await browserAPI.tabs.update(targetId, { muted: false }).catch(() => {});
+    }
+  } catch (_) {}
+  safeSendTabMessage(targetId, { type: 'MEDIA_CONTROL', action: 'unmute' });
+  const targetMedia = tabMediaMap.get(targetId) || tabMediaMap.get(String(targetId));
+  if (targetMedia && targetMedia.primaryMedia) targetMedia.primaryMedia.isMuted = false;
+
   const tabsToMute = await collectCandidateTabs(targetId);
   let mutedCount = 0;
-
   for (const muteId of tabsToMute) {
     try {
       if (browserAPI.tabs && typeof browserAPI.tabs.update === 'function') {
@@ -2843,13 +2879,10 @@ async function handleMuteAllOthersExecution(primaryTabId) {
       }
     } catch (_) {}
     safeSendTabMessage(muteId, { type: 'MEDIA_CONTROL', action: 'mute' });
-    const m = tabMediaMap.get(muteId);
-    if (m && m.primaryMedia) {
-      m.primaryMedia.isMuted = true;
-    }
+    const m = tabMediaMap.get(muteId) || tabMediaMap.get(String(muteId));
+    if (m && m.primaryMedia) m.primaryMedia.isMuted = true;
     mutedCount++;
   }
-
   safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
   return { success: true, primaryTabId: targetId, mutedCount };
 }
@@ -4568,6 +4601,44 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (msgType === 'MEDIA_STREAM_MUTE_ALL_CLEAR') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllClearExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  // Canonical media action aliases for direct invocation & CLI parity
+  if (msgType === 'media:mute_all_others' || msgType === 'mute_all_others' || msgType === 'mute_others') {
+    (async () => {
+      await ensureStorageLoaded();
+      const primaryTabId = message.primaryTabId || message.tabId;
+      const result = await handleMuteAllOthersExecution(primaryTabId);
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'media:unmute_all_others' || msgType === 'media:mute_all_others_clear' || msgType === 'mute_all_others_clear' || msgType === 'unmute_all_others') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllOthersClearExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'media:mute_all' || msgType === 'mute_all') {
+    (async () => {
+      await ensureStorageLoaded();
+      const result = await handleMuteAllExecution();
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msgType === 'media:unmute_all' || msgType === 'media:mute_all_clear' || msgType === 'mute_all_clear' || msgType === 'unmute_all') {
     (async () => {
       await ensureStorageLoaded();
       const result = await handleMuteAllClearExecution();

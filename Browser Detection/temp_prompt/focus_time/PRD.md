@@ -45,6 +45,14 @@ The **Focus Time & Focus Sentinel Subsystem** provides intelligent, persistent f
 | **FR-08** | Popup UI | **Popup Mini-Timer Controller:** Embed `#cardPopupFocusTimer` inside `viewTrackingPane` in [popup.html](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/popup/popup.html) with compact countdown, mode indicator, and Start/Pause/Reset actions. | **Must Have** | **Phase 1 & 2** |
 | **FR-09** | Micro-HUD | **Sidebar HUD Micro-Widget Synchronization:** Ensure `#wellbeingLiveMicroWidget` in the dashboard sidebar continuously updates its digital clock and status dot with background state. | **Must Have** | **Phase 1 & 2** |
 | **FR-10** | Persistence | **Storage & Daily Metrics Accumulation:** Persist timer state in `sentinel_focus_timer`, settings in `sentinel_focus_settings`, and accumulate daily completed focus seconds into `daily_focus_metrics`. | **Must Have** | **Phase 2** |
+| **FR-11** | Visual UI | **Custom Duration Stepper & Mode Tabs:** Support Focus, Short Break, and Long Break mode tabs plus a custom numeric minute stepper (1-180m). | **Must Have** | **Phase 1** |
+| **FR-12** | Visual UI | **Task Intent / Goal Input:** Allow user to set active focus task intent ("What are you focusing on?") with active task chip and dial preview. | **Must Have** | **Phase 1** |
+| **FR-13** | Visual UI | **Full-Screen Zen Mode:** Expandable distraction-free ambient overlay with minimal dial, active goal, and mindfulness quote. | **Must Have** | **Phase 1** |
+| **FR-14** | Visual UI | **4-Stage Pomodoro Cycle Visualizer:** 4 visual dot indicators (Session 1 of 4) showing progress through the 4-interval cycle. | **Must Have** | **Phase 1** |
+| **FR-15** | Audio UI | **Ambient Soundscapes Bar:** Web Audio soundscape generator (Rain, Cafe, Ocean, Forest, White Noise) with volume slider and play/pause toggle. | **Must Have** | **Phase 1** |
+| **FR-16** | Security | **Strict Shield Distraction Blocker Preview:** Toggle switch for gentle nudge alerts when visiting social/entertainment domains during focus. | **Must Have** | **Phase 1** |
+| **FR-17** | Audio UI | **Acoustic Chime Selector with Preview:** Select between Solfeggio, Tibetan Bowl, Bell, and Gong with interactive (▶ Test) preview button. | **Must Have** | **Phase 1** |
+| **FR-18** | Analytics | **Daily Streak & Target Goal Progress Bar:** Visual daily streak badge ("🔥 1-Day Streak") and interactive goal progress bar. | **Must Have** | **Phase 1** |
 
 ---
 
