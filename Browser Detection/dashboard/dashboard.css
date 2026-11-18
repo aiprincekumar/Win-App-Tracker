@@ -6743,6 +6743,7 @@ body.visualizer-fullscreen-active {
   position: relative;
   display: inline-flex;
   align-items: center;
+  z-index: 101 !important;
 }
 
 .select-viz-effect,
