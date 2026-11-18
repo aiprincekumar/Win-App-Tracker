@@ -1011,6 +1011,8 @@ button.spinning .refresh-spinner-icon,
 .data-table-card.liquid-glass-card,
 .settings-card.liquid-glass-card,
 .audio-lab-widget.liquid-glass-card,
+.pomodoro-advanced-card.liquid-glass-card,
+.sleep-advanced-card.liquid-glass-card,
 .audio-eq-widget.liquid-glass-card {
   background: var(--glass-surface-bg);
   backdrop-filter: blur(var(--glass-blur-radius)) saturate(190%);
@@ -1027,6 +1029,8 @@ button.spinning .refresh-spinner-icon,
 .data-table-card.liquid-glass-card:hover,
 .settings-card.liquid-glass-card:hover,
 .audio-lab-widget.liquid-glass-card:hover,
+.pomodoro-advanced-card.liquid-glass-card:hover,
+.sleep-advanced-card.liquid-glass-card:hover,
 .audio-eq-widget.liquid-glass-card:hover {
   background: var(--glass-surface-hover);
   box-shadow: var(--shadow-ambient), var(--shadow-specular-glow);
@@ -9234,4 +9238,65 @@ body.theme-light .btn-bridge-action:hover {
   .btn-sleep-primary.paused:hover {
     transform: none;
   }
+}
+
+
+/* ========================================================================== */
+/* SECTION: ADVANCED FOCUS & SLEEP HUBS (CONTAINER SPLIT)                      */
+/* ========================================================================== */
+
+.pomodoro-advanced-card,
+.sleep-advanced-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: rgba(18, 22, 34, 0.75);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.pomodoro-advanced-card {
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), 0 0 24px -4px rgba(16, 185, 129, 0.12);
+}
+
+.pomodoro-advanced-card:hover {
+  border-color: rgba(16, 185, 129, 0.38);
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.7), 0 0 28px -2px rgba(16, 185, 129, 0.2);
+}
+
+.sleep-advanced-card {
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), 0 0 24px -4px rgba(99, 102, 241, 0.12);
+}
+
+.sleep-advanced-card:hover {
+  border-color: rgba(99, 102, 241, 0.38);
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.7), 0 0 28px -2px rgba(99, 102, 241, 0.2);
+}
+
+.pomodoro-advanced-body,
+.sleep-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  width: 100%;
+}
+
+.focus-advanced-stepper-extender-row,
+.sleep-advanced-custom-extender-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dash-focus-actions-panel,
+.dash-sleep-actions-panel {
+  width: 100%;
+  margin-top: 0.25rem;
 }

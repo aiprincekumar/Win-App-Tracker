@@ -1222,6 +1222,13 @@
             </div>
           </div>
         </div>
+
+        <!-- Floating Circular Scroll To Top Action for Media History -->
+        <button id="btnMediaScrollToTop" class="media-scroll-to-top hidden" type="button" aria-label="Scroll back to top of media history" title="Scroll to top" data-i18n-title="media_scroll_to_top" data-i18n-aria-label="media_scroll_to_top">
+          <svg class="scroll-top-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
+        </button>
       </section>
 
         <!-- ================================================================= -->
@@ -1229,13 +1236,13 @@
         <!-- ================================================================= -->
         <section id="paneWellbeing" class="tab-pane" role="tabpanel" aria-labelledby="navTabWellbeing">
           <div id="tabContentWellbeing" class="bento-grid-container wellbeing-grid bento-grid">
-            <!-- Pillar 1: Hero Pomodoro Sentinel State Machine Card (Preserves id="widgetPomodoroSentinel") -->
+            <!-- Pillar 1: Hero Pomodoro Sentinel State Machine Card (Part 1 - Basic, Preserves id="widgetPomodoroSentinel") -->
             <div id="widgetPomodoroSentinel" class="bento-card liquid-glass-card bento-span-6 pomodoro-hero-card">
               <div class="card-header-row settings-card-header">
                 <span class="card-icon settings-card-icon">🧘</span>
                 <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtPomodoroTitle" class="card-heading settings-card-title">Focus Sentinel & Pomodoro</h3>
-                  <span class="settings-card-sub">Deep work intervals, automated media cutoff & break recovery</span>
+                  <h3 id="txtPomodoroTitle" class="card-heading settings-card-title" data-i18n="pomodoro_title">Focus Sentinel & Pomodoro</h3>
+                  <span class="settings-card-sub" data-i18n="pomodoro_desc">Deep work intervals, automated media cutoff & break recovery</span>
                 </div>
                 <div class="focus-header-status-group">
                   <span id="dashFocusActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>
@@ -1270,16 +1277,6 @@
                       </div>
                       <span id="focusTargetGoalText" class="target-goal-text">Goal: 0h 45m / 3h 00m</span>
                     </div>
-                  </div>
-                </div>
-
-                <!-- Task Intent / Goal Input (Feature 2) -->
-                <div class="focus-goal-input-row">
-                  <input type="text" id="inputFocusGoal" class="styled-input focus-goal-input" placeholder="🎯 What are you focusing on? (e.g. Code Review, Research)...">
-                  <div id="chipActiveFocusGoal" class="chip-active-focus-goal hidden">
-                    <span class="chip-icon">🎯</span>
-                    <span id="txtActiveFocusGoal" class="chip-text"></span>
-                    <button type="button" id="btnClearFocusGoal" class="chip-clear" title="Clear task">✕</button>
                   </div>
                 </div>
 
@@ -1320,16 +1317,10 @@
                 <!-- Hidden progress bar for backwards-compatibility -->
                 <div id="pomodoroProgressBar" class="hidden" aria-hidden="true" style="width: 100%;"></div>
 
-                <!-- Quick Duration Presets & Custom Stepper (Feature 1) -->
+                <!-- Quick Duration Presets -->
                 <div class="dash-focus-presets-container">
                   <div class="presets-header-row">
-                    <span class="focus-section-label">Duration & Presets</span>
-                    <div class="focus-custom-minute-stepper">
-                      <label for="inputFocusCustomMinutes" class="stepper-label">Custom:</label>
-                      <input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25" aria-label="Custom Focus Minutes">
-                      <span class="stepper-unit">min</span>
-                      <button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply">Set</button>
-                    </div>
+                    <span class="focus-section-label" data-i18n="lbl_focus_presets">Duration & Presets</span>
                   </div>
                   <div class="dash-focus-presets-grid">
                     <button type="button" class="dash-focus-preset-btn" data-minutes="15">15m</button>
@@ -1339,98 +1330,33 @@
                   </div>
                 </div>
 
-                <!-- Quick Extenders & Actions Panel -->
-                <div class="dash-focus-controls-panel">
-                  <div class="dash-focus-extender-group">
-                    <span class="focus-section-label">Extend Time</span>
-                    <div class="dash-focus-extender-buttons">
-                      <button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>
-                      <button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>
-                    </div>
-                  </div>
+                <!-- Actions Panel -->
+                <div class="dash-focus-actions-panel">
                   <div class="dash-focus-actions-group">
                     <button type="button" id="btnStartPomodoro" class="btn-focus-primary">
                       <span id="btnFocusToggleIcon">▶️</span>
-                      <span id="btnFocusToggleText">Start Focus</span>
+                      <span id="btnFocusToggleText" data-i18n="btn_start_focus">Start Focus</span>
                     </button>
                     <button type="button" id="btnPausePomodoro" class="btn-focus-secondary hidden" aria-hidden="true">
                       <span>⏸️</span>
-                      <span>Pause</span>
+                      <span data-i18n="btn_pomodoro_pause">Pause</span>
                     </button>
                     <button type="button" id="btnResetPomodoro" class="btn-focus-secondary">
                       <span>🔄</span>
-                      <span>Reset</span>
+                      <span data-i18n="btn_pomodoro_reset">Reset</span>
                     </button>
                   </div>
-                </div>
-
-                <!-- Ambient Soundscapes Generator Bar (Feature 5) -->
-                <div class="focus-soundscape-panel">
-                  <div class="soundscape-header">
-                    <span class="soundscape-title">🎧 Ambient Soundscapes</span>
-                    <select id="selectFocusSoundscape" class="styled-select soundscape-select" aria-label="Ambient Soundscape Selector">
-                      <option value="none" selected>Off (Silent)</option>
-                      <option value="rain">🌧️ Gentle Rain</option>
-                      <option value="cafe">☕ Coffee Shop</option>
-                      <option value="ocean">🌊 Ocean Waves</option>
-                      <option value="forest">🌲 Forest Birds</option>
-                      <option value="whitenoise">💨 Pink/White Noise</option>
-                    </select>
-                    <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
-                  </div>
-                  <div class="soundscape-volume-row">
-                    <span class="volume-icon">🔈</span>
-                    <input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume">
-                    <span id="txtSoundscapeVolume" class="volume-num">50%</span>
-                  </div>
-                </div>
-
-                <!-- Acoustic Chime Selector with Preview Button (Feature 7) -->
-                <div class="focus-chime-selector-row">
-                  <span class="chime-label">🔔 Completion Chime:</span>
-                  <select id="selectFocusChimeTone" class="styled-select chime-select" aria-label="Completion Chime Tone">
-                    <option value="solfeggio528" selected>Solfeggio Harmonic (528Hz / 660Hz)</option>
-                    <option value="tibetan">Tibetan Singing Bowl (432Hz)</option>
-                    <option value="bell">Digital Bell Synthesizer</option>
-                    <option value="gong">Zen Temple Gong</option>
-                  </select>
-                  <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone">▶ Test</button>
-                </div>
-
-                <!-- Feature Toggles (Auto-pause media, Chime, Strict Shield Feature 6) -->
-                <div class="dash-focus-toggles-container">
-                  <label class="dash-focus-toggle-row" for="toggleFocusAutoPauseMedia">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title">Auto-pause Media</span>
-                      <span class="toggle-desc">Auto-pause media during focus</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>
-                  </label>
-                  <label class="dash-focus-toggle-row" for="toggleFocusChime">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title">Sound Chime</span>
-                      <span class="toggle-desc">Sound chime on cycle completion</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>
-                  </label>
-                  <label class="dash-focus-toggle-row" for="toggleFocusDistractionShield">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title">🛡️ Strict Shield</span>
-                      <span class="toggle-desc">Nudge and shield on distracting domains during focus</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">
-                  </label>
                 </div>
               </div>
             </div>
 
-            <!-- Pillar 1.5: Sleep Sentinel Hub & Radial Countdown Dial -->
+            <!-- Pillar 1.5: Sleep Sentinel Hub & Radial Countdown Dial (Part 1 - Basic, Preserves id="cardSleepSentinelHub") -->
             <div id="cardSleepSentinelHub" class="bento-card liquid-glass-card bento-span-6 sleep-hero-card">
               <div class="card-header-row settings-card-header">
                 <span class="card-icon settings-card-icon">🌙</span>
                 <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtSleepSentinelTitle" class="card-heading settings-card-title">Sleep Sentinel Hub</h3>
-                  <span id="txtSleepSentinelDesc" class="settings-card-sub">Automated playback cutoff, gentle audio fade-out, and bedtime recovery</span>
+                  <h3 id="txtSleepSentinelTitle" class="card-heading settings-card-title" data-i18n="sleep_sentinel_title">Sleep Sentinel Hub</h3>
+                  <span id="txtSleepSentinelDesc" class="settings-card-sub" data-i18n="sleep_sentinel_desc">Automated playback cutoff, gentle audio fade-out, and bedtime recovery</span>
                 </div>
                 <div class="sleep-header-status-group">
                   <span id="dashSleepActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>
@@ -1474,7 +1400,7 @@
 
                 <!-- Duration Presets (15m, 30m, 45m, 60m, 90m, 120m) -->
                 <div class="dash-sleep-presets-container">
-                  <span class="dash-sleep-section-label">Quick Presets</span>
+                  <span class="dash-sleep-section-label" data-i18n="lbl_quick_presets">Quick Presets</span>
                   <div class="dash-sleep-presets-grid">
                     <button type="button" class="dash-sleep-preset-btn" data-minutes="15">15m</button>
                     <button type="button" class="dash-sleep-preset-btn active" data-minutes="30">30m</button>
@@ -1485,33 +1411,145 @@
                   </div>
                 </div>
 
-                <!-- Custom Duration Input Row -->
-                <div class="dash-sleep-custom-input-row">
-                  <label for="inputDashSleepCustomMinutes" class="dash-sleep-section-label" data-i18n="lbl_custom_duration">Custom Duration</label>
-                  <div class="dash-sleep-custom-input-wrap">
-                    <input type="number" id="inputDashSleepCustomMinutes" class="dash-sleep-custom-input" min="1" max="1440" placeholder="Min (1-1440)" />
-                    <button type="button" id="btnSetDashSleepCustom" class="btn-dash-sleep-set-custom" data-i18n="btn_set">Set</button>
+                <!-- Actions Group (Start/Stop toggle & Reset) -->
+                <div class="dash-sleep-actions-panel">
+                  <div class="dash-sleep-actions-group">
+                    <button type="button" id="btnDashSleepToggle" class="btn-sleep-primary">
+                      <span id="btnDashSleepToggleIcon">▶️</span>
+                      <span id="btnDashSleepToggleText" data-i18n="btn_start_sleep_timer">Start Sleep Timer</span>
+                    </button>
+                    <button type="button" id="btnDashSleepReset" class="btn-sleep-secondary">
+                      <span>🔄</span>
+                      <span data-i18n="btn_reset">Reset</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 1B: Focus Advanced Controls Card (Part 2 - Advanced, Placed DIRECTLY UNDERNEATH Part 1) -->
+            <div id="widgetFocusAdvanced" class="bento-card liquid-glass-card bento-span-6 pomodoro-advanced-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">⚙️</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtFocusAdvancedTitle" class="card-heading settings-card-title" data-i18n="focus_advanced_title">Focus Advanced Controls</h3>
+                  <span id="txtFocusAdvancedDesc" class="settings-card-sub" data-i18n="focus_advanced_desc">Custom goals, ambient soundscapes, acoustic chimes & smart shields</span>
+                </div>
+              </div>
+              <div class="pomodoro-advanced-body">
+                <!-- Task Intent / Goal Input (Feature 2) -->
+                <div class="focus-goal-input-row">
+                  <input type="text" id="inputFocusGoal" class="styled-input focus-goal-input" placeholder="🎯 What are you focusing on? (e.g. Code Review, Research)...">
+                  <div id="chipActiveFocusGoal" class="chip-active-focus-goal hidden">
+                    <span class="chip-icon">🎯</span>
+                    <span id="txtActiveFocusGoal" class="chip-text"></span>
+                    <button type="button" id="btnClearFocusGoal" class="chip-clear" title="Clear task">✕</button>
                   </div>
                 </div>
 
-                <!-- Quick Extenders (+5m, +15m) & Actions -->
-                <div class="dash-sleep-controls-panel">
+                <!-- Custom Minutes Stepper & Quick Extenders -->
+                <div class="focus-advanced-stepper-extender-row">
+                  <div class="focus-custom-minute-stepper">
+                    <label for="inputFocusCustomMinutes" class="stepper-label" data-i18n="lbl_custom">Custom:</label>
+                    <input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25" aria-label="Custom Focus Minutes">
+                    <span class="stepper-unit">min</span>
+                    <button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply" data-i18n="btn_set">Set</button>
+                  </div>
+                  <div class="dash-focus-extender-group">
+                    <span class="focus-section-label" data-i18n="lbl_extend_time">Extend Time</span>
+                    <div class="dash-focus-extender-buttons">
+                      <button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>
+                      <button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Ambient Soundscapes Generator Bar (Feature 5) -->
+                <div class="focus-soundscape-panel">
+                  <div class="soundscape-header">
+                    <span class="soundscape-title" data-i18n="focus_ambient_soundscapes">🎧 Ambient Soundscapes</span>
+                    <select id="selectFocusSoundscape" class="styled-select soundscape-select" aria-label="Ambient Soundscape Selector">
+                      <option value="none" selected data-i18n="soundscape_opt_none">Off (Silent)</option>
+                      <option value="rain" data-i18n="soundscape_opt_rain">🌧️ Gentle Rain</option>
+                      <option value="cafe" data-i18n="soundscape_opt_cafe">☕ Coffee Shop</option>
+                      <option value="ocean" data-i18n="soundscape_opt_ocean">🌊 Ocean Waves</option>
+                      <option value="forest" data-i18n="soundscape_opt_forest">🌲 Forest Birds</option>
+                      <option value="whitenoise" data-i18n="soundscape_opt_whitenoise">💨 Pink/White Noise</option>
+                    </select>
+                    <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
+                  </div>
+                  <div class="soundscape-volume-row">
+                    <span class="volume-icon">🔈</span>
+                    <input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume">
+                    <span id="txtSoundscapeVolume" class="volume-num">50%</span>
+                  </div>
+                </div>
+
+                <!-- Acoustic Chime Selector with Preview Button (Feature 7) -->
+                <div class="focus-chime-selector-row">
+                  <span class="chime-label" data-i18n="focus_completion_chime">🔔 Completion Chime:</span>
+                  <select id="selectFocusChimeTone" class="styled-select chime-select" aria-label="Completion Chime Tone">
+                    <option value="solfeggio528" selected data-i18n="chime_opt_solfeggio">Solfeggio Harmonic (528Hz / 660Hz)</option>
+                    <option value="tibetan" data-i18n="chime_opt_tibetan">Tibetan Singing Bowl (432Hz)</option>
+                    <option value="bell" data-i18n="chime_opt_bell">Digital Bell Synthesizer</option>
+                    <option value="gong" data-i18n="chime_opt_gong">Zen Temple Gong</option>
+                  </select>
+                  <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone" data-i18n="btn_preview_chime">▶ Test</button>
+                </div>
+
+                <!-- Feature Toggles (Auto-pause media, Chime, Strict Shield Feature 6) -->
+                <div class="dash-focus-toggles-container">
+                  <label class="dash-focus-toggle-row" for="toggleFocusAutoPauseMedia">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_autopause">Auto-pause Media</span>
+                      <span class="toggle-desc" data-i18n="toggle_focus_autopause_desc">Auto-pause media during focus</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>
+                  </label>
+                  <label class="dash-focus-toggle-row" for="toggleFocusChime">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_chime">Sound Chime</span>
+                      <span class="toggle-desc" data-i18n="toggle_focus_chime_desc">Sound chime on cycle completion</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>
+                  </label>
+                  <label class="dash-focus-toggle-row" for="toggleFocusDistractionShield">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_shield">🛡️ Strict Shield</span>
+                      <span class="toggle-desc" data-i18n="toggle_focus_shield_desc">Nudge and shield on distracting domains during focus</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 1.5B: Sleep Advanced Controls Card (Part 2 - Advanced, Placed DIRECTLY UNDERNEATH Part 1) -->
+            <div id="cardSleepAdvanced" class="bento-card liquid-glass-card bento-span-6 sleep-advanced-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">⚙️</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtSleepAdvancedTitle" class="card-heading settings-card-title" data-i18n="sleep_advanced_title">Sleep Advanced Controls</h3>
+                  <span id="txtSleepAdvancedDesc" class="settings-card-sub" data-i18n="sleep_advanced_desc">Custom durations, gradual fade-out, end-of-video cutoff & inactivity triggers</span>
+                </div>
+              </div>
+
+              <div class="sleep-advanced-body">
+                <!-- Custom Duration & Quick Extenders Row -->
+                <div class="sleep-advanced-custom-extender-row">
+                  <div class="dash-sleep-custom-input-row">
+                    <label for="inputDashSleepCustomMinutes" class="dash-sleep-section-label" data-i18n="lbl_custom_duration">Custom Duration</label>
+                    <div class="dash-sleep-custom-input-wrap">
+                      <input type="number" id="inputDashSleepCustomMinutes" class="dash-sleep-custom-input" min="1" max="1440" placeholder="Min (1-1440)" />
+                      <button type="button" id="btnSetDashSleepCustom" class="btn-dash-sleep-set-custom" data-i18n="btn_set">Set</button>
+                    </div>
+                  </div>
                   <div class="dash-sleep-extender-group">
-                    <span class="dash-sleep-section-label">Extend Time</span>
+                    <span class="dash-sleep-section-label" data-i18n="lbl_extend_time">Extend Time</span>
                     <div class="dash-sleep-extender-buttons">
                       <button type="button" id="btnDashSleepExtend5" class="dash-sleep-extender-btn" data-add="5">+5m</button>
                       <button type="button" id="btnDashSleepExtend15" class="dash-sleep-extender-btn" data-add="15">+15m</button>
                     </div>
-                  </div>
-                  <div class="dash-sleep-actions-group">
-                    <button type="button" id="btnDashSleepToggle" class="btn-sleep-primary">
-                      <span id="btnDashSleepToggleIcon">▶️</span>
-                      <span id="btnDashSleepToggleText">Start Sleep Timer</span>
-                    </button>
-                    <button type="button" id="btnDashSleepReset" class="btn-sleep-secondary">
-                      <span>🔄</span>
-                      <span>Reset</span>
-                    </button>
                   </div>
                 </div>
 

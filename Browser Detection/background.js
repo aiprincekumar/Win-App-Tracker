@@ -462,6 +462,7 @@ let intervalStartTime = Date.now();
 let isBrowserFocused = true;
 let isUserActive = true;
 let isTrackingPaused = false;
+let userIdleStartTime = 0;
 
 // Feature 7 & 8: Privacy Tracking Exclusion Blacklist & Domain Budgets
 let trackingBlacklist = ['localhost', 'localhost:*', '127.0.0.1', '127.0.0.1:*', '192.168.*', '192.168.*:*', '10.*.*:*', 'file://*'];
@@ -1270,10 +1271,15 @@ async function loadStorageData() {
         sleepTimerState.triggeredAt = now;
         saveSleepTimerState();
         clearActionBadge();
+        await purgeSleepTimerAlarms();
       } else if (sleepTimerState.state === 'RUNNING') {
         const remainingMs = sleepTimerState.targetTime - now;
         updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      } else if (sleepTimerState.state === 'IDLE' || sleepTimerState.state === 'CANCELLED') {
+        await purgeSleepTimerAlarms();
       }
+    } else {
+      await purgeSleepTimerAlarms();
     }
 
     // Hydrate Focus Sentinel & Timer Settings from persistent storage
@@ -1336,10 +1342,15 @@ async function loadSleepTimerData() {
         sleepTimerState.triggeredAt = now;
         await saveSleepTimerState();
         clearActionBadge();
+        await purgeSleepTimerAlarms();
       } else if (sleepTimerState.state === 'RUNNING') {
         const remainingMs = sleepTimerState.targetTime - now;
         updateActionBadge(remainingMs, sleepTimerState.durationMs);
+      } else if (sleepTimerState.state === 'IDLE' || sleepTimerState.state === 'CANCELLED') {
+        await purgeSleepTimerAlarms();
       }
+    } else {
+      await purgeSleepTimerAlarms();
     }
   } catch (err) {
     console.error('[MediaSentinel] Failed to load sleep timer storage:', err);
@@ -1380,8 +1391,7 @@ async function saveSleepTimerSettings(newSettings) {
  */
 async function scheduleSleepTimerAlarms(state) {
   try {
-    await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
-    await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
+    await purgeSleepTimerAlarms();
 
     if (state.state !== 'RUNNING') return;
 
@@ -1411,12 +1421,17 @@ async function scheduleSleepTimerAlarms(state) {
  */
 async function triggerSleepTimerExpiration() {
   await ensureStorageLoaded();
-  console.info('[MediaSentinel] 🌙 Sleep timer expired! Triggering configured timeout action.');
+  if (!sleepTimerState || (sleepTimerState.state !== 'RUNNING' && sleepTimerState.state !== 'FADING') || (sleepTimerState.targetTime !== undefined && sleepTimerState.targetTime <= 0)) {
+    console.info('[MediaSentinel] Sleep timer expiration skipped: timer not active', sleepTimerState ? sleepTimerState.state : 'null');
+    await purgeSleepTimerAlarms();
+    return;
+  }
 
+  console.info('[MediaSentinel] 🌙 Sleep timer expired! Triggering configured timeout action.');
   sleepTimerState.state = 'TRIGGERED';
   sleepTimerState.triggeredAt = Date.now();
   await saveSleepTimerState();
-
+  await purgeSleepTimerAlarms();
   clearActionBadge();
 
   const action = String(
@@ -1427,32 +1442,36 @@ async function triggerSleepTimerExpiration() {
   ).toLowerCase();
 
   if (action === 'mute') {
-    if (typeof handleMuteAllExecution === 'function') {
-      await handleMuteAllExecution();
-    }
+    if (typeof handleMuteAllExecution === 'function') await handleMuteAllExecution();
   } else if (action === 'close' || action === 'close_tab') {
-    if (typeof dispatchGlobalMediaAction === 'function') {
-      await dispatchGlobalMediaAction('PAUSE_ALL').catch(() => {});
-    }
+    if (typeof dispatchGlobalMediaAction === 'function') await dispatchGlobalMediaAction('PAUSE_ALL').catch(() => {});
     await closeAllMediaTabs();
   } else if (action === 'pause' || sleepTimerState.pauseMedia) {
-    if (typeof dispatchGlobalMediaAction === 'function') {
-      await dispatchGlobalMediaAction('PAUSE_ALL');
-    }
+    if (typeof dispatchGlobalMediaAction === 'function') await dispatchGlobalMediaAction('PAUSE_ALL');
   }
 
-  // Freeze active tracking intervals
   if (sleepTimerState.pauseTracking) {
     commitActiveInterval();
     scheduleStorageSave(true);
   }
 
-  // Notify frontend views
   safeSendRuntimeMessage({
     action: 'SLEEP_TIMER_EXPIRED',
     type: 'SLEEP_TIMER_EXPIRED',
     state: sleepTimerState
   });
+}
+
+/**
+ * Safely purges sleep timer and volume fade alarms from browser alarms API
+ */
+async function purgeSleepTimerAlarms() {
+  try {
+    if (browserAPI && browserAPI.alarms && typeof browserAPI.alarms.clear === 'function') {
+      await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
+      await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
+    }
+  } catch (_) {}
 }
 
 /**
@@ -1484,7 +1503,11 @@ async function closeAllMediaTabs() {
  */
 async function triggerSleepTimerFade() {
   await ensureStorageLoaded();
-  if (sleepTimerState.state !== 'RUNNING') return;
+  if (!sleepTimerState || sleepTimerState.state !== 'RUNNING' || (sleepTimerState.targetTime !== undefined && sleepTimerState.targetTime <= 0)) {
+    console.info('[MediaSentinel] Sleep timer fade skipped: timer not in RUNNING state');
+    await purgeSleepTimerAlarms();
+    return;
+  }
   sleepTimerState.state = 'FADING';
   await saveSleepTimerState();
 
@@ -1544,10 +1567,7 @@ async function setSleepTimer(durationMinutes, options = {}) {
  * Cancels active sleep timer and resets state
  */
 async function cancelSleepTimer() {
-  try {
-    await browserAPI.alarms.clear(SLEEP_ALARM_NAME);
-    await browserAPI.alarms.clear(SLEEP_FADE_ALARM_NAME);
-  } catch (_) {}
+  await purgeSleepTimerAlarms();
 
   sleepTimerState = {
     ...INITIAL_SLEEP_TIMER_STATE,
@@ -2212,9 +2232,64 @@ async function handleFocusBreakExpired() {
 }
 
 /**
+ * Gathers candidate tab IDs playing media in tabs other than the newly active/created tab
+ * @param {number} activeTabId
+ * @returns {Set<number>}
+ */
+function collectAutoPauseTargetTabs(activeTabId) {
+  const targetTabIds = new Set();
+  const globalMedia = synthesizeGlobalMediaState();
+  if (globalMedia && globalMedia.primaryMedia && globalMedia.primaryMedia.isPlaying) {
+    const pmTabId = Number(globalMedia.primaryMedia.tabId);
+    if (pmTabId && pmTabId !== activeTabId) targetTabIds.add(pmTabId);
+  }
+  if (typeof tabMediaMap !== 'undefined' && tabMediaMap.forEach) {
+    tabMediaMap.forEach((mState, tId) => {
+      const numTabId = Number(tId);
+      if (numTabId && numTabId !== activeTabId && mState) {
+        if (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying)) {
+          targetTabIds.add(numTabId);
+        }
+      }
+    });
+  }
+  if (typeof activeMediaSessions !== 'undefined' && activeMediaSessions.forEach) {
+    activeMediaSessions.forEach((session, tId) => {
+      const numTabId = Number(tId);
+      if (numTabId && numTabId !== activeTabId && session && session.isPlaying) {
+        targetTabIds.add(numTabId);
+      }
+    });
+  }
+  return targetTabIds;
+}
+
+/**
+ * Safely sends pause control commands to a specific tab
+ * @param {number} tabId
+ * @returns {Promise<boolean>}
+ */
+async function executeTabMediaPause(tabId) {
+  try {
+    let tab = null;
+    if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
+      tab = await browserAPI.tabs.get(tabId).catch(() => null);
+    }
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return false;
+    }
+    safeSendTabMessage(tabId, { type: 'CONTROL_MEDIA', action: 'pause' });
+    safeSendTabMessage(tabId, { type: 'PAUSE_MEDIA', action: 'PAUSE_MEDIA' });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Defect 07: Auto-Pause on New Tab / Tab Switch
  * Pauses background media in other tabs when a new tab is created or activated
- * if smart_automations.auto_pause_new_tab is enabled in storage.
+ * if smart_automations.auto_pause_new_tab is strictly enabled (true) in storage.
  * 
  * @param {number} newActiveOrCreatedTabId The ID of the newly activated or created tab
  * @returns {Promise<{ pausedTabs: number[] }>}
@@ -2224,64 +2299,17 @@ async function handleAutoPauseOnTabChange(newActiveOrCreatedTabId) {
   if (!newActiveOrCreatedTabId || typeof newActiveOrCreatedTabId !== 'number') {
     return result;
   }
-
   try {
     const res = await browserAPI.storage.local.get(['smart_automations']);
-    const autoPause = Boolean(res && res.smart_automations && res.smart_automations.auto_pause_new_tab);
-    if (!autoPause) return result;
+    const isAutoPauseEnabled = Boolean(res && res.smart_automations && res.smart_automations.auto_pause_new_tab === true);
+    if (!isAutoPauseEnabled) return result;
 
-    const globalMedia = synthesizeGlobalMediaState();
-    const targetTabIds = new Set();
-
-    // Priority 1: primaryMedia if it is playing in a different tab
-    if (globalMedia && globalMedia.primaryMedia && globalMedia.primaryMedia.isPlaying) {
-      const pmTabId = Number(globalMedia.primaryMedia.tabId);
-      if (pmTabId && pmTabId !== newActiveOrCreatedTabId) {
-        targetTabIds.add(pmTabId);
-      }
-    }
-
-    // Priority 2: Check tabMediaMap for any playing media in other tabs
-    if (typeof tabMediaMap !== 'undefined' && tabMediaMap.forEach) {
-      tabMediaMap.forEach((mState, tId) => {
-        const numTabId = Number(tId);
-        if (numTabId && numTabId !== newActiveOrCreatedTabId && mState) {
-          if (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying)) {
-            targetTabIds.add(numTabId);
-          }
-        }
-      });
-    }
-
-    // Priority 3: Check activeMediaSessions for any audible/playing sessions in other tabs
-    if (typeof activeMediaSessions !== 'undefined' && activeMediaSessions.forEach) {
-      activeMediaSessions.forEach((session, tId) => {
-        const numTabId = Number(tId);
-        if (numTabId && numTabId !== newActiveOrCreatedTabId && session && session.isPlaying) {
-          targetTabIds.add(numTabId);
-        }
-      });
-    }
-
+    const targetTabIds = collectAutoPauseTargetTabs(newActiveOrCreatedTabId);
     for (const tabId of targetTabIds) {
-      try {
-        let tab = null;
-        if (browserAPI.tabs && typeof browserAPI.tabs.get === 'function') {
-          tab = await browserAPI.tabs.get(tabId).catch(() => null);
-        }
-        // Ensure closed tabs or restricted schemes (chrome://) are caught silently
-        if (tab && isRestrictedTabUrl(tab.url)) {
-          continue;
-        }
-
-        // Safely send pause command using safeSendTabMessage
-        safeSendTabMessage(tabId, { type: 'CONTROL_MEDIA', action: 'pause' });
-        safeSendTabMessage(tabId, { type: 'PAUSE_MEDIA', action: 'PAUSE_MEDIA' });
-        result.pausedTabs.push(tabId);
-      } catch (_) {}
+      const paused = await executeTabMediaPause(tabId);
+      if (paused) result.pausedTabs.push(tabId);
     }
   } catch (_) {}
-
   return result;
 }
 
@@ -4055,6 +4083,63 @@ browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
   sendActivityUpdateToHUD();
 });
 
+/**
+ * Checks whether user is actively watching media in focused foreground tab
+ * @returns {boolean}
+ */
+function isUserActivelyWatchingMedia() {
+  if (!isBrowserFocused || !activeTabId) return false;
+  const session = activeMediaSessions.get(activeTabId);
+  if (session && session.isPlaying) return true;
+  const mState = tabMediaMap.get(activeTabId) || tabMediaMap.get(String(activeTabId));
+  if (mState && (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks whether any media session is actively playing across all tabs
+ * @returns {boolean}
+ */
+function hasAnyActivePlayingMedia() {
+  for (const session of activeMediaSessions.values()) {
+    if (session && session.isPlaying) return true;
+  }
+  for (const mState of tabMediaMap.values()) {
+    if (mState && (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Evaluates inactivity auto-sleep and pauses unattended playback if threshold is reached
+ * @param {number} now
+ */
+async function checkInactivityAutoSleep(now = Date.now()) {
+  if (!sleepTimerSettings || sleepTimerSettings.enableInactivityAutoSleep !== true) {
+    return;
+  }
+  if (isUserActive || !userIdleStartTime) {
+    return;
+  }
+  if (isUserActivelyWatchingMedia()) {
+    return;
+  }
+  const thresholdMinutes = Math.max(1, Number(sleepTimerSettings.inactivityThresholdMinutes) || 15);
+  const thresholdMs = thresholdMinutes * 60 * 1000;
+  const elapsedIdleMs = (now - userIdleStartTime) + (CONFIG.IDLE_THRESHOLD_SECONDS * 1000);
+  if (elapsedIdleMs < thresholdMs) {
+    return;
+  }
+  if (hasAnyActivePlayingMedia()) {
+    console.info('[MediaSentinel] Inactivity threshold reached with unattended media streaming. Pausing playback.');
+    await dispatchGlobalMediaAction('PAUSE_ALL');
+  }
+}
+
 // Idle State Monitoring
 browserAPI.idle.setDetectionInterval(CONFIG.IDLE_THRESHOLD_SECONDS);
 browserAPI.idle.onStateChanged.addListener(async (newState) => {
@@ -4062,32 +4147,14 @@ browserAPI.idle.onStateChanged.addListener(async (newState) => {
   if (newState === 'idle' || newState === 'locked') {
     commitActiveInterval();
     isUserActive = false;
+    userIdleStartTime = Date.now();
     scheduleStorageSave(true);
-
-    // Inactivity Auto-Sleep Sentinel check
-    if (sleepTimerSettings && sleepTimerSettings.enableInactivityAutoSleep) {
-      let mediaPlaying = false;
-      for (const session of activeMediaSessions.values()) {
-        if (session.isPlaying) {
-          mediaPlaying = true;
-          break;
-        }
-      }
-      if (!mediaPlaying) {
-        for (const mState of tabMediaMap.values()) {
-          if (mState && (mState.anyPlaying || (mState.primaryMedia && mState.primaryMedia.isPlaying))) {
-            mediaPlaying = true;
-            break;
-          }
-        }
-      }
-      if (mediaPlaying) {
-        console.info('[MediaSentinel] Inactivity detected while media is streaming. Pausing unattended playback.');
-        await dispatchGlobalMediaAction('PAUSE_ALL');
-      }
-    }
+    // Note: Do NOT prematurely pause media on initial 60s idle state change.
+    // Inactivity auto-sleep is evaluated after user-configured inactivityThresholdMinutes.
+    await checkInactivityAutoSleep(Date.now());
   } else if (newState === 'active') {
     isUserActive = true;
+    userIdleStartTime = 0;
     intervalStartTime = Date.now();
   }
   sendActivityUpdateToHUD();
@@ -4194,10 +4261,18 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
     return;
   }
   if (alarm.name === SLEEP_ALARM_NAME) {
+    if (!sleepTimerState || (sleepTimerState.state !== 'RUNNING' && sleepTimerState.state !== 'FADING')) {
+      await purgeSleepTimerAlarms();
+      return;
+    }
     await triggerSleepTimerExpiration();
     return;
   }
   if (alarm.name === SLEEP_FADE_ALARM_NAME) {
+    if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
+      await purgeSleepTimerAlarms();
+      return;
+    }
     await triggerSleepTimerFade();
     return;
   }
@@ -4225,14 +4300,21 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
     }
     saveMediaHistory();
 
+    // Inactivity Auto-Sleep Sentinel check
+    await checkInactivityAutoSleep(now);
+
     // Sleep Timer periodic check & badge countdown update
-    if (sleepTimerState && sleepTimerState.state === 'RUNNING') {
-      const remainingMs = sleepTimerState.targetTime - now;
-      if (remainingMs <= 0) {
-        await triggerSleepTimerExpiration();
-      } else {
-        updateActionBadge(remainingMs, sleepTimerState.durationMs);
+    if (sleepTimerState && (sleepTimerState.state === 'RUNNING' || sleepTimerState.state === 'FADING')) {
+      if (sleepTimerState.targetTime > 0) {
+        const remainingMs = sleepTimerState.targetTime - now;
+        if (remainingMs <= 0) {
+          await triggerSleepTimerExpiration();
+        } else {
+          updateActionBadge(remainingMs, sleepTimerState.durationMs);
+        }
       }
+    } else if (sleepTimerState && (sleepTimerState.state === 'IDLE' || sleepTimerState.state === 'CANCELLED')) {
+      await purgeSleepTimerAlarms();
     }
 
     // Focus Timer periodic check & badge countdown update
@@ -5650,6 +5732,19 @@ if (typeof globalThis !== 'undefined') {
   globalThis.getSleepTimerState = () => sleepTimerState;
   globalThis.getSleepTimerSettings = () => sleepTimerSettings;
   globalThis.triggerSleepTimerExpiration = triggerSleepTimerExpiration;
+  globalThis.triggerSleepTimerFade = triggerSleepTimerFade;
+  globalThis.purgeSleepTimerAlarms = purgeSleepTimerAlarms;
+  globalThis.checkInactivityAutoSleep = checkInactivityAutoSleep;
+  globalThis.isUserActivelyWatchingMedia = isUserActivelyWatchingMedia;
+  globalThis.hasAnyActivePlayingMedia = hasAnyActivePlayingMedia;
+  globalThis.collectAutoPauseTargetTabs = collectAutoPauseTargetTabs;
+  globalThis.executeTabMediaPause = executeTabMediaPause;
+  globalThis.handleAutoPauseOnTabChange = handleAutoPauseOnTabChange;
+  globalThis.getUserIdleStartTime = () => userIdleStartTime;
+  globalThis.setUserIdleStartTime = (t) => { userIdleStartTime = t; };
+  globalThis.setIsBrowserFocused = (f) => { isBrowserFocused = f; };
+  globalThis.setActiveTabId = (id) => { activeTabId = id; };
+  globalThis.setIsUserActive = (a) => { isUserActive = a; };
   globalThis.closeAllMediaTabs = closeAllMediaTabs;
   // Focus Sentinel & Pomodoro Subsystem exports
   globalThis.startFocusTimer = startFocusTimer;
@@ -5705,6 +5800,19 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.getSleepTimerState = () => sleepTimerState;
     globalThis.SentinelBackgroundModules.getSleepTimerSettings = () => sleepTimerSettings;
     globalThis.SentinelBackgroundModules.triggerSleepTimerExpiration = triggerSleepTimerExpiration;
+    globalThis.SentinelBackgroundModules.triggerSleepTimerFade = triggerSleepTimerFade;
+    globalThis.SentinelBackgroundModules.purgeSleepTimerAlarms = purgeSleepTimerAlarms;
+    globalThis.SentinelBackgroundModules.checkInactivityAutoSleep = checkInactivityAutoSleep;
+    globalThis.SentinelBackgroundModules.isUserActivelyWatchingMedia = isUserActivelyWatchingMedia;
+    globalThis.SentinelBackgroundModules.hasAnyActivePlayingMedia = hasAnyActivePlayingMedia;
+    globalThis.SentinelBackgroundModules.collectAutoPauseTargetTabs = collectAutoPauseTargetTabs;
+    globalThis.SentinelBackgroundModules.executeTabMediaPause = executeTabMediaPause;
+    globalThis.SentinelBackgroundModules.handleAutoPauseOnTabChange = handleAutoPauseOnTabChange;
+    globalThis.SentinelBackgroundModules.getUserIdleStartTime = () => userIdleStartTime;
+    globalThis.SentinelBackgroundModules.setUserIdleStartTime = (t) => { userIdleStartTime = t; };
+    globalThis.SentinelBackgroundModules.setIsBrowserFocused = (f) => { isBrowserFocused = f; };
+    globalThis.SentinelBackgroundModules.setActiveTabId = (id) => { activeTabId = id; };
+    globalThis.SentinelBackgroundModules.setIsUserActive = (a) => { isUserActive = a; };
     globalThis.SentinelBackgroundModules.closeAllMediaTabs = closeAllMediaTabs;
     // Focus Sentinel & Pomodoro Subsystem exports
     globalThis.SentinelBackgroundModules.startFocusTimer = startFocusTimer;
@@ -5738,6 +5846,19 @@ if (typeof module !== 'undefined' && module.exports) {
     getSleepTimerState: () => sleepTimerState,
     getSleepTimerSettings: () => sleepTimerSettings,
     triggerSleepTimerExpiration,
+    triggerSleepTimerFade,
+    purgeSleepTimerAlarms,
+    checkInactivityAutoSleep,
+    isUserActivelyWatchingMedia,
+    hasAnyActivePlayingMedia,
+    collectAutoPauseTargetTabs,
+    executeTabMediaPause,
+    handleAutoPauseOnTabChange,
+    getUserIdleStartTime: () => userIdleStartTime,
+    setUserIdleStartTime: (t) => { userIdleStartTime = t; },
+    setIsBrowserFocused: (f) => { isBrowserFocused = f; },
+    setActiveTabId: (id) => { activeTabId = id; },
+    setIsUserActive: (a) => { isUserActive = a; },
     closeAllMediaTabs,
     startFocusTimer,
     pauseFocusTimer,

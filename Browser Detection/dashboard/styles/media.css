@@ -2360,3 +2360,99 @@ body.theme-light .viz-drawer-label {
   opacity: 0.35;
   z-index: 1;
 }
+
+/* =============================================================================
+   Floating Circular Scroll to Top Action for Media History
+   ============================================================================= */
+
+.media-scroll-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2.25rem;
+  z-index: 120;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary, #f8fafc);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), 0 0 12px 1px rgba(16, 185, 129, 0.2);
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.25s,
+              background 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              color 0.2s ease;
+}
+
+.media-scroll-to-top.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.9);
+  visibility: hidden;
+}
+
+.media-scroll-to-top.visible,
+.media-scroll-to-top:not(.hidden) {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.media-scroll-to-top:hover {
+  transform: translateY(-2px) scale(1.05);
+  border-color: var(--color-accent-primary, #10b981);
+  color: var(--color-accent-primary, #10b981);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4), 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+}
+
+.media-scroll-to-top:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.media-scroll-to-top:focus-visible {
+  outline: 2px solid var(--color-accent-primary, #10b981);
+  outline-offset: 2px;
+}
+
+.media-scroll-to-top .scroll-top-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.media-scroll-to-top:hover .scroll-top-icon {
+  transform: translateY(-2px);
+}
+
+/* Light Mode Adaptation */
+body.theme-light .media-scroll-to-top {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+body.theme-light .media-scroll-to-top:hover {
+  background: #ffffff;
+  border-color: var(--color-accent-primary, #10b981);
+  color: var(--color-accent-primary, #10b981);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Scoped tab guard: hide when paneMedia is inactive */
+#paneMedia:not(.active) #btnMediaScrollToTop {
+  display: none !important;
+}

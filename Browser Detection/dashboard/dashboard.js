@@ -316,6 +316,35 @@ const DASHBOARD_I18N = {
     
     // Feature 8: Wellbeing & Pomodoro
     pomodoro_title: 'Focus Sentinel & Pomodoro',
+    focus_advanced_title: "Focus Advanced Controls",
+    focus_advanced_desc: "Custom goals, ambient soundscapes, acoustic chimes & smart shields",
+    pomodoro_desc: "Deep work intervals, automated media cutoff & break recovery",
+    lbl_focus_presets: "Duration & Presets",
+    lbl_quick_presets: "Quick Presets",
+    lbl_extend_time: "Extend Time",
+    lbl_custom: "Custom:",
+    btn_start_sleep_timer: "Start Sleep Timer",
+    focus_ambient_soundscapes: "🎧 Ambient Soundscapes",
+    soundscape_opt_none: "Off (Silent)",
+    soundscape_opt_rain: "🌧️ Gentle Rain",
+    soundscape_opt_cafe: "☕ Coffee Shop",
+    soundscape_opt_ocean: "🌊 Ocean Waves",
+    soundscape_opt_forest: "🌲 Forest Birds",
+    soundscape_opt_whitenoise: "💨 Pink/White Noise",
+    focus_completion_chime: "🔔 Completion Chime:",
+    chime_opt_solfeggio: "Solfeggio Harmonic (528Hz / 660Hz)",
+    chime_opt_tibetan: "Tibetan Singing Bowl (432Hz)",
+    chime_opt_bell: "Digital Bell Synthesizer",
+    chime_opt_gong: "Zen Temple Gong",
+    btn_preview_chime: "▶ Test",
+    toggle_focus_autopause: "Auto-pause Media",
+    toggle_focus_autopause_desc: "Auto-pause media during focus",
+    toggle_focus_chime: "Sound Chime",
+    toggle_focus_chime_desc: "Sound chime on cycle completion",
+    toggle_focus_shield: "🛡️ Strict Shield",
+    toggle_focus_shield_desc: "Nudge and shield on distracting domains during focus",
+    sleep_advanced_title: "Sleep Advanced Controls",
+    sleep_advanced_desc: "Custom durations, gradual fade-out, end-of-video cutoff & inactivity triggers",
     budget_alert: 'Daily limit reached for this domain',
     btn_start_focus: '▶️ Start 25m Focus Block',
     budget_title: 'Domain Daily Time Budgets',
@@ -396,6 +425,7 @@ const DASHBOARD_I18N = {
     
     // Media History Table
     media_history_heading: 'Media Playback History',
+    media_scroll_to_top: 'Scroll back to top of media history',
     media_count_suffix: (n) => `${n} video record${n === 1 ? '' : 's'}`,
     search_media_placeholder: 'Search video title or platform...',
     lbl_platform: 'Platform:',
@@ -781,6 +811,35 @@ const DASHBOARD_I18N = {
     
     // Feature 8: Wellbeing & Pomodoro
     pomodoro_title: 'फोकस सेंटिनल व पोमोडोरो',
+    focus_advanced_title: "उन्नत फोकस नियंत्रण",
+    focus_advanced_desc: "कस्टम लक्ष्य, परिवेश ध्वनियां, समापन झंकार और स्मार्ट शील्ड्स",
+    pomodoro_desc: "गहन कार्य अंतराल, स्वचालित मीडिया कटऑफ और ब्रेक रिकवरी",
+    lbl_focus_presets: "अवधि और प्रीसेट्स",
+    lbl_quick_presets: "त्वरित प्रीसेट्स",
+    lbl_extend_time: "समय बढ़ाएं",
+    lbl_custom: "कस्टम:",
+    btn_start_sleep_timer: "स्लीप टाइमर शुरू करें",
+    focus_ambient_soundscapes: "🎧 परिवेशी ध्वनियां",
+    soundscape_opt_none: "बंद (शांत)",
+    soundscape_opt_rain: "🌧️ हल्की बारिश",
+    soundscape_opt_cafe: "☕ कॉफी शॉप",
+    soundscape_opt_ocean: "🌊 समुद्र की लहरें",
+    soundscape_opt_forest: "🌲 वन पक्षी",
+    soundscape_opt_whitenoise: "💨 पिंक/व्हाइट नॉइज़",
+    focus_completion_chime: "🔔 समापन झंकार:",
+    chime_opt_solfeggio: "सोल्फ़ेगियो हार्मोनिक (528Hz / 660Hz)",
+    chime_opt_tibetan: "तिब्बती सिंगिंग बाउल (432Hz)",
+    chime_opt_bell: "डिजिटल बेल सिंथेसाइज़र",
+    chime_opt_gong: "ज़ेन मंदिर गोंग",
+    btn_preview_chime: "▶ परीक्षण",
+    toggle_focus_autopause: "ऑटो-पॉज़ मीडिया",
+    toggle_focus_autopause_desc: "फोकस के दौरान मीडिया स्वचालित रूप से रोकें",
+    toggle_focus_chime: "ध्वनि झंकार",
+    toggle_focus_chime_desc: "चक्र पूर्ण होने पर झंकार बजाएं",
+    toggle_focus_shield: "🛡️ सख्त शील्ड",
+    toggle_focus_shield_desc: "फोकस के दौरान विचलित करने वाले डोमेन पर सचेत करें",
+    sleep_advanced_title: "उन्नत स्लीप नियंत्रण",
+    sleep_advanced_desc: "कस्टम अवधि, क्रमिक फेड-आउट, वीडियो समाप्ति कटऑफ और निष्क्रियता ट्रिगर्स",
     budget_alert: 'इस डोमेन की दैनिक समय सीमा समाप्त हो चुकी है',
     btn_start_focus: '▶️ 25 मिनट का फोकस ब्लॉक शुरू करें',
     budget_title: 'डोमेन दैनिक समय सीमा बजट',
@@ -3653,6 +3712,10 @@ function applyDashboardLanguage(lang) {
   setTxt('txtPomodoroTitle', 'pomodoro_title');
   setTxt('txtSleepSentinelTitle', 'sleep_sentinel_title');
   setTxt('txtSleepSentinelDesc', 'sleep_sentinel_desc');
+  setTxt('txtFocusAdvancedTitle', 'focus_advanced_title');
+  setTxt('txtFocusAdvancedDesc', 'focus_advanced_desc');
+  setTxt('txtSleepAdvancedTitle', 'sleep_advanced_title');
+  setTxt('txtSleepAdvancedDesc', 'sleep_advanced_desc');
   setTxt('txtNoteModalTitle', 'modal_note_title');
   setTxt('txtNoteModalDesc', 'modal_note_desc');
   setTxt('btnSaveDomainNote', 'btn_save_note');
