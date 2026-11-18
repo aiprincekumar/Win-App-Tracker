@@ -11592,7 +11592,12 @@ if (typeof module !== 'undefined' && module.exports) {
     calculateExtendedSleepTimerState,
     wireDashboardSleepExtenders,
     initSleepSentinelHub,
-    initDashboardSleepSentinelHub: initSleepSentinelHub
+    initDashboardSleepSentinelHub: initSleepSentinelHub,
+    // Media Scroll to Top Actions
+    initMediaScrollToTop,
+    setMediaScrollToTopVisible,
+    handleMediaScrollToTopClick,
+    evaluateMediaScrollVisibility
   };
 }
 
@@ -11666,6 +11671,10 @@ if (typeof window !== 'undefined') {
   window.wireDashboardSleepExtenders = wireDashboardSleepExtenders;
   window.initSleepSentinelHub = initSleepSentinelHub;
   window.initDashboardSleepSentinelHub = initSleepSentinelHub;
+  window.initMediaScrollToTop = initMediaScrollToTop;
+  window.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
+  window.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
+  window.evaluateMediaScrollVisibility = evaluateMediaScrollVisibility;
 }
 
 if (typeof globalThis !== 'undefined') {
@@ -11717,6 +11726,10 @@ if (typeof globalThis !== 'undefined') {
   globalThis.initDashboardSleepSentinelHub = initSleepSentinelHub;
   globalThis.syncSleepSettingsToggles = syncSleepSettingsToggles;
   globalThis.updateSleepSetting = updateSleepSetting;
+  globalThis.initMediaScrollToTop = initMediaScrollToTop;
+  globalThis.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
+  globalThis.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
+  globalThis.evaluateMediaScrollVisibility = evaluateMediaScrollVisibility;
 }
 
 // ============================================================================
