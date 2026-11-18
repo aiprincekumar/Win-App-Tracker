@@ -507,5 +507,9 @@
   "tier1_playback": "प्लेबैक",
   "tier1_studio": "स्टूडियो",
   "tier1_analytics": "एनालिटिक्स",
-  "tier1_wellness": "वेलनेस"
+  "tier1_wellness": "वेलनेस",
+  "top_tab_focus": "फ़ोकस",
+  "focus_placeholder_title": "फ़ोकस और उत्पादकता",
+  "focus_placeholder_desc": "गहन कार्य टाइमर और डिजिटल वेलनेस एकीकरण जल्द आ रहा है। सोने की दिनचर्या के लिए स्लीप टैब का उपयोग करें।",
+  "focus_status_ready": "फ़ोकस मोड तैयार"
 }

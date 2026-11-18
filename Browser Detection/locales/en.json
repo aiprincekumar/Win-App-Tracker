@@ -507,5 +507,9 @@
   "tier1_playback": "Playback",
   "tier1_studio": "Studio",
   "tier1_analytics": "Analytics",
-  "tier1_wellness": "Wellness"
+  "tier1_wellness": "Wellness",
+  "top_tab_focus": "Focus",
+  "focus_placeholder_title": "Focus & Productivity",
+  "focus_placeholder_desc": "Deep work timer and digital wellness integration coming soon. Use the Sleep tab for bedtime routines.",
+  "focus_status_ready": "Focus Mode Ready"
 }

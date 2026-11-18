@@ -83,14 +83,21 @@ console.log('Test 1: DOM Architecture & Canonical Invariants');
   assert(/<nav[^>]*id="tier1SegmentedNav"[^>]*role="tablist"/i.test(html), '#tier1SegmentedNav must declare role="tablist"');
 
   const badgesIdx = html.indexOf('class="header-badges"');
+  const switchIdx = html.indexOf('id="btnSwitchMediaTab"');
   const dashIdx = html.indexOf('id="btnOpenDashboard"');
   const tier1Idx = html.indexOf('id="tier1SegmentedNav"');
+  const footerIdx = html.indexOf('<footer');
   const qsIdx = html.indexOf('id="btnQuickSettings"');
+  const themeIdx = html.indexOf('id="btnThemeToggle"');
   const navIdx = html.indexOf('<nav class="top-nav-tabs"');
 
-  assert(tier1Idx > badgesIdx && tier1Idx < qsIdx, '#tier1SegmentedNav must precede #btnQuickSettings in .header-badges');
-  assert(dashIdx < tier1Idx, '#btnOpenDashboard must precede #tier1SegmentedNav in .header-badges');
+  // Tier 1 Nav is aligned to the left of the header-badges cluster, preceding action buttons
+  assert(tier1Idx > badgesIdx && tier1Idx < switchIdx, '#tier1SegmentedNav must precede #btnSwitchMediaTab in .header-badges');
+  assert(switchIdx < dashIdx, '#btnSwitchMediaTab must precede #btnOpenDashboard');
   assert(tier1Idx < navIdx, '#tier1SegmentedNav must precede .top-nav-tabs in DOM');
+
+  // Quick Settings is moved into footer directly preceding theme toggle
+  assert(qsIdx > footerIdx && qsIdx < themeIdx, '#btnQuickSettings must be in footer preceding #btnThemeToggle');
 
   // 2. All 4 Tier 1 buttons
   const tier1Buttons = [
@@ -117,7 +124,8 @@ console.log('Test 1: DOM Architecture & Canonical Invariants');
     { id: 'mainTabStudio', group: 'studio' },
     { id: 'mainTabTracking', group: 'analytics' },
     { id: 'mainTabDomains', group: 'analytics' },
-    { id: 'mainTabSleep', group: 'wellness' }
+    { id: 'mainTabSleep', group: 'wellness' },
+    { id: 'mainTabFocus', group: 'wellness' }
   ];
 
   expectedChildTabs.forEach(({ id, group }) => {
@@ -126,7 +134,7 @@ console.log('Test 1: DOM Architecture & Canonical Invariants');
   });
 
   // 4. Initial state: tools, studio, tracking, domains, sleep have tab-hidden, playback tabs do not
-  ['mainTabTools', 'mainTabStudio', 'mainTabTracking', 'mainTabDomains', 'mainTabSleep'].forEach(id => {
+  ['mainTabTools', 'mainTabStudio', 'mainTabTracking', 'mainTabDomains', 'mainTabSleep', 'mainTabFocus'].forEach(id => {
     const hiddenRegex = new RegExp(`<button[^>]*id="${id}"[^>]*class="[^"]*tab-hidden[^"]*"`, 'i');
     assert(hiddenRegex.test(html), `Initial DOM state for #${id} should have class "tab-hidden"`);
   });
@@ -134,7 +142,7 @@ console.log('Test 1: DOM Architecture & Canonical Invariants');
   // 5. Canonical view panes preserved
   const canonicalPanes = [
     'viewMediaPane', 'viewAudioPane', 'viewToolsPane', 'viewStudioPane',
-    'viewTrackingPane', 'viewDomainsPane', 'viewSleepPane'
+    'viewTrackingPane', 'viewDomainsPane', 'viewSleepPane', 'viewFocusPane'
   ];
   canonicalPanes.forEach(paneId => {
     assert(html.includes(`id="${paneId}"`), `popup.html must preserve canonical pane #${paneId}`);
@@ -233,7 +241,7 @@ console.log('\nTest 4: Modular Feature Engine (tier1_navigation_feature.js)');
   assert.strictEqual(Tier1Nav.getGroupForTab('tracking'), 'analytics');
   assert.strictEqual(Tier1Nav.getGroupForTab('domains'), 'analytics');
   assert.strictEqual(Tier1Nav.getGroupForTab('sleep'), 'wellness');
-  assert.strictEqual(Tier1Nav.getGroupForTab('focus'), 'analytics');
+  assert.strictEqual(Tier1Nav.getGroupForTab('focus'), 'wellness');
   assert.strictEqual(Tier1Nav.getGroupForTab('unknown_tab'), 'playback');
 
   // 2. Primary tabs
@@ -246,7 +254,7 @@ console.log('\nTest 4: Modular Feature Engine (tier1_navigation_feature.js)');
   assert.deepStrictEqual(Tier1Nav.getTabsForGroup('playback'), ['media', 'audio']);
   assert.deepStrictEqual(Tier1Nav.getTabsForGroup('studio'), ['tools', 'studio']);
   assert.deepStrictEqual(Tier1Nav.getTabsForGroup('analytics'), ['tracking', 'domains']);
-  assert.deepStrictEqual(Tier1Nav.getTabsForGroup('wellness'), ['sleep']);
+  assert.deepStrictEqual(Tier1Nav.getTabsForGroup('wellness'), ['sleep', 'focus']);
 
   // 4. Hybrid context evaluator
   // Playing -> Playback/Media
@@ -330,7 +338,8 @@ console.log('\nTest 5: JavaScript Runtime State Machine Simulation');
     { id: 'mainTabStudio', paneId: 'viewStudioPane', group: 'studio', view: 'studio' },
     { id: 'mainTabTracking', paneId: 'viewTrackingPane', group: 'analytics', view: 'tracking' },
     { id: 'mainTabDomains', paneId: 'viewDomainsPane', group: 'analytics', view: 'domains' },
-    { id: 'mainTabSleep', paneId: 'viewSleepPane', group: 'wellness', view: 'sleep' }
+    { id: 'mainTabSleep', paneId: 'viewSleepPane', group: 'wellness', view: 'sleep' },
+    { id: 'mainTabFocus', paneId: 'viewFocusPane', group: 'wellness', view: 'focus' }
   ];
 
   childTabDefs.forEach(def => {

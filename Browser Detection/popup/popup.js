@@ -139,6 +139,10 @@ const I18N_POPUP = {
     tab_tracking: 'Tracking',
     tab_domains: 'Domains',
     tab_sleep: 'Sleep',
+    top_tab_focus: 'Focus',
+    focus_placeholder_title: 'Focus & Productivity',
+    focus_placeholder_desc: 'Deep work timer and digital wellness integration coming soon. Use the Sleep tab for bedtime routines.',
+    focus_status_ready: 'Focus Mode Ready',
     tab_media_active_title: 'Media Active',
 
     // Tier 1 Navigation Categories
@@ -294,6 +298,10 @@ const I18N_POPUP = {
     tab_tracking: 'ट्रैकिंग',
     tab_domains: 'डोमेन',
     tab_sleep: 'स्लीप',
+    top_tab_focus: 'फ़ोकस',
+    focus_placeholder_title: 'फ़ोकस और उत्पादकता',
+    focus_placeholder_desc: 'गहन कार्य टाइमर और डिजिटल वेलनेस एकीकरण जल्द आ रहा है। सोने की दिनचर्या के लिए स्लीप टैब का उपयोग करें।',
+    focus_status_ready: 'फ़ोकस मोड तैयार',
     tab_media_active_title: 'मीडिया सक्रिय है',
 
     // Tier 1 Navigation Categories (Hindi Localization)
@@ -574,6 +582,10 @@ function applyPopupLanguage(lang) {
   setTxt('topTabTrackingText', 'tab_tracking');
   setTxt('topTabDomainsText', 'tab_domains');
   setTxt('topTabSleepText', 'tab_sleep');
+  setTxt('topTabFocusText', 'top_tab_focus');
+  setTxt('focusPlaceholderTitle', 'focus_placeholder_title');
+  setTxt('focusPlaceholderDesc', 'focus_placeholder_desc');
+  setTxt('focusStatusText', 'focus_status_ready');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
 
   // Tier 1 Segmented Category Navigation
@@ -932,7 +944,7 @@ const TIER1_GROUP_TABS = {
   playback: ['media', 'audio'],
   studio: ['tools', 'studio'],
   analytics: ['tracking', 'domains'],
-  wellness: ['sleep']
+  wellness: ['sleep', 'focus']
 };
 
 /**
@@ -944,9 +956,8 @@ function getTier1GroupForTab(tabKey) {
   if (typeof Tier1NavigationFeature !== 'undefined' && typeof Tier1NavigationFeature.getGroupForTab === 'function') {
     return Tier1NavigationFeature.getGroupForTab(tabKey);
   }
-  const norm = (tabKey === 'focus') ? 'tracking' : tabKey;
   for (const [group, tabs] of Object.entries(TIER1_GROUP_TABS)) {
-    if (tabs.includes(norm)) return group;
+    if (tabs.includes(tabKey)) return group;
   }
   return 'playback';
 }
@@ -1034,7 +1045,7 @@ function switchTopTab(tabName, isManual = false) {
   if (isManual) {
     userManualOverride = true;
   }
-  const normalized = (tabName === 'focus') ? 'tracking' : tabName;
+  const normalized = tabName;
   activeTopTab = normalized;
 
   // Synchronize parent Tier 1 category if needed
@@ -1055,7 +1066,8 @@ function switchTopTab(tabName, isManual = false) {
     { id: 'mainTabStudio', paneId: 'viewStudioPane', key: 'studio' },
     { id: 'mainTabTracking', paneId: 'viewTrackingPane', key: 'tracking' },
     { id: 'mainTabDomains', paneId: 'viewDomainsPane', key: 'domains' },
-    { id: 'mainTabSleep', paneId: 'viewSleepPane', key: 'sleep' }
+    { id: 'mainTabSleep', paneId: 'viewSleepPane', key: 'sleep' },
+    { id: 'mainTabFocus', paneId: 'viewFocusPane', key: 'focus' }
   ];
 
   tabs.forEach(t => {
@@ -2810,6 +2822,13 @@ function setupEventListeners() {
     });
   }
 
+  const mainTabFocus = document.getElementById('mainTabFocus');
+  if (mainTabFocus) {
+    mainTabFocus.addEventListener('click', () => {
+      switchTopTab('focus', true);
+    });
+  }
+
   if (btnGoToTracking) {
     btnGoToTracking.addEventListener('click', () => {
       switchTopTab('tracking', true);
@@ -2864,7 +2883,7 @@ function setupEventListeners() {
   if (selectDefaultTab) {
     selectDefaultTab.addEventListener('change', () => {
       // Legacy 6-tab check: ['media', 'audio', 'tools', 'studio', 'tracking', 'domains']
-      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep'];
+      const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep', 'focus'];
       const chosen = selectDefaultTab.value;
       quickSettings.default_tab = validTabs.includes(chosen) ? chosen : 'media';
       browserAPI.storage.local.set({ quick_settings: quickSettings });

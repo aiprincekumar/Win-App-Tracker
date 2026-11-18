@@ -18,7 +18,7 @@
     playback: Object.freeze(['media', 'audio']),
     studio: Object.freeze(['tools', 'studio']),
     analytics: Object.freeze(['tracking', 'domains']),
-    wellness: Object.freeze(['sleep'])
+    wellness: Object.freeze(['sleep', 'focus'])
   });
 
   const TAB_TO_GROUP = Object.freeze({
@@ -29,7 +29,7 @@
     tracking: 'analytics',
     domains: 'analytics',
     sleep: 'wellness',
-    focus: 'analytics' // legacy alias for tracking
+    focus: 'wellness'
   });
 
   const DEFAULT_GROUP_TAB = Object.freeze({
@@ -40,7 +40,7 @@
   });
 
   const ALL_GROUPS = Object.freeze(['playback', 'studio', 'analytics', 'wellness']);
-  const ALL_TABS = Object.freeze(['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep']);
+  const ALL_TABS = Object.freeze(['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep', 'focus']);
 
   /**
    * Resolves the Tier 1 group category for a given tab identifier.

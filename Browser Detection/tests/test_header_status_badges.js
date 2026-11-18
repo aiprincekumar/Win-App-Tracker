@@ -95,13 +95,14 @@ console.log('Test 1: Static HTML Architecture & Canonical 7 DOM IDs Invariant');
   const navIdx = html.indexOf('<nav class="top-nav-tabs"');
   assert(headerIdx !== -1 && badgesIdx > headerIdx && badgesIdx < navIdx, '.header-badges must reside inside <header class="header"> before top navigation');
 
-  // Verify #btnOpenDashboard and #btnQuickSettings reside inside .header-badges
+  // Verify #btnOpenDashboard resides inside .header-badges and #btnQuickSettings resides inside footer
   assert(html.includes('id="btnOpenDashboard"'), 'popup.html must define #btnOpenDashboard');
   const dashIdx = html.indexOf('id="btnOpenDashboard"');
+  const footerIdx = html.indexOf('<footer');
   const qsIdx = html.indexOf('id="btnQuickSettings"');
+  const themeIdx = html.indexOf('id="btnThemeToggle"');
   assert(dashIdx > badgesIdx && dashIdx < navIdx, '#btnOpenDashboard must reside inside .header-badges');
-  assert(qsIdx > badgesIdx && qsIdx < navIdx, '#btnQuickSettings must reside inside .header-badges');
-  assert(dashIdx < qsIdx, '#btnOpenDashboard must precede #btnQuickSettings in .header-badges');
+  assert(qsIdx > footerIdx && qsIdx < themeIdx, '#btnQuickSettings must reside inside footer preceding #btnThemeToggle');
 
   // Verify nested hierarchy: text elements must reside inside their respective badge containers
   const timeBadgeIdx = html.indexOf('id="todayHeaderTimeBadge"');
