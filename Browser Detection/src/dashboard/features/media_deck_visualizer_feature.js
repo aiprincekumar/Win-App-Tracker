@@ -147,70 +147,19 @@
     if (!targetId) return Promise.reject(new Error('Invalid soloTabId'));
 
     const isAlreadySolo = (currentSoloTabId === targetId);
+    currentSoloTabId = isAlreadySolo ? null : targetId;
 
-    if (isAlreadySolo) {
-      // Deactivate Solo Mode (Two-Way Toggle Off)
-      currentSoloTabId = null;
-
-      // Optimistically unmute all cached streams
-      cachedStreams.forEach(s => {
-        s.isMuted = false;
-      });
-
-      if (options.containerEl && options.doc) {
-        renderMultiTabMediaDeck(cachedStreams, options.containerEl, options);
-      }
-
-      if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
-        return new Promise((resolve) => {
-          try {
-            api.runtime.sendMessage({
-              action: 'MEDIA_STREAM_SOLO_CLEAR',
-              soloTabId: null
-            }, (res) => {
-              resolve(res || { success: true, cleared: true, soloTabId: null });
-            });
-          } catch (_) {
-            resolve({ success: true, cleared: true, simulated: true, soloTabId: null });
-          }
-        });
-      }
-
-      return Promise.resolve({ success: true, cleared: true, localOnly: true, soloTabId: null });
-    }
-
-    // Activate Solo Mode
-    currentSoloTabId = targetId;
-
-    // Optimistically update cached streams
     cachedStreams.forEach(s => {
-      if (s.tabId === targetId) {
-        s.isMuted = false;
-      } else {
-        s.isMuted = true;
-      }
+      s.isMuted = currentSoloTabId ? (s.tabId !== currentSoloTabId) : false;
     });
 
     if (options.containerEl && options.doc) {
       renderMultiTabMediaDeck(cachedStreams, options.containerEl, options);
     }
 
-    if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
-      return new Promise((resolve) => {
-        try {
-          api.runtime.sendMessage({
-            action: 'MEDIA_STREAM_SOLO',
-            soloTabId: targetId
-          }, (res) => {
-            resolve(res || { success: true, soloTabId: targetId });
-          });
-        } catch (_) {
-          resolve({ success: true, simulated: true, soloTabId: targetId });
-        }
-      });
-    }
-
-    return Promise.resolve({ success: true, localOnly: true, soloTabId: targetId });
+    const action = isAlreadySolo ? 'MEDIA_STREAM_SOLO_CLEAR' : 'MEDIA_STREAM_SOLO';
+    const payload = isAlreadySolo ? { cleared: true, soloTabId: null } : { soloTabId: targetId };
+    return dispatchMediaIpc(api, action, payload);
   }
 
   /**
@@ -1868,6 +1817,9 @@
     setIsMuteAllOthersActive: (val) => { isMuteAllOthersActive = Boolean(val); },
     getIsMuteAllActive: () => isMuteAllActive,
     setIsMuteAllActive: (val) => { isMuteAllActive = Boolean(val); },
+    updateBtnMuteAllOthersUI,
+    updateBtnMuteAllUI,
+    dispatchMediaIpc,
     initAudioVisualizer,
     setVisualizerMode,
     isVisualizerFullWindowActive,
