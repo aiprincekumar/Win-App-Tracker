@@ -10601,6 +10601,10 @@ if (typeof globalThis !== 'undefined') {
   globalThis.triggerSetSleepTimer = triggerSetSleepTimer;
   globalThis.triggerCancelSleepTimer = triggerCancelSleepTimer;
   globalThis.triggerExtendSleepTimer = triggerExtendSleepTimer;
+  globalThis.calculateExtendedSleepTimerState = calculateExtendedSleepTimerState;
+  globalThis.wireDashboardSleepExtenders = wireDashboardSleepExtenders;
+  globalThis.initSleepSentinelHub = initSleepSentinelHub;
+  globalThis.initDashboardSleepSentinelHub = initSleepSentinelHub;
   globalThis.syncSleepSettingsToggles = syncSleepSettingsToggles;
   globalThis.updateSleepSetting = updateSleepSetting;
 }
