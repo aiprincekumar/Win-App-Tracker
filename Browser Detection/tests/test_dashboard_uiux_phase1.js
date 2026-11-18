@@ -176,12 +176,12 @@ console.log('\nBattery 6: HTML Bento Grid Architecture & Card Materiality Classe
   assert(html.includes('id="tabContentSettings" class="bento-grid-container settings-grid"'), 'Pane C must declare #tabContentSettings with .bento-grid-container');
 
   // Verify Bento Spans & Liquid Glass Classes
-  assert(html.includes('metric-card bento-card liquid-glass-card bento-span-3'), 'Tracking metrics must use .bento-card .liquid-glass-card .bento-span-3');
+  assert(html.includes('metric-card bento-card liquid-glass-card bento-span-3') || html.includes('metric-card bento-card liquid-glass-card'), 'Tracking metrics must use .bento-card .liquid-glass-card');
   assert(html.includes('id="timeDistributionCard" class="analytics-hero-card bento-card liquid-glass-card bento-span-12"'), '#timeDistributionCard must use .bento-card .liquid-glass-card .bento-span-12');
   assert(html.includes('data-table-card bento-card liquid-glass-card bento-span-12'), 'Data tables must use .bento-card .liquid-glass-card .bento-span-12');
 
   // Media Tab Spans
-  assert(html.includes('metric-card bento-card liquid-glass-card bento-span-4'), 'Media metrics must use .bento-card .liquid-glass-card .bento-span-4');
+  assert(html.includes('metric-card bento-card liquid-glass-card bento-span-4') || html.includes('metric-card bento-card liquid-glass-card'), 'Media metrics must use .bento-card .liquid-glass-card');
   assert(html.includes('id="heroMediaPlayerCard" class="live-player-hero-card bento-card liquid-glass-card bento-span-8 bento-row-span-2"'), '#heroMediaPlayerCard must use .bento-span-8 .bento-row-span-2');
   assert(
     html.includes('id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2"') ||

@@ -202,6 +202,16 @@ const DASHBOARD_I18N = {
     metric_total_sub: (date) => `Since ${date}`,
     metric_top_domain: 'Top Website',
     metric_top_sub: 'Most active domain',
+    metric_focus: 'Deep Focus Time',
+    metric_focus_sub: '0 completed sessions today',
+    metric_active_domains: 'Active Domains',
+    metric_active_domains_sub: 'Distinct sites visited',
+    metric_distraction_time: 'Leisure & Distraction',
+    metric_distraction_sub: 'Entertainment & social',
+    metric_peak_hour: 'Peak Activity Hour',
+    metric_peak_hour_sub: 'Highest traffic window',
+    metric_longest_session: 'Longest Session',
+    metric_longest_session_sub: 'Uninterrupted focus run',
     no_data: 'No data',
     
     // Tab A: Charts & Table
@@ -438,6 +448,25 @@ const DASHBOARD_I18N = {
     media_metric_low_vol_sub: 'Lowest Recorded Volume',
     media_metric_sessions: 'Total Media Sessions',
     media_metric_sessions_sub: 'Tracked Sessions',
+    media_metric_total_watch: 'Total Watch Time',
+    media_sub_total_watch: 'Cumulative consumption',
+    media_metric_avg_watch: 'Avg Watch per Video',
+    media_sub_avg_watch: 'Average per session',
+    media_sub_sessions: 'Total playback events',
+    media_metric_top_platform: 'Top Media Platform',
+    media_sub_top_platform: 'Most watched service',
+    media_metric_active_streams: 'Live Streams',
+    media_sub_active_streams: 'Active concurrent streams',
+    media_metric_avg_volume: 'Average Volume',
+    media_sub_avg_volume: 'Mean sound output',
+    media_metric_peak_volume: 'Peak Volume',
+    media_sub_peak_volume: 'Highest volume recorded',
+    media_metric_low_volume: 'Lowest Volume',
+    media_sub_low_volume: 'Quiet playback level',
+    media_metric_muted_sessions: 'Muted Sessions',
+    media_sub_muted_sessions: 'Silent / muted playback',
+    media_metric_longest_session: 'Longest Media',
+    media_sub_longest_session: 'Single longest video',
     
     // Hero Player
     player_hero_heading: 'Live Media Player Status',
@@ -736,6 +765,16 @@ const DASHBOARD_I18N = {
     metric_total_sub: (date) => `${date} से अब तक`,
     metric_top_domain: 'शीर्ष वेबसाइट',
     metric_top_sub: 'सर्वाधिक समय व्यतीत',
+    metric_focus: 'गहन एकाग्रता समय',
+    metric_focus_sub: 'आज पूर्ण किए गए सत्र',
+    metric_active_domains: 'सक्रिय डोमेन',
+    metric_active_domains_sub: 'विज़िट की गई भिन्न वेबसाइटें',
+    metric_distraction_time: 'मनोरंजन एवं व्यवधान',
+    metric_distraction_sub: 'मनोरंजन और सोशल मीडिया',
+    metric_peak_hour: 'चरम गतिविधि का समय',
+    metric_peak_hour_sub: 'सर्वाधिक उपयोग की समयावधि',
+    metric_longest_session: 'सबसे लंबा सत्र',
+    metric_longest_session_sub: 'निर्बाध निरंतर ब्राउज़िंग',
     no_data: 'कोई डेटा नहीं',
     
     // Tab A: Charts & Table
@@ -972,6 +1011,25 @@ const DASHBOARD_I18N = {
     media_metric_low_vol_sub: 'न्यूनतम रिकॉर्ड किया गया स्तर',
     media_metric_sessions: 'कुल मीडिया सत्र',
     media_metric_sessions_sub: 'ट्रैक किए गए कुल सत्र',
+    media_metric_total_watch: 'कुल देखने की अवधि',
+    media_sub_total_watch: 'संचयी देखने का समय',
+    media_metric_avg_watch: 'औसत देखने का समय (प्रति वीडियो)',
+    media_sub_avg_watch: 'प्रति वीडियो औसत अवधि',
+    media_sub_sessions: 'कुल प्लेबैक इवेंट्स',
+    media_metric_top_platform: 'शीर्ष मीडिया प्लेटफ़ॉर्म',
+    media_sub_top_platform: 'सर्वाधिक देखा गया प्लेटफ़ॉर्म',
+    media_metric_active_streams: 'लाइव स्ट्रीम',
+    media_sub_active_streams: 'सक्रिय समवर्ती स्ट्रीम',
+    media_metric_avg_volume: 'औसत वॉल्यूम',
+    media_sub_avg_volume: 'औसत ध्वनि स्तर',
+    media_metric_peak_volume: 'उच्चतम वॉल्यूम',
+    media_sub_peak_volume: 'उच्चतम रिकॉर्ड किया गया स्तर',
+    media_metric_low_volume: 'न्यूनतम वॉल्यूम',
+    media_sub_low_volume: 'शांत प्लेबैक स्तर',
+    media_metric_muted_sessions: 'म्यूट किए गए सत्र',
+    media_sub_muted_sessions: 'मौन / म्यूट प्लेबैक',
+    media_metric_longest_session: 'सबसे लंबा मीडिया सत्र',
+    media_sub_longest_session: 'एकल सबसे लंबा वीडियो',
     
     // Hero Player
     player_hero_heading: 'लाइव मीडिया प्लेयर स्थिति',
@@ -3784,8 +3842,17 @@ function applyDashboardLanguage(lang) {
   setTxt('lblMetricTodaySub', 'metric_today_sub');
   setTxt('lblMetricDaily', 'metric_daily');
   setTxt('lblMetricTotal', 'metric_total');
+  setTxt('lblMetricFocus', 'metric_focus');
   setTxt('lblMetricTopDomain', 'metric_top_domain');
   setTxt('lblMetricTopDomainTime', 'metric_top_sub');
+  setTxt('lblMetricActiveDomains', 'metric_active_domains');
+  setTxt('subMetricActiveDomains', 'metric_active_domains_sub');
+  setTxt('lblMetricDistractionTime', 'metric_distraction_time');
+  setTxt('subMetricDistractionTime', 'metric_distraction_sub');
+  setTxt('lblMetricPeakHour', 'metric_peak_hour');
+  setTxt('subMetricPeakHour', 'metric_peak_hour_sub');
+  setTxt('lblMetricLongestSession', 'metric_longest_session');
+  setTxt('subMetricLongestSession', 'metric_longest_session_sub');
 
   setTxt('headingUsageDist', 'heading_usage_dist');
   setTxt('captionUsageDist', 'caption_usage_dist');
@@ -3837,18 +3904,26 @@ function applyDashboardLanguage(lang) {
   }
 
   // Tab B static texts
-  setTxt('lblMediaTotalWatch', 'media_metric_total');
-  setTxt('subMediaTotalWatch', 'media_metric_total_sub');
-  setTxt('lblMediaAvgWatch', 'media_metric_avg');
-  setTxt('subMediaAvgWatch', 'media_metric_avg_sub');
-  setTxt('lblMediaAvgVolume', 'media_metric_avg_vol');
-  setTxt('subMediaAvgVolume', 'media_metric_avg_vol_sub');
-  setTxt('lblMediaPeakVolume', 'media_metric_peak_vol');
-  setTxt('subMediaPeakVolume', 'media_metric_peak_vol_sub');
-  setTxt('lblMediaLowVolume', 'media_metric_low_vol');
-  setTxt('subMediaLowVolume', 'media_metric_low_vol_sub');
+  setTxt('lblMediaTotalWatch', 'media_metric_total_watch');
+  setTxt('subMediaTotalWatch', 'media_sub_total_watch');
+  setTxt('lblMediaAvgWatch', 'media_metric_avg_watch');
+  setTxt('subMediaAvgWatch', 'media_sub_avg_watch');
   setTxt('lblMediaSessions', 'media_metric_sessions');
-  setTxt('subMediaSessions', 'media_metric_sessions_sub');
+  setTxt('subMediaSessions', 'media_sub_sessions');
+  setTxt('lblMediaTopPlatform', 'media_metric_top_platform');
+  setTxt('subMediaTopPlatform', 'media_sub_top_platform');
+  setTxt('lblMediaActiveStreams', 'media_metric_active_streams');
+  setTxt('subMediaActiveStreams', 'media_sub_active_streams');
+  setTxt('lblMediaAvgVolume', 'media_metric_avg_volume');
+  setTxt('subMediaAvgVolume', 'media_sub_avg_volume');
+  setTxt('lblMediaPeakVolume', 'media_metric_peak_volume');
+  setTxt('subMediaPeakVolume', 'media_sub_peak_volume');
+  setTxt('lblMediaLowVolume', 'media_metric_low_volume');
+  setTxt('subMediaLowVolume', 'media_sub_low_volume');
+  setTxt('lblMediaMutedSessions', 'media_metric_muted_sessions');
+  setTxt('subMediaMutedSessions', 'media_sub_muted_sessions');
+  setTxt('lblMediaLongestSession', 'media_metric_longest_session');
+  setTxt('subMediaLongestSession', 'media_sub_longest_session');
 
   setTxt('headingPlayerHero', 'player_hero_heading');
   setTxt('lblHeroVolume', 'live_volume');
@@ -6314,6 +6389,71 @@ function getFaviconUrl(domain) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
 }
 
+/**
+ * Updates the 10-card Time Tracking KPI Bento Grid (Tab A) safely.
+ * Universal Rule 28 compliant (<= 45 lines, zero innerHTML).
+ */
+function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
+  const kpi = (typeof TimeTrackingKpiFeature !== 'undefined' && TimeTrackingKpiFeature.aggregateTimeTrackingKpis)
+    ? TimeTrackingKpiFeature.aggregateTimeTrackingKpis({ data, stats, temporalSubtab, todayStr })
+    : {
+        todaySec: stats && stats.todaySec ? stats.todaySec : 0,
+        dailyAvgSec: stats && stats.dailyAvgSec ? stats.dailyAvgSec : 0,
+        totalSec: stats && stats.totalSec ? stats.totalSec : 0,
+        historyDays: stats && stats.historyDays ? stats.historyDays : 1,
+        firstTrackedDate: stats && stats.firstTrackedDate ? stats.firstTrackedDate : 'today',
+        topDomain: stats && stats.topDomain ? stats.topDomain : null,
+        focusTimeSec: data && data.focusTimeSec ? data.focusTimeSec : 0,
+        focusSessionsCount: data && data.focusSessionsCount ? data.focusSessionsCount : 0,
+        activeDomainsCount: (stats && Array.isArray(stats.items)) ? stats.items.length : 0,
+        distraction: { seconds: 0, percent: 0 },
+        peakHourStr: '--:--',
+        longestSessionSec: 0
+      };
+
+  const elToday = document.getElementById('trackMetricTodayTime');
+  const elDaily = document.getElementById('trackMetricDailyAvg');
+  const elTotal = document.getElementById('trackMetricTotalTime');
+  const elHist = document.getElementById('trackMetricHistoryDays');
+  const elFirst = document.getElementById('trackMetricFirstDate');
+  const elTopDom = document.getElementById('trackMetricTopDomain');
+  const elTopTime = document.getElementById('trackMetricTopDomainTime');
+  const elFocusTime = document.getElementById('trackMetricFocusTime');
+  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
+  const elActiveDomains = document.getElementById('trackMetricActiveDomains');
+  const elDistraction = document.getElementById('trackMetricDistractionTime');
+  const elSubDistraction = document.getElementById('subMetricDistractionTime');
+  const elPeakHour = document.getElementById('trackMetricPeakHour');
+  const elLongest = document.getElementById('trackMetricLongestSession');
+
+  if (elToday) {
+    const prev = Number(elToday.dataset && elToday.dataset.rawSec ? elToday.dataset.rawSec : 0) || 0;
+    if (elToday.dataset) elToday.dataset.rawSec = kpi.todaySec;
+    animateNumberRoll(elToday, prev, kpi.todaySec, 600, '', formatDuration);
+  }
+  if (elDaily) {
+    const prev = Number(elDaily.dataset && elDaily.dataset.rawSec ? elDaily.dataset.rawSec : 0) || 0;
+    if (elDaily.dataset) elDaily.dataset.rawSec = kpi.dailyAvgSec;
+    animateNumberRoll(elDaily, prev, kpi.dailyAvgSec, 600, '', formatDuration);
+  }
+  if (elTotal) {
+    const prev = Number(elTotal.dataset && elTotal.dataset.rawSec ? elTotal.dataset.rawSec : 0) || 0;
+    if (elTotal.dataset) elTotal.dataset.rawSec = kpi.totalSec;
+    animateNumberRoll(elTotal, prev, kpi.totalSec, 600, '', formatDuration);
+  }
+  if (elHist) elHist.textContent = t('metric_daily_sub', kpi.historyDays);
+  if (elFirst) elFirst.textContent = t('metric_total_sub', kpi.firstTrackedDate);
+  if (elTopDom) elTopDom.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? kpi.topDomain.domain : t('no_data');
+  if (elTopTime) elTopTime.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? `${formatDuration(kpi.topDomain.computedSeconds)} (${kpi.topDomain.ratioPercent}%)` : '0s';
+  if (elFocusTime) elFocusTime.textContent = kpi.focusTimeSec > 0 ? formatDuration(kpi.focusTimeSec) : '0h 00m';
+  if (elFocusSessions) elFocusSessions.textContent = `${kpi.focusSessionsCount} completed sessions today`;
+  if (elActiveDomains) elActiveDomains.textContent = String(kpi.activeDomainsCount);
+  if (elDistraction) elDistraction.textContent = kpi.distraction.seconds > 0 ? formatDuration(kpi.distraction.seconds) : '0h 00m';
+  if (elSubDistraction) elSubDistraction.textContent = `${kpi.distraction.percent}% of active time`;
+  if (elPeakHour) elPeakHour.textContent = kpi.peakHourStr;
+  if (elLongest) elLongest.textContent = kpi.longestSessionSec > 0 ? formatDuration(kpi.longestSessionSec) : '0h 00m';
+}
+
 function renderTimeTrackingTab(data) {
   let stats;
 
@@ -6415,53 +6555,9 @@ function renderTimeTrackingTab(data) {
     stats = processTimeTrackingData(actData, temporalSubtab, todayStr);
   }
 
-  // 1. Metric Cards
-  const elToday = document.getElementById('trackMetricTodayTime');
-  const elDaily = document.getElementById('trackMetricDailyAvg');
-  const elTotal = document.getElementById('trackMetricTotalTime');
-  const elHist = document.getElementById('trackMetricHistoryDays');
-  const elFirst = document.getElementById('trackMetricFirstDate');
-  const elTopDom = document.getElementById('trackMetricTopDomain');
-  const elTopTime = document.getElementById('trackMetricTopDomainTime');
-
-  const prevToday = Number(elToday && elToday.dataset ? elToday.dataset.rawSec : 0) || 0;
-  const prevDaily = Number(elDaily && elDaily.dataset ? elDaily.dataset.rawSec : 0) || 0;
-  const prevTotal = Number(elTotal && elTotal.dataset ? elTotal.dataset.rawSec : 0) || 0;
-
-  if (elToday) {
-    if (elToday.dataset) elToday.dataset.rawSec = stats.todaySec;
-    animateNumberRoll(elToday, prevToday, stats.todaySec, 600, '', formatDuration);
-  }
-  if (elDaily) {
-    if (elDaily.dataset) elDaily.dataset.rawSec = stats.dailyAvgSec;
-    animateNumberRoll(elDaily, prevDaily, stats.dailyAvgSec, 600, '', formatDuration);
-  }
-  if (elTotal) {
-    if (elTotal.dataset) elTotal.dataset.rawSec = stats.totalSec;
-    animateNumberRoll(elTotal, prevTotal, stats.totalSec, 600, '', formatDuration);
-  }
-  if (elHist) elHist.textContent = t('metric_daily_sub', stats.historyDays);
-  if (elFirst) elFirst.textContent = t('metric_total_sub', stats.firstTrackedDate);
-
-  if (stats.topDomain && stats.topDomain.computedSeconds > 0) {
-    if (elTopDom) elTopDom.textContent = stats.topDomain.domain;
-    if (elTopTime) elTopTime.textContent = `${formatDuration(stats.topDomain.computedSeconds)} (${stats.topDomain.ratioPercent}%)`;
-  } else {
-    if (elTopDom) elTopDom.textContent = t('no_data');
-    if (elTopTime) elTopTime.textContent = '0s';
-  }
-
-  // 1.1 Focus Time Analytics Metric Card (Metric Card 6)
-  const elFocusTime = document.getElementById('trackMetricFocusTime');
-  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
-  if (elFocusTime) {
-    const focusSec = (data && data.focusTimeSec) ? data.focusTimeSec : 0;
-    elFocusTime.textContent = (focusSec > 0) ? formatDuration(focusSec) : '0h 00m';
-  }
-  if (elFocusSessions) {
-    const sessions = (data && data.focusSessionsCount) ? data.focusSessionsCount : 0;
-    elFocusSessions.textContent = `${sessions} completed sessions today`;
-  }
+  // 1. Metric Cards (Symmetrical 5x2 Bento Grid)
+  const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
+  updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr);
 
   // 2. SVG Donut Chart
   renderDonutChart(stats.items, stats.activeTemporalSum, temporalSubtab);
@@ -7018,6 +7114,49 @@ function resolveUnifiedMediaHistory(bgList, hubList) {
   return result.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
+/**
+ * Updates the 10-card Media Analytics KPI Bento Grid (Tab B) safely.
+ * Universal Rule 28 compliant (<= 45 lines, zero innerHTML).
+ */
+function updateMediaAnalyticsKpiView(history, pm, activeStreams) {
+  const kpi = (typeof MediaAnalyticsKpiFeature !== 'undefined' && MediaAnalyticsKpiFeature.aggregateMediaAnalyticsKpis)
+    ? MediaAnalyticsKpiFeature.aggregateMediaAnalyticsKpis({ history, activeStreams, pm })
+    : {
+        totalWatchSec: 0,
+        avgWatchSec: 0,
+        sessionsCount: (history || []).length,
+        topPlatform: '-',
+        activeStreamsCount: 0,
+        avgVolume: 0,
+        peakVolume: 0,
+        lowVolume: 0,
+        mutedSessionsCount: 0,
+        longestMediaSec: 0
+      };
+
+  const elTotWatch = document.getElementById('mediaMetricTotalWatch');
+  const elAvgWatch = document.getElementById('mediaMetricAvgWatch');
+  const elSessCount = document.getElementById('mediaMetricSessionsCount');
+  const elTopPlat = document.getElementById('mediaMetricTopPlatform');
+  const elActiveStreams = document.getElementById('mediaMetricActiveStreams');
+  const elAvgVol = document.getElementById('mediaMetricAvgVolume');
+  const elPeakVol = document.getElementById('mediaMetricPeakVolume');
+  const elLowVol = document.getElementById('mediaMetricLowVolume');
+  const elMutedSess = document.getElementById('mediaMetricMutedSessions');
+  const elLongestMedia = document.getElementById('mediaMetricLongestSession');
+
+  if (elTotWatch) elTotWatch.textContent = formatDuration(kpi.totalWatchSec);
+  if (elAvgWatch) elAvgWatch.textContent = formatDuration(kpi.avgWatchSec);
+  if (elSessCount) elSessCount.textContent = String(kpi.sessionsCount);
+  if (elTopPlat) elTopPlat.textContent = kpi.topPlatform;
+  if (elActiveStreams) elActiveStreams.textContent = String(kpi.activeStreamsCount);
+  if (elAvgVol) elAvgVol.textContent = `${kpi.avgVolume}%`;
+  if (elPeakVol) elPeakVol.textContent = `${kpi.peakVolume}%`;
+  if (elLowVol) elLowVol.textContent = `${kpi.lowVolume}%`;
+  if (elMutedSess) elMutedSess.textContent = String(kpi.mutedSessionsCount);
+  if (elLongestMedia) elLongestMedia.textContent = kpi.longestMediaSec > 0 ? formatDuration(kpi.longestMediaSec) : '0h 00m';
+}
+
 function renderMediaAnalyticsTab(data) {
   const safeData = data || dashboardData || {};
   const rawBgHistory = Array.isArray(safeData.mediaHistory) ? safeData.mediaHistory : [];
@@ -7035,38 +7174,11 @@ function renderMediaAnalyticsTab(data) {
   const globalMedia = safeData.globalMediaState || {};
   const pm = globalMedia.primaryMedia;
 
-  // 1. Compute Summary Metrics Cards
-  let totalWatchSec = 0;
-  let totalVolSum = 0;
-  let peakVol = 0;
-  let lowVol = 100;
-  const sessionsCount = history.length;
-
-  history.forEach(item => {
-    totalWatchSec += (item.watchDuration || 0);
-    const avgV = item.averageVolume !== undefined ? item.averageVolume : 100;
-    totalVolSum += avgV;
-    if (item.peakVolume !== undefined && item.peakVolume > peakVol) peakVol = item.peakVolume;
-    if (item.lowVolume !== undefined && item.lowVolume < lowVol) lowVol = item.lowVolume;
-  });
-
-  const avgWatchSec = sessionsCount > 0 ? Math.round(totalWatchSec / sessionsCount) : 0;
-  const overallAvgVol = sessionsCount > 0 ? Math.round(totalVolSum / sessionsCount) : 0;
-  if (sessionsCount === 0) lowVol = 0;
-
-  const elTotWatch = document.getElementById('mediaMetricTotalWatch');
-  const elAvgWatch = document.getElementById('mediaMetricAvgWatch');
-  const elAvgVol = document.getElementById('mediaMetricAvgVolume');
-  const elPeakVol = document.getElementById('mediaMetricPeakVolume');
-  const elLowVol = document.getElementById('mediaMetricLowVolume');
-  const elSessCount = document.getElementById('mediaMetricSessionsCount');
-
-  if (elTotWatch) elTotWatch.textContent = formatDuration(totalWatchSec);
-  if (elAvgWatch) elAvgWatch.textContent = formatDuration(avgWatchSec);
-  if (elAvgVol) elAvgVol.textContent = `${overallAvgVol}%`;
-  if (elPeakVol) elPeakVol.textContent = `${peakVol}%`;
-  if (elLowVol) elLowVol.textContent = `${lowVol}%`;
-  if (elSessCount) elSessCount.textContent = String(sessionsCount);
+  // 1. Compute Summary Metrics Cards (Symmetrical 5x2 Bento Grid)
+  const activeStreamsList = (typeof activeMediaStreams !== 'undefined' && Array.isArray(activeMediaStreams))
+    ? activeMediaStreams
+    : [];
+  updateMediaAnalyticsKpiView(history, pm, activeStreamsList);
 
   // 2. Render Live Media Player Hero Widget
   renderHeroMediaPlayer(pm);
@@ -11989,6 +12101,8 @@ if (typeof module !== 'undefined' && module.exports) {
     renderScrubberChapterTicks,
     applyCardStaggerIndices,
     PrecisionTimelineScrubber,
+    updateTimeTrackingKpiView,
+    updateMediaAnalyticsKpiView,
     // Modular Subsystems
     DashboardState: _DashboardState,
     BrowserFilter: _BrowserFilter,

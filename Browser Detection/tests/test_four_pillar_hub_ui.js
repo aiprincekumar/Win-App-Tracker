@@ -91,14 +91,13 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
   assert(html.includes('id="selectDefaultTab"'), 'quickSettingsPopover must contain #selectDefaultTab');
   assert(html.includes('id="selectSyncInterval"'), 'quickSettingsPopover must contain #selectSyncInterval');
 
-  // Invariant Footer: exactly 7 buttons
+  // Invariant Footer: exactly 6 buttons (Switch Tab relocated to header)
   const footerButtons = [
     'btnRefresh',
     'btnGlobalMediaToggle',
     'btnToggleTrackingPause',
     'btnSleepTimerTrigger',
     'btnReconnectWs',
-    'btnSwitchMediaTab',
     'btnThemeToggle'
   ];
 
@@ -114,15 +113,18 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
     lastIdx = idx;
   });
 
-  // Header badges: contains #btnOpenDashboard and #btnQuickSettings
+  // Header badges: contains #btnSwitchMediaTab, #btnOpenDashboard, and #btnQuickSettings
+  assert(html.includes('id="btnSwitchMediaTab"'), 'Header badges must contain #btnSwitchMediaTab');
   assert(html.includes('id="btnOpenDashboard"'), 'Header badges must contain #btnOpenDashboard');
   assert(html.includes('id="btnQuickSettings"'), 'Header badges must contain #btnQuickSettings');
+  const switchHeaderIdx = html.indexOf('id="btnSwitchMediaTab"');
   const dashHeaderIdx = html.indexOf('id="btnOpenDashboard"');
   const qsHeaderIdx = html.indexOf('id="btnQuickSettings"');
+  assert(switchHeaderIdx < dashHeaderIdx, '#btnSwitchMediaTab must precede #btnOpenDashboard in header badges');
   assert(dashHeaderIdx < qsHeaderIdx, '#btnOpenDashboard must precede #btnQuickSettings in header badges');
 
-  console.log('  ✅ Quick Settings & Dashboard buttons and floating popover dialog verified in header');
-  console.log('  ✅ Strict single-row footer toolbar invariant certified (all 7 buttons in exact sequence)');
+  console.log('  ✅ Quick Settings, Dashboard, and Switch Tab buttons and floating popover dialog verified in header');
+  console.log('  ✅ Strict single-row footer toolbar invariant certified (all 6 buttons in exact sequence)');
 }
 
 // ---------------------------------------------------------------------------

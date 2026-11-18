@@ -14,13 +14,96 @@
 @import './tabs/tab_sleep.css';
 
 /* ==========================================================================
+   Tier 1: Top-Tier Category Segmented Navigation (Compact Icon-Only Header Nav)
+   ========================================================================== */
+.tier1-segmented-nav.header-group-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px;
+  border-radius: 9px;
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.tier1-segmented-nav .tier1-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.tier1-segmented-nav .tier1-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.tier1-segmented-nav .tier1-nav-btn:active {
+  transform: scale(0.94);
+}
+
+.tier1-segmented-nav .tier1-nav-btn:focus-visible {
+  outline: 2px solid var(--accent-emerald, #10b981);
+  outline-offset: 1px;
+}
+
+.tier1-segmented-nav .tier1-nav-btn.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(139, 92, 246, 0.3) 100%);
+  color: #ffffff;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.tier1-segmented-nav .tier1-nav-btn[data-category="playback"].active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(6, 182, 212, 0.3) 100%);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.tier1-segmented-nav .tier1-nav-btn[data-category="studio"].active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(139, 92, 246, 0.3) 100%);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
+}
+
+.tier1-segmented-nav .tier1-nav-btn[data-category="analytics"].active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.32) 0%, rgba(59, 130, 246, 0.28) 100%);
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.tier1-segmented-nav .tier1-nav-btn[data-category="wellness"].active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(168, 85, 247, 0.3) 100%);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+/* ==========================================================================
    Top Primary Multi-Tabs Navigation & View Panes (6-Tab Single-Word Architecture)
    ========================================================================== */
 .top-nav-tabs {
-  display: grid;
+  display: flex;
   /* Legacy 4-column fallback for backwards compatibility */
   /* grid-template-columns: repeat(4, 1fr); */
   /* grid-template-columns: repeat(6, 1fr); */
+  /* grid-template-columns: repeat(7, 1fr); */
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
   background: rgba(255, 255, 255, 0.035);
@@ -33,6 +116,7 @@
 }
 
 .top-tab-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,6 +136,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+
+/* Dynamic Filtering Hidden Class */
+.top-tab-btn.tab-hidden {
+  display: none !important;
 }
 
 .top-tab-btn:hover {

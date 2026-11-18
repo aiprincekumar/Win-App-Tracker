@@ -499,7 +499,6 @@ console.log('\nTest 9: Modern SVG Vector Markup Integrity');
     'btnGlobalMediaToggle',
     'btnSleepTimerTrigger',
     'btnReconnectWs',
-    'btnSwitchMediaTab',
     'btnThemeToggle'
   ];
 
@@ -517,6 +516,12 @@ console.log('\nTest 9: Modern SVG Vector Markup Integrity');
     assert(btnMarkup.includes('</svg>'), `Button #${btnId} SVG must have matching closing tag </svg>`);
   });
 
+  // Relocated #btnSwitchMediaTab Header Badge Vector Check
+  const switchBadgeMatch = html.match(/<button id="btnSwitchMediaTab"[\s\S]*?<\/button>/i);
+  assert(switchBadgeMatch, '#btnSwitchMediaTab must exist in HTML');
+  assert(switchBadgeMatch[0].includes('width="15"'), '#btnSwitchMediaTab in header must have 15px width');
+  assert(switchBadgeMatch[0].includes('height="15"'), '#btnSwitchMediaTab in header must have 15px height');
+  console.log('  ✅ Header badge #btnSwitchMediaTab contains modern vector 15x15px <svg> markup');
   console.log('  ✅ All toolbar buttons contain modern vector <svg> markup');
   console.log('  ✅ Uniform SVG dimensions verified: viewBox="0 0 24 24", width="16", height="16", stroke="currentColor"');
 }

@@ -20,7 +20,10 @@
 .btn-quick-settings,
 .btn-theme-toggle,
 .btn-dashboard-header,
-#btnOpenDashboard {
+#btnOpenDashboard,
+.btn-switch-header,
+.btn-switch-tab-header,
+#btnSwitchMediaTab {
   position: relative;
   width: 30px;
   height: 30px;
@@ -46,7 +49,10 @@
 .btn-quick-settings:hover,
 .btn-theme-toggle:hover,
 .btn-dashboard-header:hover,
-#btnOpenDashboard:hover {
+#btnOpenDashboard:hover,
+.btn-switch-header:hover,
+.btn-switch-tab-header:hover,
+#btnSwitchMediaTab:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.22);
@@ -58,7 +64,10 @@
 .btn-quick-settings:active,
 .btn-theme-toggle:active,
 .btn-dashboard-header:active,
-#btnOpenDashboard:active {
+#btnOpenDashboard:active,
+.btn-switch-header:active,
+.btn-switch-tab-header:active,
+#btnSwitchMediaTab:active {
   transform: scale(0.94);
 }
 
@@ -139,6 +148,69 @@
   stroke: #ffffff;
   filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.85));
 }
+
+/* Header Switch Tab Badge Button Accent (Cyan Glassmorphism) */
+.btn-switch-header,
+.btn-switch-tab-header,
+.header-badges #btnSwitchMediaTab {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.18) 0%, rgba(14, 165, 233, 0.22) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.38);
+  color: #a5f3fc;
+}
+
+.btn-switch-header:hover,
+.btn-switch-tab-header:hover,
+.header-badges #btnSwitchMediaTab:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.38) 0%, rgba(14, 165, 233, 0.48) 100%);
+  border-color: #22d3ee;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-switch-header .header-switch-icon,
+.btn-switch-header .sentinel-svg-icon,
+.header-badges #btnSwitchMediaTab svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease, filter 0.2s ease;
+}
+
+.btn-switch-header:hover .header-switch-icon,
+.btn-switch-header:hover .sentinel-svg-icon,
+.header-badges #btnSwitchMediaTab:hover svg {
+  transform: scale(1.12);
+  stroke: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.85));
+}
+
+.btn-switch-header:focus-visible,
+.btn-switch-tab-header:focus-visible,
+.header-badges #btnSwitchMediaTab:focus-visible {
+  outline: 2px solid var(--accent-cyan, #06b6d4);
+  outline-offset: 1px;
+}
+
+/* Light Theme Header Switch Tab Badge */
+[data-theme="light"] .btn-switch-header,
+[data-theme="light"] .btn-switch-tab-header,
+[data-theme="light"] .header-badges #btnSwitchMediaTab {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0284c7;
+}
+
+[data-theme="light"] .btn-switch-header:hover,
+[data-theme="light"] .btn-switch-tab-header:hover,
+[data-theme="light"] .header-badges #btnSwitchMediaTab:hover {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #0369a1;
+}
+
 
 .btn-quick-settings[aria-expanded="true"] {
   background: rgba(16, 185, 129, 0.15);

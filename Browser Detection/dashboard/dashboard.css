@@ -1694,6 +1694,9 @@ button.spinning .refresh-spinner-icon,
 .metric-icon-box.amber { background: var(--accent-amber-dim); color: var(--accent-amber); }
 .metric-icon-box.rose { background: var(--accent-rose-dim); color: var(--accent-rose); }
 .metric-icon-box.blue { background: var(--accent-blue-dim); color: var(--accent-blue); }
+.metric-icon-box.indigo { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.metric-icon-box.teal { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; }
+.metric-icon-box.fuchsia { background: rgba(217, 70, 239, 0.15); color: #e879f9; }
 
 .metric-value-container {
   margin-bottom: 8px;
@@ -7899,15 +7902,17 @@ body.theme-light .conflict-modal-card {
 /* PHASE 1 RESTORATION: 5-Metric Bento Subgrid & Consolidated Export Hub      */
 /* ========================================================================= */
 
-/* Symmetrical 5-Metric Subgrid */
-.metrics-bento-row {
+/* Symmetrical 5-Metric Subgrid & 5x2 KPI Bento Grid Architecture */
+.metrics-bento-row,
+.kpi-grid-5x2 {
   display: grid !important;
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   gap: 1.25rem !important;
   width: 100%;
 }
 
-.metrics-bento-row .metric-card {
+.metrics-bento-row .metric-card,
+.kpi-grid-5x2 .metric-card {
   min-width: 0;
   grid-column: span 1 !important;
   display: flex;
@@ -7915,22 +7920,27 @@ body.theme-light .conflict-modal-card {
   justify-content: space-between;
   padding: 1.25rem;
   border-radius: 16px;
+  min-height: 135px;
 }
 
 @media (max-width: 1280px) {
-  .metrics-bento-row {
+  .metrics-bento-row,
+  .kpi-grid-5x2 {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 
 @media (max-width: 768px) {
-  .metrics-bento-row {
+  .metrics-bento-row,
+  .kpi-grid-5x2 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .metrics-bento-row {
+  .metrics-bento-row,
+  .kpi-grid-5x2 {
     grid-template-columns: 1fr !important;
   }
 }

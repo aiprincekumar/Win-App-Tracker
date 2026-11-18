@@ -140,6 +140,12 @@ const I18N_POPUP = {
     tab_domains: 'Domains',
     tab_sleep: 'Sleep',
     tab_media_active_title: 'Media Active',
+
+    // Tier 1 Navigation Categories
+    tier1_playback: 'Playback',
+    tier1_studio: 'Studio',
+    tier1_analytics: 'Analytics',
+    tier1_wellness: 'Wellness',
     
     // Headings
     heading_video: 'LIVE VIDEO SENTINEL',
@@ -289,6 +295,12 @@ const I18N_POPUP = {
     tab_domains: 'डोमेन',
     tab_sleep: 'स्लीप',
     tab_media_active_title: 'मीडिया सक्रिय है',
+
+    // Tier 1 Navigation Categories (Hindi Localization)
+    tier1_playback: 'प्लेबैक',
+    tier1_studio: 'स्टूडियो',
+    tier1_analytics: 'एनालिटिक्स',
+    tier1_wellness: 'वेलनेस',
     
     // Headings
     heading_video: 'लाइव वीडियो सेंटिनल',
@@ -563,6 +575,16 @@ function applyPopupLanguage(lang) {
   setTxt('topTabDomainsText', 'tab_domains');
   setTxt('topTabSleepText', 'tab_sleep');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
+
+  // Tier 1 Segmented Category Navigation
+  setTxt('tier1PlaybackText', 'tier1_playback');
+  setTxt('tier1StudioText', 'tier1_studio');
+  setTxt('tier1AnalyticsText', 'tier1_analytics');
+  setTxt('tier1WellnessText', 'tier1_wellness');
+  setTitle('tier1BtnPlayback', 'tier1_playback');
+  setTitle('tier1BtnStudio', 'tier1_studio');
+  setTitle('tier1BtnAnalytics', 'tier1_analytics');
+  setTitle('tier1BtnWellness', 'tier1_wellness');
 
   setTxt('lblTimeElapsed', 'watched');
   setTxt('lblTimeDuration', 'total');
@@ -901,8 +923,112 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`;
 }
 
+// =============================================================================
+// 2-Tier Segmented Control & Navigation Feature Integration
+// =============================================================================
+let activeTier1Category = 'playback';
+
+const TIER1_GROUP_TABS = {
+  playback: ['media', 'audio'],
+  studio: ['tools', 'studio'],
+  analytics: ['tracking', 'domains'],
+  wellness: ['sleep']
+};
+
 /**
- * Switches the top-level tab (Media, Audio, Tools, Studio, Tracking, Domains)
+ * Returns the Tier 1 group category for a given tab identifier
+ * @param {string} tabKey
+ * @returns {string}
+ */
+function getTier1GroupForTab(tabKey) {
+  if (typeof Tier1NavigationFeature !== 'undefined' && typeof Tier1NavigationFeature.getGroupForTab === 'function') {
+    return Tier1NavigationFeature.getGroupForTab(tabKey);
+  }
+  const norm = (tabKey === 'focus') ? 'tracking' : tabKey;
+  for (const [group, tabs] of Object.entries(TIER1_GROUP_TABS)) {
+    if (tabs.includes(norm)) return group;
+  }
+  return 'playback';
+}
+
+/**
+ * Returns primary default tab for a given group
+ * @param {string} groupKey
+ * @returns {string}
+ */
+function getTier1PrimaryTab(groupKey) {
+  if (typeof Tier1NavigationFeature !== 'undefined' && typeof Tier1NavigationFeature.getPrimaryTabForGroup === 'function') {
+    return Tier1NavigationFeature.getPrimaryTabForGroup(groupKey);
+  }
+  const defaults = { playback: 'media', studio: 'tools', analytics: 'tracking', wellness: 'sleep' };
+  return defaults[groupKey] || 'media';
+}
+
+/**
+ * Updates UI of Tier 1 category buttons
+ * @param {string} category
+ */
+function renderTier1ButtonsUI(category) {
+  const btnMap = {
+    playback: 'tier1BtnPlayback',
+    studio: 'tier1BtnStudio',
+    analytics: 'tier1BtnAnalytics',
+    wellness: 'tier1BtnWellness'
+  };
+  Object.entries(btnMap).forEach(([catKey, btnId]) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const isActive = (catKey === category);
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+}
+
+/**
+ * Filters Tier 2 child tabs based on the active Tier 1 category
+ * @param {string} category
+ */
+function filterChildTabsByCategory(category) {
+  const childTabs = document.querySelectorAll('.top-nav-tabs .top-tab-btn');
+  childTabs.forEach(btn => {
+    const group = btn.getAttribute('data-group') || getTier1GroupForTab(btn.getAttribute('data-view'));
+    const isVisible = (group === category);
+    btn.classList.toggle('tab-hidden', !isVisible);
+  });
+}
+
+/**
+ * Switches the Tier 1 Category (playback, studio, analytics, wellness)
+ * and dynamically filters Tier 2 child tabs.
+ * @param {string} category
+ * @param {boolean} isManual
+ */
+function switchTier1Category(category, isManual = false) {
+  const valid = ['playback', 'studio', 'analytics', 'wellness'];
+  if (!valid.includes(category)) return;
+
+  if (isManual) {
+    userManualOverride = true;
+  }
+  activeTier1Category = category;
+
+  renderTier1ButtonsUI(category);
+  filterChildTabsByCategory(category);
+
+  const allowedTabs = TIER1_GROUP_TABS[category] || [];
+  if (!allowedTabs.includes(activeTopTab)) {
+    const targetTab = getTier1PrimaryTab(category);
+    switchTopTab(targetTab, isManual);
+  }
+
+  try {
+    browserAPI.storage.local.set({ active_tier1_category: category });
+  } catch (_) {}
+}
+
+/**
+ * Switches the top-level tab (Media, Audio, Tools, Studio, Tracking, Domains, Sleep)
+ * and guarantees parent Tier 1 category synchronization.
  */
 function switchTopTab(tabName, isManual = false) {
   if (isManual) {
@@ -910,6 +1036,17 @@ function switchTopTab(tabName, isManual = false) {
   }
   const normalized = (tabName === 'focus') ? 'tracking' : tabName;
   activeTopTab = normalized;
+
+  // Synchronize parent Tier 1 category if needed
+  const parentCategory = getTier1GroupForTab(normalized);
+  if (parentCategory !== activeTier1Category) {
+    activeTier1Category = parentCategory;
+    renderTier1ButtonsUI(parentCategory);
+    filterChildTabsByCategory(parentCategory);
+    try {
+      browserAPI.storage.local.set({ active_tier1_category: parentCategory });
+    } catch (_) {}
+  }
 
   const tabs = [
     { id: 'mainTabMedia', paneId: 'viewMediaPane', key: 'media' },
@@ -925,15 +1062,10 @@ function switchTopTab(tabName, isManual = false) {
     const btn = document.getElementById(t.id);
     const pane = document.getElementById(t.paneId);
     if (!btn || !pane) return;
-    if (t.key === normalized) {
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      pane.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-      btn.setAttribute('aria-selected', 'false');
-      pane.classList.remove('active');
-    }
+    const isTarget = (t.key === normalized);
+    btn.classList.toggle('active', isTarget);
+    btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+    pane.classList.toggle('active', isTarget);
   });
 
   try {
@@ -1777,7 +1909,7 @@ function renderDataHubBadge(isConnected) {
 }
 
 /**
- * Handles Dynamic Auto-Switching between Tab 1 (Media) and Tab 2 (Time Tracking)
+ * Handles Dynamic Auto-Switching between Tier 1 Categories & Tabs (Media & Tracking)
  */
 function handleAutoTabSwitching(data) {
   const pm = data && data.globalMediaState && data.globalMediaState.primaryMedia;
@@ -1790,24 +1922,29 @@ function handleAutoTabSwitching(data) {
     liveDot.classList.toggle('hidden', !isPlayingNow);
   }
 
-  // 1. Initial Load: Automatically choose the right tab
+  // 1. Initial Load: Automatically choose the right category and tab
   if (isInitialLoad) {
     isInitialLoad = false;
     if (hasActiveMedia) {
+      switchTier1Category('playback', false);
       switchTopTab('media', false);
     } else {
+      switchTier1Category('analytics', false);
       switchTopTab('tracking', false);
     }
   }
 
-  // 2. Playback just started while popup is open -> Auto-switch to Media tab
+  // 2. Playback just started while popup is open -> Auto-switch to Playback / Media
   if (isPlayingNow && !lastMediaPlaying) {
-    switchTopTab('media', false);
-    userManualOverride = false;
+    if (!userManualOverride) {
+      switchTier1Category('playback', false);
+      switchTopTab('media', false);
+    }
   }
 
-  // 3. If no media and user hasn't explicitly chosen Media tab -> Auto-switch to Time Tracking
-  if (!userManualOverride && !hasActiveMedia && activeTopTab === 'media') {
+  // 3. If no media and user hasn't explicitly chosen tabs -> Auto-switch to Analytics / Tracking
+  if (!userManualOverride && !hasActiveMedia && activeTier1Category === 'playback' && activeTopTab === 'media') {
+    switchTier1Category('analytics', false);
     switchTopTab('tracking', false);
   }
 
@@ -2598,6 +2735,28 @@ function startSleepTimerWithMinutes(minutes) {
 function setupEventListeners() {
   if (popupListenersAttached) return;
   popupListenersAttached = true;
+
+  // Tier 1 Segmented Category Navigation Click Listeners
+  const tier1Buttons = [
+    { id: 'tier1BtnPlayback', category: 'playback' },
+    { id: 'tier1BtnStudio', category: 'studio' },
+    { id: 'tier1BtnAnalytics', category: 'analytics' },
+    { id: 'tier1BtnWellness', category: 'wellness' }
+  ];
+  tier1Buttons.forEach(({ id, category }) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        switchTier1Category(category, true);
+      });
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          switchTier1Category(category, true);
+        }
+      });
+    }
+  });
 
   // Top Primary Multi-Tabs Navigation (6-Tab Single-Word Architecture)
   const tabMediaBtn = document.getElementById('mainTabMedia');
@@ -4652,9 +4811,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selCat) selCat.value = selectedDomainCategory;
     }
 
-    // Hydrate 6-Tab Architecture States
+    // Hydrate 2-Tier Segmented Control & Tab States
     // Legacy 6-tab check: ['media', 'audio', 'tools', 'studio', 'tracking', 'domains']
     const validTabs = ['media', 'audio', 'tools', 'studio', 'tracking', 'domains', 'sleep'];
+    const validCategories = ['playback', 'studio', 'analytics', 'wellness'];
+    if (res && res.active_tier1_category && validCategories.includes(res.active_tier1_category)) {
+      switchTier1Category(res.active_tier1_category, false);
+    }
     if (res && res.active_popup_tab && validTabs.includes(res.active_popup_tab)) {
       switchTopTab(res.active_popup_tab, false);
     } else if (res && res.quick_settings && res.quick_settings.default_tab && validTabs.includes(res.quick_settings.default_tab)) {
