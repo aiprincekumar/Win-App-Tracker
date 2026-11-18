@@ -224,6 +224,37 @@
   }
 
   /**
+   * Pure domain helper: Resolves candidate primary media tab ID according to 3-tier hierarchy:
+   * Tier 0: Explicit preferred / solo tab ID
+   * Tier 1: Actively playing stream (prefers unmuted)
+   * Tier 2: Most recently active stream
+   * Tier 3: 0 (signals backend to resolve focused browser tab) or candidate stream tab ID
+   */
+  function resolvePrimaryMediaTabId(streamsList, explicitTabId = null, currentSoloTabId = null) {
+    const expId = Number(explicitTabId);
+    if (expId > 0) return expId;
+    const soloId = Number(currentSoloTabId);
+    if (soloId > 0) return soloId;
+
+    const list = Array.isArray(streamsList) ? streamsList.filter(s => s && Number(s.tabId) > 0) : [];
+    if (list.length === 0) return 0;
+
+    const active = list.filter(s => Boolean(s.isPlaying || s.playbackState === 'playing' || s.isAudible || s.audible));
+    if (active.length > 0) {
+      const unmuted = active.find(s => !s.isMuted && !s.muted);
+      return Number(unmuted ? unmuted.tabId : active[0].tabId);
+    }
+
+    const getRec = s => Number(s.lastPlaybackTimestamp || s.lastActiveTime || s.lastUpdated || s.timestamp || 0);
+    const sorted = [...list].sort((a, b) => getRec(b) - getRec(a));
+    if (sorted.length > 0 && getRec(sorted[0]) > 0) {
+      return Number(sorted[0].tabId);
+    }
+
+    return Number(sorted[0] && sorted[0].tabId ? sorted[0].tabId : 0);
+  }
+
+  /**
    * Executes Global Mute Others: Mutes all media streams except the primary/specified active stream.
    * Supports bidirectional toggle: if already active, toggles off and restores unmuted state.
    */
@@ -236,7 +267,7 @@
     const translate = typeof options.t === 'function' ? options.t : (k) => k;
 
     const isMuted = Boolean(isMuteAllOthersActive);
-    let targetId = Number(primaryTabId || currentSoloTabId || (list.find(s => s && s.tabId) ? list.find(s => s && s.tabId).tabId : 0) || 0);
+    const targetId = resolvePrimaryMediaTabId(list, primaryTabId, currentSoloTabId);
 
     const action = isMuted ? 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR' : 'MEDIA_STREAM_MUTE_ALL_OTHERS';
     const mediaAction = isMuted ? 'media:unmute_all_others' : 'media:mute_all_others';
@@ -720,11 +751,14 @@
   const MIN_DB = -40;
   const MAX_DB = 6;
 
-  const VALID_VIZ_MODES = ['bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'];
+  const VALID_VIZ_MODES = [
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
+  ];
 
   let visualizerCanvas = null;
   let visualizerCtx = null;
-  let visualizerMode = 'bars'; // 'bars' | 'wave' | 'radial' | 'matrix_dots' | 'flame' | 'stereo_mirror'
+  let visualizerMode = 'bars'; // 'bars' | 'wave' | 'radial' | 'matrix_dots' | 'flame' | 'stereo_mirror' | 'lissajous' | 'hex_grid' | 'particles' | 'retro_grid' | 'vinyl_rings' | 'liquid_wave'
   let isVisualizerPlaying = false;
   let isVisualizerSleeping = true;
   let visualizerRafId = null;
@@ -733,6 +767,23 @@
   // 32-Band FFT falloff state
   const peakHoldBars = new Float32Array(NUM_BANDS);
   const currentBandValues = new Float32Array(NUM_BANDS);
+
+  // 60fps Zero-GC Particle Pool for Starfield Particle Warp
+  const PARTICLE_COUNT = 64;
+  const particleX = new Float32Array(PARTICLE_COUNT);
+  const particleY = new Float32Array(PARTICLE_COUNT);
+  const particleZ = new Float32Array(PARTICLE_COUNT);
+  const particleSpeed = new Float32Array(PARTICLE_COUNT);
+
+  function resetParticlePool() {
+    for (let p = 0; p < PARTICLE_COUNT; p++) {
+      particleX[p] = (Math.random() - 0.5) * 800;
+      particleY[p] = (Math.random() - 0.5) * 300;
+      particleZ[p] = Math.random() * 800 + 10;
+      particleSpeed[p] = 2 + Math.random() * 3;
+    }
+  }
+  resetParticlePool();
 
   // Studio Peak-Hold Decay & Graticule State Machine
   let leftPeakVal = 0;
@@ -757,7 +808,13 @@
     radial: { icon: '✨', label: 'Radial Burst' },
     matrix_dots: { icon: '🟢', label: 'Matrix Dots' },
     flame: { icon: '🔥', label: 'Flame Peaks' },
-    stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' }
+    stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' },
+    lissajous: { icon: '🎛️', label: 'Lissajous Scope' },
+    hex_grid: { icon: '⬡', label: 'Hex Grid' },
+    particles: { icon: '🌌', label: 'Starfield Warp' },
+    retro_grid: { icon: '🕹️', label: 'Synthwave Grid' },
+    vinyl_rings: { icon: '💿', label: 'Vinyl Rings' },
+    liquid_wave: { icon: '💧', label: 'Liquid Wave' }
   };
 
   /**
@@ -765,7 +822,7 @@
    * Subpixel +0.5 offset prevents blurry lines on Retina/High-DPI displays.
    */
   function renderCanvasGraticule(ctx, width, height, isLightTheme = false) {
-    if (!isGraticuleEnabled || !ctx || visualizerMode === 'radial') return;
+    if (!isGraticuleEnabled || !ctx || visualizerMode === 'radial' || visualizerMode === 'particles' || visualizerMode === 'vinyl_rings' || visualizerMode === 'lissajous') return;
 
     if (typeof ctx.save === 'function') ctx.save();
     ctx.lineWidth = 1;
@@ -1435,14 +1492,469 @@
     return Math.max(0, Math.min(100, ((clamped - MIN_DB) / range) * 100));
   }
 
+  // ===========================================================================
+  // Studio-Grade Visualizer Mode Renderers (Universal Rule 28 Compliant <= 50 lines)
+  // ===========================================================================
+
+  function renderBarsMode(ctx, width, height, freqs) {
+    const gap = 3;
+    const totalGaps = (NUM_BANDS - 1) * gap;
+    const barWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      const targetVal = freqs[i] || 0;
+      currentBandValues[i] = currentBandValues[i] * 0.65 + targetVal * 0.35;
+      const barHeight = Math.max(2, currentBandValues[i] * (height - 12));
+      const x = i * (barWidth + gap);
+      const y = height - barHeight;
+
+      const grad = ctx.createLinearGradient(0, height, 0, 0);
+      grad.addColorStop(0, '#10b981');
+      grad.addColorStop(0.55, '#06b6d4');
+      grad.addColorStop(1, '#8b5cf6');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, barWidth, barHeight);
+
+      if (y < peakHoldBars[i] || peakHoldBars[i] === 0) {
+        peakHoldBars[i] = y;
+      } else {
+        peakHoldBars[i] = Math.min(height - 4, peakHoldBars[i] + 1.25);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, peakHoldBars[i] - 2, barWidth, 2);
+    }
+  }
+
+  function renderWaveMode(ctx, width, height, wave) {
+    ctx.beginPath();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#06b6d4';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#10b981';
+
+    const sliceWidth = width / (wave.length - 1);
+    const midY = height / 2;
+
+    for (let j = 0; j < wave.length; j++) {
+      const amp = wave[j] || 0;
+      const x = j * sliceWidth;
+      const y = midY + amp * (height * 0.42);
+      if (j === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function renderRadialMode(ctx, width, height, freqs, telemetry) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const minDim = Math.min(width, height);
+    const baseRadiusMin = Math.max(16, minDim * 0.18);
+    const baseRadius = baseRadiusMin + (telemetry.leftRms || 0) * (minDim * 0.08);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseRadius * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = Math.max(1, Math.min(3, minDim * 0.012));
+    ctx.stroke();
+
+    ctx.lineWidth = Math.max(2, Math.min(6, Math.round(minDim * 0.018)));
+    ctx.lineCap = 'round';
+    const spokeBaseLen = Math.max(3, minDim * 0.025);
+    const spokeMaxDynamic = minDim * 0.22;
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+      const spokeLen = spokeBaseLen + currentBandValues[i] * spokeMaxDynamic;
+      const angle = (i / NUM_BANDS) * Math.PI * 2 - Math.PI / 2;
+      const x1 = cx + Math.cos(angle) * (baseRadius + 2);
+      const y1 = cy + Math.sin(angle) * (baseRadius + 2);
+      const x2 = cx + Math.cos(angle) * (baseRadius + spokeLen);
+      const y2 = cy + Math.sin(angle) * (baseRadius + spokeLen);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';
+      ctx.stroke();
+    }
+  }
+
+  function renderMatrixDotsMode(ctx, width, height, freqs) {
+    const gap = 3;
+    const totalGaps = (NUM_BANDS - 1) * gap;
+    const colWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+    const numRows = 8;
+    const dotHeight = (height - 16) / numRows;
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+      const x = i * (colWidth + gap);
+
+      for (let r = 0; r < numRows; r++) {
+        const threshold = (r + 0.5) / numRows;
+        const isLit = currentBandValues[i] >= threshold;
+        const y = height - 8 - (r + 1) * dotHeight;
+        ctx.fillStyle = isLit ? (r > 5 ? '#f43f5e' : r > 3 ? '#38bdf8' : '#10b981') : 'rgba(255, 255, 255, 0.05)';
+        ctx.fillRect(x, y + 2, colWidth, dotHeight - 4);
+      }
+    }
+  }
+
+  function renderFlameMode(ctx, width, height, freqs, timestamp) {
+    const gap = 3;
+    const totalGaps = (NUM_BANDS - 1) * gap;
+    const barWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+    const time = (timestamp || Date.now()) * 0.005;
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      const flutter = Math.sin(time * 3 + i * 0.5) * 0.15;
+      currentBandValues[i] = currentBandValues[i] * 0.6 + (freqs[i] || 0) * 0.4;
+      const flameHeight = Math.max(4, (currentBandValues[i] + flutter) * (height - 10));
+      const x = i * (barWidth + gap);
+      const y = height - flameHeight;
+
+      const grad = ctx.createLinearGradient(0, height, 0, y);
+      grad.addColorStop(0, '#dc2626');
+      grad.addColorStop(0.5, '#f59e0b');
+      grad.addColorStop(1, '#fbbf24');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, barWidth, flameHeight, [4, 4, 0, 0]);
+      } else {
+        ctx.fillRect(x, y, barWidth, flameHeight);
+      }
+      ctx.fill();
+    }
+  }
+
+  function renderStereoMirrorMode(ctx, width, height, freqs) {
+    const halfWidth = width / 2;
+    const halfBands = NUM_BANDS / 2;
+    const barWidth = Math.max(2, (halfWidth - (halfBands * 2)) / halfBands);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillRect(halfWidth - 1, 4, 2, height - 8);
+
+    for (let i = 0; i < halfBands; i++) {
+      currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
+      const barHeight = Math.max(2, currentBandValues[i] * (height - 14));
+      const y = (height - barHeight) / 2;
+
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(halfWidth - (i + 1) * (barWidth + 2), y, barWidth, barHeight);
+
+      ctx.fillStyle = '#a855f7';
+      ctx.fillRect(halfWidth + i * (barWidth + 2) + 2, y, barWidth, barHeight);
+    }
+  }
+
+  function renderLissajousMode(ctx, width, height, wave, telemetry) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const scale = Math.min(width, height) * 0.42;
+
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, scale, 0, Math.PI * 2);
+    ctx.moveTo(cx - scale, cy);
+    ctx.lineTo(cx + scale, cy);
+    ctx.moveTo(cx, cy - scale);
+    ctx.lineTo(cx, cy + scale);
+    ctx.stroke();
+
+    const len = wave.length;
+    const quarter = Math.floor(len / 4);
+    const leftAmp = telemetry.leftRms || 0.3;
+    const rightAmp = telemetry.rightRms || 0.3;
+
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#00f5d4';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0, 245, 212, 0.7)';
+
+    for (let i = 0; i < len; i++) {
+      const xVal = (wave[i] || 0) * (0.8 + leftAmp * 0.6);
+      const yVal = (wave[(i + quarter) % len] || 0) * (0.8 + rightAmp * 0.6);
+      const px = cx + xVal * scale;
+      const py = cy - yVal * scale;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function renderHexGridMode(ctx, width, height, freqs) {
+    const cols = 8;
+    const rows = 3;
+    const hexRadius = Math.min(width / (cols * 1.75), height / (rows * 1.8));
+    const hexWidth = hexRadius * Math.sqrt(3);
+    const startX = (width - cols * hexWidth) / 2 + hexWidth / 2;
+    const startY = (height - rows * hexRadius * 1.5) / 2 + hexRadius;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const bandIdx = (r * cols + c) % NUM_BANDS;
+        currentBandValues[bandIdx] = currentBandValues[bandIdx] * 0.65 + (freqs[bandIdx] || 0) * 0.35;
+        const energy = currentBandValues[bandIdx];
+        const xOffset = (r % 2 === 1) ? hexWidth / 2 : 0;
+        const hx = startX + c * hexWidth + xOffset;
+        const hy = startY + r * hexRadius * 1.5;
+
+        ctx.beginPath();
+        for (let a = 0; a < 6; a++) {
+          const angle = (Math.PI / 3) * a - Math.PI / 6;
+          const vx = hx + hexRadius * Math.cos(angle);
+          const vy = hy + hexRadius * Math.sin(angle);
+          if (a === 0) ctx.moveTo(vx, vy);
+          else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+
+        if (energy > 0.15) {
+          ctx.fillStyle = energy > 0.6 ? `rgba(244, 63, 94, ${energy * 0.8})` : `rgba(6, 182, 212, ${energy * 0.7})`;
+          ctx.fill();
+        }
+        ctx.strokeStyle = energy > 0.3 ? '#8b5cf6' : 'rgba(99, 102, 241, 0.25)';
+        ctx.lineWidth = energy > 0.5 ? 2 : 1;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function renderParticlesMode(ctx, width, height, telemetry, timestamp) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const bass = (currentBandValues[0] + currentBandValues[1] + currentBandValues[2]) / 3 || (telemetry.leftRms || 0.2);
+    const warpSpeed = 1.0 + bass * 4.0;
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particleZ[i] -= particleSpeed[i] * warpSpeed;
+      if (particleZ[i] <= 1) {
+        particleZ[i] = 800;
+        particleX[i] = (Math.random() - 0.5) * width * 1.5;
+        particleY[i] = (Math.random() - 0.5) * height * 1.5;
+      }
+      const k = 220 / particleZ[i];
+      const px = cx + particleX[i] * k;
+      const py = cy + particleY[i] * k;
+      const size = Math.max(1, (1 - particleZ[i] / 800) * (3.5 + bass * 2.5));
+
+      if (px >= 0 && px <= width && py >= 0 && py <= height) {
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fillStyle = i % 3 === 0 ? '#38bdf8' : (i % 3 === 1 ? '#a855f7' : '#ffffff');
+        ctx.fill();
+      }
+    }
+  }
+
+  function renderRetroGridMode(ctx, width, height, freqs, timestamp) {
+    const horizonY = height * 0.42;
+    const cx = width / 2;
+    const time = (timestamp || Date.now()) * 0.002;
+
+    const sunGrad = ctx.createLinearGradient(0, horizonY - 20, 0, horizonY);
+    sunGrad.addColorStop(0, 'rgba(251, 191, 36, 0.4)');
+    sunGrad.addColorStop(1, 'rgba(244, 63, 94, 0.1)');
+    ctx.fillStyle = sunGrad;
+    ctx.fillRect(0, horizonY - 20, width, 20);
+
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY);
+    ctx.lineTo(width, horizonY);
+    ctx.stroke();
+
+    const numGridLines = 16;
+    ctx.strokeStyle = 'rgba(6, 182, 212, 0.45)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= numGridLines; i++) {
+      const norm = (i / numGridLines - 0.5) * 2;
+      const bottomX = cx + norm * (width * 0.7);
+      const bandIdx = Math.floor(Math.abs(norm) * (NUM_BANDS - 1));
+      const bump = (freqs[bandIdx] || 0) * 12;
+
+      ctx.beginPath();
+      ctx.moveTo(cx + norm * (width * 0.1), horizonY);
+      ctx.lineTo(bottomX, height - bump);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)';
+    const numHoriz = 6;
+    for (let h = 0; h < numHoriz; h++) {
+      const phase = ((h / numHoriz) + (time % 1)) % 1;
+      const hy = horizonY + Math.pow(phase, 2) * (height - horizonY);
+      ctx.beginPath();
+      ctx.moveTo(0, hy);
+      ctx.lineTo(width, hy);
+      ctx.stroke();
+    }
+  }
+
+  function renderVinylRingsMode(ctx, width, height, telemetry, timestamp) {
+    const cx = width / 2;
+    const cy = height / 2;
+    const maxR = Math.min(width, height) * 0.46;
+    const numRings = 7;
+    const rot = (timestamp || Date.now()) * 0.0015;
+    const rms = telemetry.leftRms || 0.2;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+    for (let r = 1; r <= numRings; r++) {
+      const baseR = (r / (numRings + 1)) * maxR;
+      const bandIdx = (r * 4) % NUM_BANDS;
+      const pulse = (currentBandValues[bandIdx] || 0) * 4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(4, baseR + pulse), 0, Math.PI * 2);
+      ctx.strokeStyle = r % 2 === 0 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(255, 255, 255, 0.15)';
+      ctx.stroke();
+    }
+
+    const sheenGrad = ctx.createLinearGradient(cx - maxR * Math.cos(rot), cy - maxR * Math.sin(rot), cx + maxR * Math.cos(rot), cy + maxR * Math.sin(rot));
+    sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
+    sheenGrad.addColorStop(0.5, `rgba(251, 191, 36, ${0.15 + rms * 0.25})`);
+    sheenGrad.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+    ctx.fillStyle = sheenGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+  }
+
+  function renderLiquidWaveMode(ctx, width, height, wave, freqs, timestamp) {
+    const time = (timestamp || Date.now()) * 0.003;
+    const midY = height * 0.55;
+    const numSteps = 40;
+    const stepW = width / numSteps;
+
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    for (let s = 0; s <= numSteps; s++) {
+      const x = s * stepW;
+      const band = freqs[s % NUM_BANDS] || 0;
+      const y = midY - 6 + Math.sin(s * 0.25 + time * 1.5) * 14 + band * 16;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, height);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.35)';
+    ctx.fill();
+
+    const grad = ctx.createLinearGradient(0, midY - 20, 0, height);
+    grad.addColorStop(0, 'rgba(6, 182, 212, 0.85)');
+    grad.addColorStop(0.6, 'rgba(16, 185, 129, 0.5)');
+    grad.addColorStop(1, 'rgba(15, 23, 42, 0.9)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    for (let s = 0; s <= numSteps; s++) {
+      const x = s * stepW;
+      const waveAmp = (wave[s % wave.length] || 0) * 18;
+      const ripple = Math.sin(s * 0.35 - time * 2) * 10;
+      const y = midY + waveAmp + ripple;
+      if (s === 0) ctx.lineTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, height);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.stroke();
+  }
+
+  function renderVisualizerModeByEffect(mode, ctx, width, height, freqs, wave, telemetry, timestamp) {
+    switch (mode) {
+      case 'bars': renderBarsMode(ctx, width, height, freqs); break;
+      case 'wave': renderWaveMode(ctx, width, height, wave); break;
+      case 'radial': renderRadialMode(ctx, width, height, freqs, telemetry); break;
+      case 'matrix_dots': renderMatrixDotsMode(ctx, width, height, freqs); break;
+      case 'flame': renderFlameMode(ctx, width, height, freqs, timestamp); break;
+      case 'stereo_mirror': renderStereoMirrorMode(ctx, width, height, freqs); break;
+      case 'lissajous': renderLissajousMode(ctx, width, height, wave, telemetry); break;
+      case 'hex_grid': renderHexGridMode(ctx, width, height, freqs); break;
+      case 'particles': renderParticlesMode(ctx, width, height, telemetry, timestamp); break;
+      case 'retro_grid': renderRetroGridMode(ctx, width, height, freqs, timestamp); break;
+      case 'vinyl_rings': renderVinylRingsMode(ctx, width, height, telemetry, timestamp); break;
+      case 'liquid_wave': renderLiquidWaveMode(ctx, width, height, wave, freqs, timestamp); break;
+      default: renderBarsMode(ctx, width, height, freqs); break;
+    }
+  }
+
+  function updateVuMetersAndClipping(telemetry, timestamp, doc, options) {
+    const leftDb = amplitudeToDb(telemetry.leftRms);
+    const rightDb = amplitudeToDb(telemetry.rightRms);
+    const leftPct = dbToPercent(leftDb);
+    const rightPct = dbToPercent(rightDb);
+
+    updateVuPeakHoldDecay(leftPct, rightPct, timestamp, { ...options, doc });
+
+    if (!vuLeftBarEl && doc) vuLeftBarEl = doc.getElementById('vuBarLeft');
+    if (!vuRightBarEl && doc) vuRightBarEl = doc.getElementById('vuBarRight');
+    if (!vuClipBadgeEl && doc) vuClipBadgeEl = doc.getElementById('vuClipIndicator');
+    if (!vuValLeftEl && doc) vuValLeftEl = doc.getElementById('vuValLeft');
+    if (!vuValRightEl && doc) vuValRightEl = doc.getElementById('vuValRight');
+
+    if (vuLeftBarEl) vuLeftBarEl.style.width = `${leftPct.toFixed(1)}%`;
+    if (vuRightBarEl) vuRightBarEl.style.width = `${rightPct.toFixed(1)}%`;
+    if (vuValLeftEl) vuValLeftEl.textContent = `${leftDb > 0 ? '+' : ''}${leftDb.toFixed(1)}dB`;
+    if (vuValRightEl) vuValRightEl.textContent = `${rightDb > 0 ? '+' : ''}${rightDb.toFixed(1)}dB`;
+
+    const isClipping = leftDb >= 0 || rightDb >= 0;
+    if (vuClipBadgeEl) {
+      if (isClipping) {
+        vuClipBadgeEl.classList.add('clipping');
+        vuClipBadgeEl.textContent = '0dB CLIP!';
+      } else {
+        vuClipBadgeEl.classList.remove('clipping');
+        vuClipBadgeEl.textContent = '0dB OK';
+      }
+    }
+
+    return { leftDb, rightDb, isClipping };
+  }
+
   /**
-   * Main 60fps Canvas Render Frame
+   * Main 60fps Canvas Render Frame (Rule 28 Compliant <= 50 lines)
    * Enforces Zero-Overhead Idle Sleep when paused or hidden.
    */
   function renderVisualizerFrame(timestamp = Date.now(), options = {}) {
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
 
-    // Sleep Sentinel: Check if document is hidden or media is paused
     const isDocHidden = doc && doc.visibilityState === 'hidden';
     if (!isVisualizerPlaying || isDocHidden) {
       stopVisualizerLoop();
@@ -1466,266 +1978,16 @@
     const height = visualizerCanvas.height || 120;
     const ctx = visualizerCtx;
 
-    // Background clearing with slight alpha trail for smooth visual decay
     ctx.fillStyle = 'rgba(8, 11, 17, 0.35)';
     ctx.fillRect(0, 0, width, height);
 
-    // Render calibration graticule background
     renderCanvasGraticule(ctx, width, height, options.isLightTheme);
 
-    // Retrieve or synthesize telemetry
     const telemetry = visualizerTelemetryData || synthesizeAudioTelemetry(timestamp, isVisualizerPlaying);
-    const freqs = telemetry.freqs;
-    const wave = telemetry.wave;
+    renderVisualizerModeByEffect(visualizerMode, ctx, width, height, telemetry.freqs, telemetry.wave, telemetry, timestamp);
 
-    // -------------------------------------------------------------------------
-    // Mode 1: 32-Band FFT Frequency Spectrum with Falling Peak-Hold Dots
-    // -------------------------------------------------------------------------
-    if (visualizerMode === 'bars') {
-      const gap = 3;
-      const totalGaps = (NUM_BANDS - 1) * gap;
-      const barWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
+    const vuStatus = updateVuMetersAndClipping(telemetry, timestamp, doc, options);
 
-      for (let i = 0; i < NUM_BANDS; i++) {
-        const targetVal = freqs[i] || 0;
-        // Smooth lerp
-        currentBandValues[i] = currentBandValues[i] * 0.65 + targetVal * 0.35;
-        const barHeight = Math.max(2, currentBandValues[i] * (height - 12));
-
-        const x = i * (barWidth + gap);
-        const y = height - barHeight;
-
-        // Triple-stop Gradient Fill: Emerald -> Cyan -> Violet
-        const grad = ctx.createLinearGradient(0, height, 0, 0);
-        grad.addColorStop(0, '#10b981');   // Cyber Emerald at baseline
-        grad.addColorStop(0.55, '#06b6d4'); // Electric Cyan at midrange
-        grad.addColorStop(1, '#8b5cf6');   // Neon Violet at peak
-
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        // Peak Hold Dot with realistic gravity falloff
-        if (y < peakHoldBars[i] || peakHoldBars[i] === 0) {
-          peakHoldBars[i] = y; // Snap upward to new peak
-        } else {
-          peakHoldBars[i] = Math.min(height - 4, peakHoldBars[i] + 1.25); // Smooth gravity drop
-        }
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x, peakHoldBars[i] - 2, barWidth, 2);
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // Mode 2: Oscilloscope Waveform Mode (Neon Sine Trace)
-    // -------------------------------------------------------------------------
-    else if (visualizerMode === 'wave') {
-      ctx.beginPath();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#06b6d4';
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#10b981';
-
-      const sliceWidth = width / (wave.length - 1);
-      const midY = height / 2;
-
-      for (let j = 0; j < wave.length; j++) {
-        const amp = wave[j] || 0;
-        const x = j * sliceWidth;
-        const y = midY + amp * (height * 0.42);
-
-        if (j === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-
-      // Reset shadow for subsequent draw calls
-      ctx.shadowBlur = 0;
-    }
-
-    // -------------------------------------------------------------------------
-    // Mode 3: Radial Frequency Burst (Circular Audio Ring)
-    // -------------------------------------------------------------------------
-    else if (visualizerMode === 'radial') {
-      const cx = width / 2;
-      const cy = height / 2;
-      const minDim = Math.min(width, height);
-
-      // Base circle occupies ~18% to 20% of minDim, dynamically pulsating with RMS audio energy
-      const baseRadiusMin = Math.max(16, minDim * 0.18);
-      const baseRadius = baseRadiusMin + (telemetry.leftRms || 0) * (minDim * 0.08);
-
-      // Inner glowing center core
-      ctx.beginPath();
-      ctx.arc(cx, cy, baseRadius * 0.6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
-      ctx.fill();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = Math.max(1, Math.min(3, minDim * 0.012));
-      ctx.stroke();
-
-      // Dynamic Spoke Line Width
-      ctx.lineWidth = Math.max(2, Math.min(6, Math.round(minDim * 0.018)));
-      ctx.lineCap = 'round';
-
-      // Dynamic Spoke Lengths
-      const spokeBaseLen = Math.max(3, minDim * 0.025);
-      const spokeMaxDynamic = minDim * 0.22;
-
-      for (let i = 0; i < NUM_BANDS; i++) {
-        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
-        const spokeLen = spokeBaseLen + currentBandValues[i] * spokeMaxDynamic;
-        const angle = (i / NUM_BANDS) * Math.PI * 2 - Math.PI / 2;
-        const x1 = cx + Math.cos(angle) * (baseRadius + 2);
-        const y1 = cy + Math.sin(angle) * (baseRadius + 2);
-        const x2 = cx + Math.cos(angle) * (baseRadius + spokeLen);
-        const y2 = cy + Math.sin(angle) * (baseRadius + spokeLen);
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = i % 2 === 0 ? '#38bdf8' : '#818cf8';
-        ctx.stroke();
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // Mode 4: Matrix Digital Dots / Cyber Voxel Grid
-    // -------------------------------------------------------------------------
-    else if (visualizerMode === 'matrix_dots') {
-      const gap = 3;
-      const totalGaps = (NUM_BANDS - 1) * gap;
-      const colWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
-      const numRows = 8;
-      const dotHeight = (height - 16) / numRows;
-
-      for (let i = 0; i < NUM_BANDS; i++) {
-        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
-        const x = i * (colWidth + gap);
-
-        for (let r = 0; r < numRows; r++) {
-          const threshold = (r + 0.5) / numRows;
-          const isLit = currentBandValues[i] >= threshold;
-          const y = height - 8 - (r + 1) * dotHeight;
-
-          if (isLit) {
-            ctx.fillStyle = r > 5 ? '#f43f5e' : r > 3 ? '#38bdf8' : '#10b981';
-            ctx.fillRect(x, y + 2, colWidth, dotHeight - 4);
-          } else {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.fillRect(x, y + 2, colWidth, dotHeight - 4);
-          }
-        }
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // Mode 5: Neon Flame Peaks (Warm Dynamic Fire Energy)
-    // -------------------------------------------------------------------------
-    else if (visualizerMode === 'flame') {
-      const gap = 3;
-      const totalGaps = (NUM_BANDS - 1) * gap;
-      const barWidth = Math.max(2, (width - totalGaps) / NUM_BANDS);
-      const time = (timestamp || Date.now()) * 0.005;
-
-      for (let i = 0; i < NUM_BANDS; i++) {
-        const flutter = Math.sin(time * 3 + i * 0.5) * 0.15;
-        currentBandValues[i] = currentBandValues[i] * 0.6 + (freqs[i] || 0) * 0.4;
-        const flameHeight = Math.max(4, (currentBandValues[i] + flutter) * (height - 10));
-        const x = i * (barWidth + gap);
-        const y = height - flameHeight;
-
-        const grad = ctx.createLinearGradient(0, height, 0, y);
-        grad.addColorStop(0, '#dc2626');
-        grad.addColorStop(0.5, '#f59e0b');
-        grad.addColorStop(1, '#fbbf24');
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        if (typeof ctx.roundRect === 'function') {
-          ctx.roundRect(x, y, barWidth, flameHeight, [4, 4, 0, 0]);
-        } else {
-          ctx.fillRect(x, y, barWidth, flameHeight);
-        }
-        ctx.fill();
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // Mode 6: Stereo Dual-Channel Butterfly Mirror
-    // -------------------------------------------------------------------------
-    else if (visualizerMode === 'stereo_mirror') {
-      const halfWidth = width / 2;
-      const halfBands = NUM_BANDS / 2;
-      const barWidth = Math.max(2, (halfWidth - (halfBands * 2)) / halfBands);
-
-      // Center divider pulse
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.fillRect(halfWidth - 1, 4, 2, height - 8);
-
-      for (let i = 0; i < halfBands; i++) {
-        currentBandValues[i] = currentBandValues[i] * 0.65 + (freqs[i] || 0) * 0.35;
-        const barHeight = Math.max(2, currentBandValues[i] * (height - 14));
-        const y = (height - barHeight) / 2;
-
-        // Left Mirror (expands from center to left)
-        const xLeft = halfWidth - (i + 1) * (barWidth + 2);
-        ctx.fillStyle = '#06b6d4';
-        ctx.fillRect(xLeft, y, barWidth, barHeight);
-
-        // Right Mirror (expands from center to right)
-        const xRight = halfWidth + i * (barWidth + 2) + 2;
-        ctx.fillStyle = '#a855f7';
-        ctx.fillRect(xRight, y, barWidth, barHeight);
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // Stereo VU Peak Level Meters & Red +0dB Clipping Indicator
-    // -------------------------------------------------------------------------
-    const leftDb = amplitudeToDb(telemetry.leftRms);
-    const rightDb = amplitudeToDb(telemetry.rightRms);
-    const leftPct = dbToPercent(leftDb);
-    const rightPct = dbToPercent(rightDb);
-
-    // Studio Peak-Hold Decay dynamics
-    updateVuPeakHoldDecay(leftPct, rightPct, timestamp, { ...options, doc });
-
-    if (!vuLeftBarEl && doc) vuLeftBarEl = doc.getElementById('vuBarLeft');
-    if (!vuRightBarEl && doc) vuRightBarEl = doc.getElementById('vuBarRight');
-    if (!vuClipBadgeEl && doc) vuClipBadgeEl = doc.getElementById('vuClipIndicator');
-    if (!vuValLeftEl && doc) vuValLeftEl = doc.getElementById('vuValLeft');
-    if (!vuValRightEl && doc) vuValRightEl = doc.getElementById('vuValRight');
-
-    if (vuLeftBarEl) {
-      vuLeftBarEl.style.width = `${leftPct.toFixed(1)}%`;
-    }
-    if (vuRightBarEl) {
-      vuRightBarEl.style.width = `${rightPct.toFixed(1)}%`;
-    }
-
-    if (vuValLeftEl) {
-      vuValLeftEl.textContent = `${leftDb > 0 ? '+' : ''}${leftDb.toFixed(1)}dB`;
-    }
-    if (vuValRightEl) {
-      vuValRightEl.textContent = `${rightDb > 0 ? '+' : ''}${rightDb.toFixed(1)}dB`;
-    }
-
-    const isClipping = leftDb >= 0 || rightDb >= 0;
-    if (vuClipBadgeEl) {
-      if (isClipping) {
-        vuClipBadgeEl.classList.add('clipping');
-        vuClipBadgeEl.textContent = '0dB CLIP!';
-      } else {
-        vuClipBadgeEl.classList.remove('clipping');
-        vuClipBadgeEl.textContent = '0dB OK';
-      }
-    }
-
-    // Schedule next frame if loop is running
     if (isVisualizerPlaying && !isDocHidden && typeof requestAnimationFrame === 'function') {
       visualizerRafId = requestAnimationFrame((ts) => renderVisualizerFrame(ts, options));
     }
@@ -1733,11 +1995,11 @@
     return {
       rendered: true,
       mode: visualizerMode,
-      leftDb,
-      rightDb,
+      leftDb: vuStatus.leftDb,
+      rightDb: vuStatus.rightDb,
       leftPeakVal,
       rightPeakVal,
-      isClipping
+      isClipping: vuStatus.isClipping
     };
   }
 
@@ -1853,6 +2115,7 @@
     handleSoloTab,
     handleMuteAllOthers,
     handleMuteAll,
+    resolvePrimaryMediaTabId,
     getIsMuteAllOthersActive: () => isMuteAllOthersActive,
     setIsMuteAllOthersActive: (val) => { isMuteAllOthersActive = Boolean(val); },
     getIsMuteAllActive: () => isMuteAllActive,
@@ -1873,6 +2136,7 @@
     toggleVisualizerVideoEmbed,
     VALID_VIZ_MODES,
     validModes: VALID_VIZ_MODES,
+    VIZ_MODE_META,
     setGraticuleEnabled,
     isGraticuleActive,
     setCanvasGraticuleEnabled: setGraticuleEnabled,
@@ -1931,10 +2195,13 @@
     module.exports = MediaDeckVisualizerFeature;
   }
   global.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+  global.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   if (typeof globalThis !== 'undefined') {
     globalThis.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+    globalThis.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   }
   if (typeof window !== 'undefined') {
     window.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+    window.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this);

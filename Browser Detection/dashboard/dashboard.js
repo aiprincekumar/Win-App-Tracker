@@ -249,6 +249,12 @@ const DASHBOARD_I18N = {
     viz_effect_matrix: 'Matrix Digital Dots',
     viz_effect_flame: 'Neon Flame Peaks',
     viz_effect_stereo: 'Stereo Mirror Butterfly',
+    viz_effect_lissajous: 'Lissajous Stereo Scope',
+    viz_effect_hex_grid: 'Cyberpunk Hexagon Grid',
+    viz_effect_particles: 'Starfield Particle Warp',
+    viz_effect_retro_grid: '3D Synthwave Retro Grid',
+    viz_effect_vinyl_rings: 'Vinyl Groove Concentric Rings',
+    viz_effect_liquid_wave: 'Liquid Mercury Wave',
     viz_settings_toggle_title: 'Toggle Acoustic Graticule & Telemetry Settings',
     viz_video_embed_toggle_title: 'Switch to Video Player (Embed Mode)',
     viz_fullwindow_toggle_title: 'Toggle Visualizer Full Window (Theater)',
@@ -1683,6 +1689,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
   globalThis.handleMuteAllOthers = handleMuteAllOthers;
   globalThis.handleMuteAll = handleMuteAll;
+  globalThis.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
   globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
   globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
@@ -2357,6 +2364,14 @@ function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
     return viz.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
   }
   return Promise.resolve({ success: true, mutedCount: 0 });
+}
+
+function resolvePrimaryMediaTabId(streamsList, explicitTabId = null, currentSoloTabId = null) {
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.resolvePrimaryMediaTabId === 'function') {
+    return viz.resolvePrimaryMediaTabId(streamsList || activeMediaStreams, explicitTabId, currentSoloTabId);
+  }
+  return Number(explicitTabId || currentSoloTabId || 0);
 }
 
 function handleMuteAll(streamsList, options = {}) {
@@ -7817,7 +7832,7 @@ class OmniCommandPaletteController {
       action: () => {
         switchTab('tracking');
         if (typeof document !== 'undefined') {
-          const searchInput = document.getElementById('domainSearchInput');
+          const searchInput = document.getElementById('tableDomainSearch') || document.getElementById('domainSearchInput');
           if (searchInput) {
             searchInput.value = domain;
             searchInput.dispatchEvent(new Event('input'));
@@ -9885,7 +9900,8 @@ function setupEventListeners() {
   const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
   if (btnMuteAllOthers) {
     btnMuteAllOthers.addEventListener('click', () => {
-      handleMuteAllOthers(activeMediaStreams, null, { doc: document, t, btnMuteAllOthers });
+      const containerEl = document.getElementById('mediaDeckGrid');
+      handleMuteAllOthers(activeMediaStreams, null, { doc: document, t, btnMuteAllOthers, containerEl });
     });
   }
 
@@ -10888,7 +10904,9 @@ function triggerExtendSleepTimer(extraMinutes) {
   const minsToAdd = parseInt(extraMinutes, 10);
   if (isNaN(minsToAdd) || minsToAdd <= 0) return;
 
-  const fadeToggle = typeof document !== 'undefined' ? document.getElementById('toggleDashSleepFadeCurve') : null;
+  const fadeToggle = typeof document !== 'undefined' 
+    ? (document.getElementById('toggleDashSleepFade') || document.getElementById('toggleDashSleepFadeCurve')) 
+    : null;
   const fadeSelect = typeof document !== 'undefined' ? document.getElementById('selectDashSleepFadeCurve') : null;
   const endVideoToggle = typeof document !== 'undefined' ? document.getElementById('toggleDashSleepEndOfVideo') : null;
 
@@ -11330,6 +11348,7 @@ if (typeof module !== 'undefined' && module.exports) {
     handleSoloTab,
     handleMuteAllOthers,
     handleMuteAll,
+    resolvePrimaryMediaTabId,
     initAudioVisualizer,
     setVisualizerMode,
     isVisualizerFullWindowActive,
@@ -11406,6 +11425,7 @@ if (typeof window !== 'undefined') {
   window.handleSoloTab = handleSoloTab;
   window.handleMuteAllOthers = handleMuteAllOthers;
   window.handleMuteAll = handleMuteAll;
+  window.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   window.initAudioVisualizer = initAudioVisualizer;
   window.setVisualizerMode = setVisualizerMode;
   window.isVisualizerFullWindowActive = isVisualizerFullWindowActive;
@@ -11467,6 +11487,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
   globalThis.handleMuteAllOthers = handleMuteAllOthers;
   globalThis.handleMuteAll = handleMuteAll;
+  globalThis.resolvePrimaryMediaTabId = resolvePrimaryMediaTabId;
   globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
   globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
   globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
