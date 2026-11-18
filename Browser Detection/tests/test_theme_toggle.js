@@ -5,7 +5,7 @@
  * Verifies:
  * 1. Static HTML Architecture & Placement:
  *    - Presence of canonical #btnThemeToggle as a native <button> with type="button"
- *    - Strict positioning inside .header-badges directly before #btnQuickSettings and after #wsStatusBadge
+ *    - Strict positioning inside .header-badges directly before #btnQuickSettings (#wsStatusBadge moved to footer)
  *    - Accessible aria-label and tooltip title attributes
  *    - Inner SVG uses class="theme-toggle-icon" with strict absence of class="badge-icon"
  *    - Default Moon icon geometry present with viewBox="0 0 24 24", stroke-width="2", aria-hidden="true"
@@ -54,7 +54,7 @@ console.log('Test 1: Static HTML Architecture & Hierarchy Invariant');
   assert(/<button[^>]*id="btnThemeToggle"[^>]*class="[^"]*btn-theme-toggle[^"]*"/i.test(html), '#btnThemeToggle must be a native <button> with class="btn-theme-toggle"');
   assert(/<button[^>]*id="btnThemeToggle"[^>]*type="button"/i.test(html), '#btnThemeToggle must declare type="button"');
 
-  // 2. Strict Header Hierarchy: directly after #wsStatusBadge and directly before #btnQuickSettings
+  // 2. Strict Header Hierarchy: inside .header-badges and directly before #btnQuickSettings (#wsStatusBadge moved to footer per user spec)
   const badgesContainerIdx = html.indexOf('class="header-badges"');
   const wsBadgeIdx = html.indexOf('id="wsStatusBadge"');
   const themeToggleIdx = html.indexOf('id="btnThemeToggle"');
@@ -65,7 +65,7 @@ console.log('Test 1: Static HTML Architecture & Hierarchy Invariant');
   assert(themeToggleIdx !== -1, '#btnThemeToggle must exist');
   assert(quickSettingsIdx !== -1, '#btnQuickSettings must exist');
 
-  assert(themeToggleIdx > wsBadgeIdx, '#btnThemeToggle must be positioned after #wsStatusBadge');
+  assert(themeToggleIdx > badgesContainerIdx, '#btnThemeToggle must be positioned inside .header-badges');
   assert(themeToggleIdx < quickSettingsIdx, '#btnThemeToggle must be positioned directly before #btnQuickSettings');
 
   // 3. Accessibility attributes
@@ -86,7 +86,7 @@ console.log('Test 1: Static HTML Architecture & Hierarchy Invariant');
   assert(themeBtnSection.includes('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'), 'Default Dark Mode state must render the Moon crescent path');
 
   console.log('  ✅ #btnThemeToggle declared as native <button type="button"> with class="btn-theme-toggle"');
-  console.log('  ✅ Placement verified: strictly between #wsStatusBadge and #btnQuickSettings inside .header-badges');
+  console.log('  ✅ Placement verified: strictly before #btnQuickSettings inside .header-badges');
   console.log('  ✅ SVG icon correctly classified as .theme-toggle-icon (zero .badge-icon interference)');
   console.log('  ✅ Default Moon icon SVG geometry verified');
 }

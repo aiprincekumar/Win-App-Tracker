@@ -13,7 +13,8 @@
 .footer-control-toolbar {
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: space-between;
+  gap: 4px;
   padding-top: 10px;
   border-top: 1px solid var(--border-dim);
   width: 100%;
@@ -23,8 +24,9 @@
 
 .footer-btn {
   position: relative;
-  flex: 0 0 34px;
-  min-width: 34px;
+  flex: 0 0 31.5px;
+  min-width: 30px;
+  max-width: 34px;
   height: 32px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-dim);
@@ -57,12 +59,31 @@
   transform: scale(0.97);
 }
 
-/* Hide text labels for 5 utility buttons, preserve for DOM & localization scripts */
-.footer-btn:not(#btnOpenDashboard) .btn-label {
-  display: none;
+/* Footer Status Badges Integration (Height: 32px, Seamless Alignment) */
+.footer .ws-badge {
+  width: 31.5px;
+  min-width: 30px;
+  max-width: 34px;
+  height: 32px;
+  min-height: 32px;
+  flex: 0 0 31.5px;
+  margin: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.footer .ws-badge .ws-dot {
+  top: 4px;
+  right: 4px;
+}
+
+/* Hide text labels for all footer buttons, preserve for DOM & localization scripts */
 .footer-btn .btn-label {
+  display: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -137,34 +158,46 @@
   transform: translateY(0) scale(0.97);
 }
 
-/* Primary Button: Open Full Dashboard (Emerald / Cyan Gradient, Fills Remaining Row Width) */
+/* Primary Button: Open Full Dashboard (Icon-Only, High-Visibility Cyber Capsule) */
 .footer-btn.btn-dashboard-primary {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 34px;
+  min-width: 34px;
+  width: 34px;
   height: 32px;
   font-size: 11px;
   font-weight: 700;
-  padding: 0 10px;
-  gap: 6px;
+  padding: 0;
+  gap: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(6, 182, 212, 0.22));
-  border: 1px solid rgba(16, 185, 129, 0.55);
-  color: #6ee7b7;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.32) 0%, rgba(6, 182, 212, 0.38) 100%);
+  border: 1.5px solid #10b981;
+  color: #a7f3d0;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4), 0 2px 6px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 2;
+}
+
+.footer-btn.btn-dashboard-primary .sentinel-svg-icon {
+  width: 17px;
+  height: 17px;
+  stroke: #ffffff;
+  filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.8));
 }
 
 .footer-btn.btn-dashboard-primary:hover {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.38), rgba(6, 182, 212, 0.38));
-  border-color: rgba(16, 185, 129, 0.9);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.55) 0%, rgba(6, 182, 212, 0.65) 100%);
+  border-color: #34d399;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.38);
-  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.7), 0 0 8px rgba(6, 182, 212, 0.5);
+  transform: translateY(-1px) scale(1.08);
 }
 
 .footer-btn.btn-dashboard-primary:active {
-  transform: translateY(0) scale(0.97);
+  transform: translateY(0) scale(0.96);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
 .footer-btn.danger:hover {

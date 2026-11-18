@@ -9435,3 +9435,37 @@ body.light-theme .media-scroll-to-top:hover {
 #paneMedia:not(.active) #btnMediaScrollToTop {
   display: none !important;
 }
+
+/* =========================================================================
+ * Focus & Sleep Advanced Suite Integration (Styles & Imports)
+ * ========================================================================= */
+@import url('styles/focus_sleep_advanced.css');
+
+.focus-integrity-row,
+.focus-integrity-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge-integrity-score {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.sleep-power-nap-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.sleep-soundscape-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+

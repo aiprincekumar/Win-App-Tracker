@@ -15,22 +15,23 @@
 }
 
 .footer-control-toolbar .toolbar-btn {
-  min-width: 34px;
+  min-width: 30px;
   height: 32px;
   padding: 0;
-  flex: 0 0 34px;
+  flex: 0 0 31.5px;
 }
 
 .footer-control-toolbar .toolbar-btn.btn-switch-tab {
   height: 32px;
-  flex: 0 0 34px;
+  flex: 0 0 31.5px;
   padding: 0;
 }
 
 .footer-control-toolbar .toolbar-btn.btn-dashboard-primary {
-  flex: 1 1 auto;
+  flex: 0 0 34px;
+  width: 34px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0;
 }
 
 .timer-active-dot {

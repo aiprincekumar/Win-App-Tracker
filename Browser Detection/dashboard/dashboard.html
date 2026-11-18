@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="styles/hotkeys.css">
   <link rel="stylesheet" href="styles/backup_digest.css">
   <link rel="stylesheet" href="styles/wellbeing_blacklist.css">
+  <link rel="stylesheet" href="styles/focus_sleep_advanced.css">
 
   <!-- Master Stylesheet (Global Aggregation & Root Overrides) -->
   <link rel="stylesheet" href="dashboard.css">
@@ -1475,6 +1476,10 @@
                       <option value="ocean" data-i18n="soundscape_opt_ocean">🌊 Ocean Waves</option>
                       <option value="forest" data-i18n="soundscape_opt_forest">🌲 Forest Birds</option>
                       <option value="whitenoise" data-i18n="soundscape_opt_whitenoise">💨 Pink/White Noise</option>
+                      <!-- NEW: Binaural Beats Frequencies (Default None, User Selected) -->
+                      <option value="binaural_alpha" data-i18n="soundscape_opt_binaural_alpha">🧘 Alpha 10Hz (Flow State)</option>
+                      <option value="binaural_beta" data-i18n="soundscape_opt_binaural_beta">🧠 Beta 18Hz (Analytical Focus)</option>
+                      <option value="binaural_gamma" data-i18n="soundscape_opt_binaural_gamma">⚡ Gamma 40Hz (Peak Cognition)</option>
                     </select>
                     <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
                   </div>
@@ -1520,6 +1525,46 @@
                     </span>
                     <input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">
                   </label>
+
+                  <!-- Feature 1: Focus Integrity Score & Distraction Counter -->
+                  <div class="dash-focus-toggle-row focus-integrity-row focus-integrity-card">
+                    <label class="toggle-text-group" for="toggleFocusIntegrityScore">
+                      <span class="toggle-title" data-i18n="lbl_focus_integrity">Focus Integrity Score</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_integrity">Live attention score and distraction tally</span>
+                    </label>
+                    <div class="focus-integrity-meta-group">
+                      <span id="badgeFocusIntegrityScore" class="badge-integrity-score">100%</span>
+                      <span id="cntFocusDistractions" class="badge-distraction-counter" title="Distraction tab switches count">0</span>
+                      <input type="checkbox" id="toggleFocusIntegrityScore" class="styled-checkbox">
+                    </div>
+                  </div>
+
+                  <!-- Feature 2: Auto-Mute Background Tabs on Focus -->
+                  <label class="dash-focus-toggle-row" for="toggleFocusAutoMuteBg">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_automute_bg">Auto-Mute Background Tabs</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_automute_bg">Mute noisy background tabs during focus</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusAutoMuteBg" class="styled-checkbox">
+                  </label>
+
+                  <!-- Feature 4: Soft-Nudge Breathe Overlay on Distracting Domains -->
+                  <label class="dash-focus-toggle-row" for="toggleFocusBreatheNudge">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_breathe_nudge">Soft-Nudge Breathe Overlay</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_breathe_nudge">12s box-breathing prompt on distracting domains</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusBreatheNudge" class="styled-checkbox">
+                  </label>
+
+                  <!-- Feature 5: 20-20-20 Screen-Break & Posture Alert -->
+                  <label class="dash-focus-toggle-row" for="toggleFocus2020Alert">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_2020_alert">20-20-20 Screen-Break & Posture</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_2020_alert">Remind every 20m to look 20ft away for 20s and check posture</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocus2020Alert" class="styled-checkbox">
+                  </label>
                 </div>
               </div>
             </div>
@@ -1535,6 +1580,15 @@
               </div>
 
               <div class="sleep-advanced-body">
+                <!-- Feature 6 (Sleep): 20m Power-Nap Mode Action Banner -->
+                <div class="sleep-power-nap-banner">
+                  <div class="power-nap-info">
+                    <span class="power-nap-title" data-i18n="btn_sleep_power_nap">⚡ 20m Power-Nap Mode</span>
+                    <span class="power-nap-desc" data-i18n="desc_sleep_power_nap">1-click restorative 20m nap with delta rain and gentle wake</span>
+                  </div>
+                  <button type="button" id="btnSleepPowerNapMode" class="btn-power-nap" data-i18n="btn_start_nap">Start Nap</button>
+                </div>
+
                 <!-- Custom Duration & Quick Extenders Row -->
                 <div class="sleep-advanced-custom-extender-row">
                   <div class="dash-sleep-custom-input-row">
@@ -1550,6 +1604,25 @@
                       <button type="button" id="btnDashSleepExtend5" class="dash-sleep-extender-btn" data-add="5">+5m</button>
                       <button type="button" id="btnDashSleepExtend15" class="dash-sleep-extender-btn" data-add="15">+15m</button>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Feature 2 (Sleep): Sleep Aid Soundscapes Panel -->
+                <div class="sleep-soundscape-panel">
+                  <div class="soundscape-header">
+                    <span class="soundscape-title" data-i18n="lbl_sleep_aid_soundscapes">🌙 Sleep Aid Soundscapes</span>
+                    <select id="selectSleepAidSoundscape" class="styled-select soundscape-select" aria-label="Sleep Aid Soundscape Selector">
+                      <option value="none" selected data-i18n="sleep_soundscape_none">Off (Silent)</option>
+                      <option value="pink_noise" data-i18n="sleep_soundscape_pink">🌸 Deep Pink Noise</option>
+                      <option value="midnight_ocean" data-i18n="sleep_soundscape_ocean">🌊 Midnight Ocean</option>
+                      <option value="delta_rain" data-i18n="sleep_soundscape_rain">🌧️ Delta Rain (2.5Hz)</option>
+                    </select>
+                    <button type="button" id="btnToggleSleepSoundscape" class="btn-soundscape-play" title="Play/Pause Sleep Soundscape">▶</button>
+                  </div>
+                  <div class="soundscape-volume-row">
+                    <span class="volume-icon">🔈</span>
+                    <input type="range" id="sliderSleepSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="40" aria-label="Sleep Soundscape Volume">
+                    <span id="txtSleepSoundscapeVolume" class="volume-num">40%</span>
                   </div>
                 </div>
 
@@ -1588,6 +1661,42 @@
                       <option value="close_tab" data-i18n="opt_timeout_close">Pause & Close Tab</option>
                     </select>
                   </div>
+
+                  <!-- NEW Feature 1 (Sleep): Auto-Disable Video Autoplay -->
+                  <label class="dash-sleep-toggle-row" for="toggleSleepAutoplayBlock">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_autoplay_block">Auto-Disable Video Autoplay</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_autoplay_block">Block next video autoplay during bedtime</span>
+                    </span>
+                    <input type="checkbox" id="toggleSleepAutoplayBlock" class="styled-checkbox dash-sleep-switch-input">
+                  </label>
+
+                  <!-- NEW Feature 3 (Sleep): Inactivity Fast-Cutoff (5m) -->
+                  <label class="dash-sleep-toggle-row" for="toggleSleepInactivityFastCutoff">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_inactivity_cutoff">Inactivity Fast-Cutoff (5m)</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_inactivity_cutoff">Cut off media if idle for 5m during countdown</span>
+                    </span>
+                    <input type="checkbox" id="toggleSleepInactivityFastCutoff" class="styled-checkbox dash-sleep-switch-input">
+                  </label>
+
+                  <!-- NEW Feature 4 (Sleep): Progressive Screen Dimmer Nudge -->
+                  <label class="dash-sleep-toggle-row" for="toggleSleepScreenDimmer">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_screen_dimmer">Progressive Screen Dimmer</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_screen_dimmer">Circadian screen dimming during final countdown</span>
+                    </span>
+                    <input type="checkbox" id="toggleSleepScreenDimmer" class="styled-checkbox dash-sleep-switch-input">
+                  </label>
+
+                  <!-- NEW Feature 5 (Sleep): Memory-Saver Tab Hibernation -->
+                  <label class="dash-sleep-toggle-row" for="toggleSleepTabHibernate">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_tab_hibernate">Memory-Saver Tab Hibernation</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_tab_hibernate">Suspend idle tabs on timeout to quiet cooling fans</span>
+                    </span>
+                    <input type="checkbox" id="toggleSleepTabHibernate" class="styled-checkbox dash-sleep-switch-input">
+                  </label>
                 </div>
               </div>
             </div>
@@ -1649,6 +1758,36 @@
               </div>
             </div>
           </div>
+
+          <!-- Soft-Nudge Breathe Overlay Modal (Feature 4, Default Hidden) -->
+          <div id="overlayBreatheNudge" class="breathe-nudge-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="txtBreatheNudgeTitle">
+            <div class="breathe-nudge-modal liquid-glass-card">
+              <div class="breathe-ring-container">
+                <div id="breatheVisualRing" class="breathe-visual-ring"></div>
+                <span id="breathePacingText" class="breathe-pacing-text">Inhale</span>
+                <span id="breathePacingCountdown" class="breathe-countdown-num">4</span>
+              </div>
+              <h3 id="txtBreatheNudgeTitle" class="breathe-title" data-i18n="breathe_nudge_title">Mindful Pause: Stay Focused</h3>
+              <p id="txtBreatheNudgeDesc" class="breathe-desc" data-i18n="breathe_nudge_desc">Take a conscious breath before browsing distracting content.</p>
+              <div class="breathe-actions-row">
+                <button type="button" id="btnBreatheReturnTask" class="btn-breathe-primary" data-i18n="btn_breathe_return">Return to Focus</button>
+                <button type="button" id="btnBreatheAllowTemp" class="btn-breathe-secondary" data-i18n="btn_breathe_allow">Allow for 5m</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 20-20-20 Posture Alert Toast HUD (Feature 5, Default Hidden) -->
+          <div id="toast2020PostureAlert" class="toast-2020-alert hidden" role="alert" aria-live="assertive">
+            <div class="toast-2020-icon">👁️</div>
+            <div class="toast-2020-content">
+              <div class="toast-2020-title" data-i18n="toast_2020_title">20-20-20 Screen-Break</div>
+              <div class="toast-2020-desc" data-i18n="toast_2020_desc">Look at an object 20 feet away for 20 seconds. Relax neck & shoulders.</div>
+            </div>
+            <button type="button" id="btnClose2020Alert" class="toast-2020-close" aria-label="Close notification">✕</button>
+          </div>
+
+          <!-- Progressive Screen Dimmer Overlay (Default Hidden, Non-Blocking) -->
+          <div id="overlaySleepDimmer" class="screen-dimmer-overlay hidden" aria-hidden="true"></div>
         </section>
 
         <!-- ================================================================= -->
@@ -2316,6 +2455,8 @@
 
   <!-- Feature Modules (Browser-accessible relative imports) -->
   <script src="../src/dashboard/features/media_deck_visualizer_feature.js"></script>
+  <script src="../src/dashboard/features/focus_advanced_suite.js"></script>
+  <script src="../src/dashboard/features/sleep_advanced_suite.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

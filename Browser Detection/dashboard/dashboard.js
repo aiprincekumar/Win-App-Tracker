@@ -345,6 +345,44 @@ const DASHBOARD_I18N = {
     toggle_focus_shield_desc: "Nudge and shield on distracting domains during focus",
     sleep_advanced_title: "Sleep Advanced Controls",
     sleep_advanced_desc: "Custom durations, gradual fade-out, end-of-video cutoff & inactivity triggers",
+
+    // Advanced Focus Suite i18n
+    lbl_focus_integrity: "Focus Integrity Score",
+    desc_focus_integrity: "Live attention score and distraction tally",
+    toggle_focus_automute_bg: "Auto-Mute Background Tabs",
+    desc_focus_automute_bg: "Mute noisy background tabs during focus",
+    soundscape_opt_binaural_alpha: "🧘 Alpha 10Hz (Flow State)",
+    soundscape_opt_binaural_beta: "🧠 Beta 18Hz (Analytical Focus)",
+    soundscape_opt_binaural_gamma: "⚡ Gamma 40Hz (Peak Cognition)",
+    toggle_focus_breathe_nudge: "Soft-Nudge Breathe Overlay",
+    desc_focus_breathe_nudge: "12s box-breathing prompt on distracting domains",
+    toggle_focus_2020_alert: "20-20-20 Screen-Break & Posture",
+    desc_focus_2020_alert: "Remind every 20m to look 20ft away for 20s and check posture",
+    breathe_nudge_title: "Mindful Pause: Stay Focused",
+    breathe_nudge_desc: "Take a conscious breath before browsing distracting content.",
+    btn_breathe_return: "Return to Focus",
+    btn_breathe_allow: "Allow for 5m",
+    toast_2020_title: "20-20-20 Screen-Break",
+    toast_2020_desc: "Look at an object 20 feet away for 20 seconds. Relax neck & shoulders.",
+
+    // Advanced Sleep Suite i18n
+    toggle_sleep_autoplay_block: "Auto-Disable Video Autoplay",
+    desc_sleep_autoplay_block: "Block next video autoplay during bedtime",
+    lbl_sleep_aid_soundscapes: "🌙 Sleep Aid Soundscapes",
+    desc_sleep_aid_soundscapes: "Acoustic synthesizers with gentle circadian sleep fade",
+    sleep_soundscape_none: "Off (Silent)",
+    sleep_soundscape_pink: "🌸 Deep Pink Noise",
+    sleep_soundscape_ocean: "🌊 Midnight Ocean",
+    sleep_soundscape_rain: "🌧️ Delta Rain (2.5Hz)",
+    toggle_sleep_inactivity_cutoff: "Inactivity Fast-Cutoff (5m)",
+    desc_sleep_inactivity_cutoff: "Cut off media if idle for 5m during countdown",
+    toggle_sleep_screen_dimmer: "Progressive Screen Dimmer",
+    desc_sleep_screen_dimmer: "Circadian screen dimming during final countdown",
+    toggle_sleep_tab_hibernate: "Memory-Saver Tab Hibernation",
+    desc_sleep_tab_hibernate: "Suspend idle tabs on timeout to quiet cooling fans",
+    btn_sleep_power_nap: "⚡ 20m Power-Nap Mode",
+    desc_sleep_power_nap: "1-click restorative 20m nap with delta rain and gentle wake",
+    btn_start_nap: "Start Nap",
     budget_alert: 'Daily limit reached for this domain',
     btn_start_focus: '▶️ Start 25m Focus Block',
     budget_title: 'Domain Daily Time Budgets',
@@ -840,6 +878,44 @@ const DASHBOARD_I18N = {
     toggle_focus_shield_desc: "फोकस के दौरान विचलित करने वाले डोमेन पर सचेत करें",
     sleep_advanced_title: "उन्नत स्लीप नियंत्रण",
     sleep_advanced_desc: "कस्टम अवधि, क्रमिक फेड-आउट, वीडियो समाप्ति कटऑफ और निष्क्रियता ट्रिगर्स",
+
+    // Advanced Focus Suite i18n
+    lbl_focus_integrity: "फोकस सत्यनिष्ठा स्कोर",
+    desc_focus_integrity: "वास्तविक समय ध्यान स्कोर और विचलन काउंटर",
+    toggle_focus_automute_bg: "बैकग्राउंड टैब स्वतः म्यूट करें",
+    desc_focus_automute_bg: "फोकस शुरू होते ही अन्य सभी बैकग्राउंड टैब म्यूट करें",
+    soundscape_opt_binaural_alpha: "🧘 अल्फा 10Hz (प्रवाह अवस्था)",
+    soundscape_opt_binaural_beta: "🧠 बीटा 18Hz (गहन विश्लेषण)",
+    soundscape_opt_binaural_gamma: "⚡ गामा 40Hz (शीर्ष संज्ञान)",
+    toggle_focus_breathe_nudge: "सौम्य श्वास विश्राम संकेत",
+    desc_focus_breathe_nudge: "ध्यान भटकाने वाली वेबसाइटों पर 12 सेकंड का श्वास विश्राम",
+    toggle_focus_2020_alert: "20-20-20 स्क्रीन-विश्राम और मुद्रा सतर्कता",
+    desc_focus_2020_alert: "हर 20 मिनट पर 20 सेकंड के लिए 20 फीट दूर देखने का स्मरण",
+    breathe_nudge_title: "माइंडफुल विराम: एकाग्र रहें",
+    breathe_nudge_desc: "विचलित करने वाली सामग्री देखने से पहले एक गहरी सांस लें।",
+    btn_breathe_return: "फोकस पर लौटें",
+    btn_breathe_allow: "5 मिनट के लिए अनुमति दें",
+    toast_2020_title: "20-20-20 स्क्रीन-विश्राम",
+    toast_2020_desc: "20 सेकंड के लिए 20 फीट दूर किसी वस्तु को देखें। गर्दन और कंधों को आराम दें।",
+
+    // Advanced Sleep Suite i18n
+    toggle_sleep_autoplay_block: "वीडियो स्वतः प्ले रोकें",
+    desc_sleep_autoplay_block: "सोते समय स्ट्रीमिंग प्लेटफॉर्म पर अगला वीडियो स्वतः चलने से रोकें",
+    lbl_sleep_aid_soundscapes: "🌙 निद्रा सहायक ध्वनियां",
+    desc_sleep_aid_soundscapes: "शांत ध्वनियां जो स्लीप टाइमर के साथ धीरे-धीरे बंद होती हैं",
+    sleep_soundscape_none: "बंद (शांत)",
+    sleep_soundscape_pink: "🌸 डीप पिंक नॉइज़",
+    sleep_soundscape_ocean: "🌊 अर्धरात्रि समुद्र",
+    sleep_soundscape_rain: "🌧️ डेल्टा रेन (2.5Hz)",
+    toggle_sleep_inactivity_cutoff: "5 मिनट निष्क्रियता पर त्वरित शटडाउन",
+    desc_sleep_inactivity_cutoff: "टाइमर के दौरान 5 मिनट निष्क्रिय रहने पर तुरंत कटऑफ करें",
+    toggle_sleep_screen_dimmer: "क्रमिक स्क्रीन डिमर संकेत",
+    desc_sleep_screen_dimmer: "टाइमर समाप्ति से पूर्व स्क्रीन की रोशनी को धीरे-धीरे धीमा करें",
+    toggle_sleep_tab_hibernate: "मेमोरी-सेवर टैब निलंबन",
+    desc_sleep_tab_hibernate: "स्लीप टाइमर पर बैकग्राउंड टैब सस्पेंड कर पंखे की आवाज शांत करें",
+    btn_sleep_power_nap: "⚡ 20 मिनट पावर-नैप मोड",
+    desc_sleep_power_nap: "डेल्टा रेन और शांत अलार्म के साथ 20 मिनट का स्फूर्तिदायक नैप",
+    btn_start_nap: "नैप शुरू करें",
     budget_alert: 'इस डोमेन की दैनिक समय सीमा समाप्त हो चुकी है',
     btn_start_focus: '▶️ 25 मिनट का फोकस ब्लॉक शुरू करें',
     budget_title: 'डोमेन दैनिक समय सीमा बजट',
@@ -4371,6 +4447,114 @@ function createNoiseBuffer(ctx, seconds = 5) {
   return buffer;
 }
 
+// =============================================================================
+// Focus & Sleep Advanced Suite Facade Functions (Universal Rule 28 Compliant)
+// =============================================================================
+
+function initFocusAdvancedState() {
+  if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.initFocusAdvancedState) {
+    FocusAdvancedSuite.initFocusAdvancedState();
+    FocusAdvancedSuite.bindFocusAdvancedEventListeners();
+    return;
+  }
+  const toggleIntegrity = document.getElementById('toggleFocusIntegrityScore');
+  const toggleAutoMute = document.getElementById('toggleFocusAutoMuteBg');
+  const toggleBreathe = document.getElementById('toggleFocusBreatheNudge');
+  const toggle2020 = document.getElementById('toggleFocus2020Alert');
+  if (toggleIntegrity) toggleIntegrity.checked = localStorage.getItem('sentinel_focus_adv_integrity') === 'true';
+  if (toggleAutoMute) toggleAutoMute.checked = localStorage.getItem('sentinel_focus_adv_automute_bg') === 'true';
+  if (toggleBreathe) toggleBreathe.checked = localStorage.getItem('sentinel_focus_adv_breathe_nudge') === 'true';
+  if (toggle2020) toggle2020.checked = localStorage.getItem('sentinel_focus_adv_posture_alert') === 'true';
+  const selectSoundscape = document.getElementById('selectFocusSoundscape');
+  if (selectSoundscape && !selectSoundscape.value) {
+    selectSoundscape.value = localStorage.getItem('sentinel_focus_soundscape') || 'none';
+  }
+}
+
+function initSleepAdvancedState() {
+  if (typeof SleepAdvancedSuite !== 'undefined' && SleepAdvancedSuite.initSleepAdvancedState) {
+    SleepAdvancedSuite.initSleepAdvancedState();
+    SleepAdvancedSuite.bindSleepAdvancedEventListeners();
+    return;
+  }
+  const toggleAutoplay = document.getElementById('toggleSleepAutoplayBlock');
+  const toggleInactivity = document.getElementById('toggleSleepInactivityFastCutoff');
+  const toggleDimmer = document.getElementById('toggleSleepScreenDimmer');
+  const toggleHibernate = document.getElementById('toggleSleepTabHibernate');
+  if (toggleAutoplay) toggleAutoplay.checked = localStorage.getItem('sentinel_sleep_adv_autoplay_block') === 'true';
+  if (toggleInactivity) toggleInactivity.checked = localStorage.getItem('sentinel_sleep_adv_inactivity_cutoff') === 'true';
+  if (toggleDimmer) toggleDimmer.checked = localStorage.getItem('sentinel_sleep_adv_screen_dimmer') === 'true';
+  if (toggleHibernate) toggleHibernate.checked = localStorage.getItem('sentinel_sleep_adv_tab_hibernate') === 'true';
+  const selectSleepSound = document.getElementById('selectSleepAidSoundscape');
+  if (selectSleepSound) selectSleepSound.value = localStorage.getItem('sentinel_sleep_adv_soundscape') || 'none';
+}
+
+function createBinauralBeatNodes(ctx, carrier, beatFreq, gainNode) {
+  if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.createBinauralBeatNodes) {
+    return FocusAdvancedSuite.createBinauralBeatNodes(ctx, carrier, beatFreq, gainNode);
+  }
+  const oscL = ctx.createOscillator();
+  const oscR = ctx.createOscillator();
+  oscL.type = 'sine';
+  oscR.type = 'sine';
+  oscL.frequency.setValueAtTime(carrier, ctx.currentTime);
+  oscR.frequency.setValueAtTime(carrier + beatFreq, ctx.currentTime);
+  const merger = ctx.createChannelMerger(2);
+  oscL.connect(merger, 0, 0);
+  oscR.connect(merger, 0, 1);
+  merger.connect(gainNode);
+  oscL.start();
+  oscR.start();
+  return [oscL, oscR, merger];
+}
+
+function startSleepAidSoundscape(type, vol) {
+  if (typeof SleepAdvancedSuite !== 'undefined' && SleepAdvancedSuite.startSleepAidSoundscape) {
+    SleepAdvancedSuite.startSleepAidSoundscape(type, vol);
+  }
+}
+
+function stopSleepAidSoundscape() {
+  if (typeof SleepAdvancedSuite !== 'undefined' && SleepAdvancedSuite.stopSleepAidSoundscape) {
+    SleepAdvancedSuite.stopSleepAidSoundscape();
+  }
+}
+
+function triggerPowerNapMode() {
+  if (typeof SleepAdvancedSuite !== 'undefined' && SleepAdvancedSuite.triggerPowerNapMode) {
+    SleepAdvancedSuite.triggerPowerNapMode((mins) => triggerSetSleepTimer(mins));
+    showToast('⚡ Power-Nap Activated (20m with Delta Rain)', false);
+    return;
+  }
+  const inputCustom = document.getElementById('inputDashSleepCustomMinutes');
+  if (inputCustom) inputCustom.value = 20;
+  triggerSetSleepTimer(20);
+}
+
+function trigger2020PostureAlert() {
+  if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.trigger2020PostureAlert) {
+    FocusAdvancedSuite.trigger2020PostureAlert();
+    return;
+  }
+  const toast = document.getElementById('toast2020PostureAlert');
+  if (toast) toast.classList.remove('hidden');
+}
+
+function triggerBreatheNudgeOverlay(domain) {
+  if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.triggerBreatheNudgeOverlay) {
+    FocusAdvancedSuite.triggerBreatheNudgeOverlay(domain);
+    return;
+  }
+  const overlay = document.getElementById('overlayBreatheNudge');
+  if (overlay) overlay.classList.remove('hidden');
+}
+
+function updateFocusIntegrityScore(delta, reason) {
+  if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.updateFocusIntegrityScore) {
+    FocusAdvancedSuite.updateFocusIntegrityScore(delta, reason);
+  }
+}
+
 function startSoundscape(type) {
   stopActiveSoundscape();
   if (!type || type === 'none') return;
@@ -4480,6 +4664,14 @@ function startSoundscape(type) {
     filter.connect(soundscapeGainNode);
     noiseSource.start();
     nodes.push(noiseSource, filter);
+  } else if (type && type.startsWith('binaural_')) {
+    const config = {
+      binaural_alpha: { carrier: 200, beat: 10 },
+      binaural_beta: { carrier: 220, beat: 18 },
+      binaural_gamma: { carrier: 240, beat: 40 }
+    }[type] || { carrier: 200, beat: 10 };
+    const binNodes = createBinauralBeatNodes(ctx, config.carrier, config.beat, soundscapeGainNode);
+    nodes.push(...binNodes);
   }
 
   nodes.push(soundscapeGainNode);
@@ -5366,6 +5558,7 @@ function initPomodoroWidget() {
   updateFocusTargetProgressUI();
   initFocusGoalInput();
   initZenMode();
+  initFocusAdvancedState();
 }
 
 // =============================================================================
@@ -10600,6 +10793,9 @@ function renderDashSleepTimer(timer) {
   const isIdle = !timer || timer.state === 'IDLE' || timer.state === 'CANCELLED' || !timer.targetTime;
 
   if (isIdle) {
+    if (typeof SleepAdvancedSuite !== 'undefined') {
+      SleepAdvancedSuite.resetScreenDimmer();
+    }
     if (countdownEl) countdownEl.textContent = '00:00';
     if (finishTimeEl) finishTimeEl.textContent = 'No active timer';
     if (badgeEl) {
@@ -10675,6 +10871,19 @@ function renderDashSleepTimer(timer) {
   });
 
   updateDashSleepDial(remainingMs, totalMs, isRunning, isPaused, isFading);
+
+  if (typeof SleepAdvancedSuite !== 'undefined') {
+    if (isFading || (isRunning && remainingMs <= 60000)) {
+      SleepAdvancedSuite.triggerScreenDimmer();
+    }
+    if (isFading) {
+      SleepAdvancedSuite.applySleepVolumeRamp(0, 30);
+    }
+    if (timer.state === 'TRIGGERED') {
+      SleepAdvancedSuite.executeSleepTabHibernation();
+      SleepAdvancedSuite.stopSleepAidSoundscape();
+    }
+  }
 
   if ((isRunning || isFading) && !dashSleepTickerInterval) {
     startDashSleepTicker();
@@ -10955,6 +11164,7 @@ function initSleepSentinelHub() {
   }
 
   // Initial state hydration
+  initSleepAdvancedState();
   fetchSleepTimerState();
 }
 
@@ -11726,6 +11936,15 @@ if (typeof window !== 'undefined') {
   window.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
   window.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
   window.evaluateMediaScrollVisibility = evaluateMediaScrollVisibility;
+  window.initFocusAdvancedState = initFocusAdvancedState;
+  window.initSleepAdvancedState = initSleepAdvancedState;
+  window.createBinauralBeatNodes = createBinauralBeatNodes;
+  window.startSleepAidSoundscape = startSleepAidSoundscape;
+  window.stopSleepAidSoundscape = stopSleepAidSoundscape;
+  window.triggerPowerNapMode = triggerPowerNapMode;
+  window.trigger2020PostureAlert = trigger2020PostureAlert;
+  window.triggerBreatheNudgeOverlay = triggerBreatheNudgeOverlay;
+  window.updateFocusIntegrityScore = updateFocusIntegrityScore;
 }
 
 if (typeof globalThis !== 'undefined') {
@@ -11733,6 +11952,15 @@ if (typeof globalThis !== 'undefined') {
   globalThis.updateHUDStatus = updateHUDStatus;
   globalThis.updateDataHubStatus = updateDataHubStatus;
   globalThis.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
+  globalThis.initFocusAdvancedState = initFocusAdvancedState;
+  globalThis.initSleepAdvancedState = initSleepAdvancedState;
+  globalThis.createBinauralBeatNodes = createBinauralBeatNodes;
+  globalThis.startSleepAidSoundscape = startSleepAidSoundscape;
+  globalThis.stopSleepAidSoundscape = stopSleepAidSoundscape;
+  globalThis.triggerPowerNapMode = triggerPowerNapMode;
+  globalThis.trigger2020PostureAlert = trigger2020PostureAlert;
+  globalThis.triggerBreatheNudgeOverlay = triggerBreatheNudgeOverlay;
+  globalThis.updateFocusIntegrityScore = updateFocusIntegrityScore;
   globalThis.aggregateChronoHeatmap = aggregateChronoHeatmap;
   globalThis.renderChronoHeatmap = renderChronoHeatmap;
   globalThis.calculateProductivityScore = calculateProductivityScore;
