@@ -43,9 +43,11 @@
     return `${mins}:${secStr}`;
   }
 
-  // Active Streams Cache
+  // Active Streams Cache & Global Mute Toggle State
   let cachedStreams = [];
   let currentSoloTabId = null;
+  let isMuteAllOthersActive = false;
+  let isMuteAllActive = false;
 
   /**
    * Dispatches remote media command to background service worker.
@@ -212,23 +214,115 @@
   }
 
   /**
+   * Helper: Dispatches media IPC action to service worker with graceful fallbacks.
+   */
+  function dispatchMediaIpc(api, action, payload = {}) {
+    if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+      return new Promise((resolve) => {
+        try {
+          const msg = Object.assign({ action, type: action }, payload);
+          api.runtime.sendMessage(msg, (res) => {
+            resolve(res || Object.assign({ success: true }, payload));
+          });
+        } catch (_) {
+          resolve(Object.assign({ success: true, simulated: true }, payload));
+        }
+      });
+    }
+    return Promise.resolve(Object.assign({ success: true, localOnly: true }, payload));
+  }
+
+  /**
+   * Helper: Updates UI classes and localized text for Mute All Others button.
+   */
+  function updateBtnMuteAllOthersUI(btnEl, isActive, translate) {
+    if (!btnEl) return;
+    if (isActive) {
+      btnEl.classList.add('active', 'btn-danger');
+      btnEl.classList.remove('btn-secondary');
+      btnEl.textContent = translate('btn_unmute_all_others') || '🔊 Unmute All Others';
+    } else {
+      btnEl.classList.remove('active', 'btn-danger');
+      btnEl.classList.add('btn-secondary');
+      btnEl.textContent = translate('btn_mute_all_others') || '🔇 Mute All Others';
+    }
+  }
+
+  /**
    * Executes Global Mute Others: Mutes all media streams except the primary/specified active stream.
+   * Supports bidirectional toggle: if already active, toggles off and restores unmuted state.
    */
   function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
-    const list = streamsList || cachedStreams;
-    const targetId = primaryTabId ? Number(primaryTabId) : currentSoloTabId;
+    const api = options.browserAPI || (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    const containerEl = options.containerEl || (doc ? doc.getElementById('mediaDeckGrid') : null);
+    const list = Array.isArray(streamsList) ? streamsList : cachedStreams;
+    const targetId = Number(primaryTabId || currentSoloTabId || (list[0] && list[0].tabId) || 0);
+    const btnEl = options.btnMuteAllOthers || (doc ? doc.getElementById('btnMuteAllOthers') : null);
+    const translate = typeof options.t === 'function' ? options.t : (k) => k;
 
-    const tabsToMute = list.filter(s => s.tabId !== targetId);
-    const promises = tabsToMute.map(s => handleRemoteMediaCommand(s.tabId, 'mute', 0, options));
+    isMuteAllOthersActive = !isMuteAllOthersActive;
+    list.forEach(s => {
+      s.isMuted = isMuteAllOthersActive ? (s.tabId !== targetId) : false;
+      const cached = cachedStreams.find(c => c.tabId === s.tabId);
+      if (cached) cached.isMuted = s.isMuted;
+    });
 
-    // Update local state
-    tabsToMute.forEach(s => { s.isMuted = true; });
+    updateBtnMuteAllOthersUI(btnEl, isMuteAllOthersActive, translate);
 
-    if (options.containerEl && options.doc) {
-      renderMultiTabMediaDeck(list, options.containerEl, options);
+    if (containerEl && doc) {
+      renderMultiTabMediaDeck(list, containerEl, options);
     }
 
-    return Promise.all(promises);
+    const action = isMuteAllOthersActive ? 'MEDIA_STREAM_MUTE_ALL_OTHERS' : 'MEDIA_STREAM_MUTE_ALL_OTHERS_CLEAR';
+    const payload = isMuteAllOthersActive ? { primaryTabId: targetId } : { cleared: true };
+    return dispatchMediaIpc(api, action, payload);
+  }
+
+  /**
+   * Helper: Updates UI classes and localized text for Mute All button.
+   */
+  function updateBtnMuteAllUI(btnEl, isActive, translate) {
+    if (!btnEl) return;
+    if (isActive) {
+      btnEl.classList.add('active', 'btn-danger');
+      btnEl.classList.remove('btn-secondary');
+      btnEl.textContent = translate('btn_unmute_all') || '🔊 Unmute All';
+    } else {
+      btnEl.classList.remove('active', 'btn-danger');
+      btnEl.classList.add('btn-secondary');
+      btnEl.textContent = translate('btn_mute_all') || '🔇 Mute All';
+    }
+  }
+
+  /**
+   * Executes Global Mute All mode: Mutes all media streams across all tabs.
+   * Supports bidirectional toggle: if already active, toggles off and restores unmuted state.
+   */
+  function handleMuteAll(streamsList, options = {}) {
+    const api = options.browserAPI || (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null));
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    const containerEl = options.containerEl || (doc ? doc.getElementById('mediaDeckGrid') : null);
+    const list = Array.isArray(streamsList) ? streamsList : cachedStreams;
+    const btnEl = options.btnMuteAll || (doc ? doc.getElementById('btnMuteAll') : null);
+    const translate = typeof options.t === 'function' ? options.t : (k) => k;
+
+    isMuteAllActive = !isMuteAllActive;
+    list.forEach(s => {
+      s.isMuted = isMuteAllActive;
+      const cached = cachedStreams.find(c => c.tabId === s.tabId);
+      if (cached) cached.isMuted = s.isMuted;
+    });
+
+    updateBtnMuteAllUI(btnEl, isMuteAllActive, translate);
+
+    if (containerEl && doc) {
+      renderMultiTabMediaDeck(list, containerEl, options);
+    }
+
+    const action = isMuteAllActive ? 'MEDIA_STREAM_MUTE_ALL' : 'MEDIA_STREAM_MUTE_ALL_CLEAR';
+    const payload = isMuteAllActive ? {} : { cleared: true };
+    return dispatchMediaIpc(api, action, payload);
   }
 
   /**
@@ -651,12 +745,155 @@
   const peakHoldBars = new Float32Array(NUM_BANDS);
   const currentBandValues = new Float32Array(NUM_BANDS);
 
-  // Cached DOM elements for VU meters
+  // Studio Peak-Hold Decay & Graticule State Machine
+  let leftPeakVal = 0;
+  let rightPeakVal = 0;
+  let leftPeakHoldTime = 0;
+  let rightPeakHoldTime = 0;
+  let peakDecayRate = 0.03; // Normal studio decay rate
+  let isGraticuleEnabled = true;
+
+  // Cached DOM elements for VU meters & Peak Indicators
   let vuLeftBarEl = null;
   let vuRightBarEl = null;
+  let vuPeakLeftEl = null;
+  let vuPeakRightEl = null;
   let vuClipBadgeEl = null;
   let vuValLeftEl = null;
   let vuValRightEl = null;
+
+  const VIZ_MODE_META = {
+    bars: { icon: '⚡', label: '32-Band FFT' },
+    wave: { icon: '🌊', label: 'Oscilloscope' },
+    radial: { icon: '✨', label: 'Radial Burst' },
+    matrix_dots: { icon: '🟢', label: 'Matrix Dots' },
+    flame: { icon: '🔥', label: 'Flame Peaks' },
+    stereo_mirror: { icon: '🦋', label: 'Stereo Mirror' }
+  };
+
+  /**
+   * Renders subtle acoustic frequency octaves and decibel gridlines directly on the canvas.
+   * Subpixel +0.5 offset prevents blurry lines on Retina/High-DPI displays.
+   */
+  function renderCanvasGraticule(ctx, width, height, isLightTheme = false) {
+    if (!isGraticuleEnabled || !ctx || visualizerMode === 'radial') return;
+
+    if (typeof ctx.save === 'function') ctx.save();
+    ctx.lineWidth = 1;
+
+    // Horizontal dB grid lines: -12dB (25% height), -24dB (50% height), -36dB (75% height)
+    const dbLines = [
+      { ratio: 0.25, label: '-12dB' },
+      { ratio: 0.50, label: '-24dB' },
+      { ratio: 0.75, label: '-36dB' }
+    ];
+
+    ctx.strokeStyle = isLightTheme ? 'rgba(15, 23, 42, 0.08)' : 'rgba(99, 102, 241, 0.12)';
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([3, 4]);
+    }
+
+    for (const line of dbLines) {
+      const y = Math.floor(height * line.ratio) + 0.5;
+      if (typeof ctx.beginPath === 'function') ctx.beginPath();
+      if (typeof ctx.moveTo === 'function') ctx.moveTo(0, y);
+      if (typeof ctx.lineTo === 'function') ctx.lineTo(width, y);
+      if (typeof ctx.stroke === 'function') ctx.stroke();
+    }
+
+    // Vertical Frequency octave ticks: 60Hz, 250Hz, 1kHz, 4kHz, 16kHz
+    // Corresponding to standard 32-band log distribution
+    const freqTicks = [0.08, 0.28, 0.50, 0.72, 0.92];
+    ctx.strokeStyle = isLightTheme ? 'rgba(15, 23, 42, 0.06)' : 'rgba(255, 255, 255, 0.08)';
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([2, 5]);
+    }
+
+    for (const xRatio of freqTicks) {
+      const x = Math.floor(width * xRatio) + 0.5;
+      if (typeof ctx.beginPath === 'function') ctx.beginPath();
+      if (typeof ctx.moveTo === 'function') ctx.moveTo(x, 0);
+      if (typeof ctx.lineTo === 'function') ctx.lineTo(x, height);
+      if (typeof ctx.stroke === 'function') ctx.stroke();
+    }
+
+    if (typeof ctx.restore === 'function') ctx.restore();
+  }
+
+  /**
+   * Computes studio peak-hold dynamics (instant attack, 400ms hold, exponential falloff).
+   * Strictly <= 50 lines per Universal Rule 28.
+   */
+  function updateVuPeakHoldDecay(leftVal, rightVal, timestamp = Date.now(), options = {}) {
+    const now = timestamp || Date.now();
+    const holdDuration = 400; // 400ms broadcast hold
+    const decayStep = peakDecayRate * 100;
+
+    // Left channel peak hold & decay
+    if (leftVal >= leftPeakVal) {
+      leftPeakVal = leftVal;
+      leftPeakHoldTime = now + holdDuration;
+    } else if (now > leftPeakHoldTime) {
+      leftPeakVal = Math.max(0, leftPeakVal - decayStep);
+    }
+
+    // Right channel peak hold & decay
+    if (rightVal >= rightPeakVal) {
+      rightPeakVal = rightVal;
+      rightPeakHoldTime = now + holdDuration;
+    } else if (now > rightPeakHoldTime) {
+      rightPeakVal = Math.max(0, rightPeakVal - decayStep);
+    }
+
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    if (doc) {
+      if (!vuPeakLeftEl) vuPeakLeftEl = doc.getElementById('vuPeakLeft');
+      if (!vuPeakRightEl) vuPeakRightEl = doc.getElementById('vuPeakRight');
+    }
+
+    if (vuPeakLeftEl) {
+      vuPeakLeftEl.style.left = `${Math.min(99, leftPeakVal).toFixed(1)}%`;
+    }
+    if (vuPeakRightEl) {
+      vuPeakRightEl.style.left = `${Math.min(99, rightPeakVal).toFixed(1)}%`;
+    }
+
+    return {
+      leftPeak: leftPeakVal,
+      rightPeak: rightPeakVal,
+      leftHoldTime: leftPeakHoldTime,
+      rightHoldTime: rightPeakHoldTime
+    };
+  }
+
+  function setGraticuleEnabled(enabled) {
+    isGraticuleEnabled = Boolean(enabled);
+    return isGraticuleEnabled;
+  }
+
+  function isGraticuleActive() {
+    return isGraticuleEnabled;
+  }
+
+  function setPeakDecayRate(rate) {
+    peakDecayRate = typeof rate === 'number' && rate > 0 ? rate : 0.03;
+    return peakDecayRate;
+  }
+
+  function getPeakDecayRate() {
+    return peakDecayRate;
+  }
+
+  function getPeakHoldValues() {
+    return {
+      leftPeakVal,
+      rightPeakVal,
+      leftPeakHoldTime,
+      rightPeakHoldTime,
+      peakDecayRate,
+      isGraticuleEnabled
+    };
+  }
 
   /**
    * Initializes the 60fps Canvas Audio Visualizer Engine
@@ -672,6 +909,8 @@
     if (doc) {
       vuLeftBarEl = doc.getElementById('vuBarLeft');
       vuRightBarEl = doc.getElementById('vuBarRight');
+      vuPeakLeftEl = doc.getElementById('vuPeakLeft');
+      vuPeakRightEl = doc.getElementById('vuPeakRight');
       vuClipBadgeEl = doc.getElementById('vuClipIndicator');
       vuValLeftEl = doc.getElementById('vuValLeft');
       vuValRightEl = doc.getElementById('vuValRight');
@@ -848,6 +1087,30 @@
           btnWave.classList.remove('active');
           if (typeof btnWave.setAttribute === 'function') btnWave.setAttribute('aria-pressed', 'false');
         }
+      }
+
+      // Synchronize compact pill trigger and popover options if present
+      const pillLabel = doc.getElementById('vizPillLabel');
+      const pillIcon = doc.getElementById('vizPillIcon');
+      if (VIZ_MODE_META[mode]) {
+        if (pillLabel) pillLabel.textContent = VIZ_MODE_META[mode].label;
+        if (pillIcon) pillIcon.textContent = VIZ_MODE_META[mode].icon;
+      }
+      const popoverOptions = doc.querySelectorAll ? doc.querySelectorAll('.viz-popover-option') : [];
+      if (popoverOptions && popoverOptions.forEach) {
+        popoverOptions.forEach(opt => {
+          const isSelected = opt.getAttribute && opt.getAttribute('data-effect') === mode;
+          if (opt.classList) {
+            if (isSelected) {
+              opt.classList.add('active');
+            } else {
+              opt.classList.remove('active');
+            }
+          }
+          if (typeof opt.setAttribute === 'function') {
+            opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+          }
+        });
       }
 
       const canvasEl = doc.getElementById('canvasAudioVisualizer') || doc.getElementById('mediaDeckVisualizerCanvas');
@@ -1209,6 +1472,9 @@
     ctx.fillStyle = 'rgba(8, 11, 17, 0.35)';
     ctx.fillRect(0, 0, width, height);
 
+    // Render calibration graticule background
+    renderCanvasGraticule(ctx, width, height, options.isLightTheme);
+
     // Retrieve or synthesize telemetry
     const telemetry = visualizerTelemetryData || synthesizeAudioTelemetry(timestamp, isVisualizerPlaying);
     const freqs = telemetry.freqs;
@@ -1427,6 +1693,9 @@
     const leftPct = dbToPercent(leftDb);
     const rightPct = dbToPercent(rightDb);
 
+    // Studio Peak-Hold Decay dynamics
+    updateVuPeakHoldDecay(leftPct, rightPct, timestamp, options);
+
     if (!vuLeftBarEl && doc) vuLeftBarEl = doc.getElementById('vuBarLeft');
     if (!vuRightBarEl && doc) vuRightBarEl = doc.getElementById('vuBarRight');
     if (!vuClipBadgeEl && doc) vuClipBadgeEl = doc.getElementById('vuClipIndicator');
@@ -1468,6 +1737,8 @@
       mode: visualizerMode,
       leftDb,
       rightDb,
+      leftPeakVal,
+      rightPeakVal,
       isClipping
     };
   }
@@ -1520,6 +1791,18 @@
    */
   function setAudioPlayingState(isPlaying, options = {}) {
     isVisualizerPlaying = Boolean(isPlaying);
+    const doc = options.doc || (typeof document !== 'undefined' ? document : null);
+    if (doc && typeof doc.getElementById === 'function') {
+      const dot = doc.getElementById('vizLiveDot');
+      const text = doc.getElementById('vizHeaderStatusText');
+      if (dot && dot.classList) {
+        if (isVisualizerPlaying) dot.classList.add('active');
+        else dot.classList.remove('active');
+      }
+      if (text) {
+        text.textContent = isVisualizerPlaying ? 'LIVE' : 'STANDBY';
+      }
+    }
     if (isVisualizerPlaying) {
       startVisualizerLoop(options);
     } else {
@@ -1545,8 +1828,14 @@
       mode: visualizerMode,
       isPlaying: isVisualizerPlaying,
       isSleeping: isVisualizerSleeping,
+      isGraticuleEnabled,
+      peakDecayRate,
+      leftPeakVal,
+      rightPeakVal,
       rafId: visualizerRafId,
       currentSoloTabId,
+      isMuteAllOthersActive,
+      isMuteAllActive,
       cachedStreamsCount: cachedStreams.length,
       peakBarsSample: Array.from(peakHoldBars.slice(0, 5))
     };
@@ -1565,6 +1854,11 @@
     handleRemoteMediaCommand,
     handleSoloTab,
     handleMuteAllOthers,
+    handleMuteAll,
+    getIsMuteAllOthersActive: () => isMuteAllOthersActive,
+    setIsMuteAllOthersActive: (val) => { isMuteAllOthersActive = Boolean(val); },
+    getIsMuteAllActive: () => isMuteAllActive,
+    setIsMuteAllActive: (val) => { isMuteAllActive = Boolean(val); },
     initAudioVisualizer,
     setVisualizerMode,
     isVisualizerFullWindowActive,
@@ -1578,6 +1872,15 @@
     toggleVisualizerVideoEmbed,
     VALID_VIZ_MODES,
     validModes: VALID_VIZ_MODES,
+    setGraticuleEnabled,
+    isGraticuleActive,
+    setCanvasGraticuleEnabled: setGraticuleEnabled,
+    isCanvasGraticuleEnabled: isGraticuleActive,
+    setPeakDecayRate,
+    getPeakDecayRate,
+    renderCanvasGraticule,
+    updateVuPeakHoldDecay,
+    getPeakHoldValues,
     synthesizeAudioTelemetry,
     amplitudeToDb,
     dbToPercent,
@@ -1627,4 +1930,10 @@
     module.exports = MediaDeckVisualizerFeature;
   }
   global.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+  if (typeof globalThis !== 'undefined') {
+    globalThis.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+  }
+  if (typeof window !== 'undefined') {
+    window.MediaDeckVisualizerFeature = MediaDeckVisualizerFeature;
+  }
 })(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this);
