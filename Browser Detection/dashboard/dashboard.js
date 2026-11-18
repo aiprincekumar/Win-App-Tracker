@@ -920,6 +920,7 @@ const DASHBOARD_I18N = {
     
     // Media History Table
     media_history_heading: 'विस्तृत मीडिया इतिहास',
+    media_scroll_to_top: 'मीडिया इतिहास के शीर्ष पर वापस जाएं',
     media_count_suffix: (n) => `${n} वीडियो रिकॉर्ड`,
     search_media_placeholder: 'वीडियो शीर्षक या प्लेटफॉर्म खोजें...',
     lbl_platform: 'प्लेटफ़ॉर्म:',
@@ -1855,6 +1856,96 @@ function updateHeroVolumeUI(volumeFraction) {
     else if (pct <= 33) volIcon.textContent = '🔈';
     else if (pct <= 66) volIcon.textContent = '🔉';
     else volIcon.textContent = '🔊';
+  }
+}
+
+/**
+ * Updates visibility of the Media History "Scroll to Top" button.
+ *
+ * @param {boolean} shouldShow
+ */
+function setMediaScrollToTopVisible(shouldShow) {
+  const btn = document.getElementById('btnMediaScrollToTop');
+  if (!btn) return;
+
+  if (shouldShow) {
+    btn.classList.remove('hidden');
+    btn.classList.add('visible');
+  } else {
+    btn.classList.add('hidden');
+    btn.classList.remove('visible');
+  }
+}
+
+/**
+ * Handles smooth scrolling of the main content stage back to the top.
+ */
+function handleMediaScrollToTopClick() {
+  const mainStage = document.querySelector('.main-stage');
+  if (mainStage) {
+    mainStage.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  setMediaScrollToTopVisible(false);
+}
+
+/**
+ * Evaluates header intersection entry and scroll position to determine button visibility.
+ *
+ * @param {IntersectionObserverEntry} [entry]
+ * @param {HTMLElement|null} [mainStage]
+ */
+function evaluateMediaScrollVisibility(entry, mainStage) {
+  const paneMedia = document.getElementById('paneMedia');
+  const isMediaActive = Boolean(paneMedia && paneMedia.classList.contains('active'));
+  if (!isMediaActive) {
+    setMediaScrollToTopVisible(false);
+    return;
+  }
+
+  const rootTop = (entry && entry.rootBounds) ? entry.rootBounds.top : 0;
+  const isScrolledPast = Boolean(entry && !entry.isIntersecting && entry.boundingClientRect.top < rootTop);
+  const isPastThreshold = Boolean(mainStage && mainStage.scrollTop > 350);
+
+  setMediaScrollToTopVisible(isScrolledPast || isPastThreshold);
+}
+
+/**
+ * Initializes the floating circular "Scroll to Top" button for the Media History view.
+ */
+function initMediaScrollToTop() {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('btnMediaScrollToTop');
+  const targetHeader = document.getElementById('headingMediaHistory');
+  const mainStage = document.querySelector('.main-stage');
+  if (!btn) return;
+
+  btn.addEventListener('click', handleMediaScrollToTopClick);
+
+  if (targetHeader && typeof IntersectionObserver !== 'undefined') {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries && entries.length) {
+        evaluateMediaScrollVisibility(entries[0], mainStage);
+      }
+    }, {
+      root: mainStage || null,
+      threshold: [0, 0.5, 1.0]
+    });
+    observer.observe(targetHeader);
+  }
+
+  if (mainStage) {
+    mainStage.addEventListener('scroll', () => {
+      const paneMedia = document.getElementById('paneMedia');
+      if (!paneMedia || !paneMedia.classList.contains('active')) {
+        setMediaScrollToTopVisible(false);
+        return;
+      }
+      if (mainStage.scrollTop < 100) {
+        setMediaScrollToTopVisible(false);
+      }
+    }, { passive: true });
   }
 }
 
