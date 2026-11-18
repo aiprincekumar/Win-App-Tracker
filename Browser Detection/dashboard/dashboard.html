@@ -1563,18 +1563,18 @@
               </div>
             </div>
 
-            <!-- Pillar 1B: Focus Advanced Controls Card (Part 2 - Advanced, Placed DIRECTLY UNDERNEATH Part 1) -->
+            <!-- Pillar 1B: Focus Advanced Cards Split -->
             <div id="widgetFocusAdvanced" class="bento-card liquid-glass-card bento-span-6 pomodoro-advanced-card">
               <div class="card-header-row settings-card-header">
-                <span class="card-icon settings-card-icon">⚙️</span>
+                <span class="card-icon settings-card-icon">🎵</span>
                 <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtFocusAdvancedTitle" class="card-heading settings-card-title" data-i18n="focus_advanced_title">Focus Advanced Controls</h3>
-                  <span id="txtFocusAdvancedDesc" class="settings-card-sub" data-i18n="focus_advanced_desc">Custom goals, ambient soundscapes, acoustic chimes & smart shields</span>
+                  <h3 id="txtFocusAdvancedTitle" class="card-heading settings-card-title" data-i18n="focus_advanced_title">Session Planner & Soundscapes</h3>
+                  <span id="txtFocusAdvancedDesc" class="settings-card-sub" data-i18n="focus_advanced_desc">Custom goals, ambient soundscapes, acoustic chimes & rhythm aids</span>
                 </div>
               </div>
-              <div class="pomodoro-advanced-body">
-                <!-- Task Intent / Goal Input (Feature 2) -->
-                <div class="focus-goal-input-row">
+              <div class="pomodoro-advanced-body controls-2col-grid">
+                <!-- Goal Input Row -->
+                <div class="focus-goal-input-row grid-col-span-full">
                   <input type="text" id="inputFocusGoal" class="styled-input focus-goal-input" placeholder="🎯 What are you focusing on? (e.g. Code Review, Research)...">
                   <div id="chipActiveFocusGoal" class="chip-active-focus-goal hidden">
                     <span class="chip-icon">🎯</span>
@@ -1582,256 +1582,450 @@
                     <button type="button" id="btnClearFocusGoal" class="chip-clear" title="Clear task">✕</button>
                   </div>
                 </div>
-
-                <!-- Custom Minutes Stepper & Quick Extenders -->
-                <div class="focus-advanced-stepper-extender-row">
-                  <div class="focus-custom-minute-stepper">
-                    <label for="inputFocusCustomMinutes" class="stepper-label" data-i18n="lbl_custom">Custom:</label>
-                    <input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25" aria-label="Custom Focus Minutes">
-                    <span class="stepper-unit">min</span>
-                    <button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply" data-i18n="btn_set">Set</button>
-                  </div>
-                  <div class="dash-focus-extender-group">
-                    <span class="focus-section-label" data-i18n="lbl_extend_time">Extend Time</span>
-                    <div class="dash-focus-extender-buttons">
-                      <button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>
-                      <button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>
+                <!-- Left Column -->
+                <div class="controls-col-panel">
+                  <div class="focus-advanced-stepper-extender-row">
+                    <div class="focus-custom-minute-stepper">
+                      <label for="inputFocusCustomMinutes" class="stepper-label" data-i18n="lbl_custom">Custom:</label>
+                      <input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25" aria-label="Custom Focus Minutes">
+                      <span class="stepper-unit">min</span>
+                      <button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply" data-i18n="btn_set">Set</button>
+                    </div>
+                    <div class="dash-focus-extender-group">
+                      <span class="focus-section-label" data-i18n="lbl_extend_time">Extend Time</span>
+                      <div class="dash-focus-extender-buttons">
+                        <button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>
+                        <button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Ambient Soundscapes Generator Bar (Feature 5) -->
-                <div class="focus-soundscape-panel">
-                  <div class="soundscape-header">
-                    <span class="soundscape-title" data-i18n="focus_ambient_soundscapes">🎧 Ambient Soundscapes</span>
-                    <select id="selectFocusSoundscape" class="styled-select soundscape-select" aria-label="Ambient Soundscape Selector">
-                      <option value="none" selected data-i18n="soundscape_opt_none">Off (Silent)</option>
-                      <option value="rain" data-i18n="soundscape_opt_rain">🌧️ Gentle Rain</option>
-                      <option value="cafe" data-i18n="soundscape_opt_cafe">☕ Coffee Shop</option>
-                      <option value="ocean" data-i18n="soundscape_opt_ocean">🌊 Ocean Waves</option>
-                      <option value="forest" data-i18n="soundscape_opt_forest">🌲 Forest Birds</option>
-                      <option value="whitenoise" data-i18n="soundscape_opt_whitenoise">💨 Pink/White Noise</option>
-                      <!-- NEW: Binaural Beats Frequencies (Default None, User Selected) -->
-                      <option value="binaural_alpha" data-i18n="soundscape_opt_binaural_alpha">🧘 Alpha 10Hz (Flow State)</option>
-                      <option value="binaural_beta" data-i18n="soundscape_opt_binaural_beta">🧠 Beta 18Hz (Analytical Focus)</option>
-                      <option value="binaural_gamma" data-i18n="soundscape_opt_binaural_gamma">⚡ Gamma 40Hz (Peak Cognition)</option>
+                <!-- Right Column -->
+                <div class="controls-col-panel">
+                  <div class="focus-soundscape-panel">
+                    <div class="soundscape-header">
+                      <span class="soundscape-title" data-i18n="focus_ambient_soundscapes">🎧 Ambient Soundscapes</span>
+                      <select id="selectFocusSoundscape" class="styled-select soundscape-select" aria-label="Ambient Soundscape Selector">
+                        <option value="none" selected data-i18n="soundscape_opt_none">Off (Silent)</option>
+                        <option value="rain" data-i18n="soundscape_opt_rain">🌧️ Gentle Rain</option>
+                        <option value="cafe" data-i18n="soundscape_opt_cafe">☕ Coffee Shop</option>
+                        <option value="ocean" data-i18n="soundscape_opt_ocean">🌊 Ocean Waves</option>
+                        <option value="forest" data-i18n="soundscape_opt_forest">🌲 Forest Birds</option>
+                        <option value="whitenoise" data-i18n="soundscape_opt_whitenoise">💨 Pink/White Noise</option>
+                        <option value="binaural_alpha" data-i18n="soundscape_opt_binaural_alpha">🧘 Alpha 10Hz (Flow State)</option>
+                        <option value="binaural_beta" data-i18n="soundscape_opt_binaural_beta">🧠 Beta 18Hz (Analytical Focus)</option>
+                        <option value="binaural_gamma" data-i18n="soundscape_opt_binaural_gamma">⚡ Gamma 40Hz (Peak Cognition)</option>
+                      </select>
+                      <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
+                    </div>
+                    <div class="soundscape-volume-row">
+                      <span class="volume-icon">🔈</span>
+                      <input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume">
+                      <span id="txtSoundscapeVolume" class="volume-num">50%</span>
+                    </div>
+                  </div>
+                  <div class="focus-chime-selector-row">
+                    <span class="chime-label" data-i18n="focus_completion_chime">🔔 Completion Chime:</span>
+                    <select id="selectFocusChimeTone" class="styled-select chime-select" aria-label="Completion Chime Tone">
+                      <option value="solfeggio528" selected data-i18n="chime_opt_solfeggio">Solfeggio Harmonic (528Hz / 660Hz)</option>
+                      <option value="tibetan" data-i18n="chime_opt_tibetan">Tibetan Singing Bowl (432Hz)</option>
+                      <option value="bell" data-i18n="chime_opt_bell">Digital Bell Synthesizer</option>
+                      <option value="gong" data-i18n="chime_opt_gong">Zen Temple Gong</option>
                     </select>
-                    <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
-                  </div>
-                  <div class="soundscape-volume-row">
-                    <span class="volume-icon">🔈</span>
-                    <input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume">
-                    <span id="txtSoundscapeVolume" class="volume-num">50%</span>
+                    <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone" data-i18n="btn_preview_chime">▶ Test</button>
                   </div>
                 </div>
-
-                <!-- Acoustic Chime Selector with Preview Button (Feature 7) -->
-                <div class="focus-chime-selector-row">
-                  <span class="chime-label" data-i18n="focus_completion_chime">🔔 Completion Chime:</span>
-                  <select id="selectFocusChimeTone" class="styled-select chime-select" aria-label="Completion Chime Tone">
-                    <option value="solfeggio528" selected data-i18n="chime_opt_solfeggio">Solfeggio Harmonic (528Hz / 660Hz)</option>
-                    <option value="tibetan" data-i18n="chime_opt_tibetan">Tibetan Singing Bowl (432Hz)</option>
-                    <option value="bell" data-i18n="chime_opt_bell">Digital Bell Synthesizer</option>
-                    <option value="gong" data-i18n="chime_opt_gong">Zen Temple Gong</option>
-                  </select>
-                  <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone" data-i18n="btn_preview_chime">▶ Test</button>
-                </div>
-
-                <!-- Feature Toggles (Auto-pause media, Chime, Strict Shield Feature 6) -->
-                <div class="dash-focus-toggles-container">
-                  <label class="dash-focus-toggle-row" for="toggleFocusAutoPauseMedia">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_autopause">Auto-pause Media</span>
-                      <span class="toggle-desc" data-i18n="toggle_focus_autopause_desc">Auto-pause media during focus</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>
-                  </label>
-                  <label class="dash-focus-toggle-row" for="toggleFocusChime">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_chime">Sound Chime</span>
-                      <span class="toggle-desc" data-i18n="toggle_focus_chime_desc">Sound chime on cycle completion</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>
-                  </label>
-                  <label class="dash-focus-toggle-row" for="toggleFocusDistractionShield">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_shield">🛡️ Strict Shield</span>
-                      <span class="toggle-desc" data-i18n="toggle_focus_shield_desc">Nudge and shield on distracting domains during focus</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">
-                  </label>
-
-                  <!-- Feature 1: Focus Integrity Score & Distraction Counter -->
-                  <div class="dash-focus-toggle-row focus-integrity-row focus-integrity-card">
-                    <label class="toggle-text-group" for="toggleFocusIntegrityScore">
-                      <span class="toggle-title" data-i18n="lbl_focus_integrity">Focus Integrity Score</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_integrity">Live attention score and distraction tally</span>
-                    </label>
-                    <div class="focus-integrity-meta-group">
-                      <span id="badgeFocusIntegrityScore" class="badge-integrity-score">100%</span>
-                      <span id="cntFocusDistractions" class="badge-distraction-counter" title="Distraction tab switches count">0</span>
-                      <input type="checkbox" id="toggleFocusIntegrityScore" class="styled-checkbox">
+                <!-- Bottom Row -->
+                <div class="controls-full-span-group">
+                  <div class="extended-toggles-divider"></div>
+                  <div class="dash-advanced-toggles-grid">
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_chime">Sound Chime</span>
+                        <span class="toggle-desc" data-i18n="toggle_focus_chime_desc">Sound chime on cycle completion</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusChime">
+                        <input type="checkbox" id="toggleFocusChime" role="switch" class="switch-input" aria-label="Sound Chime on cycle completion" checked>
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_autorestart_break">Auto-Restart Breaks</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_autorestart_break">Automatically trigger next interval</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusAutoRestartBreak">
+                        <input type="checkbox" id="toggleFocusAutoRestartBreak" role="switch" class="switch-input" aria-label="Auto-Restart Breaks">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_ticking">Acoustic Clock Rhythm</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_ticking">Gentle synthesized clock tick pacing</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusTicking">
+                        <input type="checkbox" id="toggleFocusTicking" role="switch" class="switch-input" aria-label="Acoustic Clock Rhythm">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_ambient_lighting">Ambient Accent Glow</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_ambient_lighting">Sync glass border glow with timer</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusAmbientLighting">
+                        <input type="checkbox" id="toggleFocusAmbientLighting" role="switch" class="switch-input" aria-label="Ambient Accent Glow">
+                        <span class="slider-round"></span>
+                      </label>
                     </div>
                   </div>
-
-                  <!-- Feature 2: Auto-Mute Background Tabs on Focus -->
-                  <label class="dash-focus-toggle-row" for="toggleFocusAutoMuteBg">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_automute_bg">Auto-Mute Background Tabs</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_automute_bg">Mute noisy background tabs during focus</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusAutoMuteBg" class="styled-checkbox">
-                  </label>
-
-                  <!-- Feature 4: Soft-Nudge Breathe Overlay on Distracting Domains -->
-                  <label class="dash-focus-toggle-row" for="toggleFocusBreatheNudge">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_breathe_nudge">Soft-Nudge Breathe Overlay</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_breathe_nudge">12s box-breathing prompt on distracting domains</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocusBreatheNudge" class="styled-checkbox">
-                  </label>
-
-                  <!-- Feature 5: 20-20-20 Screen-Break & Posture Alert -->
-                  <label class="dash-focus-toggle-row" for="toggleFocus2020Alert">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_2020_alert">20-20-20 Screen-Break & Posture</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_2020_alert">Remind every 20m to look 20ft away for 20s and check posture</span>
-                    </span>
-                    <input type="checkbox" id="toggleFocus2020Alert" class="styled-checkbox">
-                  </label>
                 </div>
               </div>
             </div>
 
-            <!-- Pillar 1.5B: Sleep Advanced Controls Card (Part 2 - Advanced, Placed DIRECTLY UNDERNEATH Part 1) -->
-            <div id="cardSleepAdvanced" class="bento-card liquid-glass-card bento-span-6 sleep-advanced-card">
+            <div id="widgetFocusAdvancedShields" class="bento-card liquid-glass-card bento-span-6 pomodoro-advanced-card">
               <div class="card-header-row settings-card-header">
-                <span class="card-icon settings-card-icon">⚙️</span>
+                <span class="card-icon settings-card-icon">🛡️</span>
                 <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtSleepAdvancedTitle" class="card-heading settings-card-title" data-i18n="sleep_advanced_title">Sleep Advanced Controls</h3>
-                  <span id="txtSleepAdvancedDesc" class="settings-card-sub" data-i18n="sleep_advanced_desc">Custom durations, gradual fade-out, end-of-video cutoff & inactivity triggers</span>
+                  <h3 id="txtFocusShieldsTitle" class="card-heading settings-card-title" data-i18n="focus_shields_title">Smart Shields & Attention Integrity</h3>
+                  <span id="txtFocusShieldsDesc" class="settings-card-sub" data-i18n="focus_shields_desc">Attention scoring, media shielding, breathing nudges & ergonomics</span>
                 </div>
               </div>
+              <div class="pomodoro-advanced-body controls-2col-grid">
+                <div class="controls-col-panel">
+                  <div class="control-toggle-item focus-integrity-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="lbl_focus_integrity">Focus Integrity Score</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_integrity">Live attention score and distraction tally</span>
+                    </div>
+                    <div class="focus-integrity-meta-group">
+                      <span id="badgeFocusIntegrityScore" class="badge-integrity-score">100%</span>
+                      <span id="cntFocusDistractions" class="badge-distraction-counter" title="Distraction tab switches count">0</span>
+                      <label class="switch-toggle" for="toggleFocusIntegrityScore">
+                        <input type="checkbox" id="toggleFocusIntegrityScore" role="switch" class="switch-input" aria-label="Focus Integrity Score">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_autopause">Auto-pause Media</span>
+                      <span class="toggle-desc" data-i18n="toggle_focus_autopause_desc">Auto-pause media during focus</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleFocusAutoPauseMedia">
+                      <input type="checkbox" id="toggleFocusAutoPauseMedia" role="switch" class="switch-input" aria-label="Auto-pause Media" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_automute_bg">Auto-Mute Background Tabs</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_automute_bg">Mute noisy background tabs during focus</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleFocusAutoMuteBg">
+                      <input type="checkbox" id="toggleFocusAutoMuteBg" role="switch" class="switch-input" aria-label="Auto-Mute Background Tabs">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="controls-col-panel">
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_shield">🛡️ Strict Shield</span>
+                      <span class="toggle-desc" data-i18n="toggle_focus_shield_desc">Nudge and shield on distracting domains during focus</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleFocusDistractionShield">
+                      <input type="checkbox" id="toggleFocusDistractionShield" role="switch" class="switch-input" aria-label="Strict Shield">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_breathe_nudge">Soft-Nudge Breathe Overlay</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_breathe_nudge">12s box-breathing prompt on distracting domains</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleFocusBreatheNudge">
+                      <input type="checkbox" id="toggleFocusBreatheNudge" role="switch" class="switch-input" aria-label="Soft-Nudge Breathe Overlay">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_focus_2020_alert">20-20-20 Screen-Break & Posture</span>
+                      <span class="toggle-desc" data-i18n="desc_focus_2020_alert">Remind every 20m to look 20ft away for 20s and check posture</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleFocus2020Alert">
+                      <input type="checkbox" id="toggleFocus2020Alert" role="switch" class="switch-input" aria-label="20-20-20 Screen-Break & Posture">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="controls-full-span-group">
+                  <div class="extended-toggles-divider"></div>
+                  <div class="dash-advanced-toggles-grid">
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_hard_blockade">Hard Domain Blockade</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_hard_blockade">Immediately intercept blacklisted tabs</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusHardBlockade">
+                        <input type="checkbox" id="toggleFocusHardBlockade" role="switch" class="switch-input" aria-label="Hard Domain Blockade">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_dnd_notifications">DND Notification Silencer</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_dnd_notifications">Suppress desktop notifications during focus</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusDndNotifications">
+                        <input type="checkbox" id="toggleFocusDndNotifications" role="switch" class="switch-input" aria-label="DND Notification Silencer">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_tab_freeze">Tab Memory Discard</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_tab_freeze">Freeze background tab execution</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusTabFreeze">
+                        <input type="checkbox" id="toggleFocusTabFreeze" role="switch" class="switch-input" aria-label="Tab Memory Discard">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              <div class="sleep-advanced-body">
-                <!-- Feature 6 (Sleep): 20m Power-Nap Mode Action Banner -->
-                <div class="sleep-power-nap-banner">
+            <!-- Pillar 1.5B: Sleep Advanced Cards Split -->
+            <div id="cardSleepAdvanced" class="bento-card liquid-glass-card bento-span-6 sleep-advanced-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">🌙</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtSleepAdvancedTitle" class="card-heading settings-card-title" data-i18n="sleep_advanced_title">Bedtime Acoustics & Power-Nap Engine</h3>
+                  <span id="txtSleepAdvancedDesc" class="settings-card-sub" data-i18n="sleep_advanced_desc">Restorative power-naps, delta soundscapes & gentle volume fade</span>
+                </div>
+              </div>
+              <div class="sleep-advanced-body controls-2col-grid">
+                <div class="sleep-power-nap-banner grid-col-span-full">
                   <div class="power-nap-info">
                     <span class="power-nap-title" data-i18n="btn_sleep_power_nap">⚡ 20m Power-Nap Mode</span>
                     <span class="power-nap-desc" data-i18n="desc_sleep_power_nap">1-click restorative 20m nap with delta rain and gentle wake</span>
                   </div>
                   <button type="button" id="btnSleepPowerNapMode" class="btn-power-nap" data-i18n="btn_start_nap">Start Nap</button>
                 </div>
-
-                <!-- Custom Duration & Quick Extenders Row -->
-                <div class="sleep-advanced-custom-extender-row">
-                  <div class="dash-sleep-custom-input-row">
-                    <label for="inputDashSleepCustomMinutes" class="dash-sleep-section-label" data-i18n="lbl_custom_duration">Custom Duration</label>
-                    <div class="dash-sleep-custom-input-wrap">
-                      <input type="number" id="inputDashSleepCustomMinutes" class="dash-sleep-custom-input" min="1" max="1440" placeholder="Min (1-1440)" />
-                      <button type="button" id="btnSetDashSleepCustom" class="btn-dash-sleep-set-custom" data-i18n="btn_set">Set</button>
+                <div class="controls-col-panel">
+                  <div class="sleep-advanced-custom-extender-row">
+                    <div class="dash-sleep-custom-input-row">
+                      <label for="inputDashSleepCustomMinutes" class="dash-sleep-section-label" data-i18n="lbl_custom_duration">Custom Duration</label>
+                      <div class="dash-sleep-custom-input-wrap">
+                        <input type="number" id="inputDashSleepCustomMinutes" class="dash-sleep-custom-input" min="1" max="1440" placeholder="Min (1-1440)">
+                        <button type="button" id="btnSetDashSleepCustom" class="btn-dash-sleep-set-custom" data-i18n="btn_set">Set</button>
+                      </div>
                     </div>
-                  </div>
-                  <div class="dash-sleep-extender-group">
-                    <span class="dash-sleep-section-label" data-i18n="lbl_extend_time">Extend Time</span>
-                    <div class="dash-sleep-extender-buttons">
-                      <button type="button" id="btnDashSleepExtend5" class="dash-sleep-extender-btn" data-add="5">+5m</button>
-                      <button type="button" id="btnDashSleepExtend15" class="dash-sleep-extender-btn" data-add="15">+15m</button>
+                    <div class="dash-sleep-extender-group">
+                      <span class="dash-sleep-section-label" data-i18n="lbl_extend_time">Extend Time</span>
+                      <div class="dash-sleep-extender-buttons">
+                        <button type="button" id="btnDashSleepExtend5" class="dash-sleep-extender-btn" data-add="5">+5m</button>
+                        <button type="button" id="btnDashSleepExtend15" class="dash-sleep-extender-btn" data-add="15">+15m</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Feature 2 (Sleep): Sleep Aid Soundscapes Panel -->
-                <div class="sleep-soundscape-panel">
-                  <div class="soundscape-header">
-                    <span class="soundscape-title" data-i18n="lbl_sleep_aid_soundscapes">🌙 Sleep Aid Soundscapes</span>
-                    <select id="selectSleepAidSoundscape" class="styled-select soundscape-select" aria-label="Sleep Aid Soundscape Selector">
-                      <option value="none" selected data-i18n="sleep_soundscape_none">Off (Silent)</option>
-                      <option value="pink_noise" data-i18n="sleep_soundscape_pink">🌸 Deep Pink Noise</option>
-                      <option value="midnight_ocean" data-i18n="sleep_soundscape_ocean">🌊 Midnight Ocean</option>
-                      <option value="delta_rain" data-i18n="sleep_soundscape_rain">🌧️ Delta Rain (2.5Hz)</option>
-                    </select>
-                    <button type="button" id="btnToggleSleepSoundscape" class="btn-soundscape-play" title="Play/Pause Sleep Soundscape">▶</button>
+                <div class="controls-col-panel">
+                  <div class="sleep-soundscape-panel">
+                    <div class="soundscape-header">
+                      <span class="soundscape-title" data-i18n="lbl_sleep_aid_soundscapes">🌙 Sleep Aid Soundscapes</span>
+                      <select id="selectSleepAidSoundscape" class="styled-select soundscape-select" aria-label="Sleep Aid Soundscape Selector">
+                        <option value="none" selected data-i18n="sleep_soundscape_none">Off (Silent)</option>
+                        <option value="pink_noise" data-i18n="sleep_soundscape_pink">🌸 Deep Pink Noise</option>
+                        <option value="midnight_ocean" data-i18n="sleep_soundscape_ocean">🌊 Midnight Ocean</option>
+                        <option value="delta_rain" data-i18n="sleep_soundscape_rain">🌧️ Delta Rain (2.5Hz)</option>
+                      </select>
+                      <button type="button" id="btnToggleSleepSoundscape" class="btn-soundscape-play" title="Play/Pause Sleep Soundscape">▶</button>
+                    </div>
+                    <div class="soundscape-volume-row">
+                      <span class="volume-icon">🔈</span>
+                      <input type="range" id="sliderSleepSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="40" aria-label="Sleep Soundscape Volume">
+                      <span id="txtSleepSoundscapeVolume" class="volume-num">40%</span>
+                    </div>
                   </div>
-                  <div class="soundscape-volume-row">
-                    <span class="volume-icon">🔈</span>
-                    <input type="range" id="sliderSleepSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="40" aria-label="Sleep Soundscape Volume">
-                    <span id="txtSleepSoundscapeVolume" class="volume-num">40%</span>
-                  </div>
-                </div>
-
-                <!-- Feature Toggles -->
-                <div class="dash-sleep-toggles-container">
-                  <div class="dash-sleep-toggle-row">
-                    <label class="toggle-text-group" for="toggleDashSleepFade">
+                  <div class="control-toggle-item sleep-fade-item">
+                    <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="lbl_sleep_fade">Gradual Audio Fade-out</span>
-                      <span class="toggle-desc" data-i18n="desc_sleep_fade">Smoothly lower volume 30s before cutoff to prevent sudden waking</span>
-                    </label>
+                      <span class="toggle-desc" data-i18n="desc_sleep_fade">Smoothly lower volume before cutoff</span>
+                    </div>
                     <div class="dash-sleep-row-controls">
                       <select id="selectDashSleepFadeCurve" class="dash-sleep-select-sm" aria-label="Fade Curve Duration">
                         <option value="10">10s</option>
                         <option value="30" selected>30s</option>
                         <option value="60">60s</option>
                       </select>
-                      <input type="checkbox" id="toggleDashSleepFade" class="styled-checkbox dash-sleep-switch-input" checked>
+                      <label class="switch-toggle" for="toggleDashSleepFade">
+                        <input type="checkbox" id="toggleDashSleepFade" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Gradual Audio Fade-out" checked>
+                        <span class="slider-round"></span>
+                      </label>
                     </div>
                   </div>
-                  <label class="dash-sleep-toggle-row" for="toggleDashSleepEndOfVideo">
-                    <span class="toggle-text-group">
+                </div>
+                <div class="controls-full-span-group">
+                  <div class="extended-toggles-divider"></div>
+                  <div class="dash-advanced-toggles-grid">
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_whitenoise_drift">White Noise Delta Drift</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_whitenoise_drift">Gradually decrease soundscape pitch toward deep delta frequencies</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepWhiteNoiseDrift">
+                        <input type="checkbox" id="toggleSleepWhiteNoiseDrift" role="switch" class="switch-input" aria-label="White Noise Delta Drift">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_gentle_alarm">Gentle Wake Chime</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_gentle_alarm">Play calming sunrise acoustic tones on timer expiration</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepGentleAlarm">
+                        <input type="checkbox" id="toggleSleepGentleAlarm" role="switch" class="switch-input" aria-label="Gentle Wake Chime">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_smart_prewind">Smart Pre-Bedtime Wind-Down</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_smart_prewind">Prepare acoustic aids and lower blue light 30m before bedtime</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepSmartPrewind">
+                        <input type="checkbox" id="toggleSleepSmartPrewind" role="switch" class="switch-input" aria-label="Smart Pre-Bedtime Wind-Down">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="widgetSleepAdvancedAutomation" class="bento-card liquid-glass-card bento-span-6 sleep-advanced-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">⚡</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtSleepAutomationTitle" class="card-heading settings-card-title" data-i18n="sleep_automation_title">Sleep Cutoff Sentinel & Power Automation</h3>
+                  <span id="txtSleepAutomationDesc" class="settings-card-sub" data-i18n="sleep_automation_desc">Automated playback cutoff, tab hibernation & inactivity triggers</span>
+                </div>
+              </div>
+              <div class="sleep-advanced-body controls-2col-grid">
+                <div class="controls-col-panel">
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="lbl_sleep_end_of_video">Stop at End of Video</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_end_of_video">Trigger cutoff as soon as the current playing video finishes</span>
-                    </span>
-                    <input type="checkbox" id="toggleDashSleepEndOfVideo" class="styled-checkbox dash-sleep-switch-input">
-                  </label>
-                  <div class="dash-sleep-toggle-row">
-                    <span class="toggle-title" data-i18n="lbl_inactivity_auto_sleep">Pause if idle 15m</span>
-                    <input type="checkbox" id="toggleDashSleepInactivity" class="dash-sleep-switch-input styled-checkbox" />
+                    </div>
+                    <label class="switch-toggle" for="toggleDashSleepEndOfVideo">
+                      <input type="checkbox" id="toggleDashSleepEndOfVideo" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Stop at End of Video">
+                      <span class="slider-round"></span>
+                    </label>
                   </div>
-                  <div class="dash-sleep-toggle-row">
-                    <span class="toggle-title" data-i18n="lbl_timeout_action">On Timeout Action</span>
-                    <select id="selectDashSleepTimeoutAction" class="dash-sleep-select-sm">
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_autoplay_block">Auto-Disable Video Autoplay</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_autoplay_block">Block next video autoplay during bedtime</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleSleepAutoplayBlock">
+                      <input type="checkbox" id="toggleSleepAutoplayBlock" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Auto-Disable Video Autoplay">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="lbl_inactivity_auto_sleep">Pause if idle 15m</span>
+                      <span class="toggle-desc" data-i18n="desc_inactivity_auto_sleep">Trigger sleep timer cutoff when user is idle for 15 minutes</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleDashSleepInactivity">
+                      <input type="checkbox" id="toggleDashSleepInactivity" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Pause if idle 15m">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_inactivity_cutoff">Inactivity Fast-Cutoff (5m)</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_inactivity_cutoff">Cut off media if idle for 5m during countdown</span>
+                    </div>
+                    <label class="switch-toggle" for="toggleSleepInactivityFastCutoff">
+                      <input type="checkbox" id="toggleSleepInactivityFastCutoff" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Inactivity Fast-Cutoff (5m)">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="controls-col-panel">
+                  <div class="control-select-item">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="lbl_timeout_action">On Timeout Action</span>
+                      <span class="toggle-desc" data-i18n="desc_timeout_action">Action to dispatch when sleep countdown reaches zero</span>
+                    </div>
+                    <select id="selectDashSleepTimeoutAction" class="styled-select dash-sleep-select-sm" aria-label="On Timeout Action">
                       <option value="pause" selected data-i18n="opt_timeout_pause">Pause Media Only</option>
                       <option value="mute" data-i18n="opt_timeout_mute">Mute Tab</option>
                       <option value="close_tab" data-i18n="opt_timeout_close">Pause & Close Tab</option>
                     </select>
                   </div>
-
-                  <!-- NEW Feature 1 (Sleep): Auto-Disable Video Autoplay -->
-                  <label class="dash-sleep-toggle-row" for="toggleSleepAutoplayBlock">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_sleep_autoplay_block">Auto-Disable Video Autoplay</span>
-                      <span class="toggle-desc" data-i18n="desc_sleep_autoplay_block">Block next video autoplay during bedtime</span>
-                    </span>
-                    <input type="checkbox" id="toggleSleepAutoplayBlock" class="styled-checkbox dash-sleep-switch-input">
-                  </label>
-
-                  <!-- NEW Feature 3 (Sleep): Inactivity Fast-Cutoff (5m) -->
-                  <label class="dash-sleep-toggle-row" for="toggleSleepInactivityFastCutoff">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_sleep_inactivity_cutoff">Inactivity Fast-Cutoff (5m)</span>
-                      <span class="toggle-desc" data-i18n="desc_sleep_inactivity_cutoff">Cut off media if idle for 5m during countdown</span>
-                    </span>
-                    <input type="checkbox" id="toggleSleepInactivityFastCutoff" class="styled-checkbox dash-sleep-switch-input">
-                  </label>
-
-                  <!-- NEW Feature 4 (Sleep): Progressive Screen Dimmer Nudge -->
-                  <label class="dash-sleep-toggle-row" for="toggleSleepScreenDimmer">
-                    <span class="toggle-text-group">
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_screen_dimmer">Progressive Screen Dimmer</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_screen_dimmer">Circadian screen dimming during final countdown</span>
-                    </span>
-                    <input type="checkbox" id="toggleSleepScreenDimmer" class="styled-checkbox dash-sleep-switch-input">
-                  </label>
-
-                  <!-- NEW Feature 5 (Sleep): Memory-Saver Tab Hibernation -->
-                  <label class="dash-sleep-toggle-row" for="toggleSleepTabHibernate">
-                    <span class="toggle-text-group">
+                    </div>
+                    <label class="switch-toggle" for="toggleSleepScreenDimmer">
+                      <input type="checkbox" id="toggleSleepScreenDimmer" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Progressive Screen Dimmer">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                  <div class="control-toggle-item">
+                    <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_tab_hibernate">Memory-Saver Tab Hibernation</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_tab_hibernate">Suspend idle tabs on timeout to quiet cooling fans</span>
-                    </span>
-                    <input type="checkbox" id="toggleSleepTabHibernate" class="styled-checkbox dash-sleep-switch-input">
-                  </label>
+                    </div>
+                    <label class="switch-toggle" for="toggleSleepTabHibernate">
+                      <input type="checkbox" id="toggleSleepTabHibernate" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Memory-Saver Tab Hibernation">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="controls-full-span-group">
+                  <div class="extended-toggles-divider"></div>
+                  <div class="dash-advanced-toggles-grid">
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_close_all_media_tabs">Close All Media Tabs</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_close_all_media_tabs">Safely close all inactive media tabs across browser windows</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepCloseAllMediaTabs">
+                        <input type="checkbox" id="toggleSleepCloseAllMediaTabs" role="switch" class="switch-input" aria-label="Close All Media Tabs">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_darken_display">OLED Full Blackout</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_darken_display">Render pure 100% black overlay on cutoff to eliminate night glow</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepDarkenDisplay">
+                        <input type="checkbox" id="toggleSleepDarkenDisplay" role="switch" class="switch-input" aria-label="OLED Full Blackout">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                    <div class="control-toggle-item">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_sleep_system_inactivity_sync">System Inactivity Sync</span>
+                        <span class="toggle-desc" data-i18n="desc_sleep_system_inactivity_sync">Bridge OS-level sleep state to sync countdown timer</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleSleepSystemInactivitySync">
+                        <input type="checkbox" id="toggleSleepSystemInactivitySync" role="switch" class="switch-input" aria-label="System Inactivity Sync">
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
