@@ -6598,8 +6598,8 @@ function renderDonutChart(items, totalSeconds, subtab) {
 
   if (!slicesGroup || !centerTimeEl || !legendGrid) return;
 
-  slicesGroup.innerHTML = '';
-  legendGrid.innerHTML = '';
+  while (slicesGroup.firstChild) slicesGroup.removeChild(slicesGroup.firstChild);
+  while (legendGrid.firstChild) legendGrid.removeChild(legendGrid.firstChild);
 
   centerTimeEl.textContent = formatDuration(totalSeconds);
 
@@ -6618,7 +6618,11 @@ function renderDonutChart(items, totalSeconds, subtab) {
     } else if (selectedTrackingMode === 'foreground') {
       emptyMsg = t('donut_empty_foreground');
     }
-    legendGrid.innerHTML = `<span class="empty-text">${emptyMsg}</span>`;
+    while (legendGrid.firstChild) legendGrid.removeChild(legendGrid.firstChild);
+    const emptySpan = document.createElement('span');
+    emptySpan.className = 'empty-text';
+    emptySpan.textContent = emptyMsg;
+    legendGrid.appendChild(emptySpan);
     return;
   }
 
@@ -6695,11 +6699,24 @@ function renderDonutChart(items, totalSeconds, subtab) {
 
     const tag = document.createElement('div');
     tag.className = 'legend-tag';
-    tag.innerHTML = `
-      <span class="legend-color-dot" style="background: ${color}"></span>
-      <span class="legend-domain-name">${escapeHtml(slice.domain)}</span>
-      <span class="legend-pct" style="color: ${color}; font-weight: 700;">${slice.ratioPercent}%</span>
-    `;
+    
+    const dot = document.createElement('span');
+    dot.className = 'legend-color-dot';
+    dot.style.background = color;
+    tag.appendChild(dot);
+    
+    const name = document.createElement('span');
+    name.className = 'legend-domain-name';
+    name.textContent = slice.domain;
+    tag.appendChild(name);
+    
+    const pct = document.createElement('span');
+    pct.className = 'legend-pct';
+    pct.style.color = color;
+    pct.style.fontWeight = '700';
+    pct.textContent = `${slice.ratioPercent}%`;
+    tag.appendChild(pct);
+    
     legendGrid.appendChild(tag);
   });
 }

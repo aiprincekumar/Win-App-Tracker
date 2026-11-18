@@ -270,10 +270,10 @@ console.log('\nBattery 6: Popup DOM Structure Integrity');
     assert.ok(popupHtml.includes(`id="${id}"`), `popup.html must contain id="${id}"`);
   }
 
-  // Verify #cardPopupFocusTimer is inside viewTrackingPane
-  const panePos = popupHtml.indexOf('id="viewTrackingPane"');
+  // Verify #cardPopupFocusTimer is inside viewFocusPane
+  const panePos = popupHtml.indexOf('id="viewFocusPane"');
   const cardPos = popupHtml.indexOf('id="cardPopupFocusTimer"');
-  assert.ok(panePos !== -1 && cardPos > panePos, '#cardPopupFocusTimer must reside inside viewTrackingPane');
+  assert.ok(panePos !== -1 && cardPos > panePos, '#cardPopupFocusTimer must reside inside viewFocusPane');
 
   // Verify popup.js binds and controls these elements
   assert.ok(popupJs.includes('btnPopupFocusToggle'), 'popup.js must bind btnPopupFocusToggle');

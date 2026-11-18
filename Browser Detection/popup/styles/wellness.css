@@ -438,3 +438,38 @@
   padding: 3px 6px;
   outline: none;
 }
+
+/* Focus Mode Toggle */
+.focus-section-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.focus-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.focus-toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-toggle-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.focus-toggle-sub {
+  font-size: 9.5px;
+  color: var(--text-secondary);
+}

@@ -113,7 +113,7 @@ console.log('\nTest 2: 6 Dedicated View Panes & Section Decomposition');
   const focusPaneIdx = html.indexOf('id="viewFocusPane"');
 
   assert(chartIdx > trackingPaneIdx && chartIdx < domainsPaneIdx, '.chart-section must be inside #viewTrackingPane');
-  assert((wellnessIdx > focusPaneIdx) || (wellnessIdx > trackingPaneIdx && wellnessIdx < domainsPaneIdx), '#cardFocusWellness must be inside #viewFocusPane or #viewTrackingPane');
+  assert(wellnessIdx > focusPaneIdx, '#cardFocusWellness must be inside #viewFocusPane');
 
   console.log('  ✅ All 6 view panes exist with role="tabpanel"');
   console.log('  ✅ #viewToolsPane successfully houses #cardSmartAutomations & micro actions');

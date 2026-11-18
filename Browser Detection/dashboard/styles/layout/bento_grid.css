@@ -544,3 +544,10 @@
 .hidden {
   display: none !important;
 }
+
+
+@media (max-width: 768px) {
+  .bento-grid-container {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+}

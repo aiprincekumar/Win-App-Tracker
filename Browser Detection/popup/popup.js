@@ -62,6 +62,7 @@ const _HeaderBadges = (typeof globalThis !== 'undefined' && globalThis.HeaderBad
 const _DataHubService = (typeof globalThis !== 'undefined' && globalThis.DataHubService) ? globalThis.DataHubService : _safeRequire('./src/popup/services/data_hub_service.js', '../src/popup/services/data_hub_service.js');
 const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
 const _PopupFeatureManager = (typeof globalThis !== 'undefined' && globalThis.PopupFeatureManager) ? globalThis.PopupFeatureManager : _safeRequire('./src/popup/features/popup_feature_manager.js', '../src/popup/features/popup_feature_manager.js');
+const _FocusModeToggle = (typeof globalThis !== 'undefined' && globalThis.FocusModeToggle) ? globalThis.FocusModeToggle : _safeRequire('./src/popup/features/focus_mode_toggle.js', '../src/popup/features/focus_mode_toggle.js');
 
 if (typeof window !== 'undefined') {
   window.__SentinelPopupModules = {
@@ -75,7 +76,8 @@ if (typeof window !== 'undefined') {
     HeaderBadges: _HeaderBadges,
     DataHubService: _DataHubService,
     FeatureRegistry: _FeatureRegistry,
-    PopupFeatureManager: _PopupFeatureManager
+    PopupFeatureManager: _PopupFeatureManager,
+    FocusModeToggle: _FocusModeToggle
   };
 }
 
@@ -4752,6 +4754,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize popup modular features
   try {
+    _FocusModeToggle.init();
     if (_PopupFeatureManager && typeof _PopupFeatureManager.initPopupFeatures === 'function') {
       _PopupFeatureManager.initPopupFeatures({ browserAPI: browserAPI, state: _PopupState });
     }
@@ -5036,6 +5039,7 @@ if (typeof window !== 'undefined') {
     HeaderBadges: _HeaderBadges,
     DataHubService: _DataHubService,
     FeatureRegistry: _FeatureRegistry,
-    PopupFeatureManager: _PopupFeatureManager
+    PopupFeatureManager: _PopupFeatureManager,
+    FocusModeToggle: _FocusModeToggle
   };
 }

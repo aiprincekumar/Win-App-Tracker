@@ -113,10 +113,12 @@ console.log('\nBattery 4: Popup Focus Time Mini-Controller');
   assert(popupHtml.includes('id="btnPopupFocusToggle"'), 'Must contain #btnPopupFocusToggle');
   assert(popupHtml.includes('id="btnPopupFocusReset"'), 'Must contain #btnPopupFocusReset');
 
-  // Verify it is within viewTrackingPane / cardFocusWellness
-  const panePos = popupHtml.indexOf('id="viewTrackingPane"');
-  const cardPos = popupHtml.indexOf('id="cardPopupFocusTimer"');
-  assert(cardPos > panePos, '#cardPopupFocusTimer must be inside viewTrackingPane');
+  // Verify it is within viewFocusPane / cardFocusWellness / cardPopupFocusTimer
+  const panePos = popupHtml.indexOf('id="viewFocusPane"');
+  const cardPos1 = popupHtml.indexOf('id="cardPopupFocusTimer"');
+  const cardPos2 = popupHtml.indexOf('id="cardFocusWellness"');
+  assert(cardPos1 > panePos, '#cardPopupFocusTimer must be inside viewFocusPane');
+  assert(cardPos2 > panePos, '#cardFocusWellness must be inside viewFocusPane');
 
   console.log('  ✅ Popup Focus Mini-Timer Controller markup verified');
 }

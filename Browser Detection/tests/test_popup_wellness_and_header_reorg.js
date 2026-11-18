@@ -107,6 +107,9 @@ console.log('\nBattery 2: Wellness Sub-Tab Structure (Focus + Sleep)');
 
   // #viewFocusPane structure
   assert(html.includes('id="cardFocusPlaceholder"'), '#viewFocusPane must contain #cardFocusPlaceholder');
+  const wellnessIdx = html.indexOf('id="cardFocusWellness"');
+  const focusPaneIdx = html.indexOf('id="viewFocusPane"');
+  assert(wellnessIdx > focusPaneIdx, '#cardFocusWellness must be inside #viewFocusPane');
   assert(html.includes('id="focusPlaceholderTitle"'), '#cardFocusPlaceholder must contain #focusPlaceholderTitle');
   assert(html.includes('id="focusPlaceholderDesc"'), '#cardFocusPlaceholder must contain #focusPlaceholderDesc');
   assert(html.includes('id="focusStatusText"'), '#cardFocusPlaceholder must contain #focusStatusText');
