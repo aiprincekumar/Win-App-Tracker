@@ -1758,7 +1758,7 @@
         else dot.classList.remove('active');
       }
       if (text) {
-        text.textContent = isVisualizerPlaying ? 'LIVE' : 'STANDBY';
+        text.textContent = isVisualizerPlaying ? 'LIVE' : 'IDLE';
       }
     }
     if (isVisualizerPlaying) {

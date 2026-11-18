@@ -531,6 +531,22 @@
       }
     }
 
+    function setFocusDuration(sec) {
+      const s = Math.max(60, Math.floor(sec || 1500));
+      state.focusDuration = s;
+      if (state.status === 'idle') {
+        state.remainingSeconds = s;
+      }
+      return getState();
+    }
+
+    function extendRemaining(sec) {
+      const add = Math.floor(sec || 0);
+      state.remainingSeconds = Math.max(0, state.remainingSeconds + add);
+      state.focusDuration = Math.max(state.focusDuration, state.remainingSeconds);
+      return getState();
+    }
+
     return {
       getState,
       start,
@@ -539,7 +555,10 @@
       tick,
       destroy,
       formatTime,
-      playSyntheticChime
+      playSyntheticChime,
+      setFocusDuration,
+      extendRemaining,
+      _state: state
     };
   }
 

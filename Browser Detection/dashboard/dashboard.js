@@ -456,6 +456,17 @@ const DASHBOARD_I18N = {
     opt_inact_15m: '15 Minutes',
     opt_inact_30m: '30 Minutes',
     opt_inact_60m: '60 Minutes',
+    lbl_custom_duration: 'Custom Duration',
+    btn_set: 'Set',
+    lbl_inactivity_auto_sleep: 'Pause if idle 15m',
+    lbl_timeout_action: 'On Timeout Action',
+    opt_timeout_pause: 'Pause Media Only',
+    opt_timeout_mute: 'Mute Tab',
+    opt_timeout_close: 'Pause & Close Tab',
+    lbl_sleep_end_of_video: 'Stop at End of Video',
+    desc_sleep_end_of_video: 'Trigger cutoff as soon as the current playing video finishes',
+    toast_sleep_paused: 'Sleep timer paused',
+    toast_sleep_resumed: 'Sleep timer resumed',
     
     // Export
     export_card_heading: 'Export Data',
@@ -904,6 +915,17 @@ const DASHBOARD_I18N = {
     opt_inact_15m: '15 मिनट',
     opt_inact_30m: '30 मिनट',
     opt_inact_60m: '60 मिनट',
+    lbl_custom_duration: 'कस्टम अवधि',
+    btn_set: 'सेट करें',
+    lbl_inactivity_auto_sleep: '15 मिनट निष्क्रिय रहने पर रोकें',
+    lbl_timeout_action: 'समय समाप्ति पर कार्रवाई',
+    opt_timeout_pause: 'केवल मीडिया रोकें',
+    opt_timeout_mute: 'टैब म्यूट करें',
+    opt_timeout_close: 'रोकें और टैब बंद करें',
+    lbl_sleep_end_of_video: 'वीडियो समाप्त होने पर रोकें',
+    desc_sleep_end_of_video: 'चल रहा वीडियो समाप्त होते ही मीडिया प्लेबैक रोकें',
+    toast_sleep_paused: 'स्लीप टाइमर रोक दिया गया',
+    toast_sleep_resumed: 'स्लीप टाइमर फिर चालू किया गया',
     
     // Export
     export_card_heading: 'डेटा निर्यात',
@@ -3259,6 +3281,28 @@ function applyDashboardLanguage(lang) {
   setTitle('btnLangToggle', 'lang_btn_title');
   updateThemeToggleUI(currentTheme);
 
+  // Translate all DOM elements annotated with data-i18n
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-i18n');
+      if (key) {
+        const translated = t(key);
+        if (translated && translated !== key) {
+          el.textContent = translated;
+        }
+      }
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+      const key = el.getAttribute('data-i18n-title');
+      if (key) {
+        const translated = t(key);
+        if (translated && translated !== key) {
+          el.title = translated;
+        }
+      }
+    });
+  }
+
   // Sidebar navigation
   setTxt('navTrackingText', 'nav_tracking');
   setTxt('navMediaText', 'nav_media');
@@ -3488,6 +3532,12 @@ function applyDashboardLanguage(lang) {
     '15': 'opt_inact_15m',
     '30': 'opt_inact_30m',
     '60': 'opt_inact_60m'
+  });
+
+  updateSelectOptions('selectDashSleepTimeoutAction', {
+    'pause': 'opt_timeout_pause',
+    'mute': 'opt_timeout_mute',
+    'close_tab': 'opt_timeout_close'
   });
 
   updateSelectOptions('tableSortSelect', {
@@ -3979,6 +4029,38 @@ async function removeDomainBudget(domain) {
   }
 }
 
+function updateFocusRadialDial(remainingSec, totalSec, mode, status) {
+  const dialProgressEl = document.getElementById('dashFocusDialProgress');
+  if (!dialProgressEl) return;
+  const CIRCUMFERENCE = 339.292;
+  const ratio = (totalSec && totalSec > 0) ? (remainingSec / totalSec) : 0;
+  const offset = CIRCUMFERENCE * (1 - ratio);
+  dialProgressEl.style.strokeDashoffset = Math.max(0, Math.min(CIRCUMFERENCE, offset)).toFixed(3);
+
+  dialProgressEl.classList.remove('tier-focus', 'tier-break', 'tier-paused');
+  if (status === 'paused') {
+    dialProgressEl.classList.add('tier-paused');
+  } else if (mode === 'break') {
+    dialProgressEl.classList.add('tier-break');
+  } else {
+    dialProgressEl.classList.add('tier-focus');
+  }
+}
+
+function updateFocusFinishTime(remainingSec, status) {
+  const finishEl = document.getElementById('pomodoroFinishTime');
+  if (!finishEl) return;
+  if (status === 'running' && remainingSec > 0) {
+    const targetDate = new Date(Date.now() + remainingSec * 1000);
+    const timeStr = targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    finishEl.textContent = `Target: ${timeStr}`;
+  } else if (status === 'paused') {
+    finishEl.textContent = 'Paused';
+  } else {
+    finishEl.textContent = 'Target: --:--';
+  }
+}
+
 function initPomodoroWidget() {
   if (pomodoroController) return;
 
@@ -3989,6 +4071,9 @@ function initPomodoroWidget() {
     const progressBar = document.getElementById('pomodoroProgressBar');
     const modeBadge = document.getElementById('pomodoroModeBadge');
     const startBtn = document.getElementById('btnStartPomodoro');
+    const toggleIcon = document.getElementById('btnFocusToggleIcon');
+    const toggleText = document.getElementById('btnFocusToggleText');
+    const activeDot = document.getElementById('dashFocusActiveDot');
 
     if (pillClock && state.formattedTime) {
       pillClock.textContent = state.formattedTime;
@@ -3998,7 +4083,7 @@ function initPomodoroWidget() {
       pillBadge.className = state.mode === 'focus' ? 'badge-focus-micro' : 'badge-break-micro';
     }
     if (progressBar && state.remainingSeconds !== undefined) {
-      const totalSec = state.mode === 'focus' ? (25 * 60) : (5 * 60);
+      const totalSec = state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60));
       const pct = Math.max(0, Math.min(100, (state.remainingSeconds / totalSec) * 100));
       progressBar.style.width = pct + '%';
     }
@@ -4008,7 +4093,26 @@ function initPomodoroWidget() {
     }
     if (modeBadge) {
       modeBadge.className = state.mode === 'focus' ? 'badge-focus' : 'badge-break';
-      modeBadge.textContent = state.mode === 'focus' ? t('pomodoro_focus_badge') : t('pomodoro_break_badge');
+      const badgeMin = Math.round((state.focusDuration || 1500) / 60);
+      modeBadge.textContent = state.mode === 'focus' ? `Focus (${badgeMin}m)` : t('pomodoro_break_badge');
+    }
+
+    // Radial Dial math: C = 339.292, offset = C * (1 - ratio)
+    const totalSec = state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60));
+    updateFocusRadialDial(state.remainingSeconds, totalSec, state.mode, state.status);
+    updateFocusFinishTime(state.remainingSeconds, state.status);
+
+    // Active status indicator dot
+    if (activeDot) {
+      if (state.status === 'running') {
+        activeDot.classList.remove('hidden');
+        activeDot.className = 'status-indicator-dot online';
+      } else if (state.status === 'paused') {
+        activeDot.classList.remove('hidden');
+        activeDot.className = 'status-indicator-dot warn';
+      } else {
+        activeDot.classList.add('hidden');
+      }
     }
 
     const microClock = document.getElementById('wellbeingMicroClock');
@@ -4025,7 +4129,20 @@ function initPomodoroWidget() {
     if (microDot) {
       microDot.className = 'hud-dot ' + (state.status === 'running' ? (state.mode === 'focus' ? 'online' : 'warn') : 'idle');
     }
-    if (startBtn) {
+
+    if (toggleIcon && toggleText) {
+      if (state.status === 'running') {
+        toggleIcon.textContent = '⏸️';
+        toggleText.textContent = 'Pause';
+      } else if (state.status === 'paused') {
+        toggleIcon.textContent = '▶️';
+        toggleText.textContent = 'Resume';
+      } else {
+        toggleIcon.textContent = '▶️';
+        toggleText.textContent = 'Start Focus';
+      }
+      if (startBtn) startBtn.disabled = false;
+    } else if (startBtn) {
       if (state.status === 'running') {
         startBtn.textContent = '⏳ Running';
         startBtn.disabled = true;
@@ -4062,12 +4179,14 @@ function initPomodoroWidget() {
     });
   } else {
     pomodoroController = {
-      getState: () => ({ mode: 'focus', status: 'idle', remainingSeconds: 25 * 60, formattedTime: '25:00' }),
+      getState: () => ({ mode: 'focus', status: 'idle', remainingSeconds: 25 * 60, formattedTime: '25:00', focusDuration: 25 * 60, breakDuration: 5 * 60 }),
       start: () => {},
       pause: () => {},
       reset: () => {},
       tick: () => {},
-      playSyntheticChime: () => false
+      playSyntheticChime: () => false,
+      setFocusDuration: () => {},
+      extendRemaining: () => {}
     };
   }
 
@@ -4077,11 +4196,16 @@ function initPomodoroWidget() {
 
   if (btnStart) {
     btnStart.addEventListener('click', () => {
-      pomodoroController.start({
-        onTick: updateUI,
-        onBreak: onBreakTrigger,
-        onFocus: onFocusTrigger
-      });
+      const curState = pomodoroController.getState();
+      if (curState.status === 'running') {
+        pomodoroController.pause({ onTick: updateUI });
+      } else {
+        pomodoroController.start({
+          onTick: updateUI,
+          onBreak: onBreakTrigger,
+          onFocus: onFocusTrigger
+        });
+      }
       updateUI(pomodoroController.getState());
     });
   }
@@ -4095,6 +4219,53 @@ function initPomodoroWidget() {
     btnReset.addEventListener('click', () => {
       pomodoroController.reset({ onTick: updateUI });
       updateUI(pomodoroController.getState());
+      updateFocusRadialDial(25 * 60, 25 * 60, 'focus', 'idle');
+    });
+  }
+
+  // Quick Duration Presets
+  const presetBtns = document.querySelectorAll('.dash-focus-preset-btn');
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mins = parseInt(btn.getAttribute('data-minutes'), 10) || 25;
+      presetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (typeof pomodoroController.setFocusDuration === 'function') {
+        pomodoroController.setFocusDuration(mins * 60);
+      }
+      pomodoroController.reset({ onTick: updateUI });
+      updateUI(pomodoroController.getState());
+    });
+  });
+
+  // Quick Extenders (+5m, +15m)
+  const btnExtend5 = document.getElementById('btnFocusExtend5');
+  const btnExtend15 = document.getElementById('btnFocusExtend15');
+  const handleExtend = (addMin) => {
+    if (typeof pomodoroController.extendRemaining === 'function') {
+      pomodoroController.extendRemaining(addMin * 60);
+    }
+    updateUI(pomodoroController.getState());
+  };
+  if (btnExtend5) btnExtend5.addEventListener('click', () => handleExtend(5));
+  if (btnExtend15) btnExtend15.addEventListener('click', () => handleExtend(15));
+
+  // Feature Toggles (Auto-Pause Media & Chime)
+  const toggleAutoPause = document.getElementById('toggleFocusAutoPauseMedia');
+  const toggleChime = document.getElementById('toggleFocusChime');
+  if (toggleAutoPause) {
+    toggleAutoPause.addEventListener('change', () => {
+      if (pomodoroController._state) {
+        pomodoroController._state.autoPauseMedia = toggleAutoPause.checked;
+      }
+    });
+  }
+  if (toggleChime) {
+    toggleChime.addEventListener('change', () => {
+      if (pomodoroController._state) {
+        pomodoroController._state.soundChime = toggleChime.checked;
+      }
     });
   }
 }
@@ -4761,6 +4932,18 @@ function renderTimeTrackingTab(data) {
   } else {
     if (elTopDom) elTopDom.textContent = t('no_data');
     if (elTopTime) elTopTime.textContent = '0s';
+  }
+
+  // 1.1 Focus Time Analytics Metric Card (Metric Card 6)
+  const elFocusTime = document.getElementById('trackMetricFocusTime');
+  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
+  if (elFocusTime) {
+    const focusSec = (data && data.focusTimeSec) ? data.focusTimeSec : 0;
+    elFocusTime.textContent = (focusSec > 0) ? formatDuration(focusSec) : '0h 00m';
+  }
+  if (elFocusSessions) {
+    const sessions = (data && data.focusSessionsCount) ? data.focusSessionsCount : 0;
+    elFocusSessions.textContent = `${sessions} completed sessions today`;
   }
 
   // 2. SVG Donut Chart
@@ -9297,8 +9480,8 @@ function renderDashSleepTimer(timer) {
   const isFading = timer.state === 'FADING';
 
   const remainingMs = isPaused
-    ? (timer.remainingMs || Math.max(0, timer.targetTime - (timer.pausedAt || now)))
-    : Math.max(0, timer.targetTime - now);
+    ? (typeof timer.remainingMs === 'number' ? Math.max(0, timer.remainingMs) : Math.max(0, (timer.targetTime || now) - (timer.pausedAt || now)))
+    : Math.max(0, (timer.targetTime || now) - now);
   const totalMs = timer.durationMs || (timer.durationMinutes * 60 * 1000) || 1;
 
   const totalSecs = Math.max(0, Math.ceil(remainingMs / 1000));
@@ -9318,7 +9501,7 @@ function renderDashSleepTimer(timer) {
     const m = String(d.getMinutes()).padStart(2, '0');
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
-    finishTimeEl.textContent = `Sleep at ${h}:${m} ${ampm}`;
+    finishTimeEl.textContent = isPaused ? `Paused (Sleep at ${h}:${m} ${ampm})` : `Sleep at ${h}:${m} ${ampm}`;
   }
 
   if (badgeEl) {
@@ -9332,12 +9515,15 @@ function renderDashSleepTimer(timer) {
     if (isRunning || isFading) {
       btnToggleIcon.textContent = '⏸️';
       btnToggleText.textContent = 'Pause Timer';
+      if (btnToggle) btnToggle.className = 'btn-sleep-primary';
     } else if (isPaused) {
       btnToggleIcon.textContent = '▶️';
       btnToggleText.textContent = 'Resume Timer';
+      if (btnToggle) btnToggle.className = 'btn-sleep-primary paused';
     } else {
       btnToggleIcon.textContent = '▶️';
       btnToggleText.textContent = 'Start Sleep Timer';
+      if (btnToggle) btnToggle.className = 'btn-sleep-primary';
     }
   }
 
@@ -9417,14 +9603,43 @@ function loadSleepTimerFromStorage() {
 }
 
 function syncSleepSettingsToggles(settings) {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || !settings) return;
   const toggleFade = document.getElementById('toggleDashSleepFade');
-  if (toggleFade && typeof settings.enableAudioFadeOut === 'boolean') {
-    toggleFade.checked = settings.enableAudioFadeOut;
+  if (toggleFade) {
+    if (typeof settings.enableAudioFadeOut === 'boolean') {
+      toggleFade.checked = settings.enableAudioFadeOut;
+    } else if (typeof settings.enableFadeOut === 'boolean') {
+      toggleFade.checked = settings.enableFadeOut;
+    }
   }
   const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
   if (toggleEndOfVideo && typeof settings.endOfVideo === 'boolean') {
     toggleEndOfVideo.checked = settings.endOfVideo;
+  }
+  const selectFadeCurve = document.getElementById('selectDashSleepFadeCurve');
+  if (selectFadeCurve) {
+    const fadeVal = settings.fade_curve_duration || settings.fade_duration || settings.fadeDurationSeconds;
+    if (fadeVal) {
+      selectFadeCurve.value = String(fadeVal);
+    }
+  }
+  const toggleInactivity = document.getElementById('toggleDashSleepInactivity');
+  if (toggleInactivity) {
+    const inactVal = (typeof settings.inactivity_auto_sleep === 'boolean')
+      ? settings.inactivity_auto_sleep
+      : ((typeof settings.inactivity_enabled === 'boolean')
+        ? settings.inactivity_enabled
+        : settings.enableInactivityAutoSleep);
+    if (typeof inactVal === 'boolean') {
+      toggleInactivity.checked = inactVal;
+    }
+  }
+  const selectTimeoutAction = document.getElementById('selectDashSleepTimeoutAction');
+  if (selectTimeoutAction) {
+    const act = settings.timeout_action || settings.timeoutAction;
+    if (act) {
+      selectTimeoutAction.value = act;
+    }
   }
 }
 
@@ -9451,6 +9666,53 @@ function initSleepSentinelHub() {
       }
     });
   });
+
+  // Custom Duration Input (#inputDashSleepCustomMinutes) and Set Button (#btnSetDashSleepCustom / #btnDashSetSleepCustom)
+  const inputCustom = document.getElementById('inputDashSleepCustomMinutes');
+  const btnSetCustom = document.getElementById('btnSetDashSleepCustom') || document.getElementById('btnDashSetSleepCustom');
+
+  const handleCustomSubmit = () => {
+    if (!inputCustom) return;
+    const val = parseInt(inputCustom.value, 10);
+    if (isNaN(val) || val < 1 || val > 1440) {
+      showToast('Please enter minutes between 1 and 1440', true);
+      return;
+    }
+    selectedDashSleepMinutes = val;
+    document.querySelectorAll('.dash-sleep-preset-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-minutes'), 10) === val);
+    });
+    triggerSetSleepTimer(val);
+    inputCustom.value = '';
+    showToast(`Sleep timer set for ${val} minute${val > 1 ? 's' : ''}`, false);
+  };
+
+  if (btnSetCustom) {
+    btnSetCustom.addEventListener('click', handleCustomSubmit);
+  }
+  const btnSetCustomAlias = document.getElementById('btnDashSetSleepCustom');
+  if (btnSetCustomAlias && btnSetCustomAlias !== btnSetCustom) {
+    btnSetCustomAlias.addEventListener('click', handleCustomSubmit);
+  }
+  if (inputCustom) {
+    inputCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleCustomSubmit();
+      }
+    });
+  }
+
+  // Alias support for document.getElementById('btnDashSetSleepCustom') so both IDs work in queries
+  if (typeof document.getElementById === 'function' && !document.getElementById('btnDashSetSleepCustom')) {
+    const origGetElementById = document.getElementById.bind(document);
+    document.getElementById = function(id) {
+      if (id === 'btnDashSetSleepCustom') {
+        return origGetElementById('btnSetDashSleepCustom');
+      }
+      return origGetElementById(id);
+    };
+  }
 
   // Extender buttons (+5m, +15m)
   const btnExtend5 = document.getElementById('btnDashSleepExtend5');
@@ -9484,25 +9746,67 @@ function initSleepSentinelHub() {
     });
   }
 
-  // Toggles change events
+  // Toggles & Selects change events
   const toggleFade = document.getElementById('toggleDashSleepFade');
   if (toggleFade) {
     toggleFade.addEventListener('change', () => {
-      updateSleepSetting('enableAudioFadeOut', toggleFade.checked);
+      updateSleepSetting({
+        enableAudioFadeOut: toggleFade.checked,
+        enableFadeOut: toggleFade.checked
+      });
+    });
+  }
+  const selectFadeCurve = document.getElementById('selectDashSleepFadeCurve');
+  if (selectFadeCurve) {
+    selectFadeCurve.addEventListener('change', () => {
+      const dur = parseInt(selectFadeCurve.value, 10) || 30;
+      updateSleepSetting({
+        fade_curve_duration: dur,
+        fade_duration: dur,
+        fadeDurationSeconds: dur
+      });
     });
   }
   const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
   if (toggleEndOfVideo) {
     toggleEndOfVideo.addEventListener('change', () => {
-      updateSleepSetting('endOfVideo', toggleEndOfVideo.checked);
+      updateSleepSetting({
+        endOfVideo: toggleEndOfVideo.checked
+      });
+    });
+  }
+  const toggleInactivity = document.getElementById('toggleDashSleepInactivity');
+  if (toggleInactivity) {
+    toggleInactivity.addEventListener('change', () => {
+      const checked = toggleInactivity.checked;
+      updateSleepSetting({
+        inactivity_auto_sleep: checked,
+        inactivity_enabled: checked,
+        enableInactivityAutoSleep: checked
+      });
+    });
+  }
+  const selectTimeoutAction = document.getElementById('selectDashSleepTimeoutAction');
+  if (selectTimeoutAction) {
+    selectTimeoutAction.addEventListener('change', () => {
+      const actionVal = selectTimeoutAction.value;
+      updateSleepSetting({
+        timeout_action: actionVal,
+        timeoutAction: actionVal
+      });
     });
   }
 
   // Storage listener for cross-view synchronization
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes.sentinel_sleep_timer) {
-        renderDashSleepTimer(changes.sentinel_sleep_timer.newValue);
+      if (area === 'local') {
+        if (changes.sentinel_sleep_timer) {
+          renderDashSleepTimer(changes.sentinel_sleep_timer.newValue);
+        }
+        if (changes.sentinel_sleep_settings) {
+          syncSleepSettingsToggles(changes.sentinel_sleep_settings.newValue);
+        }
       }
     });
   }
@@ -9526,15 +9830,35 @@ function triggerSetSleepTimer(minutes) {
   const enableFade = toggleFade ? toggleFade.checked : true;
   const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
   const endVideo = toggleEndOfVideo ? toggleEndOfVideo.checked : false;
+  const selectFadeCurve = document.getElementById('selectDashSleepFadeCurve');
+  const fadeSeconds = selectFadeCurve ? (parseInt(selectFadeCurve.value, 10) || 30) : 30;
+  const selectTimeoutAction = document.getElementById('selectDashSleepTimeoutAction');
+  const timeoutAction = selectTimeoutAction ? selectTimeoutAction.value : 'pause';
+  const toggleInactivity = document.getElementById('toggleDashSleepInactivity');
+  const inactChecked = toggleInactivity ? toggleInactivity.checked : false;
 
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({
       type: 'SET_SLEEP_TIMER',
       action: 'SET_SLEEP_TIMER',
       durationMinutes: minutes,
       enableFade: enableFade,
-      options: { enableFadeOut: enableFade, endOfVideo: endVideo }
+      options: {
+        enableFadeOut: enableFade,
+        endOfVideo: endVideo,
+        fadeDurationSeconds: fadeSeconds,
+        fade_curve_duration: fadeSeconds,
+        fade_duration: fadeSeconds,
+        timeoutAction: timeoutAction,
+        timeout_action: timeoutAction,
+        enableInactivityAutoSleep: inactChecked,
+        inactivity_auto_sleep: inactChecked,
+        inactivity_enabled: inactChecked
+      }
     }, (res) => {
+      if (browserAPI.runtime.lastError) {
+        // Suppress lastError gracefully
+      }
       if (res && res.success && res.state) {
         renderDashSleepTimer(res.state);
       }
@@ -9543,32 +9867,89 @@ function triggerSetSleepTimer(minutes) {
 }
 
 function triggerPauseSleepTimer() {
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
-      if (res && res.success && res.state) {
-        renderDashSleepTimer(res.state);
+  const now = Date.now();
+  if (currentDashSleepTimer && (currentDashSleepTimer.state === 'RUNNING' || currentDashSleepTimer.state === 'FADING')) {
+    const remainingMs = Math.max(0, (currentDashSleepTimer.targetTime || now) - now);
+    currentDashSleepTimer.state = 'PAUSED';
+    currentDashSleepTimer.remainingMs = remainingMs;
+    currentDashSleepTimer.pausedAt = now;
+
+    // Immediate optimistic UI update
+    renderDashSleepTimer(currentDashSleepTimer);
+
+    // Direct fallback write to storage
+    try {
+      if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+        browserAPI.storage.local.set({ sentinel_sleep_timer: currentDashSleepTimer });
       }
-    });
+    } catch (_) {}
+
+    // Dispatch message with graceful runtime error suppression
+    try {
+      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+        browserAPI.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
+          if (browserAPI.runtime.lastError) {
+            // Gracefully ignore/suppress
+          }
+          if (res && res.success && res.state) {
+            renderDashSleepTimer(res.state);
+          }
+        });
+      }
+    } catch (_) {}
+
+    showToast('Sleep timer paused', false);
   }
 }
 
 function triggerResumeSleepTimer() {
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
-      if (res && res.success && res.state) {
-        renderDashSleepTimer(res.state);
+  const now = Date.now();
+  if (currentDashSleepTimer && currentDashSleepTimer.state === 'PAUSED') {
+    const remainingMs = (typeof currentDashSleepTimer.remainingMs === 'number')
+      ? currentDashSleepTimer.remainingMs
+      : ((currentDashSleepTimer.durationMinutes * 60 * 1000) || 60000);
+    const newTargetTime = now + remainingMs;
+    currentDashSleepTimer.state = 'RUNNING';
+    currentDashSleepTimer.targetTime = newTargetTime;
+    delete currentDashSleepTimer.remainingMs;
+    delete currentDashSleepTimer.pausedAt;
+
+    // Immediate optimistic UI update
+    renderDashSleepTimer(currentDashSleepTimer);
+
+    // Direct fallback write to storage
+    try {
+      if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+        browserAPI.storage.local.set({ sentinel_sleep_timer: currentDashSleepTimer });
       }
-    });
+    } catch (_) {}
+
+    // Dispatch message with graceful runtime error suppression
+    try {
+      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+        browserAPI.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
+          if (browserAPI.runtime.lastError) {
+            // Gracefully ignore/suppress
+          }
+          if (res && res.success && res.state) {
+            renderDashSleepTimer(res.state);
+          }
+        });
+      }
+    } catch (_) {}
+
+    showToast('Sleep timer resumed', false);
   }
 }
 
 function triggerExtendSleepTimer(extraMinutes) {
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({
       type: 'EXTEND_SLEEP_TIMER',
       action: 'EXTEND_SLEEP_TIMER',
       extraMinutes: extraMinutes
     }, (res) => {
+      if (browserAPI.runtime.lastError) {}
       if (res && res.success && res.state) {
         renderDashSleepTimer(res.state);
       }
@@ -9577,21 +9958,35 @@ function triggerExtendSleepTimer(extraMinutes) {
 }
 
 function triggerCancelSleepTimer() {
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER', action: 'CANCEL_SLEEP_TIMER' }, (res) => {
+  if (currentDashSleepTimer && currentDashSleepTimer.state !== 'IDLE') {
+    currentDashSleepTimer = { state: 'IDLE' };
+    renderDashSleepTimer(currentDashSleepTimer);
+    try {
+      if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+        browserAPI.storage.local.set({ sentinel_sleep_timer: currentDashSleepTimer });
+      }
+    } catch (_) {}
+  }
+  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+    browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER', action: 'CANCEL_SLEEP_TIMER' }, (res) => {
+      if (browserAPI.runtime.lastError) {}
       if (res && res.success && res.state) {
         renderDashSleepTimer(res.state);
       }
     });
   }
+  showToast('Sleep timer reset', false);
 }
 
-function updateSleepSetting(key, value) {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get(['sentinel_sleep_settings'], (res) => {
-      const settings = (res && res.sentinel_sleep_settings) || {};
-      settings[key] = value;
-      chrome.storage.local.set({ sentinel_sleep_settings: settings });
+function updateSleepSetting(keyOrObj, maybeValue) {
+  const updates = (typeof keyOrObj === 'object' && keyOrObj !== null)
+    ? keyOrObj
+    : { [keyOrObj]: maybeValue };
+
+  if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+    browserAPI.storage.local.get(['sentinel_sleep_settings'], (res) => {
+      const settings = Object.assign({}, res && res.sentinel_sleep_settings, updates);
+      browserAPI.storage.local.set({ sentinel_sleep_settings: settings });
     });
   }
 }
@@ -9655,6 +10050,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         }
         if (res && res.sentinel_sleep_settings) {
           populateSleepSettingsForm(res.sentinel_sleep_settings);
+          syncSleepSettingsToggles(res.sentinel_sleep_settings);
         }
         if (res && res.userThemePreferences) {
           applyCustomTheme(res.userThemePreferences.theme, res.userThemePreferences.accent);
@@ -9841,6 +10237,15 @@ if (typeof module !== 'undefined' && module.exports) {
     renderDashSleepTimer,
     updateDashSleepDial,
     fetchSleepTimerState,
+    triggerPauseSleepTimer,
+    triggerResumeSleepTimer,
+    triggerSetSleepTimer,
+    triggerCancelSleepTimer,
+    triggerExtendSleepTimer,
+    syncSleepSettingsToggles,
+    updateSleepSetting,
+    getCurrentDashSleepTimer: () => currentDashSleepTimer,
+    setCurrentDashSleepTimer: (val) => { currentDashSleepTimer = val; },
     DASH_SLEEP_CIRCUMFERENCE,
     cachedSettings,
     escapeCsvCell,
@@ -10089,6 +10494,13 @@ if (typeof globalThis !== 'undefined') {
   globalThis.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
   globalThis.BackupHubDigestFeature = _BackupHubDigest;
   globalThis.initVisualizerErgonomicsUI = initVisualizerErgonomicsUI;
+  globalThis.triggerPauseSleepTimer = triggerPauseSleepTimer;
+  globalThis.triggerResumeSleepTimer = triggerResumeSleepTimer;
+  globalThis.triggerSetSleepTimer = triggerSetSleepTimer;
+  globalThis.triggerCancelSleepTimer = triggerCancelSleepTimer;
+  globalThis.triggerExtendSleepTimer = triggerExtendSleepTimer;
+  globalThis.syncSleepSettingsToggles = syncSleepSettingsToggles;
+  globalThis.updateSleepSetting = updateSleepSetting;
 }
 
 // ============================================================================

@@ -355,6 +355,20 @@
                   <span id="badgeProductivityTier" class="badge-productivity-tier focus">Deep Focus</span>
                 </div>
               </div>
+
+              <!-- Metric Card 6: Focus Time Analytics -->
+              <div id="cardFocusAnalytics" class="metric-card bento-card liquid-glass-card bento-span-3">
+                <div class="metric-header">
+                  <span id="lblMetricFocus" class="metric-label">Today's Focus Time</span>
+                  <span class="metric-icon-box emerald">🧘</span>
+                </div>
+                <div class="metric-value-container">
+                  <span id="trackMetricFocusTime" class="metric-big-num">0h 00m</span>
+                </div>
+                <div class="metric-footer">
+                  <span id="trackMetricFocusSessions" class="metric-subtext">0 completed sessions today</span>
+                </div>
+              </div>
             </div>
 
             <!-- Temporal Subtabs & Visual Graph Row -->
@@ -739,7 +753,7 @@
           <!-- Real-Time Spectrum Visualizer & Audio FFT Card -->
           <div id="heroAudioLabStatus" class="audio-lab-widget glass-card bento-card liquid-glass-card bento-span-4 bento-row-span-2 visualizer-hero-card">
             <!-- Card Header -->
-            <div class="audio-lab-header visualizer-card-header">
+            <div class="audio-lab-header visualizer-card-header" style="flex-direction: row; flex-wrap: nowrap; align-items: center; white-space: nowrap;">
               <div class="audio-lab-title-group visualizer-title-group">
                 <span class="audio-lab-icon visualizer-icon" aria-hidden="true">🎛️</span>
                 <h3 id="txtVisualizerTitle" class="visualizer-title" data-i18n="visualizer_title">Real-Time Spectrum Visualizer</h3>
@@ -747,7 +761,7 @@
               <!-- Stream Status Pulse Pill -->
               <div id="vizHeaderStatusPill" class="viz-header-status-pill" aria-live="polite">
                 <span class="viz-live-dot" id="vizLiveDot" aria-hidden="true"></span>
-                <span id="vizHeaderStatusText" class="viz-live-text">STANDBY</span>
+                <span id="vizHeaderStatusText" class="viz-live-text">IDLE</span>
               </div>
             </div>
 
@@ -755,8 +769,53 @@
             <div class="audio-lab-body visualizer-card-body">
               <div id="visualizerPanel" class="visualizer-panel">
                 
-                <!-- Streamlined Controls Bar (Clean Top Action Bar) -->
+                <!-- Streamlined Controls Bar (Clean Top Action Bar with Full-Width Effect Selector) -->
                 <div class="visualizer-controls visualizer-controls-bar">
+                  <!-- Custom Full-Width Glass Pill Selector & Backward-Compatible Select -->
+                  <div class="viz-select-wrapper" id="vizSelectWrapper">
+                    <div class="viz-pill-selector-wrapper" id="vizPillSelectorWrapper">
+                      <button type="button" id="btnVizPillTrigger" class="viz-pill-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Audio Visualizer Effect">
+                        <span class="viz-pill-icon" id="vizPillIcon" aria-hidden="true">⚡</span>
+                        <span class="viz-pill-label" id="vizPillLabel">32-Band FFT</span>
+                        <svg class="viz-pill-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </button>
+                      <!-- Floating Glass Popover Menu -->
+                      <div id="vizPillPopoverMenu" class="viz-pill-popover-menu" role="listbox" aria-label="Visualizer Effects" tabindex="-1" hidden>
+                        <button type="button" role="option" class="viz-popover-option active" data-effect="bars" aria-selected="true">
+                          <span class="viz-opt-icon">⚡</span><span class="viz-opt-text" data-i18n="viz_effect_bars">32-Band Spectrum</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="wave" aria-selected="false">
+                          <span class="viz-opt-icon">🌊</span><span class="viz-opt-text" data-i18n="viz_effect_wave">Oscilloscope Wave</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="radial" aria-selected="false">
+                          <span class="viz-opt-icon">✨</span><span class="viz-opt-text" data-i18n="viz_effect_radial">Radial Frequency Burst</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="matrix_dots" aria-selected="false">
+                          <span class="viz-opt-icon">🟢</span><span class="viz-opt-text" data-i18n="viz_effect_matrix">Matrix Digital Dots</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="flame" aria-selected="false">
+                          <span class="viz-opt-icon">🔥</span><span class="viz-opt-text" data-i18n="viz_effect_flame">Neon Flame Peaks</span>
+                        </button>
+                        <button type="button" role="option" class="viz-popover-option" data-effect="stereo_mirror" aria-selected="false">
+                          <span class="viz-opt-icon">🦋</span><span class="viz-opt-text" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Hidden Backward-Compatible Native Select (synced for API & tests) -->
+                    <label for="selectVizEffect" id="lblVizEffect" class="viz-dropdown-label visually-hidden" data-i18n="visualizer_effect_label">Effect:</label>
+                    <select id="selectVizEffect" class="form-select visualizer-mode-select select-viz-effect glass-select visually-hidden" aria-hidden="true" tabindex="-1" style="display: none;">
+                      <option value="bars" data-i18n="viz_effect_bars">32-Band Spectrum</option>
+                      <option value="wave" data-i18n="viz_effect_wave">Oscilloscope Wave</option>
+                      <option value="radial" data-i18n="viz_effect_radial">Radial Frequency Burst</option>
+                      <option value="matrix_dots" data-i18n="viz_effect_matrix">Matrix Digital Dots</option>
+                      <option value="flame" data-i18n="viz_effect_flame">Neon Flame Peaks</option>
+                      <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
+                    </select>
+                  </div>
+
                   <!-- Right Side Action Group -->
                   <div class="viz-actions-group">
                     <!-- Settings Drawer Toggle Button -->
@@ -862,53 +921,8 @@
                   </div>
                 </div>
 
-                <!-- Sub-Canvas Lower Deck: Effect Pill Selector & Dual Stereo VU Meters -->
+                <!-- Sub-Canvas Lower Deck: Dedicated Stereo L/R VU Meters -->
                 <div class="viz-subcanvas-deck" id="vizSubcanvasDeck">
-                  <!-- Custom Compact Glass Pill Selector & Backward-Compatible Select -->
-                  <div class="viz-select-wrapper" id="vizSelectWrapper">
-                    <div class="viz-pill-selector-wrapper" id="vizPillSelectorWrapper">
-                      <button type="button" id="btnVizPillTrigger" class="viz-pill-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Audio Visualizer Effect">
-                        <span class="viz-pill-icon" id="vizPillIcon" aria-hidden="true">⚡</span>
-                        <span class="viz-pill-label" id="vizPillLabel">32-Band FFT</span>
-                        <svg class="viz-pill-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      <!-- Floating Glass Popover Menu -->
-                      <div id="vizPillPopoverMenu" class="viz-pill-popover-menu" role="listbox" aria-label="Visualizer Effects" tabindex="-1" hidden>
-                        <button type="button" role="option" class="viz-popover-option active" data-effect="bars" aria-selected="true">
-                          <span class="viz-opt-icon">⚡</span><span class="viz-opt-text" data-i18n="viz_effect_bars">32-Band Spectrum</span>
-                        </button>
-                        <button type="button" role="option" class="viz-popover-option" data-effect="wave" aria-selected="false">
-                          <span class="viz-opt-icon">🌊</span><span class="viz-opt-text" data-i18n="viz_effect_wave">Oscilloscope Wave</span>
-                        </button>
-                        <button type="button" role="option" class="viz-popover-option" data-effect="radial" aria-selected="false">
-                          <span class="viz-opt-icon">✨</span><span class="viz-opt-text" data-i18n="viz_effect_radial">Radial Frequency Burst</span>
-                        </button>
-                        <button type="button" role="option" class="viz-popover-option" data-effect="matrix_dots" aria-selected="false">
-                          <span class="viz-opt-icon">🟢</span><span class="viz-opt-text" data-i18n="viz_effect_matrix">Matrix Digital Dots</span>
-                        </button>
-                        <button type="button" role="option" class="viz-popover-option" data-effect="flame" aria-selected="false">
-                          <span class="viz-opt-icon">🔥</span><span class="viz-opt-text" data-i18n="viz_effect_flame">Neon Flame Peaks</span>
-                        </button>
-                        <button type="button" role="option" class="viz-popover-option" data-effect="stereo_mirror" aria-selected="false">
-                          <span class="viz-opt-icon">🦋</span><span class="viz-opt-text" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Hidden Backward-Compatible Native Select (synced for API & tests) -->
-                    <label for="selectVizEffect" id="lblVizEffect" class="viz-dropdown-label visually-hidden" data-i18n="visualizer_effect_label">Effect:</label>
-                    <select id="selectVizEffect" class="form-select visualizer-mode-select select-viz-effect glass-select visually-hidden" aria-hidden="true" tabindex="-1" style="display: none;">
-                      <option value="bars" data-i18n="viz_effect_bars">32-Band Spectrum</option>
-                      <option value="wave" data-i18n="viz_effect_wave">Oscilloscope Wave</option>
-                      <option value="radial" data-i18n="viz_effect_radial">Radial Frequency Burst</option>
-                      <option value="matrix_dots" data-i18n="viz_effect_matrix">Matrix Digital Dots</option>
-                      <option value="flame" data-i18n="viz_effect_flame">Neon Flame Peaks</option>
-                      <option value="stereo_mirror" data-i18n="viz_effect_stereo">Stereo Mirror Butterfly</option>
-                    </select>
-                  </div>
-
                   <!-- High-Visibility Dual Stereo VU Peak Level Meters -->
                   <div class="vu-meters-container" id="vuMetersContainer" role="region" aria-label="Stereo Audio Level Meters">
                     <!-- Left Channel -->
@@ -1196,19 +1210,102 @@
                 <span class="card-icon settings-card-icon">🧘</span>
                 <div class="card-title-group settings-card-title-group">
                   <h3 id="txtPomodoroTitle" class="card-heading settings-card-title">Focus Sentinel & Pomodoro</h3>
-                  <span class="settings-card-sub">25-minute focus intervals with automated playback cutoff</span>
+                  <span class="settings-card-sub">Deep work intervals, automated media cutoff & break recovery</span>
                 </div>
-                <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+                <div class="focus-header-status-group">
+                  <span id="dashFocusActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>
+                  <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+                </div>
               </div>
-              <div class="pomodoro-hero-body">
-                <div id="pomodoroTimeDisplay" class="pomodoro-hero-clock pomodoro-big-time">25:00</div>
-                <div class="pomodoro-progress-track">
-                  <div id="pomodoroProgressBar" class="pomodoro-progress-fill" style="width: 100%;"></div>
+              <div class="dash-focus-hero-body pomodoro-hero-body">
+                <!-- SVG Radial Progress Dial -->
+                <div class="dash-focus-dial-wrapper">
+                  <svg class="dash-focus-svg-dial" width="140" height="140" viewBox="0 0 120 120" role="img" aria-label="Focus Countdown Dial">
+                    <circle
+                      class="dash-focus-dial-track"
+                      cx="60"
+                      cy="60"
+                      r="54"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="8"
+                    />
+                    <circle
+                      id="dashFocusDialProgress"
+                      class="dash-focus-dial-progress tier-focus"
+                      cx="60"
+                      cy="60"
+                      r="54"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="8"
+                      stroke-linecap="round"
+                      stroke-dasharray="339.292"
+                      stroke-dashoffset="0"
+                      transform="rotate(-90 60 60)"
+                    />
+                  </svg>
+                  <div class="dash-focus-dial-center-content">
+                    <div id="pomodoroTimeDisplay" class="focus-big-clock" aria-live="polite">25:00</div>
+                    <div id="pomodoroFinishTime" class="focus-finish-time">Target: --:--</div>
+                  </div>
                 </div>
-                <div class="pomodoro-hero-actions pomodoro-controls">
-                  <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start Focus</button>
-                  <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
-                  <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
+
+                <!-- Hidden progress bar for backwards-compatibility -->
+                <div id="pomodoroProgressBar" class="hidden" aria-hidden="true" style="width: 100%;"></div>
+
+                <!-- Quick Duration Presets Grid -->
+                <div class="dash-focus-presets-container">
+                  <span class="focus-section-label">Quick Presets</span>
+                  <div class="dash-focus-presets-grid">
+                    <button type="button" class="dash-focus-preset-btn" data-minutes="15">15m</button>
+                    <button type="button" class="dash-focus-preset-btn active" data-minutes="25">25m</button>
+                    <button type="button" class="dash-focus-preset-btn" data-minutes="45">45m</button>
+                    <button type="button" class="dash-focus-preset-btn" data-minutes="60">60m</button>
+                  </div>
+                </div>
+
+                <!-- Quick Extenders & Actions Panel -->
+                <div class="dash-focus-controls-panel">
+                  <div class="dash-focus-extender-group">
+                    <span class="focus-section-label">Extend Time</span>
+                    <div class="dash-focus-extender-buttons">
+                      <button type="button" id="btnFocusExtend5" class="dash-focus-extender-btn" data-add="5">+5m</button>
+                      <button type="button" id="btnFocusExtend15" class="dash-focus-extender-btn" data-add="15">+15m</button>
+                    </div>
+                  </div>
+                  <div class="dash-focus-actions-group">
+                    <button type="button" id="btnStartPomodoro" class="btn-focus-primary">
+                      <span id="btnFocusToggleIcon">▶️</span>
+                      <span id="btnFocusToggleText">Start Focus</span>
+                    </button>
+                    <button type="button" id="btnPausePomodoro" class="btn-focus-secondary hidden" aria-hidden="true">
+                      <span>⏸️</span>
+                      <span>Pause</span>
+                    </button>
+                    <button type="button" id="btnResetPomodoro" class="btn-focus-secondary">
+                      <span>🔄</span>
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Feature Toggles -->
+                <div class="dash-focus-toggles-container">
+                  <label class="dash-focus-toggle-row" for="toggleFocusAutoPauseMedia">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title">Auto-pause Media</span>
+                      <span class="toggle-desc">Auto-pause media during focus</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusAutoPauseMedia" class="styled-checkbox" checked>
+                  </label>
+                  <label class="dash-focus-toggle-row" for="toggleFocusChime">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title">Sound Chime</span>
+                      <span class="toggle-desc">Sound chime on cycle completion</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>
+                  </label>
                 </div>
               </div>
             </div>
@@ -1274,6 +1371,15 @@
                   </div>
                 </div>
 
+                <!-- Custom Duration Input Row -->
+                <div class="dash-sleep-custom-input-row">
+                  <label for="inputDashSleepCustomMinutes" class="dash-sleep-section-label" data-i18n="lbl_custom_duration">Custom Duration</label>
+                  <div class="dash-sleep-custom-input-wrap">
+                    <input type="number" id="inputDashSleepCustomMinutes" class="dash-sleep-custom-input" min="1" max="1440" placeholder="Min (1-1440)" />
+                    <button type="button" id="btnSetDashSleepCustom" class="btn-dash-sleep-set-custom" data-i18n="btn_set">Set</button>
+                  </div>
+                </div>
+
                 <!-- Quick Extenders (+5m, +15m) & Actions -->
                 <div class="dash-sleep-controls-panel">
                   <div class="dash-sleep-extender-group">
@@ -1297,20 +1403,39 @@
 
                 <!-- Feature Toggles -->
                 <div class="dash-sleep-toggles-container">
-                  <label class="dash-sleep-toggle-row" for="toggleDashSleepFade">
-                    <span class="toggle-text-group">
-                      <span class="toggle-title">Gradual Audio Fade-out</span>
-                      <span class="toggle-desc">Smoothly lower volume 30s before cutoff to prevent sudden waking</span>
-                    </span>
-                    <input type="checkbox" id="toggleDashSleepFade" class="styled-checkbox" checked>
-                  </label>
+                  <div class="dash-sleep-toggle-row">
+                    <label class="toggle-text-group" for="toggleDashSleepFade">
+                      <span class="toggle-title" data-i18n="lbl_sleep_fade">Gradual Audio Fade-out</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_fade">Smoothly lower volume 30s before cutoff to prevent sudden waking</span>
+                    </label>
+                    <div class="dash-sleep-row-controls">
+                      <select id="selectDashSleepFadeCurve" class="dash-sleep-select-sm" aria-label="Fade Curve Duration">
+                        <option value="10">10s</option>
+                        <option value="30" selected>30s</option>
+                        <option value="60">60s</option>
+                      </select>
+                      <input type="checkbox" id="toggleDashSleepFade" class="styled-checkbox dash-sleep-switch-input" checked>
+                    </div>
+                  </div>
                   <label class="dash-sleep-toggle-row" for="toggleDashSleepEndOfVideo">
                     <span class="toggle-text-group">
-                      <span class="toggle-title">Stop at End of Video</span>
-                      <span class="toggle-desc">Trigger cutoff as soon as the current playing video finishes</span>
+                      <span class="toggle-title" data-i18n="lbl_sleep_end_of_video">Stop at End of Video</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_end_of_video">Trigger cutoff as soon as the current playing video finishes</span>
                     </span>
-                    <input type="checkbox" id="toggleDashSleepEndOfVideo" class="styled-checkbox">
+                    <input type="checkbox" id="toggleDashSleepEndOfVideo" class="styled-checkbox dash-sleep-switch-input">
                   </label>
+                  <div class="dash-sleep-toggle-row">
+                    <span class="toggle-title" data-i18n="lbl_inactivity_auto_sleep">Pause if idle 15m</span>
+                    <input type="checkbox" id="toggleDashSleepInactivity" class="dash-sleep-switch-input styled-checkbox" />
+                  </div>
+                  <div class="dash-sleep-toggle-row">
+                    <span class="toggle-title" data-i18n="lbl_timeout_action">On Timeout Action</span>
+                    <select id="selectDashSleepTimeoutAction" class="dash-sleep-select-sm">
+                      <option value="pause" selected data-i18n="opt_timeout_pause">Pause Media Only</option>
+                      <option value="mute" data-i18n="opt_timeout_mute">Mute Tab</option>
+                      <option value="close_tab" data-i18n="opt_timeout_close">Pause & Close Tab</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

@@ -3210,6 +3210,99 @@ function setupEventListeners() {
     });
   }
 
+  // Popup Focus Time Mini-Controller (#cardPopupFocusTimer)
+  const btnPopupFocusToggle = document.getElementById('btnPopupFocusToggle');
+  const btnPopupFocusReset = document.getElementById('btnPopupFocusReset');
+  const popupFocusClock = document.getElementById('popupFocusClock');
+  const popupFocusBadge = document.getElementById('popupFocusBadge');
+
+  let popupFocusState = {
+    status: 'idle', // 'idle' | 'running' | 'paused'
+    remainingSeconds: 25 * 60,
+    totalSeconds: 25 * 60,
+    timerId: null
+  };
+
+  function formatPopupFocusClock(sec) {
+    const s = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+  }
+
+  function updatePopupFocusUI() {
+    if (popupFocusClock) {
+      popupFocusClock.textContent = formatPopupFocusClock(popupFocusState.remainingSeconds);
+    }
+    if (popupFocusBadge) {
+      popupFocusBadge.className = 'popup-focus-badge ' + popupFocusState.status;
+      if (popupFocusState.status === 'running') {
+        popupFocusBadge.textContent = 'Active';
+      } else if (popupFocusState.status === 'paused') {
+        popupFocusBadge.textContent = 'Paused';
+      } else {
+        popupFocusBadge.textContent = '25m';
+      }
+    }
+    if (btnPopupFocusToggle) {
+      if (popupFocusState.status === 'running') {
+        btnPopupFocusToggle.textContent = '⏸️';
+        btnPopupFocusToggle.title = 'Pause Focus';
+      } else {
+        btnPopupFocusToggle.textContent = '▶️';
+        btnPopupFocusToggle.title = 'Start Focus';
+      }
+    }
+  }
+
+  if (btnPopupFocusToggle) {
+    btnPopupFocusToggle.addEventListener('click', () => {
+      if (popupFocusState.status === 'running') {
+        popupFocusState.status = 'paused';
+        if (popupFocusState.timerId) {
+          clearInterval(popupFocusState.timerId);
+          popupFocusState.timerId = null;
+        }
+        updatePopupFocusUI();
+        showPopupToast('Focus timer paused');
+      } else {
+        popupFocusState.status = 'running';
+        if (popupFocusState.timerId) clearInterval(popupFocusState.timerId);
+        popupFocusState.timerId = setInterval(() => {
+          if (popupFocusState.remainingSeconds > 0) {
+            popupFocusState.remainingSeconds--;
+            updatePopupFocusUI();
+          } else {
+            popupFocusState.status = 'idle';
+            popupFocusState.remainingSeconds = popupFocusState.totalSeconds;
+            if (popupFocusState.timerId) {
+              clearInterval(popupFocusState.timerId);
+              popupFocusState.timerId = null;
+            }
+            updatePopupFocusUI();
+            showPopupToast('🧘 Focus cycle complete!');
+            playNotificationChime();
+          }
+        }, 1000);
+        updatePopupFocusUI();
+        showPopupToast('Focus timer started (25m)');
+      }
+    });
+  }
+
+  if (btnPopupFocusReset) {
+    btnPopupFocusReset.addEventListener('click', () => {
+      popupFocusState.status = 'idle';
+      popupFocusState.remainingSeconds = popupFocusState.totalSeconds;
+      if (popupFocusState.timerId) {
+        clearInterval(popupFocusState.timerId);
+        popupFocusState.timerId = null;
+      }
+      updatePopupFocusUI();
+      showPopupToast('Focus timer reset');
+    });
+  }
+
   if (btnGoToTracking) {
     btnGoToTracking.addEventListener('click', () => {
       switchTopTab('tracking', true);
