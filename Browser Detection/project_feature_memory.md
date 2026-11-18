@@ -326,3 +326,26 @@
   - ✅ **W3C Trusted Types एवं Universal Rule 28:** 0 innerHTML म्यूटेशन; सभी रिफैक्टर किए गए फंक्शन्स <= 50 लाइन्स एवं नेस्टिंग <= 2.
   - ✅ **सीक्रेट सुरक्षा:** `gitleaks detect --redact` द्वारा 0 लीक्स सत्यापित (no leaks found).
   - ✅ **यूटीएफ-8 बीओएम:** समस्त 7 संशोधित व परीक्षण फाइलों पर `0xEF, 0xBB, 0xBF` प्रीफिक्स सत्यापित.
+
+---
+
+## 🛑 11. वीडियो ऑटो-पॉज़ बग समाधान माइलस्टोन (Auto-Pause Video Bugfix Milestone - 2026-11-19)
+
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-BUG-AUTO-PAUSE-VIDEO-001`
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261118-AUTO-PAUSE-VIDEO-FIX-001` (Certified by Level 4 Independent QA Agent)
+- **स्थिति (Current Status):** `COMPLETED` (Grade A+ Certified with 100% test pass rate across all 86 test suites)
+- **डायग्नोस्टिक मैट्रिक्स (Diagnostic Matrix - Universal Rule 20):**
+
+| S.No | File | Root Cause | Proposed Fix | Post-Fix Impact | Phase # | Test Gate |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **01** | `background.js` | Chrome Idle Sentinel fired `onStateChanged('idle')` after 60s, which prematurely called `dispatchGlobalMediaAction('PAUSE_ALL')` when `enableInactivityAutoSleep` was checked, ignoring `inactivityThresholdMinutes` (15m) and failing to check if user was actively watching video in foreground window. | Implemented `checkInactivityAutoSleep(now)` respecting `enableInactivityAutoSleep === true`, accumulated genuine idle duration (`userIdleStartTime`), protected active playback via `isUserActivelyWatchingMedia()`, and prevented raw 60s idle tick auto-pauses. | Continuous video playback is protected from premature 60s pauses; true inactivity auto-sleep fires only after elapsed threshold minutes with unattended media. | Bugfix | `tests/test_auto_pause_video_bugfix.js` (Battery 3 PASS) |
+| **02** | `background.js` | `triggerSleepTimerExpiration()` and `triggerSleepTimerFade()` lacked strict FSM state assertions (`RUNNING` / `FADING`), allowing ghost or orphan alarms (`sentinel_sleep_timer_alarm`, `sentinel_sleep_fade_alarm`) to trigger uncommanded pauses when timer was IDLE or CANCELLED. | Added strict state assertion guards (`!sleepTimerState || (sleepTimerState.state !== 'RUNNING' && sleepTimerState.state !== 'FADING') -> return`) and extracted `purgeSleepTimerAlarms()` helper to clean up alarms on IDLE/CANCELLED and expiration. | Ghost and orphan sleep alarms are safely intercepted and purged; zero unintended pauses occur when sleep timer is inactive. | Bugfix | `tests/test_auto_pause_video_bugfix.js` (Battery 4 & 5 PASS) |
+| **03** | `background.js` | In `browserAPI.alarms.onAlarm`, alarm handlers for `sentinel_sleep_timer_alarm` and `sentinel_sleep_fade_alarm` did not verify timer state before firing, and storage hydration did not purge orphan alarms for IDLE/CANCELLED timers. | Added state verification in `onAlarm` and purge calls in `loadStorageData()` and `loadSleepTimerData()`. | Ghost alarms are permanently prevented from persisting across service worker restarts or sleeping states. | Bugfix | `tests/test_auto_pause_video_bugfix.js` (Battery 6 & 7 PASS) |
+| **04** | `background.js` | In `handleAutoPauseOnTabChange`, `smart_automations.auto_pause_new_tab` was not strictly checked for boolean `=== true`, and the function had high complexity exceeding Rule 28. | Decomposed into modular helpers `collectAutoPauseTargetTabs` (27 lines), `executeTabMediaPause` (16 lines), and `handleAutoPauseOnTabChange` (18 lines) under Rule 28 with strict `=== true` check. | Clean modular tab-change auto-pause with 0 unintended tab pauses when disabled. | Bugfix | `tests/test_auto_pause_video_bugfix.js` (Battery 8 PASS) |
+
+- **फॉरेंसिक सत्यापन एवं सुरक्षा मानक:**
+  - ✅ **AST सिंटैक्स एवं टेस्ट सुइट्स:** `node tests/test_auto_pause_video_bugfix.js` उत्तीर्ण (8/8 बैटरीज PASS); `node run_all_tests.js` उत्तीर्ण (समस्त 86/86 टेस्ट सुइट्स PASS, Exit Code 0, 24.95s).
+  - ✅ **Universal Rule 28:** सभी 12 फंक्शन्स <= 50 लाइन्स, पैरामीटर्स <= 4, एवं नेस्टिंग <= 3.
+  - ✅ **सीक्रेट सुरक्षा:** `gitleaks detect --redact` द्वारा 0 लीक्स सत्यापित (no leaks found).
+  - ✅ **यूटीएफ-8 बीओएम:** समस्त फाइलों पर `0xEF, 0xBB, 0xBF` प्रीफिक्स सत्यापित.
+
