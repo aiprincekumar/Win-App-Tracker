@@ -1860,11 +1860,32 @@ function updateHeroVolumeUI(volumeFraction) {
 }
 
 /**
+ * Checks whether the Media Playback History header (#headingMediaHistory) has
+ * scrolled out of the viewport / above the top boundary of the scroll container.
+ *
+ * @param {HTMLElement|null} heading
+ * @param {HTMLElement|null} mainStage
+ * @returns {boolean}
+ */
+function isMediaHeadingScrolledPast(heading, mainStage) {
+  if (!heading || typeof heading.getBoundingClientRect !== 'function') {
+    return false;
+  }
+  const headingRect = heading.getBoundingClientRect();
+  const stageTop = (mainStage && typeof mainStage.getBoundingClientRect === 'function')
+    ? mainStage.getBoundingClientRect().top
+    : 0;
+
+  return (headingRect.bottom < stageTop) || (headingRect.top < 0);
+}
+
+/**
  * Updates visibility of the Media History "Scroll to Top" button.
  *
  * @param {boolean} shouldShow
  */
 function setMediaScrollToTopVisible(shouldShow) {
+  if (typeof document === 'undefined') return;
   const btn = document.getElementById('btnMediaScrollToTop');
   if (!btn) return;
 
@@ -1881,10 +1902,15 @@ function setMediaScrollToTopVisible(shouldShow) {
  * Handles smooth scrolling of the main content stage back to the top.
  */
 function handleMediaScrollToTopClick() {
-  const mainStage = document.querySelector('.main-stage');
+  const mainStage = (typeof document !== 'undefined') ? document.querySelector('.main-stage') : null;
   if (mainStage) {
-    mainStage.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (typeof window !== 'undefined') {
+    if (typeof mainStage.scrollTo === 'function') {
+      mainStage.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      mainStage.scrollTop = 0;
+    }
+  }
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   setMediaScrollToTopVisible(false);
@@ -1892,6 +1918,7 @@ function handleMediaScrollToTopClick() {
 
 /**
  * Evaluates header intersection entry and scroll position to determine button visibility.
+ * Strictly verifies that #headingMediaHistory has scrolled out of viewport / container top.
  *
  * @param {IntersectionObserverEntry} [entry]
  * @param {HTMLElement|null} [mainStage]
@@ -1904,11 +1931,33 @@ function evaluateMediaScrollVisibility(entry, mainStage) {
     return;
   }
 
-  const rootTop = (entry && entry.rootBounds) ? entry.rootBounds.top : 0;
-  const isScrolledPast = Boolean(entry && !entry.isIntersecting && entry.boundingClientRect.top < rootTop);
-  const isPastThreshold = Boolean(mainStage && mainStage.scrollTop > 350);
+  const stage = mainStage || ((typeof document !== 'undefined') ? document.querySelector('.main-stage') : null);
+  const heading = document.getElementById('headingMediaHistory');
+  if (!heading) {
+    setMediaScrollToTopVisible(false);
+    return;
+  }
 
-  setMediaScrollToTopVisible(isScrolledPast || isPastThreshold);
+  let shouldShow = isMediaHeadingScrolledPast(heading, stage);
+
+  if (entry && typeof entry.isIntersecting === 'boolean') {
+    if (entry.isIntersecting) {
+      shouldShow = false;
+    } else {
+      const rootTop = (entry.rootBounds && typeof entry.rootBounds.top === 'number')
+        ? entry.rootBounds.top
+        : ((stage && typeof stage.getBoundingClientRect === 'function') ? stage.getBoundingClientRect().top : 0);
+      const bBottom = (entry.boundingClientRect && typeof entry.boundingClientRect.bottom === 'number')
+        ? entry.boundingClientRect.bottom
+        : (heading.getBoundingClientRect ? heading.getBoundingClientRect().bottom : 0);
+      const bTop = (entry.boundingClientRect && typeof entry.boundingClientRect.top === 'number')
+        ? entry.boundingClientRect.top
+        : (heading.getBoundingClientRect ? heading.getBoundingClientRect().top : 0);
+      shouldShow = (bBottom < rootTop) || (bTop < 0);
+    }
+  }
+
+  setMediaScrollToTopVisible(shouldShow);
 }
 
 /**
@@ -1930,22 +1979,20 @@ function initMediaScrollToTop() {
       }
     }, {
       root: mainStage || null,
-      threshold: [0, 0.5, 1.0]
+      threshold: [0, 1.0]
     });
     observer.observe(targetHeader);
   }
 
+  const handleScroll = () => {
+    evaluateMediaScrollVisibility(null, mainStage);
+  };
+
   if (mainStage) {
-    mainStage.addEventListener('scroll', () => {
-      const paneMedia = document.getElementById('paneMedia');
-      if (!paneMedia || !paneMedia.classList.contains('active')) {
-        setMediaScrollToTopVisible(false);
-        return;
-      }
-      if (mainStage.scrollTop < 100) {
-        setMediaScrollToTopVisible(false);
-      }
-    }, { passive: true });
+    mainStage.addEventListener('scroll', handleScroll, { passive: true });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', handleScroll, { passive: true });
   }
 }
 
@@ -5577,7 +5624,7 @@ function switchTab(tabKey) {
     }
   });
 
-  // Hide Media Scroll to Top button when leaving Media tab
+  // Manage Media Scroll to Top button visibility on tab switch
   if (tabKey !== 'media') {
     if (typeof setMediaScrollToTopVisible === 'function') {
       setMediaScrollToTopVisible(false);
@@ -5588,6 +5635,8 @@ function switchTab(tabKey) {
         scrollBtn.classList.remove('visible');
       }
     }
+  } else if (typeof evaluateMediaScrollVisibility === 'function') {
+    evaluateMediaScrollVisibility(null, document.querySelector('.main-stage'));
   }
 
   // Top Bar Headers
@@ -11594,6 +11643,7 @@ if (typeof module !== 'undefined' && module.exports) {
     initSleepSentinelHub,
     initDashboardSleepSentinelHub: initSleepSentinelHub,
     // Media Scroll to Top Actions
+    isMediaHeadingScrolledPast,
     initMediaScrollToTop,
     setMediaScrollToTopVisible,
     handleMediaScrollToTopClick,
@@ -11671,6 +11721,7 @@ if (typeof window !== 'undefined') {
   window.wireDashboardSleepExtenders = wireDashboardSleepExtenders;
   window.initSleepSentinelHub = initSleepSentinelHub;
   window.initDashboardSleepSentinelHub = initSleepSentinelHub;
+  window.isMediaHeadingScrolledPast = isMediaHeadingScrolledPast;
   window.initMediaScrollToTop = initMediaScrollToTop;
   window.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
   window.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
@@ -11726,6 +11777,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.initDashboardSleepSentinelHub = initSleepSentinelHub;
   globalThis.syncSleepSettingsToggles = syncSleepSettingsToggles;
   globalThis.updateSleepSetting = updateSleepSetting;
+  globalThis.isMediaHeadingScrolledPast = isMediaHeadingScrolledPast;
   globalThis.initMediaScrollToTop = initMediaScrollToTop;
   globalThis.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
   globalThis.handleMediaScrollToTopClick = handleMediaScrollToTopClick;

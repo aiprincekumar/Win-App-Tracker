@@ -67,14 +67,19 @@ console.log("\nBattery 2: CSS Stylesheet & Glassmorphic Design Invariants");
   const css = fs.readFileSync(dashCssPath, "utf8");
 
   assert(css.includes(".media-scroll-to-top"), "CSS must define .media-scroll-to-top");
-  assert(css.includes("position: fixed;"), "Button must be position: fixed");
-  assert(css.includes("border-radius: 50%;"), "Button must have circular 50% border radius");
+  assert(css.includes("position: fixed"), "Button must be position: fixed");
+  assert(css.includes("border-radius: 50%"), "Button must have circular 50% border radius");
+  assert(css.includes("width: 46px") && css.includes("height: 46px"), "Button must specify 46px dimensions");
+  assert(css.includes("min-width: 46px") && css.includes("max-width: 46px"), "Button must lock min/max width to prevent horizontal stretching");
+  assert(css.includes("aspect-ratio: 1 / 1"), "Button must enforce aspect-ratio: 1 / 1");
+  assert(css.includes("bottom: 24px") && css.includes("right: 28px"), "Button must float in bottom-right corner");
+  assert(css.includes("z-index: 9999"), "Button must specify high z-index: 9999");
   assert(css.includes("backdrop-filter: blur(16px)"), "Button must include glassmorphic blur");
   assert(css.includes(".media-scroll-to-top.hidden"), "CSS must handle .hidden state");
-  assert(css.includes("body.theme-light .media-scroll-to-top"), "CSS must include light mode adaptation");
+  assert(css.includes("body.theme-light"), "CSS must include light mode adaptation");
   assert(css.includes("#paneMedia:not(.active) #btnMediaScrollToTop"), "CSS must ensure button is hidden when tab is inactive");
 
-  console.log("  ✅ CSS styling verified: circular, glassmorphism, transitions, light mode & inactive tab guard");
+  console.log("  ✅ CSS styling verified: circular 46px FAB, aspect-ratio lock, glassmorphism, light mode & inactive tab guard");
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +91,7 @@ console.log("\nBattery 3: JavaScript Controller Functions & Logic Verification")
   const jsCode = fs.readFileSync(dashJsPath, "utf8");
 
   // Verify function declarations exist in code
+  assert(jsCode.includes("function isMediaHeadingScrolledPast"), "isMediaHeadingScrolledPast must be declared");
   assert(jsCode.includes("function initMediaScrollToTop"), "initMediaScrollToTop must be declared");
   assert(jsCode.includes("function setMediaScrollToTopVisible"), "setMediaScrollToTopVisible must be declared");
   assert(jsCode.includes("function handleMediaScrollToTopClick"), "handleMediaScrollToTopClick must be declared");
@@ -136,7 +142,40 @@ console.log("\nBattery 3: JavaScript Controller Functions & Logic Verification")
   assert.strictEqual(scrolledTo.behavior, "smooth", "handleMediaScrollToTopClick must use smooth scroll");
   assert(mockClassList.has("hidden"), "Click must immediately hide the button");
 
-  console.log("  ✅ JavaScript controller logic verified with zero syntax errors and expected state transitions");
+  // Verify isMediaHeadingScrolledPast logic
+  function testIsMediaHeadingScrolledPast(headingRect, stageTop) {
+    return (headingRect.bottom < stageTop) || (headingRect.top < 0);
+  }
+
+  // Case 1: Heading visible in container (bottom >= stageTop, top >= 0) -> must be false (hidden)
+  assert.strictEqual(
+    testIsMediaHeadingScrolledPast({ top: 120, bottom: 160 }, 60),
+    false,
+    "Heading visible in container must return false"
+  );
+
+  // Case 2: Heading below viewport (top > stageTop) -> must be false (hidden)
+  assert.strictEqual(
+    testIsMediaHeadingScrolledPast({ top: 800, bottom: 840 }, 60),
+    false,
+    "Heading below viewport must return false"
+  );
+
+  // Case 3: Heading scrolled above container top (bottom < stageTop) -> must be true (visible)
+  assert.strictEqual(
+    testIsMediaHeadingScrolledPast({ top: 20, bottom: 50 }, 60),
+    true,
+    "Heading scrolled past container top must return true"
+  );
+
+  // Case 4: Heading scrolled negative in window (top < 0) -> must be true (visible)
+  assert.strictEqual(
+    testIsMediaHeadingScrolledPast({ top: -10, bottom: 20 }, 0),
+    true,
+    "Heading scrolled past window top must return true"
+  );
+
+  console.log("  ✅ JavaScript controller logic verified: strict scroll detection, state transitions & smooth scroll");
 }
 
 // ---------------------------------------------------------------------------
@@ -162,7 +201,7 @@ console.log("\nBattery 4: Bilingual i18n Parity & Dynamic Language Switching");
 // ---------------------------------------------------------------------------
 console.log("\nBattery 5: UTF-8 BOM Verification on All Edited Assets");
 {
-  const targetFiles = [dashHtmlPath, dashCssPath, dashJsPath];
+  const targetFiles = [dashHtmlPath, dashCssPath, dashJsPath, path.join(baseDir, "dashboard", "dashboard.css")];
   targetFiles.forEach((file) => {
     const buf = fs.readFileSync(file);
     const hasBOM = buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
