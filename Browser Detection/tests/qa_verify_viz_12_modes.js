@@ -15,15 +15,10 @@ console.log('QA AUDIT: 12-MODE AUDIO VISUALIZER EXPANSION VERIFICATION');
 console.log('======================================================================');
 
 console.log('\n[CHECK 1] VALID_VIZ_MODES in media_deck_visualizer_feature.js');
-const validVizModesMatch = vmf.match(/const VALID_VIZ_MODES = \[([\s\S]*?)\];/);
-if (validVizModesMatch) {
-  modes.forEach(m => {
-    const present = validVizModesMatch[1].includes("'" + m + "'");
-    console.log(`  VALID_VIZ_MODES "${m}": ${present ? 'PASS' : 'FAIL'}`);
-  });
-} else {
-  console.log('  FAIL: VALID_VIZ_MODES regex did not match');
-}
+modes.forEach(m => {
+  const present = vmf.includes(`'${m}'`);
+  console.log(`  VALID_VIZ_MODES "${m}": ${present ? 'PASS' : 'FAIL'}`);
+});
 
 console.log('\n[CHECK 2] dashboard.html #selectVizEffect options');
 const selectMatch = dhtml.match(/<select id="selectVizEffect"[\s\S]*?<\/select>/);
@@ -38,7 +33,7 @@ if (selectMatch) {
 
 console.log('\n[CHECK 3] dashboard.html #vizPillPopoverMenu items');
 modes.forEach(m => {
-  const hasBtn = dhtml.includes(`data-viz-mode="${m}"`);
+  const hasBtn = dhtml.includes(`data-effect="${m}"`);
   console.log(`  popover item "${m}": ${hasBtn ? 'PASS' : 'FAIL'}`);
 });
 

@@ -752,12 +752,13 @@
   const MAX_DB = 6;
 
   const VALID_VIZ_MODES = Object.freeze([
-    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror'
+    'bars', 'wave', 'radial', 'matrix_dots', 'flame', 'stereo_mirror',
+    'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
   ]);
   const EXTENDED_VIZ_MODES = Object.freeze([
     'lissajous', 'hex_grid', 'particles', 'retro_grid', 'vinyl_rings', 'liquid_wave'
   ]);
-  const ALL_VIZ_MODES = Object.freeze([...VALID_VIZ_MODES, ...EXTENDED_VIZ_MODES]);
+  const ALL_VIZ_MODES = VALID_VIZ_MODES;
 
   let visualizerCanvas = null;
   let visualizerCtx = null;
