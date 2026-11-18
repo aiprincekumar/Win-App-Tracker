@@ -4486,8 +4486,82 @@ function initZenMode() {
   }
 }
 
+function playSyntheticFocusChime(audioCtx) {
+  try {
+    const ctx = audioCtx || getFocusAudioContext();
+    if (!ctx) return false;
+    const now = ctx.currentTime || 0;
+    const tones = [
+      { freq: 528, start: 0.0, dur: 0.8, gain: 0.22 },
+      { freq: 660, start: 0.12, dur: 0.9, gain: 0.18 }
+    ];
+    tones.forEach(t => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(t.freq, now + t.start);
+      gain.gain.setValueAtTime(0.0001, now + t.start);
+      gain.gain.exponentialRampToValueAtTime(t.gain, now + t.start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + t.start);
+      osc.stop(now + t.start + t.dur + 0.05);
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function updateDashboardFocusMetrics(metrics) {
+  const elFocusTime = document.getElementById('trackMetricFocusTime');
+  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
+  const todayKey = new Date().toISOString().split('T')[0];
+  const today = (metrics && metrics[todayKey]) ? metrics[todayKey] : (metrics && metrics.totalFocusSeconds !== undefined ? metrics : null);
+  const totalSec = today ? (today.totalFocusSeconds || 0) : 0;
+  const sessions = today ? (today.completedSessions || 0) : 0;
+
+  if (elFocusTime) {
+    elFocusTime.textContent = (totalSec > 0) ? formatDuration(totalSec) : '0h 00m';
+  }
+  if (elFocusSessions) {
+    elFocusSessions.textContent = `${sessions} completed session${sessions === 1 ? '' : 's'} today`;
+  }
+}
+
+function syncFocusSettingsToggles(settings) {
+  if (!settings) return;
+  const toggleAutoPause = document.getElementById('toggleFocusAutoPauseMedia');
+  const toggleChime = document.getElementById('toggleFocusChime');
+  if (toggleAutoPause && typeof settings.autoPauseMedia === 'boolean') {
+    toggleAutoPause.checked = settings.autoPauseMedia;
+  }
+  if (toggleChime && typeof settings.soundChime === 'boolean') {
+    toggleChime.checked = settings.soundChime;
+  }
+}
+
 function initPomodoroWidget() {
   if (pomodoroController) return;
+
+  let currentFocusMode = 'focus';
+  let currentFocusDurationMin = 25;
+  let focusBackendState = {
+    state: 'IDLE',
+    mode: 'focus',
+    durationMinutes: 25,
+    remainingSeconds: 1500,
+    targetTime: null
+  };
+  let focusTicker = null;
+
+  function formatTime(sec) {
+    const s = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(rem).padStart(2, '0');
+  }
 
   const updateUI = (state) => {
     const timeDisplay = document.getElementById('pomodoroTimeDisplay');
@@ -4504,24 +4578,26 @@ function initPomodoroWidget() {
     const btnZenToggleIcon = document.getElementById('btnZenToggleIcon');
     const btnZenToggleText = document.getElementById('btnZenToggleText');
 
-    if (pillClock && state.formattedTime) {
-      pillClock.textContent = state.formattedTime;
+    const formattedTime = state.formattedTime || formatTime(state.remainingSeconds);
+
+    if (pillClock && formattedTime) {
+      pillClock.textContent = formattedTime;
     }
     if (pillBadge) {
       pillBadge.textContent = state.mode === 'focus' ? 'Focus' : 'Break';
       pillBadge.className = state.mode === 'focus' ? 'badge-focus-micro' : 'badge-break-micro';
     }
     if (progressBar && state.remainingSeconds !== undefined) {
-      const totalSec = state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60));
+      const totalSec = (state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60))) || 1500;
       const pct = Math.max(0, Math.min(100, (state.remainingSeconds / totalSec) * 100));
       progressBar.style.width = pct + '%';
     }
 
-    if (timeDisplay && state.formattedTime) {
-      timeDisplay.textContent = state.formattedTime;
+    if (timeDisplay && formattedTime) {
+      timeDisplay.textContent = formattedTime;
     }
-    if (zenClock && state.formattedTime) {
-      zenClock.textContent = state.formattedTime;
+    if (zenClock && formattedTime) {
+      zenClock.textContent = formattedTime;
     }
     if (zenStatus) {
       zenStatus.textContent = state.status === 'running'
@@ -4535,7 +4611,7 @@ function initPomodoroWidget() {
     }
 
     // Radial Dial math: C = 339.292, offset = C * (1 - ratio)
-    const totalSec = state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60));
+    const totalSec = (state.mode === 'focus' ? (state.focusDuration || (25 * 60)) : (state.breakDuration || (5 * 60))) || 1500;
     updateFocusRadialDial(state.remainingSeconds, totalSec, state.mode, state.status);
     updateFocusFinishTime(state.remainingSeconds, state.status);
 
@@ -4555,8 +4631,8 @@ function initPomodoroWidget() {
     const microClock = document.getElementById('wellbeingMicroClock');
     const microMode = document.getElementById('wellbeingMicroMode');
     const microDot = document.getElementById('wellbeingMicroStatusDot');
-    if (microClock && state.formattedTime) {
-      microClock.textContent = state.formattedTime;
+    if (microClock && formattedTime) {
+      microClock.textContent = formattedTime;
     }
     if (microMode) {
       microMode.textContent = state.status === 'running'
@@ -4622,8 +4698,7 @@ function initPomodoroWidget() {
 
     const chimeToggle = document.getElementById('toggleFocusChime');
     if (chimeToggle && chimeToggle.checked) {
-      const toneSelect = document.getElementById('selectFocusChimeTone');
-      playAcousticChime(toneSelect ? toneSelect.value : 'solfeggio528');
+      playSyntheticFocusChime();
     }
 
     updateUI(state);
@@ -4633,31 +4708,153 @@ function initPomodoroWidget() {
   const onFocusTrigger = (state) => {
     const chimeToggle = document.getElementById('toggleFocusChime');
     if (chimeToggle && chimeToggle.checked) {
-      const toneSelect = document.getElementById('selectFocusChimeTone');
-      playAcousticChime(toneSelect ? toneSelect.value : 'solfeggio528');
+      playSyntheticFocusChime();
     }
 
     updateUI(state);
     showToast(currentLang === 'hi' ? '⚡ ब्रेक समाप्त! नया फोकस ब्लॉक शुरू करने के लिए तैयार।' : '⚡ Break finished! Ready to begin new focus block.', false);
   };
 
-  if (_WellbeingBlacklist && typeof _WellbeingBlacklist.createPomodoroController === 'function') {
-    pomodoroController = _WellbeingBlacklist.createPomodoroController({
-      autoPauseMedia: true,
-      soundChime: true
-    });
-  } else {
-    pomodoroController = {
-      getState: () => ({ mode: 'focus', status: 'idle', remainingSeconds: 25 * 60, formattedTime: '25:00', focusDuration: 25 * 60, breakDuration: 5 * 60 }),
-      start: () => {},
-      pause: () => {},
-      reset: () => {},
-      tick: () => {},
-      playSyntheticChime: () => false,
-      setFocusDuration: () => {},
-      extendRemaining: () => {}
-    };
+  function computeLocalRemaining(state) {
+    if ((state.state === 'RUNNING_FOCUS' || state.state === 'RUNNING_BREAK') && state.targetTime) {
+      return Math.max(0, Math.round((state.targetTime - Date.now()) / 1000));
+    }
+    if (state.remainingSeconds !== undefined && state.remainingSeconds !== null) {
+      return state.remainingSeconds;
+    }
+    return (state.durationMinutes || 25) * 60;
   }
+
+  function syncStateFromBackend(bgState) {
+    if (!bgState) return;
+    focusBackendState = { ...focusBackendState, ...bgState };
+    if (bgState.mode) currentFocusMode = bgState.mode;
+    if (bgState.durationMinutes) currentFocusDurationMin = bgState.durationMinutes;
+
+    const isRunning = (focusBackendState.state === 'RUNNING_FOCUS' || focusBackendState.state === 'RUNNING_BREAK');
+    if (isRunning) {
+      if (!focusTicker) {
+        focusTicker = setInterval(() => {
+          if (focusBackendState.state === 'RUNNING_FOCUS' || focusBackendState.state === 'RUNNING_BREAK') {
+            updateUI(pomodoroController.getState());
+          }
+        }, 1000);
+      }
+    } else {
+      if (focusTicker) {
+        clearInterval(focusTicker);
+        focusTicker = null;
+      }
+    }
+
+    if (focusBackendState.completedSessionsToday !== undefined) {
+      currentPomodoroCycle = (focusBackendState.completedSessionsToday % 4) + 1;
+      updateFocusCycleUI(currentPomodoroCycle);
+    }
+
+    updateUI(pomodoroController.getState());
+  }
+
+  pomodoroController = {
+    _state: focusBackendState,
+    getState: () => {
+      const isRunning = (focusBackendState.state === 'RUNNING_FOCUS' || focusBackendState.state === 'RUNNING_BREAK');
+      const isPaused = (focusBackendState.state === 'PAUSED_FOCUS' || focusBackendState.state === 'PAUSED_BREAK');
+      const status = isRunning ? 'running' : (isPaused ? 'paused' : 'idle');
+      const remaining = computeLocalRemaining(focusBackendState);
+      const focusDur = (focusBackendState.durationMinutes || currentFocusDurationMin || 25) * 60;
+      const breakDur = 5 * 60;
+      return {
+        mode: focusBackendState.mode || currentFocusMode,
+        status,
+        remainingSeconds: remaining,
+        formattedTime: formatTime(remaining),
+        focusDuration: focusDur,
+        breakDuration: breakDur,
+        completedCycles: focusBackendState.completedSessionsToday || 0,
+        autoPauseMedia: focusBackendState.autoPauseMedia !== false,
+        soundChime: focusBackendState.soundChime !== false
+      };
+    },
+    start: (callbacks = {}) => {
+      safeRuntimeSendMessage({
+        action: 'START_FOCUS_TIMER',
+        durationMinutes: currentFocusDurationMin,
+        mode: currentFocusMode
+      }, (res) => {
+        if (res && res.state) syncStateFromBackend(res.state);
+      });
+      const durSec = currentFocusDurationMin * 60;
+      syncStateFromBackend({
+        state: currentFocusMode === 'focus' ? 'RUNNING_FOCUS' : 'RUNNING_BREAK',
+        mode: currentFocusMode,
+        durationMinutes: currentFocusDurationMin,
+        remainingSeconds: durSec,
+        targetTime: Date.now() + (durSec * 1000)
+      });
+    },
+    pause: (callbacks = {}) => {
+      safeRuntimeSendMessage({ action: 'PAUSE_FOCUS_TIMER' }, (res) => {
+        if (res && res.state) syncStateFromBackend(res.state);
+      });
+      const cur = pomodoroController.getState();
+      syncStateFromBackend({
+        state: cur.mode === 'focus' ? 'PAUSED_FOCUS' : 'PAUSED_BREAK',
+        remainingSeconds: cur.remainingSeconds,
+        targetTime: null
+      });
+    },
+    resume: (callbacks = {}) => {
+      safeRuntimeSendMessage({ action: 'RESUME_FOCUS_TIMER' }, (res) => {
+        if (res && res.state) syncStateFromBackend(res.state);
+      });
+      const cur = pomodoroController.getState();
+      syncStateFromBackend({
+        state: cur.mode === 'focus' ? 'RUNNING_FOCUS' : 'RUNNING_BREAK',
+        targetTime: Date.now() + (cur.remainingSeconds * 1000)
+      });
+    },
+    reset: (callbacks = {}) => {
+      safeRuntimeSendMessage({ action: 'RESET_FOCUS_TIMER' }, (res) => {
+        if (res && res.state) syncStateFromBackend(res.state);
+      });
+      syncStateFromBackend({
+        state: 'IDLE',
+        mode: 'focus',
+        durationMinutes: currentFocusDurationMin,
+        remainingSeconds: currentFocusDurationMin * 60,
+        targetTime: null
+      });
+    },
+    tick: (callbacks = {}) => {
+      updateUI(pomodoroController.getState());
+      return pomodoroController.getState();
+    },
+    playSyntheticChime: () => {
+      return playSyntheticFocusChime();
+    },
+    setFocusDuration: (sec) => {
+      const mins = Math.max(1, Math.round(sec / 60));
+      currentFocusDurationMin = mins;
+      focusBackendState.durationMinutes = mins;
+      focusBackendState.remainingSeconds = mins * 60;
+      updateUI(pomodoroController.getState());
+    },
+    extendRemaining: (sec) => {
+      const extraMinutes = Math.max(1, Math.round(sec / 60));
+      safeRuntimeSendMessage({ action: 'EXTEND_FOCUS_TIMER', extraMinutes }, (res) => {
+        if (res && res.state) syncStateFromBackend(res.state);
+      });
+      const cur = pomodoroController.getState();
+      const newSec = cur.remainingSeconds + (extraMinutes * 60);
+      const isRunning = cur.status === 'running';
+      syncStateFromBackend({
+        remainingSeconds: newSec,
+        durationMinutes: (focusBackendState.durationMinutes || 25) + extraMinutes,
+        targetTime: isRunning ? ((focusBackendState.targetTime || Date.now()) + extraMinutes * 60000) : null
+      });
+    }
+  };
 
   const btnStart = document.getElementById('btnStartPomodoro');
   const btnPause = document.getElementById('btnPausePomodoro');
@@ -4668,6 +4865,8 @@ function initPomodoroWidget() {
       const curState = pomodoroController.getState();
       if (curState.status === 'running') {
         pomodoroController.pause({ onTick: updateUI });
+      } else if (curState.status === 'paused') {
+        pomodoroController.resume({ onTick: updateUI });
       } else {
         pomodoroController.start({
           onTick: updateUI,
@@ -4703,18 +4902,17 @@ function initPomodoroWidget() {
     const targetTab = mode === 'focus' ? tabFocus : (durationMin > 10 ? tabLongBreak : tabShortBreak);
     if (targetTab) targetTab.classList.add('active');
 
-    if (typeof pomodoroController.setFocusDuration === 'function') {
-      pomodoroController.setFocusDuration(durationMin * 60);
+    currentFocusMode = mode;
+    currentFocusDurationMin = durationMin;
+    pomodoroController.setFocusDuration(durationMin * 60);
+
+    const curState = pomodoroController.getState();
+    if (curState.status === 'idle') {
+      focusBackendState.mode = mode;
+      focusBackendState.durationMinutes = durationMin;
+      focusBackendState.remainingSeconds = durationMin * 60;
+      updateUI(pomodoroController.getState());
     }
-    if (pomodoroController._state) {
-      pomodoroController._state.mode = (mode === 'focus') ? 'focus' : 'break';
-      if (mode !== 'focus') {
-        pomodoroController._state.breakDuration = durationMin * 60;
-        pomodoroController._state.remainingSeconds = durationMin * 60;
-      }
-    }
-    pomodoroController.reset({ onTick: updateUI });
-    updateUI(pomodoroController.getState());
   }
 
   if (tabFocus) {
@@ -4735,11 +4933,14 @@ function initPomodoroWidget() {
       presetBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
-      if (typeof pomodoroController.setFocusDuration === 'function') {
-        pomodoroController.setFocusDuration(mins * 60);
+      currentFocusDurationMin = mins;
+      pomodoroController.setFocusDuration(mins * 60);
+      const curState = pomodoroController.getState();
+      if (curState.status === 'idle') {
+        focusBackendState.durationMinutes = mins;
+        focusBackendState.remainingSeconds = mins * 60;
+        updateUI(pomodoroController.getState());
       }
-      pomodoroController.reset({ onTick: updateUI });
-      updateUI(pomodoroController.getState());
     });
   });
 
@@ -4754,11 +4955,14 @@ function initPomodoroWidget() {
       return;
     }
     presetBtns.forEach(b => b.classList.remove('active'));
-    if (typeof pomodoroController.setFocusDuration === 'function') {
-      pomodoroController.setFocusDuration(val * 60);
+    currentFocusDurationMin = val;
+    pomodoroController.setFocusDuration(val * 60);
+    const curState = pomodoroController.getState();
+    if (curState.status === 'idle') {
+      focusBackendState.durationMinutes = val;
+      focusBackendState.remainingSeconds = val * 60;
+      updateUI(pomodoroController.getState());
     }
-    pomodoroController.reset({ onTick: updateUI });
-    updateUI(pomodoroController.getState());
     showToast(`Focus duration set to ${val}m`, false);
   }
   if (btnApplyCustom) {
@@ -4773,14 +4977,8 @@ function initPomodoroWidget() {
   // Quick Extenders (+5m, +15m)
   const btnExtend5 = document.getElementById('btnFocusExtend5');
   const btnExtend15 = document.getElementById('btnFocusExtend15');
-  const handleExtend = (addMin) => {
-    if (typeof pomodoroController.extendRemaining === 'function') {
-      pomodoroController.extendRemaining(addMin * 60);
-    }
-    updateUI(pomodoroController.getState());
-  };
-  if (btnExtend5) btnExtend5.addEventListener('click', () => handleExtend(5));
-  if (btnExtend15) btnExtend15.addEventListener('click', () => handleExtend(15));
+  if (btnExtend5) btnExtend5.addEventListener('click', () => pomodoroController.extendRemaining(5 * 60));
+  if (btnExtend15) btnExtend15.addEventListener('click', () => pomodoroController.extendRemaining(15 * 60));
 
   // Feature 5: Ambient Background Soundscapes
   const selectSoundscape = document.getElementById('selectFocusSoundscape');
@@ -4842,16 +5040,18 @@ function initPomodoroWidget() {
 
   if (toggleAutoPause) {
     toggleAutoPause.addEventListener('change', () => {
-      if (pomodoroController._state) {
-        pomodoroController._state.autoPauseMedia = toggleAutoPause.checked;
-      }
+      safeRuntimeSendMessage({
+        action: 'SAVE_FOCUS_SETTINGS',
+        settings: { autoPauseMedia: toggleAutoPause.checked }
+      });
     });
   }
   if (toggleChime) {
     toggleChime.addEventListener('change', () => {
-      if (pomodoroController._state) {
-        pomodoroController._state.soundChime = toggleChime.checked;
-      }
+      safeRuntimeSendMessage({
+        action: 'SAVE_FOCUS_SETTINGS',
+        settings: { soundChime: toggleChime.checked }
+      });
     });
   }
   if (toggleStrictShield) {
@@ -4867,6 +5067,50 @@ function initPomodoroWidget() {
       }
     });
   }
+
+  // Storage listener for cross-view synchronization
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local') {
+        if (changes.sentinel_focus_timer && changes.sentinel_focus_timer.newValue) {
+          syncStateFromBackend(changes.sentinel_focus_timer.newValue);
+        }
+        if (changes.daily_focus_metrics && changes.daily_focus_metrics.newValue) {
+          updateDashboardFocusMetrics(changes.daily_focus_metrics.newValue);
+        }
+        if (changes.sentinel_focus_settings && changes.sentinel_focus_settings.newValue) {
+          syncFocusSettingsToggles(changes.sentinel_focus_settings.newValue);
+        }
+      }
+    });
+  }
+
+  // Runtime message listener for live broadcast events
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && (msg.type === 'FOCUS_TIMER_STATE_CHANGED' || msg.action === 'FOCUS_TIMER_STATE_CHANGED')) {
+        if (msg.state) syncStateFromBackend(msg.state);
+      }
+      if (msg && (msg.type === 'FOCUS_TIMER_COMPLETED' || msg.action === 'FOCUS_TIMER_COMPLETED')) {
+        onBreakTrigger(pomodoroController.getState());
+        if (msg.todayMetrics) {
+          updateDashboardFocusMetrics(msg.todayMetrics);
+        }
+      }
+      if (msg && (msg.type === 'FOCUS_BREAK_COMPLETED' || msg.action === 'FOCUS_BREAK_COMPLETED')) {
+        onFocusTrigger(pomodoroController.getState());
+      }
+    });
+  }
+
+  // Initial state fetch from background
+  safeRuntimeSendMessage({ action: 'GET_FOCUS_TIMER_STATE' }, (res) => {
+    if (res && res.success) {
+      if (res.state) syncStateFromBackend(res.state);
+      if (res.todayMetrics) updateDashboardFocusMetrics(res.todayMetrics);
+      if (res.settings) syncFocusSettingsToggles(res.settings);
+    }
+  });
 
   // Initialize Subsystems
   updateFocusCycleUI(1);
@@ -9884,12 +10128,7 @@ function initVisualizerGraticuleAndDecay(doc) {
   }
 }
 
-function initVisualizerPillSelector(doc) {
-  if (!doc) return;
-  const btnVizPillTrigger = doc.getElementById('btnVizPillTrigger');
-  const vizPillPopoverMenu = doc.getElementById('vizPillPopoverMenu');
-  const vizPillSelectorWrapper = doc.getElementById('vizPillSelectorWrapper');
-
+function bindVizPillTrigger(btnVizPillTrigger, vizPillPopoverMenu) {
   if (btnVizPillTrigger && !btnVizPillTrigger.__vizBound) {
     btnVizPillTrigger.__vizBound = true;
     btnVizPillTrigger.addEventListener('click', (e) => {
@@ -9906,43 +10145,72 @@ function initVisualizerPillSelector(doc) {
       }
     });
   }
+}
+
+function bindVizPopoverOption(btnOpt, doc, vizPillPopoverMenu, btnVizPillTrigger) {
+  if (btnOpt && !btnOpt.__vizBound) {
+    btnOpt.__vizBound = true;
+    btnOpt.addEventListener('click', (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const effect = btnOpt.getAttribute('data-effect');
+      if (effect) {
+        setVisualizerMode(effect, { doc });
+        const selectEl = doc && doc.getElementById ? doc.getElementById('selectVizEffect') : null;
+        if (selectEl && selectEl.value !== effect) {
+          selectEl.value = effect;
+          try {
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+          } catch (_) {}
+        }
+      }
+      if (vizPillPopoverMenu) vizPillPopoverMenu.setAttribute('hidden', '');
+      if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+    });
+  }
+}
+
+function bindVizPopoverDismiss(doc, vizPillPopoverMenu, vizPillSelectorWrapper, btnVizPillTrigger) {
+  if (!doc || doc.__vizPopoverDismissBound || typeof doc.addEventListener !== 'function') return;
+  doc.__vizPopoverDismissBound = true;
+
+  doc.addEventListener('click', (e) => {
+    if (vizPillPopoverMenu && !vizPillPopoverMenu.hasAttribute('hidden')) {
+      if (vizPillSelectorWrapper && !vizPillSelectorWrapper.contains(e.target)) {
+        vizPillPopoverMenu.setAttribute('hidden', '');
+        if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  doc.addEventListener('keydown', (e) => {
+    if (e && (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27)) {
+      if (vizPillPopoverMenu && !vizPillPopoverMenu.hasAttribute('hidden')) {
+        vizPillPopoverMenu.setAttribute('hidden', '');
+        if (btnVizPillTrigger) {
+          btnVizPillTrigger.setAttribute('aria-expanded', 'false');
+          if (typeof btnVizPillTrigger.focus === 'function') btnVizPillTrigger.focus();
+        }
+      }
+    }
+  });
+}
+
+function initVisualizerPillSelector(doc) {
+  if (!doc) return;
+  const btnVizPillTrigger = doc.getElementById('btnVizPillTrigger');
+  const vizPillPopoverMenu = doc.getElementById('vizPillPopoverMenu');
+  const vizPillSelectorWrapper = doc.getElementById('vizPillSelectorWrapper');
+
+  bindVizPillTrigger(btnVizPillTrigger, vizPillPopoverMenu);
 
   const vizPopoverOptions = doc.querySelectorAll ? doc.querySelectorAll('.viz-popover-option') : [];
   if (vizPopoverOptions && vizPopoverOptions.length > 0) {
     vizPopoverOptions.forEach((btnOpt) => {
-      if (!btnOpt.__vizBound) {
-        btnOpt.__vizBound = true;
-        btnOpt.addEventListener('click', (e) => {
-          if (e && typeof e.preventDefault === 'function') e.preventDefault();
-          const effect = btnOpt.getAttribute('data-effect');
-          if (effect) {
-            setVisualizerMode(effect, { doc });
-            const selectEl = doc.getElementById('selectVizEffect');
-            if (selectEl && selectEl.value !== effect) {
-              selectEl.value = effect;
-              try {
-                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-              } catch (_) {}
-            }
-          }
-          if (vizPillPopoverMenu) vizPillPopoverMenu.setAttribute('hidden', '');
-          if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
-        });
-      }
+      bindVizPopoverOption(btnOpt, doc, vizPillPopoverMenu, btnVizPillTrigger);
     });
   }
 
-  if (!doc.__vizPopoverDismissBound && typeof doc.addEventListener === 'function') {
-    doc.__vizPopoverDismissBound = true;
-    doc.addEventListener('click', (e) => {
-      if (vizPillPopoverMenu && !vizPillPopoverMenu.hasAttribute('hidden')) {
-        if (vizPillSelectorWrapper && !vizPillSelectorWrapper.contains(e.target)) {
-          vizPillPopoverMenu.setAttribute('hidden', '');
-          if (btnVizPillTrigger) btnVizPillTrigger.setAttribute('aria-expanded', 'false');
-        }
-      }
-    });
-  }
+  bindVizPopoverDismiss(doc, vizPillPopoverMenu, vizPillSelectorWrapper, btnVizPillTrigger);
 }
 
 function initVisualizerErgonomicsUI(doc = (typeof document !== 'undefined' ? document : null)) {
@@ -10853,6 +11121,8 @@ if (typeof window !== 'undefined') {
   window.removeDomainBudget = removeDomainBudget;
   window.initPomodoroWidget = initPomodoroWidget;
   window.getPomodoroController = () => pomodoroController;
+  window.playSyntheticFocusChime = playSyntheticFocusChime;
+  window.updateDashboardFocusMetrics = updateDashboardFocusMetrics;
   window.getStarredDomains = () => starredDomains;
   window.getDomainAnnotations = () => domainAnnotations;
   window.getTrackingBlacklist = () => trackingBlacklist;

@@ -1389,8 +1389,8 @@ body.theme-light .btn-deck-mute:hover {
 }
 
 /* Floating Glass Popover Menu */
-#vizPillPopoverMenu,
-.viz-pill-popover-menu {
+#vizPillPopoverMenu:not([hidden]),
+.viz-pill-popover-menu:not([hidden]) {
   position: absolute !important;
   top: calc(100% + 6px) !important;
   left: 0 !important;
@@ -1411,6 +1411,7 @@ body.theme-light .btn-deck-mute:hover {
   animation: vizPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+#vizPillPopoverMenu[hidden],
 .viz-pill-popover-menu[hidden] {
   display: none !important;
 }
