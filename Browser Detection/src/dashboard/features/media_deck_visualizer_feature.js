@@ -328,6 +328,11 @@
       : 0;
     progress.style.width = `${pct.toFixed(1)}%`;
     miniScrubber.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+    const thumb = doc.createElement('span');
+    thumb.className = 'deck-scrubber-thumb';
+    progress.appendChild(thumb);
+
     miniScrubber.appendChild(progress);
 
     const timeSpan = doc.createElement('span');
@@ -489,11 +494,11 @@
       handleSoloTab(stream.tabId, Object.assign({}, options, { containerEl }));
     });
 
-    // 4. Switch to Tab Button
+    // 4. Switch to Tab Button (Icon Only 🎯)
     const btnSwitchTab = doc.createElement('button');
     btnSwitchTab.className = 'btn-deck-ctrl btn-deck-switch-tab';
-    btnSwitchTab.textContent = translate('btn_switch_tab') || '🎯 Switch Tab';
-    btnSwitchTab.setAttribute('title', 'Switch to this media tab in browser');
+    btnSwitchTab.textContent = '🎯';
+    btnSwitchTab.setAttribute('title', translate('btn_switch_tab') || 'Switch to this media tab in browser');
     btnSwitchTab.setAttribute('aria-label', `Switch to tab ${stream.tabId}`);
     btnSwitchTab.addEventListener('click', (e) => {
       e.stopPropagation();

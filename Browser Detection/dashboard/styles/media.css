@@ -981,15 +981,43 @@ body.theme-light .hero-seek-slider {
   height: 4px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
 .deck-scrubber-progress {
+  position: relative;
   height: 100%;
   background: linear-gradient(90deg, #10b981, #06b6d4);
-  border-radius: 2px;
+  border-radius: var(--radius-full, 9999px);
   transition: width 0.25s ease;
+}
+
+.deck-scrubber-thumb {
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #06b6d4;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+  pointer-events: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.deck-mini-scrubber:hover .deck-scrubber-thumb {
+  transform: translateY(-50%) scale(1.25);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.9);
+}
+
+body.theme-light .deck-scrubber-thumb,
+body.light-theme .deck-scrubber-thumb {
+  background: #ffffff;
+  border: 2px solid #059669;
+  box-shadow: 0 0 8px rgba(5, 150, 105, 0.5);
 }
 
 .deck-time-display {
@@ -1153,7 +1181,7 @@ body.theme-light .btn-deck-mute:hover {
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.3);
   color: #38bdf8;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 6px;
