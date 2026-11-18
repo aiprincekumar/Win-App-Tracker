@@ -14,6 +14,7 @@ const dashJsPath = path.join(rootDir, 'dashboard', 'dashboard.js');
 const featureJsPath = path.join(rootDir, 'src', 'dashboard', 'features', 'media_deck_visualizer_feature.js');
 const mediaCssPath = path.join(rootDir, 'dashboard', 'styles', 'media.css');
 const dashCssPath = path.join(rootDir, 'dashboard', 'dashboard.css');
+const vizDeckCssPath = path.join(rootDir, 'dashboard', 'styles', 'media', 'visualizer_deck.css');
 
 // =============================================================================
 // Test 1: UTF-8 with BOM (0xEF, 0xBB, 0xBF) Standard Audit
@@ -26,6 +27,7 @@ console.log('Test 1: UTF-8 BOM (0xEF, 0xBB, 0xBF) Standard Audit');
     { name: 'src/dashboard/features/media_deck_visualizer_feature.js', path: featureJsPath },
     { name: 'dashboard/styles/media.css', path: mediaCssPath },
     { name: 'dashboard/dashboard.css', path: dashCssPath },
+    { name: 'dashboard/styles/media/visualizer_deck.css', path: vizDeckCssPath },
     { name: 'tests/test_visualizer_phase_01_ergonomics.js', path: __filename }
   ];
 
@@ -105,6 +107,7 @@ console.log('\nTest 3: CSS Specifications & Materiality Standards');
 {
   const mediaCss = fs.readFileSync(mediaCssPath, 'utf8');
   const dashCss = fs.readFileSync(dashCssPath, 'utf8');
+  const vizDeckCss = fs.readFileSync(vizDeckCssPath, 'utf8');
 
   const requiredSelectors = [
     '.visualizer-controls-bar',
@@ -137,14 +140,14 @@ console.log('\nTest 3: CSS Specifications & Materiality Standards');
   ];
 
   requiredSelectors.forEach(sel => {
-    assert(mediaCss.includes(sel) || dashCss.includes(sel), `Selector "${sel}" must be declared in media.css or dashboard.css`);
+    assert(vizDeckCss.includes(sel) || mediaCss.includes(sel) || dashCss.includes(sel), `Selector "${sel}" must be declared in visualizer stylesheets`);
   });
   console.log('  ✅ 3.1: All required Phase 1 CSS selectors declared in stylesheets');
 
   // Verify height & layout constraint rules
-  assert(mediaCss.includes('max-height: 34px') || dashCss.includes('max-height: 34px'), 'Top controls bar constrained to 34px');
-  assert(mediaCss.includes('.viz-subcanvas-deck') && mediaCss.includes('display: flex'), '.viz-subcanvas-deck flex layout defined');
-  assert(mediaCss.includes('.vu-peak-indicator') && mediaCss.includes('position: absolute'), 'Peak-hold indicators styled as absolute overlay');
+  assert(vizDeckCss.includes('max-height: 34px') || mediaCss.includes('max-height: 34px') || dashCss.includes('max-height: 34px'), 'Top controls bar constrained to 34px');
+  assert((vizDeckCss.includes('.viz-subcanvas-deck') && vizDeckCss.includes('display: flex')) || (mediaCss.includes('.viz-subcanvas-deck') && mediaCss.includes('display: flex')), '.viz-subcanvas-deck flex layout defined');
+  assert((vizDeckCss.includes('.vu-peak-indicator') && vizDeckCss.includes('position: absolute')) || (mediaCss.includes('.vu-peak-indicator') && mediaCss.includes('position: absolute')), 'Peak-hold indicators styled as absolute overlay');
   console.log('  ✅ 3.2: Top bar height constraints and lower deck flex rules verified');
 }
 

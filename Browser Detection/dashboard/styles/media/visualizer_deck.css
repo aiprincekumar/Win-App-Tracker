@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Sentinel Web Activity & Media Sentinel - Visualizer Deck Modular Styles
  * File: dashboard/styles/media/visualizer_deck.css
  * Phase 1: Real-Time Spectrum Visualizer UI/UX Ergonomics & Zero-Expansion Layout
@@ -25,6 +25,43 @@
   flex-shrink: 0 !important;
 }
 
+.viz-actions-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-left: auto !important;
+}
+
+.btn-viz-action-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+}
+
+.btn-viz-action-icon:hover {
+  background: rgba(49, 46, 129, 0.75) !important;
+  border-color: rgba(129, 140, 248, 0.6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35) !important;
+}
+
+.btn-viz-action-icon:active,
+.btn-viz-action-icon.active {  }
+
+.btn-viz-action-icon:focus-visible {  }
+
+.viz-action-svg {  }
+
 .viz-header-status-pill {
   display: inline-flex;
   align-items: center;
@@ -46,15 +83,11 @@
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-.viz-live-dot.active {
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  animation: vizPulseLiveDot 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
-}
+.viz-live-dot.active {  }
 
 @keyframes vizPulseLiveDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.65; transform: scale(1.15); }
+  0%, 100% {  }
+  50% {  }
 }
 
 .viz-live-text {
@@ -65,13 +98,26 @@
 }
 
 /* ========================================================================= */
-/* 2. COMPACT GLASS PILL SELECTOR & FLOATING POPOVER MENU                    */
+/* 2. SUB-CANVAS LOWER DECK: PILL SELECTOR & STEREO VU METERS                */
 /* ========================================================================= */
-.viz-pill-selector-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
+.viz-subcanvas-deck {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
+
+.viz-subcanvas-deck .viz-select-wrapper {  }
+
+.viz-subcanvas-deck .vu-meters-container {  }
+
+/* Compact Glass Pill Selector */
+.viz-pill-selector-wrapper {  }
 
 .viz-pill-trigger {
   display: inline-flex;
@@ -91,22 +137,16 @@
 }
 
 .viz-pill-trigger:hover,
-.viz-pill-trigger[aria-expanded="true"] {
-  background: rgba(49, 46, 129, 0.7);
-  border-color: rgba(129, 140, 248, 0.6);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
-}
+.viz-pill-trigger[aria-expanded="true"] {  }
 
-.viz-pill-trigger:focus-visible {
-  outline: 2px solid #818cf8;
-  outline-offset: 1px;
-}
+.viz-pill-trigger:focus-visible {  }
 
-.viz-pill-icon { font-size: 0.8rem; line-height: 1; }
-.viz-pill-label { line-height: 1.2; }
-.viz-pill-chevron { transition: transform 0.2s ease; }
-.viz-pill-trigger[aria-expanded="true"] .viz-pill-chevron { transform: rotate(180deg); }
+.viz-pill-icon {  }
+.viz-pill-label {  }
+.viz-pill-chevron {  }
+.viz-pill-trigger[aria-expanded="true"] .viz-pill-chevron {  }
 
+/* Floating Glass Popover Menu */
 .viz-pill-popover-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -126,11 +166,11 @@
   animation: vizPopoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.viz-pill-popover-menu[hidden] { display: none !important; }
+.viz-pill-popover-menu[hidden] {  }
 
 @keyframes vizPopoverFadeIn {
-  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {  }
+  to {  }
 }
 
 .viz-popover-option {
@@ -151,17 +191,9 @@
 }
 
 .viz-popover-option:hover,
-.viz-popover-option:focus-visible {
-  background: rgba(99, 102, 241, 0.2);
-  color: #ffffff;
-  outline: none;
-}
+.viz-popover-option:focus-visible {  }
 
-.viz-popover-option.active {
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.35), rgba(6, 182, 212, 0.25));
-  color: #38bdf8;
-  font-weight: 600;
-}
+.viz-popover-option.active {  }
 
 /* ========================================================================= */
 /* 3. CANVAS CHASSIS, HUD OVERLAY & SLIDING SETTINGS DRAWER                  */
@@ -188,7 +220,11 @@
   justify-content: space-between;
   padding: 8px;
   z-index: 10;
-telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
+}
+
+.viz-hud-telemetry-cluster {  }
+
+.viz-hud-badge {
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
@@ -200,8 +236,11 @@ telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
   color: #94a3b8;
   letter-spacing: 0.5px;
 }
-.viz-hud-fps { color: #10b981; border-color: rgba(16, 185, 129, 0.25); }
-.viz-hud-rate { color: #38bdf8; border-color: rgba(56, 189, 248, 0.25); graticule-labels {
+
+.viz-hud-fps {  }
+.viz-hud-rate {  }
+
+.viz-hud-graticule-labels {
   display: flex;
   justify-content: space-between;
   padding: 0 4px 2px 4px;
@@ -220,6 +259,7 @@ telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
   user-select: none;
 }
 
+/* Sliding Settings Glass Drawer Overlay */
 .viz-settings-drawer {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -234,11 +274,8 @@ telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
   transform: translateY(0);
   opacity: 1;
 }
-.viz-settings-drawer[hidden] {
-  display: none !important;
-  transform: translateY(-100%);
-  opacity: 0;
-}
+
+.viz-settings-drawer[hidden] {  }
 
 .viz-drawer-header {
   display: flex;
@@ -248,13 +285,16 @@ telemetry-cluster { display: flex; gap: 6px; align-items: center; badge {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 8px;
 }
+
 .viz-drawer-title {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: #38bdf8;
-drawer-close {
+}
+
+.btn-viz-drawer-close {
   background: transparent;
   border: none;
   color: #94a3b8;
@@ -264,8 +304,9 @@ drawer-close {
   align-items: center;
   transition: color 0.15s ease;
 }
-.btn-viz-drawer-close:hover { color: #f43f5e; }
-.btn-viz-drawer-close:focus-visible { outline: 2px solid #818cf8; border-radius: 4px; }
+
+.btn-viz-drawer-close:hover {  }
+.btn-viz-drawer-close:focus-visible {  }
 
 .viz-drawer-row {
   display: flex;
@@ -273,16 +314,19 @@ drawer-close {
   align-items: center;
   margin-bottom: 8px;
 }
-.viz-drawer-row:last-child { margin-bottom: 0; }
-.viz-drawer-label { font-size: 0.68rem; color: #cbd5e1; }
 
+.viz-drawer-row:last-child {  }
+.viz-drawer-label {  }
+
+/* Micro Toggle Switch */
 .viz-toggle-switch {
   position: relative;
   display: inline-block;
   width: 32px;
   height: 18px;
 }
-.viz-toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.viz-toggle-switch input {  }
 .viz-toggle-slider {
   position: absolute;
   cursor: pointer;
@@ -291,6 +335,7 @@ drawer-close {
   border-radius: 18px;
   transition: 0.2s;
 }
+
 .viz-toggle-slider:before {
   position: absolute;
   content: "";
@@ -302,10 +347,12 @@ drawer-close {
   border-radius: 50%;
   transition: 0.2s;
 }
-.viz-toggle-switch input:checked + .viz-toggle-slider { background: #6366f1; }
-.viz-toggle-switch input:checked + .viz-toggle-slider:before { transform: translateX(14px); }
-.viz-toggle-switch input:focus-visible + .viz-toggle-slider { box-shadow: 0 0 0 2px #818cf8; }
 
+.viz-toggle-switch input:checked + .viz-toggle-slider {  }
+.viz-toggle-switch input:checked + .viz-toggle-slider:before {  }
+.viz-toggle-switch input:focus-visible + .viz-toggle-slider {  }
+
+/* Segmented Decay Rate Buttons */
 .viz-btn-segmented {
   display: inline-flex;
   background: rgba(30, 41, 59, 0.7);
@@ -313,6 +360,7 @@ drawer-close {
   padding: 2px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
 .viz-seg-btn {
   background: transparent;
   border: none;
@@ -324,9 +372,10 @@ drawer-close {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.viz-seg-btn:hover { color: #ffffff; }
-.viz-seg-btn:focus-visible { outline: 2px solid #818cf8; }
-.viz-seg-btn.active { background: #4f46e5; color: #ffffff; font-weight: 600; }
+
+.viz-seg-btn:hover {  }
+.viz-seg-btn:focus-visible {  }
+.viz-seg-btn.active {  }
 
 /* ========================================================================= */
 /* 4. STUDIO PEAK-HOLD STEREO VU METERS                                      */
@@ -341,19 +390,26 @@ drawer-close {
   border-radius: 8px !important;
   margin-top: 6px !important;
   flex-shrink: 0 !important;
-bar-wrapper {
+}
+
+.vu-bar-wrapper {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
   width: 100% !important;
-label {
+}
+
+.vu-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
   font-weight: 700;
   color: #38bdf8;
   width: 12px;
   text-align: center;
-meter-track {
+}
+
+.vu-meter,
+.vu-meter-track {
   position: relative;
   flex: 1 1 auto;
   height: 6px;
@@ -361,12 +417,17 @@ meter-track {
   border-radius: 3px;
   overflow: hidden;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
-level-fill {
+}
+
+.vu-level,
+.vu-level-fill {
   height: 100%;
   border-radius: 3px;
   background: linear-gradient(90deg, #10b981 0%, #10b981 65%, #f59e0b 85%, #ef4444 100%);
   transition: width 0.04s ease-out;
-peak-indicator {
+}
+
+.vu-peak-indicator {
   position: absolute;
   top: 0; bottom: 0;
   width: 2px;
@@ -375,7 +436,9 @@ peak-indicator {
   border-radius: 1px;
   pointer-events: none;
   transition: left 0.02s linear;
-db-text {
+}
+
+.vu-db-text {
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   font-size: 0.65rem;
@@ -383,11 +446,11 @@ db-text {
   color: #94a3b8;
   width: 44px;
   text-align: right;
-status-cluster {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2px;
-clip-badge {
+}
+
+.vu-status-cluster {  }
+
+.vu-clip-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
   font-weight: 700;
@@ -399,29 +462,35 @@ clip-badge {
   letter-spacing: 0.5px;
 }
 
+.vu-clip-badge.clipping {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  color: #ef4444 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
 /* ========================================================================= */
 /* 5. LIGHT THEME HARMONIZATION                                              */
 /* ========================================================================= */
-body.theme-light .visualizer-controls-bar {
-  background: rgba(241, 245, 249, 0.8) !important;
-  border-color: rgba(203, 213, 225, 0.8) !important;
- .viz-pill-trigger {
+body.theme-light .visualizer-controls-bar {  }
+
+body.theme-light .viz-pill-trigger {
   background: #ffffff;
   border-color: rgba(99, 102, 241, 0.4);
   color: #0f172a;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
- .viz-pill-popover-menu {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(203, 213, 225, 0.9);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
- .viz-popover-option { color: #334155; }
-body.theme-light .viz-popover-option:hover { background: rgba(99, 102, 241, 0.1); color: #1e1b4b; }
-body.theme-light .viz-settings-drawer {
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom-color: rgba(203, 213, 225, 0.8);
 }
-body.theme-light .viz-drawer-label { color: #334155; }
-body.theme-light .vu-meters-container {
-  background: rgba(241, 245, 249, 0.8) !important;
-  border-color: rgba(203, 213, 225, 0.8) !important;
-}
+
+body.theme-light .viz-pill-popover-menu {  }
+
+body.theme-light .viz-popover-option {  }
+
+body.theme-light .viz-popover-option:hover {  }
+
+body.theme-light .viz-settings-drawer {  }
+
+body.theme-light .viz-drawer-label {  }
+
+body.theme-light .viz-subcanvas-deck {  }
+
+body.theme-light .vu-meters-container {  }
