@@ -231,7 +231,10 @@ const DASHBOARD_I18N = {
     media_deck_title: '🎬 Multi-Tab Live Media Deck',
     btn_solo_tab: '🎧 Solo Tab',
     btn_switch_tab: '🎯 Switch Tab',
+    btn_mute_all: '🔇 Mute All',
+    btn_unmute_all: '🔊 Unmute All',
     btn_mute_all_others: '🔇 Mute All Others',
+    btn_unmute_all_others: '🔊 Unmute All Others',
     status_audible: '🟢 Audible',
     status_playing: '🟢 Playing',
     status_paused: '⏸️ Paused',
@@ -676,7 +679,10 @@ const DASHBOARD_I18N = {
     media_deck_title: '🎬 मल्टी-टैब लाइव मीडिया डेक',
     btn_solo_tab: '🎧 सोलो टैब',
     btn_switch_tab: '🎯 टैब स्विच',
-    btn_mute_all_others: '🔇 अन्य सभी को म्यूट करें',
+    btn_mute_all: '🔇 सभी म्यूट करें',
+    btn_unmute_all: '🔊 सभी अनम्यूट करें',
+    btn_mute_all_others: '🔇 अन्य सभी म्यूट करें',
+    btn_unmute_all_others: '🔊 अन्य सभी अनम्यूट करें',
     status_audible: '🟢 ध्वनि चालू',
     status_playing: '🟢 चल रहा है',
     status_paused: '⏸️ रुका हुआ',
@@ -2324,6 +2330,16 @@ function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
   const viz = getResolvedVisualizer();
   if (viz && typeof viz.handleMuteAllOthers === 'function') {
     return viz.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
+  }
+  return Promise.resolve([]);
+}
+
+function handleMuteAll(streamsList, options = {}) {
+  const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  const viz = getResolvedVisualizer();
+  if (viz && typeof viz.handleMuteAll === 'function') {
+    return viz.handleMuteAll(streamsList || activeMediaStreams, opt);
   }
   return Promise.resolve([]);
 }
@@ -8835,7 +8851,14 @@ function setupEventListeners() {
   const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
   if (btnMuteAllOthers) {
     btnMuteAllOthers.addEventListener('click', () => {
-      handleMuteAllOthers();
+      handleMuteAllOthers(activeMediaStreams, null, { doc: document, t });
+    });
+  }
+
+  const btnMuteAll = document.getElementById('btnMuteAll');
+  if (btnMuteAll) {
+    btnMuteAll.addEventListener('click', () => {
+      handleMuteAll(activeMediaStreams, { doc: document, t });
     });
   }
 
@@ -9927,6 +9950,7 @@ if (typeof module !== 'undefined' && module.exports) {
     handleRemoteMediaCommand,
     handleSoloTab,
     handleMuteAllOthers,
+    handleMuteAll,
     initAudioVisualizer,
     setVisualizerMode,
     isVisualizerFullWindowActive,
@@ -9996,6 +10020,7 @@ if (typeof window !== 'undefined') {
   window.handleRemoteMediaCommand = handleRemoteMediaCommand;
   window.handleSoloTab = handleSoloTab;
   window.handleMuteAllOthers = handleMuteAllOthers;
+  window.handleMuteAll = handleMuteAll;
   window.initAudioVisualizer = initAudioVisualizer;
   window.setVisualizerMode = setVisualizerMode;
   window.isVisualizerFullWindowActive = isVisualizerFullWindowActive;
