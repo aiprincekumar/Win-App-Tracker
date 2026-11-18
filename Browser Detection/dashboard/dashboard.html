@@ -62,7 +62,7 @@
         </button>
           <button id="navTabWellbeing" class="nav-item" data-tab="wellbeing" role="tab" aria-selected="false" aria-controls="paneWellbeing">
             <span class="nav-icon">🧘</span>
-            <span id="navWellbeingText" class="nav-text">Focus & Wellbeing</span>
+            <span id="navWellbeingText" class="nav-text" data-i18n="nav_wellbeing">Focus & Sleep Hub</span>
           </button>
         <button id="navTabSettings" class="nav-item" data-tab="settings" role="tab" aria-selected="false" aria-controls="paneSettings">
           <span class="nav-icon">⚙️</span>
@@ -75,7 +75,7 @@
       <!-- Sidebar Compact Telemetry HUD Cluster -->
       <div class="sidebar-hud-group" role="region" aria-label="Service Status Indicators">
         <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
-        <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus Sentinel State (Click to switch to Focus &amp; Wellbeing)" style="cursor: pointer;">
+        <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus &amp; Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)" style="cursor: pointer;">
           <div class="hud-card-header">
             <span class="hud-card-title">🧘 Focus Sentinel</span>
             <span id="wellbeingMicroStatusDot" class="hud-dot idle" aria-label="Focus Sentinel Status"></span>
@@ -1082,6 +1082,108 @@
                   <button type="button" id="btnStartPomodoro" class="btn-pomodoro primary">▶️ Start Focus</button>
                   <button type="button" id="btnPausePomodoro" class="btn-pomodoro">⏸️ Pause</button>
                   <button type="button" id="btnResetPomodoro" class="btn-pomodoro">🔄 Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 1.5: Sleep Sentinel Hub & Radial Countdown Dial -->
+            <div id="cardSleepSentinelHub" class="bento-card liquid-glass-card bento-span-6 sleep-hero-card">
+              <div class="card-header-row settings-card-header">
+                <span class="card-icon settings-card-icon">🌙</span>
+                <div class="card-title-group settings-card-title-group">
+                  <h3 id="txtSleepSentinelTitle" class="card-heading settings-card-title">Sleep Sentinel Hub</h3>
+                  <span id="txtSleepSentinelDesc" class="settings-card-sub">Automated playback cutoff, gentle audio fade-out, and bedtime recovery</span>
+                </div>
+                <div class="sleep-header-status-group">
+                  <span id="dashSleepActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>
+                  <span id="dashSleepStatusBadge" class="dash-sleep-badge idle">IDLE</span>
+                </div>
+              </div>
+
+              <div class="dash-sleep-hero-body">
+                <!-- SVG Radial Progress Dial -->
+                <div class="dash-sleep-dial-wrapper">
+                  <svg class="dash-sleep-svg-dial" width="140" height="140" viewBox="0 0 120 120" role="img" aria-label="Sleep Timer Countdown Dial">
+                    <circle
+                      class="dash-sleep-dial-track"
+                      cx="60"
+                      cy="60"
+                      r="54"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="8"
+                    />
+                    <circle
+                      id="dashSleepDialProgress"
+                      class="dash-sleep-dial-progress"
+                      cx="60"
+                      cy="60"
+                      r="54"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="8"
+                      stroke-linecap="round"
+                      stroke-dasharray="339.292"
+                      stroke-dashoffset="339.292"
+                      transform="rotate(-90 60 60)"
+                    />
+                  </svg>
+                  <div class="dash-sleep-dial-center-content">
+                    <div id="dashSleepCountdownDisplay" class="dash-sleep-big-time" aria-live="polite">00:00</div>
+                    <div id="dashSleepFinishTime" class="dash-sleep-finish-time">No active timer</div>
+                  </div>
+                </div>
+
+                <!-- Duration Presets (15m, 30m, 45m, 60m, 90m, 120m) -->
+                <div class="dash-sleep-presets-container">
+                  <span class="dash-sleep-section-label">Quick Presets</span>
+                  <div class="dash-sleep-presets-grid">
+                    <button type="button" class="dash-sleep-preset-btn" data-minutes="15">15m</button>
+                    <button type="button" class="dash-sleep-preset-btn active" data-minutes="30">30m</button>
+                    <button type="button" class="dash-sleep-preset-btn" data-minutes="45">45m</button>
+                    <button type="button" class="dash-sleep-preset-btn" data-minutes="60">60m</button>
+                    <button type="button" class="dash-sleep-preset-btn" data-minutes="90">90m</button>
+                    <button type="button" class="dash-sleep-preset-btn" data-minutes="120">120m</button>
+                  </div>
+                </div>
+
+                <!-- Quick Extenders (+5m, +15m) & Actions -->
+                <div class="dash-sleep-controls-panel">
+                  <div class="dash-sleep-extender-group">
+                    <span class="dash-sleep-section-label">Extend Time</span>
+                    <div class="dash-sleep-extender-buttons">
+                      <button type="button" id="btnDashSleepExtend5" class="dash-sleep-extender-btn" data-add="5">+5m</button>
+                      <button type="button" id="btnDashSleepExtend15" class="dash-sleep-extender-btn" data-add="15">+15m</button>
+                    </div>
+                  </div>
+                  <div class="dash-sleep-actions-group">
+                    <button type="button" id="btnDashSleepToggle" class="btn-sleep-primary">
+                      <span id="btnDashSleepToggleIcon">▶️</span>
+                      <span id="btnDashSleepToggleText">Start Sleep Timer</span>
+                    </button>
+                    <button type="button" id="btnDashSleepReset" class="btn-sleep-secondary">
+                      <span>🔄</span>
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Feature Toggles -->
+                <div class="dash-sleep-toggles-container">
+                  <label class="dash-sleep-toggle-row" for="toggleDashSleepFade">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title">Gradual Audio Fade-out</span>
+                      <span class="toggle-desc">Smoothly lower volume 30s before cutoff to prevent sudden waking</span>
+                    </span>
+                    <input type="checkbox" id="toggleDashSleepFade" class="styled-checkbox" checked>
+                  </label>
+                  <label class="dash-sleep-toggle-row" for="toggleDashSleepEndOfVideo">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title">Stop at End of Video</span>
+                      <span class="toggle-desc">Trigger cutoff as soon as the current playing video finishes</span>
+                    </span>
+                    <input type="checkbox" id="toggleDashSleepEndOfVideo" class="styled-checkbox">
+                  </label>
                 </div>
               </div>
             </div>

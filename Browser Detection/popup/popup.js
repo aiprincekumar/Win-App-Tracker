@@ -3718,34 +3718,65 @@ function setupEventListeners() {
   const btnSleepToggleRun = document.getElementById('btnSleepToggleRun');
   if (btnSleepToggleRun) {
     btnSleepToggleRun.addEventListener('click', () => {
-      if (currentSleepTimer && currentSleepTimer.state === 'RUNNING') {
-        const now = Date.now();
-        const rem = Math.max(0, currentSleepTimer.targetTime - now);
-        currentSleepTimer.state = 'PAUSED';
-        currentSleepTimer.remainingMs = rem;
-        currentSleepTimer.pausedAt = now;
+      if (currentSleepTimer && (currentSleepTimer.state === 'RUNNING' || currentSleepTimer.state === 'FADING')) {
         try {
+          browserAPI.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
+            if (res && res.success && res.state) {
+              currentSleepTimer = res.state;
+              renderSleepTimerUI(currentSleepTimer);
+            } else {
+              const now = Date.now();
+              const rem = Math.max(0, currentSleepTimer.targetTime - now);
+              currentSleepTimer.state = 'PAUSED';
+              currentSleepTimer.remainingMs = rem;
+              currentSleepTimer.pausedAt = now;
+              browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
+                renderSleepTimerUI(currentSleepTimer);
+              });
+            }
+            showPopupToast('Sleep timer paused', 'info');
+          });
+        } catch (_) {
+          const now = Date.now();
+          const rem = Math.max(0, currentSleepTimer.targetTime - now);
+          currentSleepTimer.state = 'PAUSED';
+          currentSleepTimer.remainingMs = rem;
+          currentSleepTimer.pausedAt = now;
           browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
             renderSleepTimerUI(currentSleepTimer);
             showPopupToast('Sleep timer paused', 'info');
           });
-        } catch (_) {
-          renderSleepTimerUI(currentSleepTimer);
         }
       } else if (currentSleepTimer && currentSleepTimer.state === 'PAUSED') {
-        const now = Date.now();
-        const rem = currentSleepTimer.remainingMs || 60000;
-        currentSleepTimer.state = 'RUNNING';
-        currentSleepTimer.targetTime = now + rem;
-        delete currentSleepTimer.remainingMs;
-        delete currentSleepTimer.pausedAt;
         try {
+          browserAPI.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
+            if (res && res.success && res.state) {
+              currentSleepTimer = res.state;
+              renderSleepTimerUI(currentSleepTimer);
+            } else {
+              const now = Date.now();
+              const rem = currentSleepTimer.remainingMs || 60000;
+              currentSleepTimer.state = 'RUNNING';
+              currentSleepTimer.targetTime = now + rem;
+              delete currentSleepTimer.remainingMs;
+              delete currentSleepTimer.pausedAt;
+              browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
+                renderSleepTimerUI(currentSleepTimer);
+              });
+            }
+            showPopupToast('Sleep timer resumed', 'success');
+          });
+        } catch (_) {
+          const now = Date.now();
+          const rem = currentSleepTimer.remainingMs || 60000;
+          currentSleepTimer.state = 'RUNNING';
+          currentSleepTimer.targetTime = now + rem;
+          delete currentSleepTimer.remainingMs;
+          delete currentSleepTimer.pausedAt;
           browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
             renderSleepTimerUI(currentSleepTimer);
             showPopupToast('Sleep timer resumed', 'success');
           });
-        } catch (_) {
-          renderSleepTimerUI(currentSleepTimer);
         }
       } else {
         startSleepTimerWithMinutes(30);

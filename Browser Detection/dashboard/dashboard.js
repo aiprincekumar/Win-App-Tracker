@@ -178,7 +178,9 @@ const DASHBOARD_I18N = {
     // Sidebar Tabs
     nav_tracking: 'Time Tracking',
     nav_media: 'Media Analytics',
-    nav_wellbeing: 'Focus & Wellbeing',
+    nav_wellbeing: 'Focus & Sleep Hub',
+    sleep_sentinel_title: 'Sleep Sentinel Hub',
+    sleep_sentinel_desc: 'Automated playback cutoff, gentle audio fade-out, and bedtime recovery',
     nav_settings: 'Settings & Data',
     
     // App Bar Headers
@@ -620,7 +622,9 @@ const DASHBOARD_I18N = {
     // Sidebar Tabs
     nav_tracking: 'टाइम ट्रैकिंग',
     nav_media: 'मीडिया एनालिटिक्स',
-    nav_wellbeing: 'फोकस व वेलबीइंग',
+    nav_wellbeing: 'फोकस व स्लीप हब',
+    sleep_sentinel_title: 'स्लीप सेंटिनल हब',
+    sleep_sentinel_desc: 'स्वचालित प्लेबैक कटऑफ, क्रमिक ऑडियो फेड-आउट व स्लीप टाइमर',
     nav_settings: 'सेटिंग्स व डेटा',
     
     // App Bar Headers
@@ -3491,6 +3495,8 @@ function applyDashboardLanguage(lang) {
   setTxt('btnAddBudget', 'btn_set_budget');
 
   setTxt('txtPomodoroTitle', 'pomodoro_title');
+  setTxt('txtSleepSentinelTitle', 'sleep_sentinel_title');
+  setTxt('txtSleepSentinelDesc', 'sleep_sentinel_desc');
   setTxt('txtNoteModalTitle', 'modal_note_title');
   setTxt('txtNoteModalDesc', 'modal_note_desc');
   setTxt('btnSaveDomainNote', 'btn_save_note');
@@ -8988,6 +8994,383 @@ if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
   });
 }
 
+
+// =============================================================================
+// Sleep Sentinel Hub & Radial Dial Controller (Dashboard Wellbeing Pane)
+// =============================================================================
+const DASH_SLEEP_CIRCUMFERENCE = 339.292; // 2 * Math.PI * 54
+let currentDashSleepTimer = null;
+let dashSleepTickerInterval = null;
+let selectedDashSleepMinutes = 30;
+
+/**
+ * Updates SVG radial progress circle stroke-dashoffset and color
+ */
+function updateDashSleepDial(remainingMs, totalDurationMs, isRunning, isPaused, isFading) {
+  if (typeof document === 'undefined') return;
+  const circle = document.getElementById('dashSleepDialProgress');
+  if (!circle) return;
+
+  if (totalDurationMs <= 0 || remainingMs <= 0 || (!isRunning && !isPaused && !isFading)) {
+    circle.setAttribute('stroke-dashoffset', String(DASH_SLEEP_CIRCUMFERENCE));
+    circle.style.stroke = '#38bdf8';
+    return;
+  }
+
+  const ratio = Math.max(0, Math.min(1, remainingMs / totalDurationMs));
+  const offset = DASH_SLEEP_CIRCUMFERENCE * (1 - ratio);
+  circle.setAttribute('stroke-dashoffset', String(offset.toFixed(2)));
+
+  if (isFading) {
+    circle.style.stroke = '#c084fc';
+  } else if (isPaused) {
+    circle.style.stroke = '#fbbf24';
+  } else if (ratio < 0.15) {
+    circle.style.stroke = '#ef4444';
+  } else if (ratio < 0.5) {
+    circle.style.stroke = '#eab308';
+  } else {
+    circle.style.stroke = '#38bdf8';
+  }
+}
+
+/**
+ * Renders sleep timer state into the dashboard hub DOM elements
+ */
+function renderDashSleepTimer(timer) {
+  if (typeof document === 'undefined') return;
+  currentDashSleepTimer = timer || { state: 'IDLE' };
+  const countdownEl = document.getElementById('dashSleepCountdownDisplay');
+  const finishTimeEl = document.getElementById('dashSleepFinishTime');
+  const badgeEl = document.getElementById('dashSleepStatusBadge');
+  const activeDot = document.getElementById('dashSleepActiveDot');
+  const btnToggle = document.getElementById('btnDashSleepToggle');
+  const btnToggleIcon = document.getElementById('btnDashSleepToggleIcon');
+  const btnToggleText = document.getElementById('btnDashSleepToggleText');
+
+  const isIdle = !timer || timer.state === 'IDLE' || timer.state === 'CANCELLED' || !timer.targetTime;
+
+  if (isIdle) {
+    if (countdownEl) countdownEl.textContent = '00:00';
+    if (finishTimeEl) finishTimeEl.textContent = 'No active timer';
+    if (badgeEl) {
+      badgeEl.textContent = 'IDLE';
+      badgeEl.className = 'dash-sleep-badge idle';
+    }
+    if (activeDot) activeDot.classList.add('hidden');
+    if (btnToggleIcon) btnToggleIcon.textContent = '▶️';
+    if (btnToggleText) btnToggleText.textContent = 'Start Sleep Timer';
+    if (btnToggle) btnToggle.className = 'btn-sleep-primary';
+    updateDashSleepDial(0, 1, false, false, false);
+    stopDashSleepTicker();
+    return;
+  }
+
+  const now = Date.now();
+  const isPaused = timer.state === 'PAUSED';
+  const isRunning = timer.state === 'RUNNING';
+  const isFading = timer.state === 'FADING';
+
+  const remainingMs = isPaused
+    ? (timer.remainingMs || Math.max(0, timer.targetTime - (timer.pausedAt || now)))
+    : Math.max(0, timer.targetTime - now);
+  const totalMs = timer.durationMs || (timer.durationMinutes * 60 * 1000) || 1;
+
+  const totalSecs = Math.max(0, Math.ceil(remainingMs / 1000));
+  const hrs = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  const timeStr = hrs > 0
+    ? `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  if (countdownEl) countdownEl.textContent = timeStr;
+
+  if (finishTimeEl) {
+    const projectedTarget = isPaused ? (now + remainingMs) : timer.targetTime;
+    const d = new Date(projectedTarget);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    finishTimeEl.textContent = `Sleep at ${h}:${m} ${ampm}`;
+  }
+
+  if (badgeEl) {
+    badgeEl.textContent = timer.state;
+    badgeEl.className = `dash-sleep-badge ${timer.state.toLowerCase()}`;
+  }
+
+  if (activeDot) activeDot.classList.toggle('hidden', isIdle);
+
+  if (btnToggleText && btnToggleIcon) {
+    if (isRunning || isFading) {
+      btnToggleIcon.textContent = '⏸️';
+      btnToggleText.textContent = 'Pause Timer';
+    } else if (isPaused) {
+      btnToggleIcon.textContent = '▶️';
+      btnToggleText.textContent = 'Resume Timer';
+    } else {
+      btnToggleIcon.textContent = '▶️';
+      btnToggleText.textContent = 'Start Sleep Timer';
+    }
+  }
+
+  // Highlight active preset button if match
+  document.querySelectorAll('.dash-sleep-preset-btn').forEach(btn => {
+    const minsPreset = parseInt(btn.getAttribute('data-minutes'), 10);
+    btn.classList.toggle('active', minsPreset === timer.durationMinutes);
+  });
+
+  updateDashSleepDial(remainingMs, totalMs, isRunning, isPaused, isFading);
+
+  if ((isRunning || isFading) && !dashSleepTickerInterval) {
+    startDashSleepTicker();
+  } else if (isPaused) {
+    stopDashSleepTicker();
+  }
+}
+
+function startDashSleepTicker() {
+  stopDashSleepTicker();
+  dashSleepTickerInterval = setInterval(() => {
+    if (currentDashSleepTimer && (currentDashSleepTimer.state === 'RUNNING' || currentDashSleepTimer.state === 'FADING')) {
+      const now = Date.now();
+      if (currentDashSleepTimer.targetTime <= now) {
+        stopDashSleepTicker();
+        fetchSleepTimerState();
+      } else {
+        renderDashSleepTimer(currentDashSleepTimer);
+      }
+    } else {
+      stopDashSleepTicker();
+    }
+  }, 1000);
+}
+
+function stopDashSleepTicker() {
+  if (dashSleepTickerInterval) {
+    clearInterval(dashSleepTickerInterval);
+    dashSleepTickerInterval = null;
+  }
+}
+
+/**
+ * Fetches latest sleep timer and settings from browser runtime / storage
+ */
+function fetchSleepTimerState() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'GET_SLEEP_TIMER_STATE' }, (res) => {
+        if (res && res.success && res.state) {
+          renderDashSleepTimer(res.state);
+        } else {
+          loadSleepTimerFromStorage();
+        }
+      });
+    } else {
+      loadSleepTimerFromStorage();
+    }
+  } catch (_) {
+    loadSleepTimerFromStorage();
+  }
+}
+
+function loadSleepTimerFromStorage() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['sentinel_sleep_timer', 'sentinel_sleep_settings'], (res) => {
+        if (res && res.sentinel_sleep_timer) {
+          renderDashSleepTimer(res.sentinel_sleep_timer);
+        }
+        if (res && res.sentinel_sleep_settings) {
+          syncSleepSettingsToggles(res.sentinel_sleep_settings);
+        }
+      });
+    }
+  } catch (_) {}
+}
+
+function syncSleepSettingsToggles(settings) {
+  if (typeof document === 'undefined') return;
+  const toggleFade = document.getElementById('toggleDashSleepFade');
+  if (toggleFade && typeof settings.enableAudioFadeOut === 'boolean') {
+    toggleFade.checked = settings.enableAudioFadeOut;
+  }
+  const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
+  if (toggleEndOfVideo && typeof settings.endOfVideo === 'boolean') {
+    toggleEndOfVideo.checked = settings.endOfVideo;
+  }
+}
+
+/**
+ * Initializes listeners, presets, and sync hooks for Sleep Sentinel Hub
+ */
+function initSleepSentinelHub() {
+  if (typeof document === 'undefined') return;
+
+  // Preset buttons (15m, 30m, 45m, 60m, 90m, 120m)
+  document.querySelectorAll('.dash-sleep-preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dash-sleep-preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDashSleepMinutes = parseInt(btn.getAttribute('data-minutes'), 10) || 30;
+      
+      // If timer is idle, update big display to selected minutes
+      if (!currentDashSleepTimer || currentDashSleepTimer.state === 'IDLE' || currentDashSleepTimer.state === 'CANCELLED') {
+        const countdownEl = document.getElementById('dashSleepCountdownDisplay');
+        if (countdownEl) countdownEl.textContent = `${String(selectedDashSleepMinutes).padStart(2, '0')}:00`;
+      } else {
+        // If already running or paused, clicking preset immediately sets new duration
+        triggerSetSleepTimer(selectedDashSleepMinutes);
+      }
+    });
+  });
+
+  // Extender buttons (+5m, +15m)
+  const btnExtend5 = document.getElementById('btnDashSleepExtend5');
+  if (btnExtend5) {
+    btnExtend5.addEventListener('click', () => triggerExtendSleepTimer(5));
+  }
+  const btnExtend15 = document.getElementById('btnDashSleepExtend15');
+  if (btnExtend15) {
+    btnExtend15.addEventListener('click', () => triggerExtendSleepTimer(15));
+  }
+
+  // Toggle button (Start / Pause / Resume)
+  const btnToggle = document.getElementById('btnDashSleepToggle');
+  if (btnToggle) {
+    btnToggle.addEventListener('click', () => {
+      if (currentDashSleepTimer && (currentDashSleepTimer.state === 'RUNNING' || currentDashSleepTimer.state === 'FADING')) {
+        triggerPauseSleepTimer();
+      } else if (currentDashSleepTimer && currentDashSleepTimer.state === 'PAUSED') {
+        triggerResumeSleepTimer();
+      } else {
+        triggerSetSleepTimer(selectedDashSleepMinutes);
+      }
+    });
+  }
+
+  // Reset button
+  const btnReset = document.getElementById('btnDashSleepReset');
+  if (btnReset) {
+    btnReset.addEventListener('click', () => {
+      triggerCancelSleepTimer();
+    });
+  }
+
+  // Toggles change events
+  const toggleFade = document.getElementById('toggleDashSleepFade');
+  if (toggleFade) {
+    toggleFade.addEventListener('change', () => {
+      updateSleepSetting('enableAudioFadeOut', toggleFade.checked);
+    });
+  }
+  const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
+  if (toggleEndOfVideo) {
+    toggleEndOfVideo.addEventListener('change', () => {
+      updateSleepSetting('endOfVideo', toggleEndOfVideo.checked);
+    });
+  }
+
+  // Storage listener for cross-view synchronization
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.sentinel_sleep_timer) {
+        renderDashSleepTimer(changes.sentinel_sleep_timer.newValue);
+      }
+    });
+  }
+
+  // Runtime message listener for live broadcast events
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && (msg.type === 'SLEEP_TIMER_STATE_CHANGED' || msg.type === 'SLEEP_TIMER_EXPIRED')) {
+        renderDashSleepTimer(msg.state);
+      }
+    });
+  }
+
+  // Initial state hydration
+  fetchSleepTimerState();
+}
+
+function triggerSetSleepTimer(minutes) {
+  if (typeof document === 'undefined') return;
+  const toggleFade = document.getElementById('toggleDashSleepFade');
+  const enableFade = toggleFade ? toggleFade.checked : true;
+  const toggleEndOfVideo = document.getElementById('toggleDashSleepEndOfVideo');
+  const endVideo = toggleEndOfVideo ? toggleEndOfVideo.checked : false;
+
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: 'SET_SLEEP_TIMER',
+      action: 'SET_SLEEP_TIMER',
+      durationMinutes: minutes,
+      enableFade: enableFade,
+      options: { enableFadeOut: enableFade, endOfVideo: endVideo }
+    }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
+      }
+    });
+  }
+}
+
+function triggerPauseSleepTimer() {
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
+      }
+    });
+  }
+}
+
+function triggerResumeSleepTimer() {
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
+      }
+    });
+  }
+}
+
+function triggerExtendSleepTimer(extraMinutes) {
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: 'EXTEND_SLEEP_TIMER',
+      action: 'EXTEND_SLEEP_TIMER',
+      extraMinutes: extraMinutes
+    }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
+      }
+    });
+  }
+}
+
+function triggerCancelSleepTimer() {
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER', action: 'CANCEL_SLEEP_TIMER' }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
+      }
+    });
+  }
+}
+
+function updateSleepSetting(key, value) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get(['sentinel_sleep_settings'], (res) => {
+      const settings = (res && res.sentinel_sleep_settings) || {};
+      settings[key] = value;
+      chrome.storage.local.set({ sentinel_sleep_settings: settings });
+    });
+  }
+}
+
 // Bootstrap Initialization
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -8996,6 +9379,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
+    initSleepSentinelHub();
 
     // Default Media Platform Filter initialization
     const initialMediaPlat = document.getElementById('tableMediaPlatformFilter');
@@ -9228,6 +9612,11 @@ if (typeof module !== 'undefined' && module.exports) {
     populateSleepSettingsForm,
     saveDashboardSettings,
     saveSleepSettings,
+    initSleepSentinelHub,
+    renderDashSleepTimer,
+    updateDashSleepDial,
+    fetchSleepTimerState,
+    DASH_SLEEP_CIRCUMFERENCE,
     cachedSettings,
     escapeCsvCell,
     exportTimeTrackingCsv,
