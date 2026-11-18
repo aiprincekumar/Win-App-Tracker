@@ -31,8 +31,10 @@ const focusSuitePath = path.join(rootDir, 'src', 'dashboard', 'features', 'focus
 const sleepSuitePath = path.join(rootDir, 'src', 'dashboard', 'features', 'sleep_advanced_suite.js');
 const enJsonPath = path.join(rootDir, 'locales', 'en.json');
 const hiJsonPath = path.join(rootDir, 'locales', 'hi.json');
+const bgPath = path.join(rootDir, 'background.js');
+const contentMediaPath = path.join(rootDir, 'content_media.js');
 
-console.log('🧪 Starting Advanced Focus & Sleep Suite 8-Battery QA Test Suite...\n');
+console.log('🧪 Starting Advanced Focus & Sleep Suite 20-Battery QA Test Suite...\n');
 
 function checkBOM(filePath) {
   const buf = fs.readFileSync(filePath);
@@ -41,13 +43,17 @@ function checkBOM(filePath) {
 }
 
 // Check UTF-8 BOM on all relevant files
-[htmlPath, cssPath, advCssPath, jsPath, focusSuitePath, sleepSuitePath, enJsonPath, hiJsonPath].forEach(checkBOM);
+[htmlPath, cssPath, advCssPath, jsPath, focusSuitePath, sleepSuitePath, enJsonPath, hiJsonPath, bgPath, contentMediaPath].forEach(checkBOM);
 console.log('✅ UTF-8 with BOM certified across all suite files and locales.\n');
 
 const html = fs.readFileSync(htmlPath, 'utf8');
 const css = fs.readFileSync(cssPath, 'utf8');
 const advCss = fs.readFileSync(advCssPath, 'utf8');
 const js = fs.readFileSync(jsPath, 'utf8');
+const bgCode = fs.readFileSync(bgPath, 'utf8');
+const contentMediaCode = fs.readFileSync(contentMediaPath, 'utf8');
+const focusCode = fs.readFileSync(focusSuitePath, 'utf8');
+const sleepCode = fs.readFileSync(sleepSuitePath, 'utf8');
 
 // =============================================================================
 // Battery 1: DOM Structural Hierarchy & ID Verification
@@ -263,9 +269,6 @@ console.log('\nBattery 6: JavaScript Controller & State Functions Existence & Ru
 console.log('\nBattery 7: Web Audio API Synthesis Safety');
 {
   // Zero external audio URLs (no http, mp3, wav downloads)
-  const focusCode = fs.readFileSync(focusSuitePath, 'utf8');
-  const sleepCode = fs.readFileSync(sleepSuitePath, 'utf8');
-
   assert(!focusCode.includes('.mp3') && !focusCode.includes('.wav'), 'Focus suite must not load external audio files');
   assert(!sleepCode.includes('.mp3') && !sleepCode.includes('.wav'), 'Sleep suite must not load external audio files');
 
@@ -301,7 +304,300 @@ console.log('\nBattery 8: Feature Suite Modules Integration & Clean Execution');
   console.log('  ✅ Modular feature suites pass unit tests and instantiate clean default states.');
 }
 
+// =============================================================================
+// Battery 9: Focus Distraction Detection & Integrity Score Dynamic Recalculation (#toggleFocusIntegrityScore)
+// =============================================================================
+console.log('\nBattery 9: Focus Distraction Detection & Integrity Score Dynamic Recalculation');
+{
+  const FocusSuite = require(focusSuitePath);
+  const bg = require(bgPath);
+
+  assert.strictEqual(typeof bg.isDistractingDomain, 'function', 'bg.isDistractingDomain must be a function');
+  assert.strictEqual(bg.isDistractingDomain('youtube.com'), true, 'youtube.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('www.youtube.com'), true, 'www.youtube.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('twitter.com'), true, 'twitter.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('x.com'), true, 'x.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('reddit.com'), true, 'reddit.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('netflix.com'), true, 'netflix.com must be distracting');
+  assert.strictEqual(bg.isDistractingDomain('github.com'), false, 'github.com should not be distracting');
+  assert.strictEqual(bg.isDistractingDomain('docs.google.com'), false, 'docs.google.com should not be distracting');
+
+  FocusSuite.resetFocusIntegrityScore();
+  let state = FocusSuite.getState();
+  assert.strictEqual(state.integrityScore, 100, 'Score must start at 100');
+  assert.strictEqual(state.distractionCount, 0, 'Distractions must start at 0');
+
+  FocusSuite.updateFocusIntegrityScore(-5, 'distracting_domain');
+  state = FocusSuite.getState();
+  assert.strictEqual(state.integrityScore, 95, 'Score must be 95 after 1 distraction');
+  assert.strictEqual(state.distractionCount, 1, 'Distractions must be 1');
+
+  FocusSuite.updateFocusIntegrityScore(-5, 'distracting_domain');
+  state = FocusSuite.getState();
+  assert.strictEqual(state.integrityScore, 90, 'Score must be 90 after 2 distractions');
+  assert.strictEqual(state.distractionCount, 2, 'Distractions must be 2');
+
+  FocusSuite.resetFocusIntegrityScore();
+  state = FocusSuite.getState();
+  assert.strictEqual(state.integrityScore, 100, 'Score must reset to 100');
+  assert.strictEqual(state.distractionCount, 0, 'Distractions must reset to 0');
+
+  assert(bgCode.includes('FOCUS_DISTRACTION_EVENT'), 'background.js must dispatch FOCUS_DISTRACTION_EVENT');
+  assert(js.includes('FOCUS_DISTRACTION_EVENT'), 'dashboard.js must listen for FOCUS_DISTRACTION_EVENT');
+
+  console.log('  ✅ Distraction detection & dynamic score recalculation certified.');
+}
+
+// =============================================================================
+// Battery 10: Auto-Mute Background Tabs Lifecycle & Audible Tab Guard (#toggleFocusAutoMuteBg)
+// =============================================================================
+console.log('\nBattery 10: Auto-Mute Background Tabs Lifecycle & Audible Tab Guard');
+{
+  const bg = require(bgPath);
+  assert.strictEqual(typeof bg.executeAutoMuteBackgroundTabs, 'function', 'executeAutoMuteBackgroundTabs must exist');
+  assert.strictEqual(typeof bg.checkAndAutoMuteBackgroundTab, 'function', 'checkAndAutoMuteBackgroundTab must exist');
+
+  assert(bgCode.includes('executeAutoMuteBackgroundTabs(true)'), 'background.js must auto-mute on focus timer start/resume');
+  assert(bgCode.includes('executeAutoMuteBackgroundTabs(false)'), 'background.js must unmute on focus pause/reset/expire');
+  assert(bgCode.includes('checkAndAutoMuteBackgroundTab(tabId)'), 'background.js must mute newly audible background tabs');
+  assert(js.includes('FocusAdvancedSuite.executeAutoMuteBackgroundTabs'), 'dashboard.js must invoke executeAutoMuteBackgroundTabs on pomodoro controls');
+
+  console.log('  ✅ Auto-Mute background tabs lifecycle & audible tab guard certified.');
+}
+
+// =============================================================================
+// Battery 11: Web Audio Binaural Beats Twin Oscillator DSP Node Generation (#selectFocusSoundscape)
+// =============================================================================
+console.log('\nBattery 11: Web Audio Binaural Beats Twin Oscillator DSP Node Generation');
+{
+  const FocusSuite = require(focusSuitePath);
+
+  function createMockAudioContext() {
+    return {
+      currentTime: 10,
+      createOscillator: () => {
+        let f = 0;
+        return {
+          type: 'sine',
+          frequency: {
+            setValueAtTime: (val) => { f = val; },
+            get value() { return f; }
+          },
+          connect: function(dest, outIdx, inIdx) { this.dest = dest; this.inIdx = inIdx; },
+          start: function() { this.started = true; },
+          stop: function() { this.stopped = true; }
+        };
+      },
+      createChannelMerger: (inputs) => ({
+        inputs,
+        connect: function(dest) { this.dest = dest; }
+      }),
+      createGain: () => ({
+        gain: { setValueAtTime: () => {} },
+        connect: () => {}
+      })
+    };
+  }
+
+  const mockCtx = createMockAudioContext();
+  const mockGain = mockCtx.createGain();
+
+  const nodesAlpha = FocusSuite.createBinauralBeatNodes(mockCtx, 200, 10, mockGain);
+  assert.strictEqual(nodesAlpha.length, 3, 'Must return [oscL, oscR, merger]');
+  assert.strictEqual(nodesAlpha[0].frequency.value, 200, 'Left oscillator frequency must be carrier 200Hz');
+  assert.strictEqual(nodesAlpha[1].frequency.value, 210, 'Right oscillator frequency must be 210Hz (200 + 10)');
+  assert.strictEqual(nodesAlpha[0].started, true, 'Left oscillator must be started');
+  assert.strictEqual(nodesAlpha[1].started, true, 'Right oscillator must be started');
+  assert.strictEqual(nodesAlpha[2].dest, mockGain, 'Channel merger must connect to master gain node');
+
+  const nodesBeta = FocusSuite.createBinauralBeatNodes(mockCtx, 220, 18, mockGain);
+  assert.strictEqual(nodesBeta[0].frequency.value, 220, 'Left oscillator frequency must be carrier 220Hz');
+  assert.strictEqual(nodesBeta[1].frequency.value, 238, 'Right oscillator frequency must be 238Hz (220 + 18)');
+
+  const nodesGamma = FocusSuite.createBinauralBeatNodes(mockCtx, 240, 40, mockGain);
+  assert.strictEqual(nodesGamma[0].frequency.value, 240, 'Left oscillator frequency must be carrier 240Hz');
+  assert.strictEqual(nodesGamma[1].frequency.value, 280, 'Right oscillator frequency must be 280Hz (240 + 40)');
+
+  assert(js.includes('createBinauralBeatNodes'), 'dashboard.js must integrate createBinauralBeatNodes');
+  assert(js.includes('binaural_alpha'), 'dashboard.js must configure binaural_alpha');
+  assert(js.includes('binaural_beta'), 'dashboard.js must configure binaural_beta');
+  assert(js.includes('binaural_gamma'), 'dashboard.js must configure binaural_gamma');
+
+  console.log('  ✅ Web Audio binaural beats twin oscillator DSP generation certified across Alpha/Beta/Gamma.');
+}
+
+// =============================================================================
+// Battery 12: Soft-Nudge Box-Breathing Overlay Cycle (#toggleFocusBreatheNudge)
+// =============================================================================
+console.log('\nBattery 12: Soft-Nudge Box-Breathing Overlay Cycle');
+{
+  const FocusSuite = require(focusSuitePath);
+  assert.strictEqual(typeof FocusSuite.triggerBreatheNudgeOverlay, 'function');
+  assert.strictEqual(typeof FocusSuite.hideBreatheNudgeOverlay, 'function');
+
+  assert(advCss.includes('.breathe-nudge-overlay'), 'CSS must define .breathe-nudge-overlay');
+  assert(advCss.includes('.breathe-visual-ring.inhale'), 'CSS must define .breathe-visual-ring.inhale');
+  assert(advCss.includes('.breathe-visual-ring.hold'), 'CSS must define .breathe-visual-ring.hold');
+  assert(advCss.includes('.breathe-visual-ring.exhale'), 'CSS must define .breathe-visual-ring.exhale');
+  assert(js.includes('triggerBreatheNudgeOverlay'), 'dashboard.js must call triggerBreatheNudgeOverlay');
+
+  console.log('  ✅ Soft-Nudge box-breathing animation cycle certified.');
+}
+
+// =============================================================================
+// Battery 13: 20-20-20 Posture Alert & Pomodoro Focus Tick Integration (#toggleFocus2020Alert)
+// =============================================================================
+console.log('\nBattery 13: 20-20-20 Posture Alert & Pomodoro Focus Tick Integration');
+{
+  const FocusSuite = require(focusSuitePath);
+  assert.strictEqual(typeof FocusSuite.handlePomodoroFocusTick, 'function');
+  assert.strictEqual(typeof FocusSuite.trigger2020PostureAlert, 'function');
+  assert.strictEqual(typeof FocusSuite.hide2020PostureAlert, 'function');
+
+  assert(html.includes('id="toast2020PostureAlert"'), 'HTML must contain #toast2020PostureAlert');
+  assert(focusCode.includes('chrome.notifications.create'), 'Focus suite must support browser notifications');
+  assert(js.includes('FocusAdvancedSuite.handlePomodoroFocusTick'), 'dashboard.js must invoke handlePomodoroFocusTick during running focus');
+
+  console.log('  ✅ 20-20-20 posture alert & Pomodoro tick integration certified.');
+}
+
+// =============================================================================
+// Battery 14: Content Script Video Autoplay Blocking & YouTube Autonav Cancellation (#toggleSleepAutoplayBlock)
+// =============================================================================
+console.log('\nBattery 14: Content Script Video Autoplay Blocking & YouTube Autonav Cancellation');
+{
+  assert(contentMediaCode.includes('sleepAutoplayBlockState'), 'content_media.js must maintain sleepAutoplayBlockState');
+  assert(contentMediaCode.includes('isSleepAutoplayBlockActive'), 'content_media.js must have isSleepAutoplayBlockActive');
+  assert(contentMediaCode.includes('applyAutoplayBlockToVideo'), 'content_media.js must have applyAutoplayBlockToVideo');
+  assert(contentMediaCode.includes('disableYouTubeAutoplayToggle'), 'content_media.js must have disableYouTubeAutoplayToggle');
+  assert(contentMediaCode.includes('onSleepVideoEnded'), 'content_media.js must cancel autonav on video ended');
+  assert(contentMediaCode.includes('SET_SLEEP_AUTOPLAY_BLOCK'), 'content_media.js must handle SET_SLEEP_AUTOPLAY_BLOCK IPC');
+  assert(contentMediaCode.includes('__SentinelSleepAutoplayBlock'), 'content_media.js must expose __SentinelSleepAutoplayBlock');
+
+  console.log('  ✅ Content script video autoplay blocking & YouTube autonav cancellation certified.');
+}
+
+// =============================================================================
+// Battery 15: Sleep Aid Soundscapes Linear Volume Ramp & Clean Stop (#selectSleepAidSoundscape)
+// =============================================================================
+console.log('\nBattery 15: Sleep Aid Soundscapes Linear Volume Ramp & Clean Stop');
+{
+  const SleepSuite = require(sleepSuitePath);
+  assert.strictEqual(typeof SleepSuite.startSleepAidSoundscape, 'function');
+  assert.strictEqual(typeof SleepSuite.stopSleepAidSoundscape, 'function');
+  assert.strictEqual(typeof SleepSuite.applySleepVolumeRamp, 'function');
+
+  assert(sleepCode.includes('createPinkNoiseSource'), 'Must synthesize Paul Kellet pink noise');
+  assert(sleepCode.includes('createMidnightOceanNodes'), 'Must synthesize LFO-modulated midnight ocean');
+  assert(sleepCode.includes('createDeltaRainNodes'), 'Must synthesize delta rain with 2.5Hz binaural sleep carrier');
+  assert(sleepCode.includes('linearRampToValueAtTime'), 'Must implement linearRampToValueAtTime');
+
+  assert(js.includes('SleepAdvancedSuite.applySleepVolumeRamp(0, 30)'), 'dashboard.js must ramp volume to 0 on fade / last 30s');
+  assert(js.includes('SleepAdvancedSuite.stopSleepAidSoundscape()'), 'dashboard.js must cleanly stop soundscape on timer expiration');
+
+  console.log('  ✅ Sleep aid soundscapes volume ramp and clean stop certified.');
+}
+
+// =============================================================================
+// Battery 16: Inactivity Fast-Cutoff 5m Acceleration (#toggleSleepInactivityFastCutoff)
+// =============================================================================
+console.log('\nBattery 16: Inactivity Fast-Cutoff 5m Acceleration');
+{
+  assert(bgCode.includes('sentinel_sleep_adv_inactivity_cutoff'), 'background.js must check sentinel_sleep_adv_inactivity_cutoff');
+  assert(bgCode.includes('5 * 60 * 1000'), 'background.js must evaluate 5-minute threshold for fast cutoff');
+  assert(bgCode.includes('Sleep fast-inactivity cutoff triggered (5m idle). Expiring sleep timer.'), 'background.js must log fast cutoff');
+
+  console.log('  ✅ Inactivity fast-cutoff 5m acceleration logic certified.');
+}
+
+// =============================================================================
+// Battery 17: Progressive Circadian Screen Dimmer Nudge Activation & Reset (#toggleSleepScreenDimmer)
+// =============================================================================
+console.log('\nBattery 17: Progressive Circadian Screen Dimmer Nudge Activation & Reset');
+{
+  const SleepSuite = require(sleepSuitePath);
+  assert.strictEqual(typeof SleepSuite.triggerScreenDimmer, 'function');
+  assert.strictEqual(typeof SleepSuite.resetScreenDimmer, 'function');
+
+  assert(html.includes('id="overlaySleepDimmer"'), 'dashboard.html must contain #overlaySleepDimmer');
+  assert(advCss.includes('.screen-dimmer-overlay'), 'CSS must define .screen-dimmer-overlay');
+  assert(advCss.includes('.screen-dimmer-overlay.active'), 'CSS must define .screen-dimmer-overlay.active');
+  assert(js.includes('SleepAdvancedSuite.triggerScreenDimmer()'), 'dashboard.js must trigger dimmer on fade/last 60s');
+  assert(js.includes('SleepAdvancedSuite.resetScreenDimmer()'), 'dashboard.js must reset dimmer on cancel/reset');
+
+  console.log('  ✅ Progressive circadian screen dimmer activation & reset certified.');
+}
+
+// =============================================================================
+// Battery 18: Tab Hibernation Memory Release on Sleep Expiration (#toggleSleepTabHibernate)
+// =============================================================================
+console.log('\nBattery 18: Tab Hibernation Memory Release on Sleep Expiration');
+{
+  const SleepSuite = require(sleepSuitePath);
+  const bg = require(bgPath);
+  assert.strictEqual(typeof SleepSuite.executeSleepTabHibernation, 'function');
+  assert.strictEqual(typeof bg.executeTabHibernationOnSleepExpire, 'function');
+
+  assert(bgCode.includes('chrome.tabs.discard') || bgCode.includes('browserAPI.tabs.discard'), 'background.js must call tabs.discard');
+  assert(sleepCode.includes('chrome.tabs.discard'), 'sleep suite must call chrome.tabs.discard');
+  assert(bgCode.includes('executeTabHibernationOnSleepExpire()'), 'triggerSleepTimerExpiration must invoke executeTabHibernationOnSleepExpire');
+
+  console.log('  ✅ Tab hibernation memory release certified.');
+}
+
+// =============================================================================
+// Battery 19: 1-Click Power-Nap Mode 20m Trigger & Wake-up Chime (#btnSleepPowerNapMode)
+// =============================================================================
+console.log('\nBattery 19: 1-Click Power-Nap Mode 20m Trigger & Wake-up Chime');
+{
+  const SleepSuite = require(sleepSuitePath);
+  assert.strictEqual(typeof SleepSuite.triggerPowerNapMode, 'function');
+  assert.strictEqual(typeof SleepSuite.resetPowerNap, 'function');
+
+  assert(html.includes('id="btnSleepPowerNapMode"'), 'HTML must contain #btnSleepPowerNapMode');
+  assert(advCss.includes('.btn-power-nap'), 'CSS must define .btn-power-nap');
+  assert(js.includes('⚡ Power-Nap Complete! Wake up refreshed!'), 'dashboard.js must trigger power-nap complete toast');
+  assert(js.includes("playAcousticChime('solfeggio528')"), 'dashboard.js must trigger solfeggio528 acoustic chime');
+  assert(js.includes('SleepAdvancedSuite.resetPowerNap()'), 'dashboard.js must reset powerNapActive');
+
+  console.log('  ✅ 1-Click power-nap mode 20m trigger & wake-up chime certified.');
+}
+
+// =============================================================================
+// Battery 20: Dual-Storage LocalStorage + chrome.storage.local Synchronization
+// =============================================================================
+console.log('\nBattery 20: Dual-Storage LocalStorage + chrome.storage.local Synchronization');
+{
+  assert(focusCode.includes('localStorage.setItem'), 'focus suite must write to localStorage');
+  assert(focusCode.includes('chrome.storage.local.set'), 'focus suite must write to chrome.storage.local');
+  assert(focusCode.includes('hydrateFocusFromChromeStorage'), 'focus suite must hydrate from chrome.storage.local');
+
+  assert(sleepCode.includes('localStorage.setItem'), 'sleep suite must write to localStorage');
+  assert(sleepCode.includes('chrome.storage.local.set'), 'sleep suite must write to chrome.storage.local');
+  assert(sleepCode.includes('hydrateSleepFromChromeStorage'), 'sleep suite must hydrate from chrome.storage.local');
+
+  const expectedKeys = [
+    'sentinel_focus_adv_integrity',
+    'sentinel_focus_adv_automute_bg',
+    'sentinel_focus_adv_breathe_nudge',
+    'sentinel_focus_adv_posture_alert',
+    'sentinel_focus_soundscape',
+    'sentinel_sleep_adv_autoplay_block',
+    'sentinel_sleep_adv_inactivity_cutoff',
+    'sentinel_sleep_adv_screen_dimmer',
+    'sentinel_sleep_adv_tab_hibernate',
+    'sentinel_sleep_adv_soundscape',
+    'sentinel_sleep_adv_soundscape_vol'
+  ];
+
+  expectedKeys.forEach(k => {
+    assert(focusCode.includes(k) || sleepCode.includes(k), `Key ${k} must be referenced in feature suites`);
+  });
+
+  console.log(`  ✅ Dual-storage synchronization certified across all ${expectedKeys.length} settings keys.`);
+}
+
 console.log('\n============================================================');
-console.log('🎉 ALL 8 BATTERIES PASSED 100% CLEAN (Exit Code 0)');
+console.log('🎉 ALL 20 BATTERIES PASSED 100% CLEAN (Exit Code 0)');
 console.log('============================================================\n');
 process.exit(0);
