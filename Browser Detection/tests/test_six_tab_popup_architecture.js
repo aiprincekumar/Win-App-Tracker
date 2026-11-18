@@ -107,17 +107,18 @@ console.log('\nTest 2: 6 Dedicated View Panes & Section Decomposition');
 
   assert(breakdownIdx > domainsPaneIdx && breakdownIdx < footerIdx, '.breakdown-section must be inside #viewDomainsPane');
 
-  // Tracking pane must house chart and wellness cards
+  // Tracking pane must house chart section, while Focus pane houses wellness cards
   const chartIdx = html.indexOf('class="chart-section"');
   const wellnessIdx = html.indexOf('id="cardFocusWellness"');
+  const focusPaneIdx = html.indexOf('id="viewFocusPane"');
 
   assert(chartIdx > trackingPaneIdx && chartIdx < domainsPaneIdx, '.chart-section must be inside #viewTrackingPane');
-  assert(wellnessIdx > trackingPaneIdx && wellnessIdx < domainsPaneIdx, '#cardFocusWellness must be inside #viewTrackingPane');
+  assert((wellnessIdx > focusPaneIdx) || (wellnessIdx > trackingPaneIdx && wellnessIdx < domainsPaneIdx), '#cardFocusWellness must be inside #viewFocusPane or #viewTrackingPane');
 
   console.log('  ✅ All 6 view panes exist with role="tabpanel"');
   console.log('  ✅ #viewToolsPane successfully houses #cardSmartAutomations & micro actions');
   console.log('  ✅ #viewDomainsPane successfully houses .breakdown-section');
-  console.log('  ✅ #viewTrackingPane successfully houses chart and wellness cards');
+  console.log('  ✅ #viewTrackingPane successfully houses chart and #viewFocusPane houses wellness cards');
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@
   <title>Web Activity & Media Sentinel</title>
   <link rel="stylesheet" href="popup.css">
   <link rel="stylesheet" href="styles/tabs/tab_sleep.css">
+  <link rel="stylesheet" href="styles/tabs/tab_wellness.css">
 </head>
 <body>
   <div class="sentinel-app">
@@ -525,72 +526,6 @@
           <span id="pillSessionsCount" class="pill-value">0</span>
         </div>
       </section>
-
-      <!-- Digital Wellness & Focus Cards -->
-      <section id="cardFocusWellness" class="focus-wellness-card">
-        <!-- Compact Focus Time Sentinel Card -->
-        <div id="cardPopupFocusTimer" class="popup-focus-card">
-          <div class="popup-focus-header">
-            <span class="popup-focus-title">🧘 Focus Block</span>
-            <span id="popupFocusBadge" class="popup-focus-badge idle">25m</span>
-          </div>
-          <div id="popupActiveGoalChip" class="popup-goal-chip hidden">
-            <span class="popup-goal-icon">🎯</span>
-            <span id="txtPopupActiveGoal" class="popup-goal-text">Deep Work</span>
-          </div>
-          <div class="popup-focus-body">
-            <span id="popupFocusClock" class="popup-focus-clock">25:00</span>
-            <div class="popup-focus-actions">
-              <button type="button" id="btnPopupFocusToggle" class="popup-focus-btn primary" title="Start Focus">▶️</button>
-              <button type="button" id="btnPopupFocusReset" class="popup-focus-btn secondary" title="Reset Timer">🔄</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Focus Ratio Balance Bar -->
-        <div id="focusRatioBarContainer" class="focus-ratio-container">
-          <div class="focus-ratio-header">
-            <span class="focus-ratio-title">⚖️ Focus Ratio</span>
-            <span id="focusRatioPercentText" class="focus-ratio-readout">75% Productive</span>
-            <span id="focusRatioText" class="hidden">75% Productive</span>
-          </div>
-          <div class="ratio-progress-track">
-            <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
-            <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
-            <div id="focusRatioProductiveBar" class="hidden"></div>
-          </div>
-          <div class="ratio-labels-row">
-            <span class="ratio-lbl prod">🟢 Productive</span>
-            <span class="ratio-lbl ent">🟠 Media & Social</span>
-          </div>
-        </div>
-
-        <!-- Doomscroll Breaker Card -->
-        <div id="doomscrollBreakerCard" class="doomscroll-breaker-row">
-          <div class="doomscroll-info">
-            <span class="doomscroll-title">🛑 Doomscroll Breaker</span>
-            <span class="doomscroll-sub">Gentle pause nudge every</span>
-          </div>
-          <div class="doomscroll-controls">
-            <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval">
-              <option value="15">15 min</option>
-              <option value="30" selected>30 min</option>
-              <option value="45">45 min</option>
-              <option value="60">60 min</option>
-            </select>
-            <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
-              <option value="15">15 min</option>
-              <option value="30" selected>30 min</option>
-              <option value="45">45 min</option>
-              <option value="60">60 min</option>
-            </select>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleDoomscrollBreaker">
-              <span class="slider-round-sm"></span>
-            </label>
-          </div>
-        </div>
-      </section>
     </div>
 
     <!-- TAB 6: Domain Breakdown & Directory View Pane -->
@@ -781,19 +716,86 @@
       </section>
     </div>
 
-    <!-- TAB 8: Dedicated Focus View Pane (Placeholder) -->
+    <!-- TAB 8: Dedicated Focus View Pane -->
     <div id="viewFocusPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabFocus">
+      <!-- Focus Hero Banner -->
       <section id="cardFocusPlaceholder" class="focus-hero-card">
         <div class="focus-placeholder-header">
           <span class="focus-placeholder-icon">🎯</span>
           <h3 id="focusPlaceholderTitle" class="focus-placeholder-title">Focus & Productivity</h3>
         </div>
         <p id="focusPlaceholderDesc" class="focus-placeholder-desc">
-          Deep work timer and digital wellness integration coming soon. Use the Sleep tab for bedtime routines.
+          Deep work timer, focus ratio balance, and intentional browsing sentinel.
         </p>
         <div class="focus-placeholder-badge">
           <span class="badge-dot">●</span>
-          <span id="focusStatusText" class="badge-text">Focus Mode Ready</span>
+          <span id="focusStatusText" class="badge-text">Focus Mode Active</span>
+        </div>
+      </section>
+
+      <!-- Digital Wellness & Focus Cards -->
+      <section id="cardFocusWellness" class="focus-wellness-card">
+        <!-- Compact Focus Time Sentinel Card -->
+        <div id="cardPopupFocusTimer" class="popup-focus-card">
+          <div class="popup-focus-header">
+            <span class="popup-focus-title">🧘 Focus Block</span>
+            <span id="popupFocusBadge" class="popup-focus-badge idle">25m</span>
+          </div>
+          <div id="popupActiveGoalChip" class="popup-goal-chip hidden">
+            <span class="popup-goal-icon">🎯</span>
+            <span id="txtPopupActiveGoal" class="popup-goal-text">Deep Work</span>
+          </div>
+          <div class="popup-focus-body">
+            <span id="popupFocusClock" class="popup-focus-clock">25:00</span>
+            <div class="popup-focus-actions">
+              <button type="button" id="btnPopupFocusToggle" class="popup-focus-btn primary" title="Start Focus">▶️</button>
+              <button type="button" id="btnPopupFocusReset" class="popup-focus-btn secondary" title="Reset Timer">🔄</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Focus Ratio Balance Bar -->
+        <div id="focusRatioBarContainer" class="focus-ratio-container">
+          <div class="focus-ratio-header">
+            <span class="focus-ratio-title">⚖️ Focus Ratio</span>
+            <span id="focusRatioPercentText" class="focus-ratio-readout">75% Productive</span>
+            <span id="focusRatioText" class="hidden">75% Productive</span>
+          </div>
+          <div class="ratio-progress-track">
+            <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
+            <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
+            <div id="focusRatioProductiveBar" class="hidden"></div>
+          </div>
+          <div class="ratio-labels-row">
+            <span class="ratio-lbl prod">🟢 Productive</span>
+            <span class="ratio-lbl ent">🟠 Media & Social</span>
+          </div>
+        </div>
+
+        <!-- Doomscroll Breaker Card -->
+        <div id="doomscrollBreakerCard" class="doomscroll-breaker-row">
+          <div class="doomscroll-info">
+            <span class="doomscroll-title">🛑 Doomscroll Breaker</span>
+            <span class="doomscroll-sub">Gentle pause nudge every</span>
+          </div>
+          <div class="doomscroll-controls">
+            <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+            </select>
+            <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">60 min</option>
+            </select>
+            <label class="switch-toggle-sm">
+              <input type="checkbox" id="toggleDoomscrollBreaker">
+              <span class="slider-round-sm"></span>
+            </label>
+          </div>
         </div>
       </section>
     </div>
