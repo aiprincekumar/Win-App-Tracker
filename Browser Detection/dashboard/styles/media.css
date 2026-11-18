@@ -1305,13 +1305,13 @@ body.theme-light .btn-deck-mute:hover {
   flex-shrink: 0 !important;
 }
 
-/* Sub-Canvas Lower Deck: Houses Pill Selector & Dual Stereo VU Meters */
+/* Sub-Canvas Lower Deck: Dedicated Full-Width Stereo VU Meters */
 .viz-subcanvas-deck {
   display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  gap: 0 !important;
   margin-top: 6px !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -1319,13 +1319,16 @@ body.theme-light .btn-deck-mute:hover {
 }
 
 .viz-subcanvas-deck .viz-select-wrapper {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .viz-subcanvas-deck .vu-meters-container {
-  flex: 1 1 auto;
+  flex: 1 1 auto !important;
+  width: 100% !important;
   margin-top: 0 !important;
 }
 
