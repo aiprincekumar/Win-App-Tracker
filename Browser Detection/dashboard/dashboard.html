@@ -1215,9 +1215,49 @@
                 <div class="focus-header-status-group">
                   <span id="dashFocusActiveDot" class="status-indicator-dot hidden" aria-hidden="true"></span>
                   <span id="pomodoroModeBadge" class="badge-focus">Focus (25m)</span>
+                  <button type="button" id="btnFocusZenExpand" class="btn-zen-expand" title="Enter Full-Screen Zen Mode (ESC to exit)" aria-label="Enter Full-Screen Zen Mode">🧘 Zen Mode</button>
                 </div>
               </div>
               <div class="dash-focus-hero-body pomodoro-hero-body">
+                <!-- Mode Selector Tabs (Feature 1) -->
+                <div class="focus-mode-tabs-row" role="tablist">
+                  <button type="button" class="focus-mode-tab active" data-mode="focus" id="tabModeFocus">🎯 Focus (25m)</button>
+                  <button type="button" class="focus-mode-tab" data-mode="shortBreak" id="tabModeShortBreak">☕ Short Break (5m)</button>
+                  <button type="button" class="focus-mode-tab" data-mode="longBreak" id="tabModeLongBreak">🌿 Long Break (15m)</button>
+                </div>
+
+                <!-- 4-Stage Pomodoro Cycle Indicator & Daily Streak (Features 4 & 8) -->
+                <div class="focus-cycle-progress-row">
+                  <div class="focus-cycle-meta-group">
+                    <div id="focusCycleDotsContainer" class="focus-cycle-dots">
+                      <span class="cycle-dot active" data-cycle="1" title="Session 1"></span>
+                      <span class="cycle-dot" data-cycle="2" title="Session 2"></span>
+                      <span class="cycle-dot" data-cycle="3" title="Session 3"></span>
+                      <span class="cycle-dot" data-cycle="4" title="Session 4"></span>
+                    </div>
+                    <span id="focusCycleText" class="focus-cycle-text">Session 1 of 4</span>
+                  </div>
+                  <div class="focus-streak-and-target">
+                    <span id="focusDailyStreakBadge" class="focus-streak-badge" title="Consecutive daily focus streak">🔥 1-Day Streak</span>
+                    <div class="focus-target-progress-wrapper">
+                      <div class="focus-target-progress-bar">
+                        <div id="focusTargetProgressFill" class="target-progress-fill" style="width: 25%;"></div>
+                      </div>
+                      <span id="focusTargetGoalText" class="target-goal-text">Goal: 0h 45m / 3h 00m</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Task Intent / Goal Input (Feature 2) -->
+                <div class="focus-goal-input-row">
+                  <input type="text" id="inputFocusGoal" class="styled-input focus-goal-input" placeholder="🎯 What are you focusing on? (e.g. Code Review, Research)...">
+                  <div id="chipActiveFocusGoal" class="chip-active-focus-goal hidden">
+                    <span class="chip-icon">🎯</span>
+                    <span id="txtActiveFocusGoal" class="chip-text"></span>
+                    <button type="button" id="btnClearFocusGoal" class="chip-clear" title="Clear task">✕</button>
+                  </div>
+                </div>
+
                 <!-- SVG Radial Progress Dial -->
                 <div class="dash-focus-dial-wrapper">
                   <svg class="dash-focus-svg-dial" width="140" height="140" viewBox="0 0 120 120" role="img" aria-label="Focus Countdown Dial">
@@ -1248,15 +1288,24 @@
                   <div class="dash-focus-dial-center-content">
                     <div id="pomodoroTimeDisplay" class="focus-big-clock" aria-live="polite">25:00</div>
                     <div id="pomodoroFinishTime" class="focus-finish-time">Target: --:--</div>
+                    <div id="pomodoroDialTaskPreview" class="focus-dial-task-preview hidden"></div>
                   </div>
                 </div>
 
                 <!-- Hidden progress bar for backwards-compatibility -->
                 <div id="pomodoroProgressBar" class="hidden" aria-hidden="true" style="width: 100%;"></div>
 
-                <!-- Quick Duration Presets Grid -->
+                <!-- Quick Duration Presets & Custom Stepper (Feature 1) -->
                 <div class="dash-focus-presets-container">
-                  <span class="focus-section-label">Quick Presets</span>
+                  <div class="presets-header-row">
+                    <span class="focus-section-label">Duration & Presets</span>
+                    <div class="focus-custom-minute-stepper">
+                      <label for="inputFocusCustomMinutes" class="stepper-label">Custom:</label>
+                      <input type="number" id="inputFocusCustomMinutes" class="styled-input stepper-input" min="1" max="180" value="25" aria-label="Custom Focus Minutes">
+                      <span class="stepper-unit">min</span>
+                      <button type="button" id="btnApplyCustomMinutes" class="btn-stepper-apply">Set</button>
+                    </div>
+                  </div>
                   <div class="dash-focus-presets-grid">
                     <button type="button" class="dash-focus-preset-btn" data-minutes="15">15m</button>
                     <button type="button" class="dash-focus-preset-btn active" data-minutes="25">25m</button>
@@ -1290,7 +1339,40 @@
                   </div>
                 </div>
 
-                <!-- Feature Toggles -->
+                <!-- Ambient Soundscapes Generator Bar (Feature 5) -->
+                <div class="focus-soundscape-panel">
+                  <div class="soundscape-header">
+                    <span class="soundscape-title">🎧 Ambient Soundscapes</span>
+                    <select id="selectFocusSoundscape" class="styled-select soundscape-select" aria-label="Ambient Soundscape Selector">
+                      <option value="none" selected>Off (Silent)</option>
+                      <option value="rain">🌧️ Gentle Rain</option>
+                      <option value="cafe">☕ Coffee Shop</option>
+                      <option value="ocean">🌊 Ocean Waves</option>
+                      <option value="forest">🌲 Forest Birds</option>
+                      <option value="whitenoise">💨 Pink/White Noise</option>
+                    </select>
+                    <button type="button" id="btnToggleSoundscape" class="btn-soundscape-play" title="Play/Pause Ambient Sound">▶</button>
+                  </div>
+                  <div class="soundscape-volume-row">
+                    <span class="volume-icon">🔈</span>
+                    <input type="range" id="sliderSoundscapeVolume" class="styled-range soundscape-range" min="0" max="100" value="50" aria-label="Soundscape Volume">
+                    <span id="txtSoundscapeVolume" class="volume-num">50%</span>
+                  </div>
+                </div>
+
+                <!-- Acoustic Chime Selector with Preview Button (Feature 7) -->
+                <div class="focus-chime-selector-row">
+                  <span class="chime-label">🔔 Completion Chime:</span>
+                  <select id="selectFocusChimeTone" class="styled-select chime-select" aria-label="Completion Chime Tone">
+                    <option value="solfeggio528" selected>Solfeggio Harmonic (528Hz / 660Hz)</option>
+                    <option value="tibetan">Tibetan Singing Bowl (432Hz)</option>
+                    <option value="bell">Digital Bell Synthesizer</option>
+                    <option value="gong">Zen Temple Gong</option>
+                  </select>
+                  <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone">▶ Test</button>
+                </div>
+
+                <!-- Feature Toggles (Auto-pause media, Chime, Strict Shield Feature 6) -->
                 <div class="dash-focus-toggles-container">
                   <label class="dash-focus-toggle-row" for="toggleFocusAutoPauseMedia">
                     <span class="toggle-text-group">
@@ -1305,6 +1387,13 @@
                       <span class="toggle-desc">Sound chime on cycle completion</span>
                     </span>
                     <input type="checkbox" id="toggleFocusChime" class="styled-checkbox" checked>
+                  </label>
+                  <label class="dash-focus-toggle-row" for="toggleFocusDistractionShield">
+                    <span class="toggle-text-group">
+                      <span class="toggle-title">🛡️ Strict Shield</span>
+                      <span class="toggle-desc">Nudge and shield on distracting domains during focus</span>
+                    </span>
+                    <input type="checkbox" id="toggleFocusDistractionShield" class="styled-checkbox">
                   </label>
                 </div>
               </div>
@@ -2120,6 +2209,44 @@
       <div class="modal-footer">
         <button type="button" id="btnCancelDomainNote" class="btn-modal-secondary">Cancel</button>
         <button type="button" id="btnSaveDomainNote" class="btn-save-primary">💾 Save Note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-Screen Zen Mode Immersion Overlay (Feature 3) -->
+  <div id="focusZenImmersionOverlay" class="focus-zen-overlay hidden" role="dialog" aria-modal="true" aria-label="Full-Screen Zen Focus Mode">
+    <div class="zen-overlay-backdrop"></div>
+    <div class="zen-overlay-content">
+      <div class="zen-header-bar">
+        <span class="zen-brand">🧘 Focus Sentinel Zen</span>
+        <button type="button" id="btnExitZenMode" class="btn-exit-zen" title="Exit Zen Mode (ESC)" aria-label="Exit Zen Mode">✕ Exit Zen</button>
+      </div>
+
+      <div class="zen-centerpiece">
+        <div class="zen-intent-display">
+          <span class="zen-intent-icon">🎯</span>
+          <span id="txtZenActiveGoal" class="zen-intent-text">Deep Focus Session</span>
+        </div>
+
+        <div class="zen-clock-wrapper">
+          <div id="zenFocusClock" class="zen-big-clock" aria-live="polite">25:00</div>
+          <div id="zenFocusStatus" class="zen-status-badge">Deep Work in Progress</div>
+        </div>
+
+        <div class="zen-actions-row">
+          <button type="button" id="btnZenToggle" class="btn-zen-action primary">
+            <span id="btnZenToggleIcon">▶️</span>
+            <span id="btnZenToggleText">Start</span>
+          </button>
+          <button type="button" id="btnZenReset" class="btn-zen-action secondary">
+            <span>🔄</span>
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <div class="zen-quote-container">
+          <p id="txtZenQuote" class="zen-quote-text">"Focus is a muscle. The more you practice, the deeper you go."</p>
+        </div>
       </div>
     </div>
   </div>

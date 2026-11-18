@@ -863,3 +863,601 @@
   font-size: 11px;
   color: var(--text-muted, #94a3b8);
 }
+
+/* =============================================================================
+   Focus Sentinel Phase 1 Enhanced UI/UX Styles
+   ============================================================================= */
+
+/* Header Zen Button */
+.btn-zen-expand {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-zen-expand:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+/* Feature 1: Mode Selector Tabs */
+.focus-mode-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.focus-mode-tab {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.focus-mode-tab:hover {
+  color: var(--text-primary, #f1f5f9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.focus-mode-tab.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.focus-mode-tab[data-mode="shortBreak"].active,
+.focus-mode-tab[data-mode="longBreak"].active {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #22d3ee;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
+}
+
+/* Feature 4 & 8: 4-Stage Pomodoro Cycle Indicator & Daily Streak */
+.focus-cycle-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.focus-cycle-meta-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.focus-cycle-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cycle-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.25s ease;
+}
+
+.cycle-dot.active {
+  background: #10b981;
+  border-color: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  transform: scale(1.15);
+}
+
+.cycle-dot.completed {
+  background: rgba(16, 185, 129, 0.5);
+  border-color: #10b981;
+}
+
+.focus-cycle-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.focus-streak-and-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.focus-streak-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: #fb923c;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.focus-target-progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-target-progress-bar {
+  width: 70px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.target-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.target-goal-text {
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+/* Feature 2: Task Intent / Goal Input */
+.focus-goal-input-row {
+  width: 100%;
+  position: relative;
+}
+
+.focus-goal-input {
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #ffffff);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.focus-goal-input:focus {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.chip-active-focus-goal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.chip-active-focus-goal .chip-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.chip-active-focus-goal .chip-text {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #34d399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.chip-clear:hover {
+  color: #ef4444;
+}
+
+.focus-dial-task-preview {
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+/* Feature 1: Presets Header & Custom Stepper */
+.presets-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.focus-custom-minute-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepper-label {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.stepper-input {
+  width: 50px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--text-primary, #ffffff);
+}
+
+.stepper-unit {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.btn-stepper-apply {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-stepper-apply:hover {
+  background: rgba(16, 185, 129, 0.3);
+  color: #ffffff;
+}
+
+/* Feature 5: Ambient Soundscapes Bar */
+.focus-soundscape-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.soundscape-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.soundscape-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.soundscape-select {
+  flex: 1;
+  max-width: 160px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f1f5f9);
+}
+
+.btn-soundscape-play {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-soundscape-play:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.soundscape-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.soundscape-range {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  accent-color: #10b981;
+}
+
+.volume-num {
+  font-size: 10.5px;
+  color: var(--text-muted, #94a3b8);
+  width: 32px;
+  text-align: right;
+}
+
+/* Feature 7: Acoustic Chime Selector */
+.focus-chime-selector-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chime-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.chime-select {
+  flex: 1;
+  max-width: 220px;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f1f5f9);
+}
+
+.btn-chime-preview {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-chime-preview:hover {
+  background: rgba(16, 185, 129, 0.3);
+  color: #ffffff;
+}
+
+/* Feature 3: Full-Screen Zen Mode Immersion Overlay */
+.focus-zen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 7, 18, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: fadeIn 0.3s ease;
+}
+
+.focus-zen-overlay.hidden {
+  display: none !important;
+}
+
+.zen-overlay-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90%;
+  max-width: 520px;
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.15);
+}
+
+.zen-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.zen-brand {
+  font-size: 14px;
+  font-weight: 700;
+  color: #34d399;
+  letter-spacing: 0.5px;
+}
+
+.btn-exit-zen {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-exit-zen:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+.zen-centerpiece {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  text-align: center;
+}
+
+.zen-intent-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.zen-intent-icon {
+  font-size: 14px;
+}
+
+.zen-intent-text {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.zen-clock-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.zen-big-clock {
+  font-size: 5rem;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  color: #ffffff;
+  text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+  line-height: 1;
+  letter-spacing: 3px;
+}
+
+.zen-status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.zen-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-zen-action {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-zen-action.primary {
+  background: linear-gradient(135deg, #059669, #10b981);
+  border: 1px solid #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-zen-action.primary:hover {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  transform: translateY(-1px);
+}
+
+.btn-zen-action.secondary {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #ffffff);
+}
+
+.btn-zen-action.secondary:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.zen-quote-container {
+  margin-top: 1rem;
+  max-width: 420px;
+}
+
+.zen-quote-text {
+  font-size: 12.5px;
+  font-style: italic;
+  color: #94a3b8;
+  line-height: 1.5;
+}

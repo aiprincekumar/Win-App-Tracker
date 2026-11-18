@@ -3215,6 +3215,20 @@ function setupEventListeners() {
   const btnPopupFocusReset = document.getElementById('btnPopupFocusReset');
   const popupFocusClock = document.getElementById('popupFocusClock');
   const popupFocusBadge = document.getElementById('popupFocusBadge');
+  const popupActiveGoalChip = document.getElementById('popupActiveGoalChip');
+  const txtPopupActiveGoal = document.getElementById('txtPopupActiveGoal');
+
+  // Load any active focus goal from storage
+  try {
+    if (typeof browserAPI !== 'undefined' && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.get(['active_focus_goal'], (res) => {
+        if (res && res.active_focus_goal && txtPopupActiveGoal && popupActiveGoalChip) {
+          txtPopupActiveGoal.textContent = res.active_focus_goal;
+          popupActiveGoalChip.classList.remove('hidden');
+        }
+      });
+    }
+  } catch (_) {}
 
   let popupFocusState = {
     status: 'idle', // 'idle' | 'running' | 'paused'

@@ -178,7 +178,85 @@ console.log('\nBattery 6: Zero innerHTML & W3C Trusted Types Compliance in JavaS
   console.log('  ✅ Client-side controllers and radial math verified');
 }
 
+// Battery 7: 8 User-Approved Enhanced Focus Features Integrity Assertion
+console.log('\nBattery 7: 8 User-Approved Enhanced Focus Features Integrity Assertion');
+{
+  const dashHtml = fs.readFileSync(path.join(baseDir, 'dashboard/dashboard.html'), 'utf8');
+  const popupHtml = fs.readFileSync(path.join(baseDir, 'popup/popup.html'), 'utf8');
+  const dashJs = fs.readFileSync(path.join(baseDir, 'dashboard/dashboard.js'), 'utf8');
+  const wellbeingCss = fs.readFileSync(path.join(baseDir, 'dashboard/styles/wellbeing_blacklist.css'), 'utf8');
+
+  // 1. Mode Selector Tabs + Custom Duration Minute Stepper
+  assert(dashHtml.includes('id="tabModeFocus"'), 'Must contain #tabModeFocus');
+  assert(dashHtml.includes('id="tabModeShortBreak"'), 'Must contain #tabModeShortBreak');
+  assert(dashHtml.includes('id="tabModeLongBreak"'), 'Must contain #tabModeLongBreak');
+  assert(dashHtml.includes('id="inputFocusCustomMinutes"'), 'Must contain #inputFocusCustomMinutes');
+  assert(dashHtml.includes('id="btnApplyCustomMinutes"'), 'Must contain #btnApplyCustomMinutes');
+  assert(dashJs.includes('tabModeFocus'), 'dashboard.js must bind #tabModeFocus');
+  assert(dashJs.includes('btnApplyCustomMinutes'), 'dashboard.js must bind #btnApplyCustomMinutes');
+
+  // 2. Task Intent / Goal Input
+  assert(dashHtml.includes('id="inputFocusGoal"'), 'Must contain #inputFocusGoal');
+  assert(dashHtml.includes('id="chipActiveFocusGoal"'), 'Must contain #chipActiveFocusGoal');
+  assert(dashHtml.includes('id="txtActiveFocusGoal"'), 'Must contain #txtActiveFocusGoal');
+  assert(dashHtml.includes('id="btnClearFocusGoal"'), 'Must contain #btnClearFocusGoal');
+  assert(dashHtml.includes('id="pomodoroDialTaskPreview"'), 'Must contain #pomodoroDialTaskPreview');
+  assert(dashJs.includes('initFocusGoalInput'), 'dashboard.js must implement initFocusGoalInput');
+
+  // 3. Full-Screen Zen / Distraction-Free Immersion Mode
+  assert(dashHtml.includes('id="btnFocusZenExpand"'), 'Must contain #btnFocusZenExpand');
+  assert(dashHtml.includes('id="focusZenImmersionOverlay"'), 'Must contain #focusZenImmersionOverlay');
+  assert(dashHtml.includes('id="btnExitZenMode"'), 'Must contain #btnExitZenMode');
+  assert(dashHtml.includes('id="txtZenQuote"'), 'Must contain #txtZenQuote');
+  assert(dashHtml.includes('id="zenFocusClock"'), 'Must contain #zenFocusClock');
+  assert(dashJs.includes('initZenMode'), 'dashboard.js must implement initZenMode');
+  assert(dashJs.includes('Escape'), 'dashboard.js must handle Escape key for Zen Mode');
+
+  // 4. 4-Stage Pomodoro Cycle Indicator
+  assert(dashHtml.includes('id="focusCycleDotsContainer"'), 'Must contain #focusCycleDotsContainer');
+  assert(dashHtml.includes('data-cycle="4"'), 'Must contain 4th cycle dot');
+  assert(dashHtml.includes('id="focusCycleText"'), 'Must contain #focusCycleText');
+  assert(dashJs.includes('updateFocusCycleUI'), 'dashboard.js must implement updateFocusCycleUI');
+
+  // 5. Ambient Background Soundscapes Bar
+  assert(dashHtml.includes('id="selectFocusSoundscape"'), 'Must contain #selectFocusSoundscape');
+  assert(dashHtml.includes('id="btnToggleSoundscape"'), 'Must contain #btnToggleSoundscape');
+  assert(dashHtml.includes('id="sliderSoundscapeVolume"'), 'Must contain #sliderSoundscapeVolume');
+  assert(dashHtml.includes('id="txtSoundscapeVolume"'), 'Must contain #txtSoundscapeVolume');
+  assert(dashJs.includes('startSoundscape'), 'dashboard.js must implement Web Audio startSoundscape');
+  assert(dashJs.includes('stopActiveSoundscape'), 'dashboard.js must implement stopActiveSoundscape');
+
+  // 6. Strict Shield / Distraction Blocker Preview toggle
+  assert(dashHtml.includes('id="toggleFocusDistractionShield"'), 'Must contain #toggleFocusDistractionShield');
+  assert(dashJs.includes('toggleFocusDistractionShield'), 'dashboard.js must bind #toggleFocusDistractionShield');
+
+  // 7. Acoustic Chime Selector with Preview
+  assert(dashHtml.includes('id="selectFocusChimeTone"'), 'Must contain #selectFocusChimeTone');
+  assert(dashHtml.includes('id="btnPreviewChime"'), 'Must contain #btnPreviewChime');
+  assert(dashJs.includes('playAcousticChime'), 'dashboard.js must implement playAcousticChime');
+
+  // 8. Daily Focus Streak & Target Progress Bar
+  assert(dashHtml.includes('id="focusDailyStreakBadge"'), 'Must contain #focusDailyStreakBadge');
+  assert(dashHtml.includes('id="focusTargetProgressFill"'), 'Must contain #focusTargetProgressFill');
+  assert(dashHtml.includes('id="focusTargetGoalText"'), 'Must contain #focusTargetGoalText');
+  assert(dashJs.includes('updateFocusTargetProgressUI'), 'dashboard.js must implement updateFocusTargetProgressUI');
+
+  // 9. Popup Mini-Timer Polish
+  assert(popupHtml.includes('id="popupActiveGoalChip"'), 'popup.html must contain #popupActiveGoalChip');
+  assert(popupHtml.includes('id="txtPopupActiveGoal"'), 'popup.html must contain #txtPopupActiveGoal');
+
+  // CSS Styles Integrity
+  assert(wellbeingCss.includes('.focus-mode-tabs-row'), 'CSS must define .focus-mode-tabs-row');
+  assert(wellbeingCss.includes('.focus-zen-overlay'), 'CSS must define .focus-zen-overlay');
+  assert(wellbeingCss.includes('.focus-soundscape-panel'), 'CSS must define .focus-soundscape-panel');
+  assert(wellbeingCss.includes('.focus-cycle-dots'), 'CSS must define .focus-cycle-dots');
+  assert(wellbeingCss.includes('.focus-streak-badge'), 'CSS must define .focus-streak-badge');
+  assert(wellbeingCss.includes('.chip-active-focus-goal'), 'CSS must define .chip-active-focus-goal');
+
+  console.log('  ✅ All 8 user-approved enhanced Focus features verified across HTML, JS, CSS, and Popup');
+}
+
 console.log('\n============================================================');
-console.log('🎉 ALL 6 FOCUS TIME PHASE 1 TEST BATTERIES PASSED CLEANLY (Exit Code 0)');
+console.log('🎉 ALL 7 FOCUS TIME PHASE 1 TEST BATTERIES PASSED CLEANLY (Exit Code 0)');
 console.log('============================================================\n');
 process.exit(0);
