@@ -6390,27 +6390,10 @@ function getFaviconUrl(domain) {
 }
 
 /**
- * Updates the 10-card Time Tracking KPI Bento Grid (Tab A) safely.
- * Universal Rule 28 compliant (<= 45 lines, zero innerHTML).
+ * Renders primary metrics for Time Tracking KPI Bento Grid (Tab A).
+ * Universal Rule 28 compliant (<= 30 lines, zero innerHTML).
  */
-function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
-  const kpi = (typeof TimeTrackingKpiFeature !== 'undefined' && TimeTrackingKpiFeature.aggregateTimeTrackingKpis)
-    ? TimeTrackingKpiFeature.aggregateTimeTrackingKpis({ data, stats, temporalSubtab, todayStr })
-    : {
-        todaySec: stats && stats.todaySec ? stats.todaySec : 0,
-        dailyAvgSec: stats && stats.dailyAvgSec ? stats.dailyAvgSec : 0,
-        totalSec: stats && stats.totalSec ? stats.totalSec : 0,
-        historyDays: stats && stats.historyDays ? stats.historyDays : 1,
-        firstTrackedDate: stats && stats.firstTrackedDate ? stats.firstTrackedDate : 'today',
-        topDomain: stats && stats.topDomain ? stats.topDomain : null,
-        focusTimeSec: data && data.focusTimeSec ? data.focusTimeSec : 0,
-        focusSessionsCount: data && data.focusSessionsCount ? data.focusSessionsCount : 0,
-        activeDomainsCount: (stats && Array.isArray(stats.items)) ? stats.items.length : 0,
-        distraction: { seconds: 0, percent: 0 },
-        peakHourStr: '--:--',
-        longestSessionSec: 0
-      };
-
+function renderPrimaryTimeMetrics(kpi) {
   const elToday = document.getElementById('trackMetricTodayTime');
   const elDaily = document.getElementById('trackMetricDailyAvg');
   const elTotal = document.getElementById('trackMetricTotalTime');
@@ -6418,13 +6401,6 @@ function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
   const elFirst = document.getElementById('trackMetricFirstDate');
   const elTopDom = document.getElementById('trackMetricTopDomain');
   const elTopTime = document.getElementById('trackMetricTopDomainTime');
-  const elFocusTime = document.getElementById('trackMetricFocusTime');
-  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
-  const elActiveDomains = document.getElementById('trackMetricActiveDomains');
-  const elDistraction = document.getElementById('trackMetricDistractionTime');
-  const elSubDistraction = document.getElementById('subMetricDistractionTime');
-  const elPeakHour = document.getElementById('trackMetricPeakHour');
-  const elLongest = document.getElementById('trackMetricLongestSession');
 
   if (elToday) {
     const prev = Number(elToday.dataset && elToday.dataset.rawSec ? elToday.dataset.rawSec : 0) || 0;
@@ -6445,6 +6421,21 @@ function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
   if (elFirst) elFirst.textContent = t('metric_total_sub', kpi.firstTrackedDate);
   if (elTopDom) elTopDom.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? kpi.topDomain.domain : t('no_data');
   if (elTopTime) elTopTime.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? `${formatDuration(kpi.topDomain.computedSeconds)} (${kpi.topDomain.ratioPercent}%)` : '0s';
+}
+
+/**
+ * Renders secondary metrics for Time Tracking KPI Bento Grid (Tab A).
+ * Universal Rule 28 compliant (<= 25 lines, zero innerHTML).
+ */
+function renderSecondaryTimeMetrics(kpi) {
+  const elFocusTime = document.getElementById('trackMetricFocusTime');
+  const elFocusSessions = document.getElementById('trackMetricFocusSessions');
+  const elActiveDomains = document.getElementById('trackMetricActiveDomains');
+  const elDistraction = document.getElementById('trackMetricDistractionTime');
+  const elSubDistraction = document.getElementById('subMetricDistractionTime');
+  const elPeakHour = document.getElementById('trackMetricPeakHour');
+  const elLongest = document.getElementById('trackMetricLongestSession');
+
   if (elFocusTime) elFocusTime.textContent = kpi.focusTimeSec > 0 ? formatDuration(kpi.focusTimeSec) : '0h 00m';
   if (elFocusSessions) elFocusSessions.textContent = `${kpi.focusSessionsCount} completed sessions today`;
   if (elActiveDomains) elActiveDomains.textContent = String(kpi.activeDomainsCount);
@@ -6452,6 +6443,32 @@ function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
   if (elSubDistraction) elSubDistraction.textContent = `${kpi.distraction.percent}% of active time`;
   if (elPeakHour) elPeakHour.textContent = kpi.peakHourStr;
   if (elLongest) elLongest.textContent = kpi.longestSessionSec > 0 ? formatDuration(kpi.longestSessionSec) : '0h 00m';
+}
+
+/**
+ * Updates the 10-card Time Tracking KPI Bento Grid (Tab A) safely.
+ * Universal Rule 28 compliant (<= 30 lines, zero innerHTML).
+ */
+function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
+  const kpi = (typeof TimeTrackingKpiFeature !== 'undefined' && TimeTrackingKpiFeature.aggregateTimeTrackingKpis)
+    ? TimeTrackingKpiFeature.aggregateTimeTrackingKpis({ data, stats, temporalSubtab, todayStr })
+    : {
+        todaySec: stats && stats.todaySec ? stats.todaySec : 0,
+        dailyAvgSec: stats && stats.dailyAvgSec ? stats.dailyAvgSec : 0,
+        totalSec: stats && stats.totalSec ? stats.totalSec : 0,
+        historyDays: stats && stats.historyDays ? stats.historyDays : 1,
+        firstTrackedDate: stats && stats.firstTrackedDate ? stats.firstTrackedDate : 'today',
+        topDomain: stats && stats.topDomain ? stats.topDomain : null,
+        focusTimeSec: data && data.focusTimeSec ? data.focusTimeSec : 0,
+        focusSessionsCount: data && data.focusSessionsCount ? data.focusSessionsCount : 0,
+        activeDomainsCount: (stats && Array.isArray(stats.items)) ? stats.items.length : 0,
+        distraction: { seconds: 0, percent: 0 },
+        peakHourStr: '--:--',
+        longestSessionSec: 0
+      };
+
+  renderPrimaryTimeMetrics(kpi);
+  renderSecondaryTimeMetrics(kpi);
 }
 
 function renderTimeTrackingTab(data) {

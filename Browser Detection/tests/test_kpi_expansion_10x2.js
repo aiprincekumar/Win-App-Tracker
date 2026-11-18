@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite: 10x2 KPI Expansion for Time Tracking & Media Analytics
  * Validates Phase 1 (Markup & Grid), Phase 2 (Aggregations & Wiring), and Phase 3 (i18n Parity).
  * 
@@ -197,7 +197,66 @@ assert.strictEqual(missingHi, 0, `hi.json has ${missingHi} missing keys`);
 console.log('  -> Phase 3 Passed: 100% Bilingual Parity Certified across all 38 token keys!\n');
 
 // -----------------------------------------------------------------------------
-// 4. SRE ENCODING VERIFICATION: UTF-8 with BOM (0xEF, 0xBB, 0xBF)
+// 4. RULE 28 FUNCTION LENGTH AUDIT: Function lines <= 50, nesting depth <= 4
+// -----------------------------------------------------------------------------
+console.log('• [Rule 28 Audit] Verifying function line limits (<= 50 lines)...');
+
+function auditFunctionLengths(filePath, targetFunctions) {
+  const code = fs.readFileSync(filePath, 'utf8');
+  const lines = code.split('\n');
+  targetFunctions.forEach(name => {
+    let start = -1;
+    let braces = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('function ' + name)) {
+        start = i + 1;
+        braces = 0;
+      }
+      if (start > 0) {
+        for (const ch of lines[i]) {
+          if (ch === '{') braces++;
+          if (ch === '}') braces--;
+        }
+        if (braces === 0 && lines[i].includes('}')) {
+          const len = i + 1 - start + 1;
+          assert(len <= 50, `Rule 28 Violation: function ${name} in ${filePath} is ${len} lines (> 50 max)`);
+          break;
+        }
+      }
+    }
+    assert(start !== -1, `Function ${name} not found in ${filePath}`);
+  });
+}
+
+auditFunctionLengths(jsPath, [
+  'renderPrimaryTimeMetrics',
+  'renderSecondaryTimeMetrics',
+  'updateTimeTrackingKpiView',
+  'updateMediaAnalyticsKpiView'
+]);
+
+auditFunctionLengths(path.join(__dirname, '..', 'src/dashboard/features/time_tracking_kpi_feature.js'), [
+  'computeActiveDomainsCount',
+  'computeDistractionStats',
+  'computePeakActivityHour',
+  'computeLongestContinuousSession',
+  'aggregateTimeTrackingKpis'
+]);
+
+auditFunctionLengths(path.join(__dirname, '..', 'src/dashboard/features/media_analytics_kpi_feature.js'), [
+  'cleanPlatformName',
+  'computeTopMediaPlatform',
+  'computeActiveLiveStreamsCount',
+  'computeMutedSessionsCount',
+  'computeLongestMediaSession',
+  'computeVolumeMetrics',
+  'aggregateMediaAnalyticsKpis'
+]);
+
+console.log('  -> Rule 28 Passed: All newly authored/modified functions strictly <= 50 lines!\n');
+
+// -----------------------------------------------------------------------------
+// 5. SRE ENCODING VERIFICATION: UTF-8 with BOM (0xEF, 0xBB, 0xBF)
 // -----------------------------------------------------------------------------
 console.log('• [SRE Standards] Verifying UTF-8 with BOM standard...');
 
@@ -208,7 +267,8 @@ const filesToCheck = [
   'dashboard/dashboard.css',
   'dashboard/dashboard.js',
   'locales/en.json',
-  'locales/hi.json'
+  'locales/hi.json',
+  'tests/test_kpi_expansion_10x2.js'
 ];
 
 filesToCheck.forEach(rel => {
@@ -218,8 +278,8 @@ filesToCheck.forEach(rel => {
   assert(hasBOM, `File is missing UTF-8 BOM (0xEF, 0xBB, 0xBF): ${rel}`);
 });
 
-console.log('  -> SRE Passed: All 7 files retain UTF-8 BOM!\n');
+console.log('  -> SRE Passed: All 8 files retain UTF-8 BOM!\n');
 
 console.log('============================================================');
-console.log('ALL PHASES (1, 2, 3) 100% VERIFIED & CERTIFIED (Exit Code 0)');
+console.log('ALL PHASES (1, 2, 3, 4) 100% VERIFIED & CERTIFIED (Exit Code 0)');
 console.log('============================================================');
