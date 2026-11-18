@@ -1659,6 +1659,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
   globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+  globalThis.handleMuteAllOthers = handleMuteAllOthers;
+  globalThis.handleMuteAll = handleMuteAll;
   globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
   globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
   globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
@@ -10071,6 +10073,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.SUBSTRATE_THEMES = SUBSTRATE_THEMES;
   globalThis.ACCENT_PALETTES = ACCENT_PALETTES;
   globalThis.DASHBOARD_UIUX_I18N = DASHBOARD_UIUX_I18N;
+  globalThis.handleMuteAllOthers = handleMuteAllOthers;
+  globalThis.handleMuteAll = handleMuteAll;
   globalThis.initStickyMiniPlayerDock = initStickyMiniPlayerDock;
   globalThis.updateSidebarLiveEqState = updateSidebarLiveEqState;
   globalThis.updateHeroVolumeUI = updateHeroVolumeUI;
