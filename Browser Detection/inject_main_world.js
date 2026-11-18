@@ -692,7 +692,8 @@
       case 'unmute': {
         if (moviePlayer && typeof moviePlayer.unMute === 'function') {
           try { moviePlayer.unMute(); } catch (_) {}
-        } else if (video) {
+        }
+        if (video) {
           try { video.muted = false; } catch (_) {}
         }
         showOSD('Unmuted', '🔊');

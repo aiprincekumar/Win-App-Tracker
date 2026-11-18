@@ -2557,7 +2557,7 @@ async function getAllActiveMediaStreams() {
             if (t.title && (!existing.title || existing.title === 'Web Media')) existing.title = t.title;
             if (t.favIconUrl) existing.favIconUrl = t.favIconUrl;
             if (t.url) existing.url = t.url;
-            existing.isMuted = isMuted || existing.isMuted;
+            existing.isMuted = isMuted;
           } else {
             streamMap.set(numId, {
               tabId: numId,
@@ -2649,17 +2649,14 @@ async function capturePreMuteSnapshot(snapshotMap) {
       snapshotMap.set(numId, Boolean(mediaData && mediaData.primaryMedia && mediaData.primaryMedia.isMuted));
     }
   }
+  if (!browserAPI.tabs || typeof browserAPI.tabs.query !== 'function') return;
   try {
-    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-      const allTabs = await browserAPI.tabs.query({});
-      if (Array.isArray(allTabs)) {
-        for (const t of allTabs) {
-          if (t && t.id) {
-            snapshotMap.set(t.id, Boolean(t.mutedInfo && t.mutedInfo.muted));
-          }
-        }
+    const allTabs = await browserAPI.tabs.query({});
+    (allTabs || []).forEach(t => {
+      if (t && t.id) {
+        snapshotMap.set(t.id, Boolean(t.mutedInfo && t.mutedInfo.muted));
       }
-    }
+    });
   } catch (_) {}
 }
 
@@ -2676,17 +2673,14 @@ async function collectCandidateTabs(excludeId = null) {
       tabs.add(numId);
     }
   }
+  if (!browserAPI.tabs || typeof browserAPI.tabs.query !== 'function') return tabs;
   try {
-    if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-      const allTabs = await browserAPI.tabs.query({});
-      if (Array.isArray(allTabs)) {
-        for (const t of allTabs) {
-          if (t && t.id && t.id !== excludeId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
-            tabs.add(t.id);
-          }
-        }
+    const allTabs = await browserAPI.tabs.query({});
+    (allTabs || []).forEach(t => {
+      if (t && t.id && t.id !== excludeId && (t.audible || (t.mutedInfo && !t.mutedInfo.muted))) {
+        tabs.add(t.id);
       }
-    }
+    });
   } catch (_) {}
   return tabs;
 }
@@ -2700,16 +2694,23 @@ async function collectCandidateTabs(excludeId = null) {
 async function restoreMuteSnapshot(snapshotMap, excludeId = null) {
   let count = 0;
   const targetEntries = [];
+  const hasSnapshot = Boolean(snapshotMap && typeof snapshotMap.entries === 'function' && snapshotMap.size > 0);
 
-  if (snapshotMap && typeof snapshotMap.entries === 'function' && snapshotMap.size > 0) {
+  if (hasSnapshot) {
     for (const [tId, wasMuted] of snapshotMap.entries()) {
       targetEntries.push([Number(tId), wasMuted]);
     }
     snapshotMap.clear();
-  } else {
-    for (const [tId] of tabMediaMap.entries()) {
-      targetEntries.push([Number(tId), false]);
-    }
+  }
+
+  if (!hasSnapshot) {
+    for (const [tId] of tabMediaMap.entries()) targetEntries.push([Number(tId), false]);
+    try {
+      const allTabs = (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') ? await browserAPI.tabs.query({}) : [];
+      (allTabs || []).forEach(t => {
+        if (t && t.id && t.mutedInfo && t.mutedInfo.muted) targetEntries.push([t.id, false]);
+      });
+    } catch (_) {}
   }
 
   for (const [numId, wasMuted] of targetEntries) {
@@ -2736,23 +2737,22 @@ async function handleSoloTabClearExecution() {
   const snapshot = (typeof soloPreviousMuteStates !== 'undefined' && typeof soloPreviousMuteStates?.get === 'function')
     ? soloPreviousMuteStates : null;
   const targets = [];
+  const hasSnapshot = Boolean(snapshot && snapshot.size > 0);
 
-  if (snapshot && snapshot.size > 0) {
+  if (hasSnapshot) {
     for (const [tId, wasMuted] of snapshot.entries()) {
       targets.push([Number(tId), wasMuted]);
     }
     snapshot.clear();
-  } else {
+  }
+
+  if (!hasSnapshot) {
     for (const [tId] of tabMediaMap.entries()) targets.push([Number(tId), false]);
     try {
-      if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-        const allTabs = await browserAPI.tabs.query({});
-        if (Array.isArray(allTabs)) {
-          for (const t of allTabs) {
-            if (t && t.id && t.mutedInfo && t.mutedInfo.muted) targets.push([t.id, false]);
-          }
-        }
-      }
+      const allTabs = (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') ? await browserAPI.tabs.query({}) : [];
+      (allTabs || []).forEach(t => {
+        if (t && t.id && t.mutedInfo && t.mutedInfo.muted) targets.push([t.id, false]);
+      });
     } catch (_) {}
   }
 
