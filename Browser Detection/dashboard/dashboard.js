@@ -6725,10 +6725,13 @@ function renderTopDistributionBars(items, totalSeconds) {
   const container = document.getElementById('topBarsListContainer');
   if (!container) return;
 
-  container.innerHTML = '';
+  while (container.firstChild) container.removeChild(container.firstChild);
 
   if (!items || items.length === 0 || totalSeconds === 0) {
-    container.innerHTML = `<span class="empty-text">${t('no_data_available')}</span>`;
+    const emptySpan = document.createElement('span');
+    emptySpan.className = 'empty-text';
+    emptySpan.textContent = t('no_data_available');
+    container.appendChild(emptySpan);
     return;
   }
 
