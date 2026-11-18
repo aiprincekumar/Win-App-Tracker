@@ -2350,22 +2350,24 @@ function handleSoloTab(soloTabId, options = {}) {
 
 function handleMuteAllOthers(streamsList, primaryTabId = null, options = {}) {
   const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
-  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  const btnMuteAllOthers = (options && options.btnMuteAllOthers) || (typeof document !== 'undefined' ? document.getElementById('btnMuteAllOthers') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container, btnMuteAllOthers }, options);
   const viz = getResolvedVisualizer();
   if (viz && typeof viz.handleMuteAllOthers === 'function') {
     return viz.handleMuteAllOthers(streamsList || activeMediaStreams, primaryTabId, opt);
   }
-  return Promise.resolve([]);
+  return Promise.resolve({ success: true, mutedCount: 0 });
 }
 
 function handleMuteAll(streamsList, options = {}) {
   const container = (options && options.containerEl) || (typeof document !== 'undefined' ? document.getElementById('mediaDeckGrid') : null);
-  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container }, options);
+  const btnMuteAll = (options && options.btnMuteAll) || (typeof document !== 'undefined' ? document.getElementById('btnMuteAll') : null);
+  const opt = Object.assign({ doc: typeof document !== 'undefined' ? document : null, t, containerEl: container, btnMuteAll }, options);
   const viz = getResolvedVisualizer();
   if (viz && typeof viz.handleMuteAll === 'function') {
     return viz.handleMuteAll(streamsList || activeMediaStreams, opt);
   }
-  return Promise.resolve([]);
+  return Promise.resolve({ success: true, mutedCount: 0 });
 }
 
 function initAudioVisualizer(canvasEl, options = {}) {
@@ -9036,14 +9038,14 @@ function setupEventListeners() {
   const btnMuteAllOthers = document.getElementById('btnMuteAllOthers');
   if (btnMuteAllOthers) {
     btnMuteAllOthers.addEventListener('click', () => {
-      handleMuteAllOthers(activeMediaStreams, null, { doc: document, t });
+      handleMuteAllOthers(activeMediaStreams, null, { doc: document, t, btnMuteAllOthers });
     });
   }
 
   const btnMuteAll = document.getElementById('btnMuteAll');
   if (btnMuteAll) {
     btnMuteAll.addEventListener('click', () => {
-      handleMuteAll(activeMediaStreams, { doc: document, t });
+      handleMuteAll(activeMediaStreams, { doc: document, t, btnMuteAll });
     });
   }
 
@@ -9715,14 +9717,7 @@ function initSleepSentinelHub() {
   }
 
   // Extender buttons (+5m, +15m)
-  const btnExtend5 = document.getElementById('btnDashSleepExtend5');
-  if (btnExtend5) {
-    btnExtend5.addEventListener('click', () => triggerExtendSleepTimer(5));
-  }
-  const btnExtend15 = document.getElementById('btnDashSleepExtend15');
-  if (btnExtend15) {
-    btnExtend15.addEventListener('click', () => triggerExtendSleepTimer(15));
-  }
+  wireDashboardSleepExtenders(document);
 
   // Toggle button (Start / Pause / Resume)
   const btnToggle = document.getElementById('btnDashSleepToggle');
@@ -9822,6 +9817,25 @@ function initSleepSentinelHub() {
 
   // Initial state hydration
   fetchSleepTimerState();
+}
+
+const initDashboardSleepSentinelHub = initSleepSentinelHub;
+
+function wireDashboardSleepExtenders(container) {
+  const root = container || (typeof document !== 'undefined' ? document : null);
+  if (!root) return;
+
+  const btnExtend5 = root.getElementById ? root.getElementById('btnDashSleepExtend5') : (root.querySelector ? root.querySelector('#btnDashSleepExtend5') : null);
+  if (btnExtend5 && !btnExtend5._hasSleepExtendListener) {
+    btnExtend5.addEventListener('click', () => triggerExtendSleepTimer(5));
+    btnExtend5._hasSleepExtendListener = true;
+  }
+
+  const btnExtend15 = root.getElementById ? root.getElementById('btnDashSleepExtend15') : (root.querySelector ? root.querySelector('#btnDashSleepExtend15') : null);
+  if (btnExtend15 && !btnExtend15._hasSleepExtendListener) {
+    btnExtend15.addEventListener('click', () => triggerExtendSleepTimer(15));
+    btnExtend15._hasSleepExtendListener = true;
+  }
 }
 
 function triggerSetSleepTimer(minutes) {
@@ -9942,19 +9956,92 @@ function triggerResumeSleepTimer() {
   }
 }
 
-function triggerExtendSleepTimer(extraMinutes) {
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({
-      type: 'EXTEND_SLEEP_TIMER',
-      action: 'EXTEND_SLEEP_TIMER',
-      extraMinutes: extraMinutes
-    }, (res) => {
-      if (browserAPI.runtime.lastError) {}
-      if (res && res.success && res.state) {
-        renderDashSleepTimer(res.state);
-      }
-    });
+function calculateExtendedSleepTimerState(currentTimer, extraMinutes, defaults = {}) {
+  const minsToAdd = parseInt(extraMinutes, 10);
+  if (isNaN(minsToAdd) || minsToAdd <= 0) {
+    return currentTimer;
   }
+
+  const extraMs = minsToAdd * 60 * 1000;
+  const now = Date.now();
+  const timer = currentTimer ? Object.assign({}, currentTimer) : null;
+
+  if (timer && (timer.state === 'RUNNING' || timer.state === 'FADING') && (timer.targetTime || 0) > now) {
+    timer.durationMinutes = (timer.durationMinutes || 0) + minsToAdd;
+    timer.durationMs = (timer.durationMs || 0) + extraMs;
+    timer.targetTime = (timer.targetTime || now) + extraMs;
+    timer.lastUpdated = now;
+    if (timer.state === 'FADING') {
+      timer.state = 'RUNNING';
+    }
+    return timer;
+  }
+
+  if (timer && timer.state === 'PAUSED') {
+    timer.durationMinutes = (timer.durationMinutes || 0) + minsToAdd;
+    timer.durationMs = (timer.durationMs || 0) + extraMs;
+    timer.remainingMs = (timer.remainingMs || 0) + extraMs;
+    timer.lastUpdated = now;
+    return timer;
+  }
+
+  return {
+    state: 'RUNNING',
+    durationMinutes: minsToAdd,
+    durationMs: extraMs,
+    startTime: now,
+    targetTime: now + extraMs,
+    pauseMedia: defaults.pauseMedia !== undefined ? defaults.pauseMedia : true,
+    pauseTracking: defaults.pauseTracking !== undefined ? defaults.pauseTracking : true,
+    enableFadeOut: defaults.enableFadeOut !== undefined ? defaults.enableFadeOut : true,
+    fadeDurationSeconds: defaults.fadeDurationSeconds || 30,
+    lastUpdated: now,
+    endOfVideo: Boolean(defaults.endOfVideo)
+  };
+}
+
+function triggerExtendSleepTimer(extraMinutes) {
+  const minsToAdd = parseInt(extraMinutes, 10);
+  if (isNaN(minsToAdd) || minsToAdd <= 0) return;
+
+  const fadeCurveEl = typeof document !== 'undefined' ? document.getElementById('toggleDashSleepFadeCurve') : null;
+  const fadeSelectEl = typeof document !== 'undefined' ? document.getElementById('selectDashSleepFadeCurve') : null;
+  const endVideoEl = typeof document !== 'undefined' ? document.getElementById('toggleDashSleepEndOfVideo') : null;
+
+  const defaults = {
+    enableFadeOut: fadeCurveEl ? fadeCurveEl.checked : true,
+    fadeDurationSeconds: fadeSelectEl ? (parseInt(fadeSelectEl.value, 10) || 30) : 30,
+    endOfVideo: endVideoEl ? endVideoEl.checked : false,
+    pauseMedia: true,
+    pauseTracking: true
+  };
+
+  currentDashSleepTimer = calculateExtendedSleepTimerState(currentDashSleepTimer, minsToAdd, defaults);
+  renderDashSleepTimer(currentDashSleepTimer);
+
+  try {
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.set({ sentinel_sleep_timer: currentDashSleepTimer });
+    }
+  } catch (_) {}
+
+  try {
+    if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+      browserAPI.runtime.sendMessage({
+        type: 'EXTEND_SLEEP_TIMER',
+        action: 'EXTEND_SLEEP_TIMER',
+        extraMinutes: minsToAdd
+      }, (res) => {
+        if (browserAPI.runtime.lastError) {}
+        if (res && res.success && res.state) {
+          currentDashSleepTimer = res.state;
+          renderDashSleepTimer(currentDashSleepTimer);
+        }
+      });
+    }
+  } catch (_) {}
+
+  showToast('Added +' + minsToAdd + 'm to sleep timer', false);
 }
 
 function triggerCancelSleepTimer() {
@@ -10391,7 +10478,13 @@ if (typeof module !== 'undefined' && module.exports) {
     handleBackupFileSelection,
     populateSnapshotRollbackSelect,
     initBackupAndDigestHandlers,
-    BackupHubDigestFeature: _BackupHubDigest
+    BackupHubDigestFeature: _BackupHubDigest,
+    // Sleep Sentinel Hub
+    triggerExtendSleepTimer,
+    calculateExtendedSleepTimerState,
+    wireDashboardSleepExtenders,
+    initSleepSentinelHub,
+    initDashboardSleepSentinelHub: initSleepSentinelHub
   };
 }
 
@@ -10455,6 +10548,15 @@ if (typeof window !== 'undefined') {
   window.populateSnapshotRollbackSelect = populateSnapshotRollbackSelect;
   window.initBackupAndDigestHandlers = initBackupAndDigestHandlers;
   window.BackupHubDigestFeature = _BackupHubDigest;
+  window.triggerPauseSleepTimer = triggerPauseSleepTimer;
+  window.triggerResumeSleepTimer = triggerResumeSleepTimer;
+  window.triggerSetSleepTimer = triggerSetSleepTimer;
+  window.triggerCancelSleepTimer = triggerCancelSleepTimer;
+  window.triggerExtendSleepTimer = triggerExtendSleepTimer;
+  window.calculateExtendedSleepTimerState = calculateExtendedSleepTimerState;
+  window.wireDashboardSleepExtenders = wireDashboardSleepExtenders;
+  window.initSleepSentinelHub = initSleepSentinelHub;
+  window.initDashboardSleepSentinelHub = initSleepSentinelHub;
 }
 
 if (typeof globalThis !== 'undefined') {
