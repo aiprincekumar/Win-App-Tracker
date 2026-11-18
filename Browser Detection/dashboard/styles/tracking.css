@@ -1280,3 +1280,139 @@ tr:hover .cell-quick-actions,
   opacity: 1;
   transform: translateX(2px);
 }
+
+/* =============================================================================
+   Floating Circular Scroll to Top Action for Time Tracking (Pure Circular FAB)
+   ============================================================================= */
+
+#btnTimeScrollToTop,
+.time-scroll-to-top {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 28px !important;
+  z-index: 9999 !important;
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  max-width: 46px !important;
+  max-height: 46px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  flex: 0 0 46px !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  justify-self: end !important;
+  align-self: end !important;
+  grid-column: unset !important;
+  grid-row: unset !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: var(--text-primary, #f8fafc) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), 0 0 14px 1px rgba(16, 185, 129, 0.25) !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              color 0.2s ease !important;
+}
+
+#btnTimeScrollToTop.hidden,
+.time-scroll-to-top.hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(14px) scale(0.85) !important;
+  visibility: hidden !important;
+}
+
+#btnTimeScrollToTop.visible,
+#btnTimeScrollToTop:not(.hidden),
+.time-scroll-to-top.visible,
+.time-scroll-to-top:not(.hidden) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+  visibility: visible !important;
+}
+
+#btnTimeScrollToTop:hover,
+.time-scroll-to-top:hover {
+  transform: translateY(-2px) scale(1.06) !important;
+  border-color: var(--color-accent-primary, #10b981) !important;
+  color: var(--color-accent-primary, #10b981) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45), 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;
+}
+
+#btnTimeScrollToTop:active,
+.time-scroll-to-top:active {
+  transform: translateY(0) scale(0.94) !important;
+}
+
+#btnTimeScrollToTop:focus-visible,
+.time-scroll-to-top:focus-visible {
+  outline: 2px solid var(--color-accent-primary, #10b981) !important;
+  outline-offset: 2px !important;
+}
+
+#btnTimeScrollToTop .scroll-top-icon,
+.time-scroll-to-top .scroll-top-icon {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  display: block !important;
+  margin: 0 auto !important;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  pointer-events: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#btnTimeScrollToTop:hover .scroll-top-icon,
+.time-scroll-to-top:hover .scroll-top-icon {
+  transform: translateY(-2px) !important;
+}
+
+/* Light Mode Adaptation */
+body.theme-light #btnTimeScrollToTop,
+body.theme-light .time-scroll-to-top,
+body.light-theme #btnTimeScrollToTop,
+body.light-theme .time-scroll-to-top {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12), 0 0 10px rgba(16, 185, 129, 0.15) !important;
+}
+
+body.theme-light #btnTimeScrollToTop:hover,
+body.theme-light .time-scroll-to-top:hover,
+body.light-theme #btnTimeScrollToTop:hover,
+body.light-theme .time-scroll-to-top:hover {
+  background: #ffffff !important;
+  border-color: var(--color-accent-primary, #10b981) !important;
+  color: var(--color-accent-primary, #10b981) !important;
+  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Scoped tab guard: hide when paneTracking or paneTime is inactive */
+#paneTracking:not(.active) #btnTimeScrollToTop,
+#paneTime:not(.active) #btnTimeScrollToTop {
+  display: none !important;
+}

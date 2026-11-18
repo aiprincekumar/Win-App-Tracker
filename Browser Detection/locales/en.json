@@ -185,6 +185,7 @@
   "top_breakdown": "Top Activity Breakdown",
   "no_data_available": "No data available",
   "domain_table_heading": "Domain Breakdown Table",
+  "time_scroll_to_top": "Scroll back to top of time tracking",
   "domain_count_suffix": "(n) => `${n} domain${n === 1 ? '' : 's'}`",
   "search_domain_placeholder": "Search domain (e.g. youtube, github)...",
   "no_matching_domain": "No matching domains found.",

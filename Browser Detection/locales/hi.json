@@ -185,6 +185,7 @@
   "top_breakdown": "शीर्ष वेबसाइट्स समय अनुपात",
   "no_data_available": "कोई डेटा उपलब्ध नहीं है",
   "domain_table_heading": "विस्तृत डोमेन उपयोग सूची",
+  "time_scroll_to_top": "समय ट्रैकिंग के शीर्ष पर वापस जाएं",
   "domain_count_suffix": "(n) => `${n} डोमेन`",
   "search_domain_placeholder": "डोमेन खोजें...",
   "no_matching_domain": "कोई मेल खाता डोमेन नहीं मिला।",

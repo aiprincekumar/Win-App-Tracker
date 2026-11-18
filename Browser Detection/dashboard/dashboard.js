@@ -406,6 +406,7 @@ const DASHBOARD_I18N = {
     
     // Table
     domain_table_heading: 'Domain Breakdown Table',
+    time_scroll_to_top: 'Scroll back to top of time tracking',
     domain_count_suffix: (n) => `${n} domain${n === 1 ? '' : 's'}`,
     search_domain_placeholder: 'Search domain (e.g. youtube, github)...',
     no_matching_domain: 'No matching domains found.',
@@ -939,6 +940,7 @@ const DASHBOARD_I18N = {
     
     // Table
     domain_table_heading: 'विस्तृत डोमेन उपयोग सूची',
+    time_scroll_to_top: 'समय ट्रैकिंग के शीर्ष पर वापस जाएं',
     domain_count_suffix: (n) => `${n} डोमेन`,
     search_domain_placeholder: 'डोमेन खोजें...',
     no_matching_domain: 'कोई मेल खाता डोमेन नहीं मिला।',
@@ -2000,8 +2002,8 @@ function handleMediaScrollToTopClick() {
  * @param {HTMLElement|null} [mainStage]
  */
 function evaluateMediaScrollVisibility(entry, mainStage) {
-  const paneMedia = document.getElementById('paneMedia');
-  const isMediaActive = Boolean(paneMedia && paneMedia.classList.contains('active'));
+  const paneMedia = (typeof document !== 'undefined') ? document.getElementById('paneMedia') : null;
+  const isMediaActive = Boolean(paneMedia && paneMedia.classList && typeof paneMedia.classList.contains === 'function' && paneMedia.classList.contains('active'));
   if (!isMediaActive) {
     setMediaScrollToTopVisible(false);
     return;
@@ -2069,6 +2071,153 @@ function initMediaScrollToTop() {
   }
   if (typeof window !== 'undefined') {
     window.addEventListener('scroll', handleScroll, { passive: true });
+  }
+}
+
+/**
+ * Checks whether the Domain Breakdown Table header (#headingDomainTable) has
+ * scrolled out of the viewport / above the top boundary of the scroll container.
+ *
+ * @param {HTMLElement|null} heading
+ * @param {HTMLElement|null} mainStage
+ * @returns {boolean}
+ */
+function isTimeHeadingScrolledPast(heading, mainStage) {
+  if (!heading || typeof heading.getBoundingClientRect !== 'function') {
+    return false;
+  }
+  const headingRect = heading.getBoundingClientRect();
+  const stageTop = (mainStage && typeof mainStage.getBoundingClientRect === 'function')
+    ? mainStage.getBoundingClientRect().top
+    : 0;
+
+  return (headingRect.bottom < stageTop) || (headingRect.top < 0);
+}
+
+/**
+ * Updates visibility of the Time Tracking "Scroll to Top" button.
+ *
+ * @param {boolean} shouldShow
+ */
+function setTimeScrollToTopVisible(shouldShow) {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('btnTimeScrollToTop');
+  if (!btn) return;
+
+  if (shouldShow) {
+    btn.classList.remove('hidden');
+    btn.classList.add('visible');
+  } else {
+    btn.classList.add('hidden');
+    btn.classList.remove('visible');
+  }
+}
+
+/**
+ * Handles smooth scrolling of the main content stage back to the top for Time Tracking.
+ */
+function handleTimeScrollToTopClick() {
+  const mainStage = (typeof document !== 'undefined') ? document.querySelector('.main-stage') : null;
+  if (mainStage) {
+    if (typeof mainStage.scrollTo === 'function') {
+      mainStage.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      mainStage.scrollTop = 0;
+    }
+  }
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  setTimeScrollToTopVisible(false);
+}
+
+/**
+ * Evaluates header intersection entry and scroll position to determine Time Tracking button visibility.
+ * Strictly verifies that #headingDomainTable has scrolled out of viewport / container top.
+ *
+ * @param {IntersectionObserverEntry} [entry]
+ * @param {HTMLElement|null} [mainStage]
+ */
+function evaluateTimeScrollVisibility(entry, mainStage) {
+  const paneTracking = (typeof document !== 'undefined')
+    ? (document.getElementById('paneTracking') || document.getElementById('paneTime'))
+    : null;
+  const isTrackingActive = Boolean(paneTracking && paneTracking.classList && typeof paneTracking.classList.contains === 'function' && paneTracking.classList.contains('active'));
+  if (!isTrackingActive) {
+    setTimeScrollToTopVisible(false);
+    return;
+  }
+
+  const stage = mainStage || ((typeof document !== 'undefined') ? document.querySelector('.main-stage') : null);
+  const heading = (typeof document !== 'undefined') ? document.getElementById('headingDomainTable') : null;
+  if (!heading) {
+    setTimeScrollToTopVisible(false);
+    return;
+  }
+
+  let shouldShow = isTimeHeadingScrolledPast(heading, stage);
+
+  if (entry && typeof entry.isIntersecting === 'boolean') {
+    if (entry.isIntersecting) {
+      shouldShow = false;
+    } else {
+      const rootTop = (entry.rootBounds && typeof entry.rootBounds.top === 'number')
+        ? entry.rootBounds.top
+        : ((stage && typeof stage.getBoundingClientRect === 'function') ? stage.getBoundingClientRect().top : 0);
+      const bBottom = (entry.boundingClientRect && typeof entry.boundingClientRect.bottom === 'number')
+        ? entry.boundingClientRect.bottom
+        : (heading.getBoundingClientRect ? heading.getBoundingClientRect().bottom : 0);
+      const bTop = (entry.boundingClientRect && typeof entry.boundingClientRect.top === 'number')
+        ? entry.boundingClientRect.top
+        : (heading.getBoundingClientRect ? heading.getBoundingClientRect().top : 0);
+      shouldShow = (bBottom < rootTop) || (bTop < 0);
+    }
+  }
+
+  setTimeScrollToTopVisible(shouldShow);
+}
+
+/**
+ * Initializes the floating circular "Scroll to Top" button for the Time Tracking view.
+ */
+function initTimeScrollToTop() {
+  if (typeof document === 'undefined') return;
+  const btn = document.getElementById('btnTimeScrollToTop');
+  const targetHeader = document.getElementById('headingDomainTable');
+  const mainStage = document.querySelector('.main-stage');
+  if (!btn) return;
+
+  btn.addEventListener('click', handleTimeScrollToTopClick);
+
+  if (targetHeader && typeof IntersectionObserver !== 'undefined') {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries && entries.length) {
+        evaluateTimeScrollVisibility(entries[0], mainStage);
+      }
+    }, {
+      root: mainStage || null,
+      threshold: [0, 1.0]
+    });
+    observer.observe(targetHeader);
+  }
+
+  const handleScroll = () => {
+    evaluateTimeScrollVisibility(null, mainStage);
+  };
+
+  if (mainStage) {
+    mainStage.addEventListener('scroll', handleScroll, { passive: true });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+  }
+
+  // Initial check if Time Tracking tab is already active
+  const paneTracking = (typeof document !== 'undefined')
+    ? (document.getElementById('paneTracking') || document.getElementById('paneTime'))
+    : null;
+  if (paneTracking && paneTracking.classList && typeof paneTracking.classList.contains === 'function' && paneTracking.classList.contains('active')) {
+    evaluateTimeScrollVisibility(null, mainStage);
   }
 }
 
@@ -3655,6 +3804,9 @@ function applyDashboardLanguage(lang) {
   setTxt('headingTopBreakdown', 'top_breakdown');
 
   setTxt('headingDomainTable', 'domain_table_heading');
+  setTitle('btnTimeScrollToTop', 'time_scroll_to_top');
+  const timeScrollBtn = document.getElementById('btnTimeScrollToTop');
+  if (timeScrollBtn) timeScrollBtn.setAttribute('aria-label', t('time_scroll_to_top'));
   setTxt('lblTableSort', 'sort_by');
   const domSearch = document.getElementById('tableDomainSearch');
   if (domSearch) domSearch.placeholder = t('search_domain_placeholder');
@@ -5830,6 +5982,21 @@ function switchTab(tabKey) {
     }
   } else if (typeof evaluateMediaScrollVisibility === 'function') {
     evaluateMediaScrollVisibility(null, document.querySelector('.main-stage'));
+  }
+
+  // Manage Time Tracking Scroll to Top button visibility on tab switch
+  if (tabKey !== 'tracking') {
+    if (typeof setTimeScrollToTopVisible === 'function') {
+      setTimeScrollToTopVisible(false);
+    } else {
+      const scrollBtn = document.getElementById('btnTimeScrollToTop');
+      if (scrollBtn) {
+        scrollBtn.classList.add('hidden');
+        scrollBtn.classList.remove('visible');
+      }
+    }
+  } else if (typeof evaluateTimeScrollVisibility === 'function') {
+    evaluateTimeScrollVisibility(null, document.querySelector('.main-stage'));
   }
 
   // Top Bar Headers
@@ -11449,6 +11616,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     applyCardStaggerIndices();
     initStickyMiniPlayerDock();
     initMediaScrollToTop();
+    initTimeScrollToTop();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
     initSleepSentinelHub();
 
@@ -11857,7 +12025,13 @@ if (typeof module !== 'undefined' && module.exports) {
     initMediaScrollToTop,
     setMediaScrollToTopVisible,
     handleMediaScrollToTopClick,
-    evaluateMediaScrollVisibility
+    evaluateMediaScrollVisibility,
+    // Time Tracking Scroll to Top Actions
+    isTimeHeadingScrolledPast,
+    initTimeScrollToTop,
+    setTimeScrollToTopVisible,
+    handleTimeScrollToTopClick,
+    evaluateTimeScrollVisibility
   };
 }
 
@@ -11936,6 +12110,11 @@ if (typeof window !== 'undefined') {
   window.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
   window.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
   window.evaluateMediaScrollVisibility = evaluateMediaScrollVisibility;
+  window.isTimeHeadingScrolledPast = isTimeHeadingScrolledPast;
+  window.initTimeScrollToTop = initTimeScrollToTop;
+  window.setTimeScrollToTopVisible = setTimeScrollToTopVisible;
+  window.handleTimeScrollToTopClick = handleTimeScrollToTopClick;
+  window.evaluateTimeScrollVisibility = evaluateTimeScrollVisibility;
   window.initFocusAdvancedState = initFocusAdvancedState;
   window.initSleepAdvancedState = initSleepAdvancedState;
   window.createBinauralBeatNodes = createBinauralBeatNodes;
@@ -12010,6 +12189,11 @@ if (typeof globalThis !== 'undefined') {
   globalThis.setMediaScrollToTopVisible = setMediaScrollToTopVisible;
   globalThis.handleMediaScrollToTopClick = handleMediaScrollToTopClick;
   globalThis.evaluateMediaScrollVisibility = evaluateMediaScrollVisibility;
+  globalThis.isTimeHeadingScrolledPast = isTimeHeadingScrolledPast;
+  globalThis.initTimeScrollToTop = initTimeScrollToTop;
+  globalThis.setTimeScrollToTopVisible = setTimeScrollToTopVisible;
+  globalThis.handleTimeScrollToTopClick = handleTimeScrollToTopClick;
+  globalThis.evaluateTimeScrollVisibility = evaluateTimeScrollVisibility;
 }
 
 // ============================================================================
