@@ -211,12 +211,12 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
+  padding: 6px 11px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -259,12 +259,12 @@
 }
 
 .btn-adv-mode-mini {
-  padding: 3px 6px;
+  padding: 4px 8px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -911,6 +911,11 @@ body.theme-light .hero-seek-slider {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+}
+
+.deck-card-top .deck-status-pill {
+  margin-left: auto;
 }
 
 .deck-card-favicon {
@@ -925,17 +930,13 @@ body.theme-light .hero-seek-slider {
   font-size: 0.85rem;
   font-weight: 600;
   color: #f8fafc;
-  flex: 1;
+  display: block;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.deck-card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  margin: 1px 0 2px;
+  line-height: 1.3;
 }
 
 .deck-status-pill {
@@ -949,6 +950,7 @@ body.theme-light .hero-seek-slider {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
 }
 
 .deck-status-pill.playing {
@@ -1000,20 +1002,17 @@ body.theme-light .hero-seek-slider {
 .deck-volume-row {
   display: flex;
   align-items: center;
-  gap: 10px;
   width: 100%;
   margin: 6px 0 4px;
   padding: 0 1px;
 }
 
-.deck-volume-row .btn-deck-mute {
-  flex: 0 0 auto;
+.btn-deck-mute {
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   color: var(--text-secondary, #94a3b8);
-  font-size: 0.85rem;
-  padding: 3px 6px;
+  font-size: 0.82rem;
   cursor: pointer;
   line-height: 1;
   display: inline-flex;
@@ -1022,19 +1021,18 @@ body.theme-light .hero-seek-slider {
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.deck-volume-row .btn-deck-mute:hover {
+.btn-deck-mute:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #f8fafc;
-  transform: scale(1.08);
 }
 
-body.theme-light .deck-volume-row .btn-deck-mute {
+body.theme-light .btn-deck-mute {
   background: rgba(0, 0, 0, 0.05);
   border-color: rgba(0, 0, 0, 0.08);
   color: #475569;
 }
 
-body.theme-light .deck-volume-row .btn-deck-mute:hover {
+body.theme-light .btn-deck-mute:hover {
   background: rgba(0, 0, 0, 0.09);
   color: #0f172a;
 }
@@ -1132,7 +1130,7 @@ body.theme-light .deck-volume-row .btn-deck-mute:hover {
   background: rgba(139, 92, 246, 0.15);
   border: 1px solid rgba(139, 92, 246, 0.35);
   color: #c084fc;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 6px;
