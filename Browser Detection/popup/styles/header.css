@@ -11,7 +11,17 @@
 .header-badges {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.header-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 0;
   flex-shrink: 0;
 }
 
