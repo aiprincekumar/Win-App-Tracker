@@ -19,10 +19,14 @@
         </div>
       </div>
       <div class="header-badges">
-        <button id="btnThemeToggle" class="btn-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle Dark/Light Mode" type="button">
-          <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        <button id="btnOpenDashboard" class="btn-dashboard-header" title="Open Full Dashboard" aria-label="Open Full Dashboard" type="button">
+          <svg class="header-dashboard-icon sentinel-svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="9" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/>
+            <rect x="3" y="16" width="7" height="5" rx="1"/>
           </svg>
+          <span id="btnOpenDashboardText" class="btn-label sr-only">📊 Dashboard</span>
         </button>
         <button id="btnQuickSettings" class="btn-quick-settings" title="Quick Settings" aria-label="Quick Settings" aria-haspopup="dialog" aria-expanded="false">
           <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -836,15 +840,12 @@
         <span id="btnSwitchMediaTabText" class="btn-label">Switch Tab</span>
       </button>
 
-      <!-- 6. Dashboard Primary Button -->
-      <button id="btnOpenDashboard" class="footer-btn toolbar-btn btn-dashboard-primary" title="Open Full Dashboard" aria-label="Open Full Dashboard">
-        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="9" rx="1"/>
-          <rect x="14" y="3" width="7" height="5" rx="1"/>
-          <rect x="14" y="12" width="7" height="9" rx="1"/>
-          <rect x="3" y="16" width="7" height="5" rx="1"/>
+      <!-- 6. Theme Toggle Toolbar Button -->
+      <button id="btnThemeToggle" class="footer-btn toolbar-btn btn-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle Dark/Light Mode" type="button">
+        <svg class="theme-toggle-icon sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
-        <span id="btnOpenDashboardText" class="btn-label sr-only">📊 Dashboard</span>
+        <span id="btnThemeToggleText" class="btn-label sr-only">Theme</span>
       </button>
     </footer>
 

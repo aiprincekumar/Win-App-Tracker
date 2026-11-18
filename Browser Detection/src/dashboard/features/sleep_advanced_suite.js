@@ -42,6 +42,48 @@
         localStorage.setItem(key, String(val));
       }
     } catch (_) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ [key]: val }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  /**
+   * Asynchronously hydrates sleep advanced state from chrome.storage.local
+   */
+  function hydrateSleepFromChromeStorage(elems) {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+    chrome.storage.local.get([
+      'sentinel_sleep_adv_autoplay_block',
+      'sentinel_sleep_adv_inactivity_cutoff',
+      'sentinel_sleep_adv_screen_dimmer',
+      'sentinel_sleep_adv_tab_hibernate',
+      'sentinel_sleep_adv_soundscape',
+      'sentinel_sleep_adv_soundscape_vol'
+    ]).then((res) => {
+      if (!res) return;
+      if (elems.toggleAutoplay && res.sentinel_sleep_adv_autoplay_block !== undefined) {
+        elems.toggleAutoplay.checked = res.sentinel_sleep_adv_autoplay_block === true || res.sentinel_sleep_adv_autoplay_block === 'true';
+      }
+      if (elems.toggleInactivity && res.sentinel_sleep_adv_inactivity_cutoff !== undefined) {
+        elems.toggleInactivity.checked = res.sentinel_sleep_adv_inactivity_cutoff === true || res.sentinel_sleep_adv_inactivity_cutoff === 'true';
+      }
+      if (elems.toggleDimmer && res.sentinel_sleep_adv_screen_dimmer !== undefined) {
+        elems.toggleDimmer.checked = res.sentinel_sleep_adv_screen_dimmer === true || res.sentinel_sleep_adv_screen_dimmer === 'true';
+      }
+      if (elems.toggleHibernate && res.sentinel_sleep_adv_tab_hibernate !== undefined) {
+        elems.toggleHibernate.checked = res.sentinel_sleep_adv_tab_hibernate === true || res.sentinel_sleep_adv_tab_hibernate === 'true';
+      }
+      if (elems.selectSleepSound && res.sentinel_sleep_adv_soundscape) {
+        elems.selectSleepSound.value = res.sentinel_sleep_adv_soundscape;
+      }
+      if (res.sentinel_sleep_adv_soundscape_vol !== undefined) {
+        const v = parseInt(res.sentinel_sleep_adv_soundscape_vol, 10) || 40;
+        if (elems.sliderVol) elems.sliderVol.value = String(v);
+        if (elems.txtVol) elems.txtVol.textContent = `${v}%`;
+      }
+    }).catch(() => {});
   }
 
   /**
@@ -94,6 +136,8 @@
     const storedVol = parseInt(getStoredItem('sentinel_sleep_adv_soundscape_vol', '40'), 10) || 40;
     if (sliderVol) sliderVol.value = String(storedVol);
     if (txtVol) txtVol.textContent = `${storedVol}%`;
+
+    hydrateSleepFromChromeStorage({ toggleAutoplay, toggleInactivity, toggleDimmer, toggleHibernate, selectSleepSound, sliderVol, txtVol });
   }
 
   /**
@@ -350,6 +394,12 @@
       setStoredItem('sentinel_sleep_adv_soundscape', 'delta_rain');
     }
 
+    const sliderVol = document.getElementById('sliderSleepSoundscapeVolume');
+    const txtVol = document.getElementById('txtSleepSoundscapeVolume');
+    if (sliderVol) sliderVol.value = '40';
+    if (txtVol) txtVol.textContent = '40%';
+    setStoredItem('sentinel_sleep_adv_soundscape_vol', 40);
+
     const btnNap = document.getElementById('btnSleepPowerNapMode');
     if (btnNap) {
       btnNap.classList.add('active');
@@ -362,9 +412,18 @@
       onStartCallback(20);
     } else if (typeof global.triggerSetSleepTimer === 'function') {
       global.triggerSetSleepTimer(20);
+    } else if (typeof window !== 'undefined' && typeof window.triggerSetSleepTimer === 'function') {
+      window.triggerSetSleepTimer(20);
     }
 
     state.powerNapActive = true;
+  }
+
+  /**
+   * Resets the power-nap active state flag
+   */
+  function resetPowerNap() {
+    state.powerNapActive = false;
   }
 
   /**
@@ -472,6 +531,7 @@
     triggerScreenDimmer,
     resetScreenDimmer,
     triggerPowerNapMode,
+    resetPowerNap,
     bindSleepAdvancedEventListeners,
     getState: () => ({ ...state })
   };

@@ -135,7 +135,7 @@ console.log('\nTest 3: Canonical DOM Element IDs Invariant');
     'cardSmartAutomations', 'toggleAutoPauseNewTab', 'toggleAutoAdSilencer', 'toggleDomainSpeedMemory',
     'cardFocusWellness', 'focusRatioBarContainer', 'doomscrollBreakerCard',
     'domainSearchInput', 'browserFilterSelect', 'trackingModeSelect', 'domainCategorySelect', 'domainsListContainer', 'emptyDomainStateText',
-    'btnRefresh', 'btnGlobalMediaToggle', 'btnToggleTrackingPause', 'btnSleepTimerTrigger', 'btnReconnectWs', 'btnSwitchMediaTab', 'btnOpenDashboard',
+    'btnRefresh', 'btnGlobalMediaToggle', 'btnToggleTrackingPause', 'btnSleepTimerTrigger', 'btnReconnectWs', 'btnSwitchMediaTab', 'btnThemeToggle', 'btnOpenDashboard',
     'selectDefaultTab', 'selectSyncInterval'
   ];
 

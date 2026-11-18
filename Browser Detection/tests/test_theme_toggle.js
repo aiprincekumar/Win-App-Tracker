@@ -4,8 +4,8 @@
  * 
  * Verifies:
  * 1. Static HTML Architecture & Placement:
- *    - Presence of canonical #btnThemeToggle as a native <button> with type="button"
- *    - Strict positioning inside .header-badges directly before #btnQuickSettings (#wsStatusBadge moved to footer)
+ *    - Presence of canonical #btnThemeToggle as a native <button> with type="button" in footer
+ *    - Strict positioning of #btnOpenDashboard inside .header-badges directly before #btnQuickSettings
  *    - Accessible aria-label and tooltip title attributes
  *    - Inner SVG uses class="theme-toggle-icon" with strict absence of class="badge-icon"
  *    - Default Moon icon geometry present with viewBox="0 0 24 24", stroke-width="2", aria-hidden="true"
@@ -54,27 +54,37 @@ console.log('Test 1: Static HTML Architecture & Hierarchy Invariant');
   assert(/<button[^>]*id="btnThemeToggle"[^>]*class="[^"]*btn-theme-toggle[^"]*"/i.test(html), '#btnThemeToggle must be a native <button> with class="btn-theme-toggle"');
   assert(/<button[^>]*id="btnThemeToggle"[^>]*type="button"/i.test(html), '#btnThemeToggle must declare type="button"');
 
-  // 2. Strict Header Hierarchy: inside .header-badges and directly before #btnQuickSettings (#wsStatusBadge moved to footer per user spec)
+  // 2. Strict Header Hierarchy: #btnOpenDashboard is inside .header-badges directly before #btnQuickSettings
   const badgesContainerIdx = html.indexOf('class="header-badges"');
-  const wsBadgeIdx = html.indexOf('id="wsStatusBadge"');
-  const themeToggleIdx = html.indexOf('id="btnThemeToggle"');
+  const dashboardHeaderIdx = html.indexOf('id="btnOpenDashboard"');
   const quickSettingsIdx = html.indexOf('id="btnQuickSettings"');
+  const footerIdx = html.indexOf('class="footer"');
+  const themeToggleIdx = html.indexOf('id="btnThemeToggle"');
+  const switchTabIdx = html.indexOf('id="btnSwitchMediaTab"');
 
   assert(badgesContainerIdx !== -1, '.header-badges container must exist');
-  assert(wsBadgeIdx !== -1, '#wsStatusBadge must exist');
-  assert(themeToggleIdx !== -1, '#btnThemeToggle must exist');
+  assert(dashboardHeaderIdx !== -1, '#btnOpenDashboard must exist');
   assert(quickSettingsIdx !== -1, '#btnQuickSettings must exist');
+  assert(footerIdx !== -1, '.footer container must exist');
+  assert(themeToggleIdx !== -1, '#btnThemeToggle must exist');
 
-  assert(themeToggleIdx > badgesContainerIdx, '#btnThemeToggle must be positioned inside .header-badges');
-  assert(themeToggleIdx < quickSettingsIdx, '#btnThemeToggle must be positioned directly before #btnQuickSettings');
+  assert(dashboardHeaderIdx > badgesContainerIdx, '#btnOpenDashboard must be positioned inside .header-badges');
+  assert(dashboardHeaderIdx < quickSettingsIdx, '#btnOpenDashboard must be positioned directly before #btnQuickSettings');
 
-  // 3. Accessibility attributes
+  // 3. Footer Hierarchy: #btnThemeToggle is positioned inside .footer after #btnSwitchMediaTab
+  assert(themeToggleIdx > footerIdx, '#btnThemeToggle must be positioned inside footer');
+  assert(themeToggleIdx > switchTabIdx, '#btnThemeToggle must be positioned after #btnSwitchMediaTab in footer');
+
+  // 4. Accessibility attributes
   assert(/<button[^>]*id="btnThemeToggle"[^>]*aria-label="[^"]+"/i.test(html), '#btnThemeToggle must declare an aria-label');
   assert(/<button[^>]*id="btnThemeToggle"[^>]*title="[^"]+"/i.test(html), '#btnThemeToggle must declare a title tooltip');
+  assert(/<button[^>]*id="btnOpenDashboard"[^>]*aria-label="[^"]+"/i.test(html), '#btnOpenDashboard must declare an aria-label');
+  assert(/<button[^>]*id="btnOpenDashboard"[^>]*title="[^"]+"/i.test(html), '#btnOpenDashboard must declare a title tooltip');
 
-  // 4. SVG Icon Specifications: MUST use class="theme-toggle-icon" and NOT class="badge-icon"
-  const themeBtnSection = html.substring(themeToggleIdx, quickSettingsIdx);
-  assert(themeBtnSection.includes('class="theme-toggle-icon"'), '#btnThemeToggle SVG must use class="theme-toggle-icon"');
+  // 5. SVG Icon Specifications: MUST use class="theme-toggle-icon" and NOT class="badge-icon"
+  const themeBtnEndIdx = html.indexOf('</button>', themeToggleIdx);
+  const themeBtnSection = html.substring(themeToggleIdx, themeBtnEndIdx);
+  assert(themeBtnSection.includes('class="theme-toggle-icon'), '#btnThemeToggle SVG must use class="theme-toggle-icon"');
   assert(!themeBtnSection.includes('badge-icon'), '#btnThemeToggle must NOT use class="badge-icon" to preserve header status badge assertions');
   assert(themeBtnSection.includes('viewBox="0 0 24 24"'), 'Theme toggle SVG must specify viewBox="0 0 24 24"');
   assert(themeBtnSection.includes('fill="none"'), 'Theme toggle SVG must specify fill="none"');
@@ -82,11 +92,11 @@ console.log('Test 1: Static HTML Architecture & Hierarchy Invariant');
   assert(themeBtnSection.includes('stroke-width="2"'), 'Theme toggle SVG must specify stroke-width="2"');
   assert(themeBtnSection.includes('aria-hidden="true"'), 'Theme toggle SVG must specify aria-hidden="true"');
 
-  // 5. Default Dark Mode Moon Icon Path
+  // 6. Default Dark Mode Moon Icon Path
   assert(themeBtnSection.includes('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'), 'Default Dark Mode state must render the Moon crescent path');
 
-  console.log('  ✅ #btnThemeToggle declared as native <button type="button"> with class="btn-theme-toggle"');
-  console.log('  ✅ Placement verified: strictly before #btnQuickSettings inside .header-badges');
+  console.log('  ✅ #btnThemeToggle declared as native <button type="button"> with class="btn-theme-toggle" in footer');
+  console.log('  ✅ Placement verified: #btnOpenDashboard in .header-badges before #btnQuickSettings, #btnThemeToggle in footer');
   console.log('  ✅ SVG icon correctly classified as .theme-toggle-icon (zero .badge-icon interference)');
   console.log('  ✅ Default Moon icon SVG geometry verified');
 }

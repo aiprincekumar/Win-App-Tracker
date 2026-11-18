@@ -18,7 +18,9 @@
 /* Base Badge / Action Button Geometry: 30x30px Compact Uniform Capsule */
 .ws-badge,
 .btn-quick-settings,
-.btn-theme-toggle {
+.btn-theme-toggle,
+.btn-dashboard-header,
+#btnOpenDashboard {
   position: relative;
   width: 30px;
   height: 30px;
@@ -42,7 +44,9 @@
 
 .ws-badge:hover,
 .btn-quick-settings:hover,
-.btn-theme-toggle:hover {
+.btn-theme-toggle:hover,
+.btn-dashboard-header:hover,
+#btnOpenDashboard:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.22);
@@ -52,13 +56,17 @@
 
 .ws-badge:active,
 .btn-quick-settings:active,
-.btn-theme-toggle:active {
+.btn-theme-toggle:active,
+.btn-dashboard-header:active,
+#btnOpenDashboard:active {
   transform: scale(0.94);
 }
 
 .ws-badge:focus-visible,
 .btn-quick-settings:focus-visible,
-.btn-theme-toggle:focus-visible {
+.btn-theme-toggle:focus-visible,
+.btn-dashboard-header:focus-visible,
+#btnOpenDashboard:focus-visible {
   outline: 2px solid var(--accent-emerald);
   outline-offset: 1px;
 }
@@ -94,6 +102,42 @@
   transform: rotate(20deg) scale(1.1);
   color: #fbbf24;
   filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.45));
+}
+
+/* Header Dashboard Badge Button Hover Glow & 15x15px Icon Accent */
+.btn-dashboard-header,
+.header-badges #btnOpenDashboard {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(6, 182, 212, 0.22) 100%);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: #a7f3d0;
+}
+
+.btn-dashboard-header:hover,
+.header-badges #btnOpenDashboard:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.38) 0%, rgba(6, 182, 212, 0.48) 100%);
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-dashboard-header .header-dashboard-icon,
+.btn-dashboard-header .sentinel-svg-icon,
+.header-badges #btnOpenDashboard svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease, filter 0.2s ease;
+}
+
+.btn-dashboard-header:hover .header-dashboard-icon,
+.btn-dashboard-header:hover .sentinel-svg-icon,
+.header-badges #btnOpenDashboard:hover svg {
+  transform: scale(1.12);
+  stroke: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.85));
 }
 
 .btn-quick-settings[aria-expanded="true"] {

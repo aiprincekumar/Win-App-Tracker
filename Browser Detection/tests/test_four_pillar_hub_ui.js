@@ -99,7 +99,7 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
     'btnSleepTimerTrigger',
     'btnReconnectWs',
     'btnSwitchMediaTab',
-    'btnOpenDashboard'
+    'btnThemeToggle'
   ];
 
   footerButtons.forEach(btnId => {
@@ -114,7 +114,14 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
     lastIdx = idx;
   });
 
-  console.log('  ✅ Quick Settings button and floating popover dialog verified in header');
+  // Header badges: contains #btnOpenDashboard and #btnQuickSettings
+  assert(html.includes('id="btnOpenDashboard"'), 'Header badges must contain #btnOpenDashboard');
+  assert(html.includes('id="btnQuickSettings"'), 'Header badges must contain #btnQuickSettings');
+  const dashHeaderIdx = html.indexOf('id="btnOpenDashboard"');
+  const qsHeaderIdx = html.indexOf('id="btnQuickSettings"');
+  assert(dashHeaderIdx < qsHeaderIdx, '#btnOpenDashboard must precede #btnQuickSettings in header badges');
+
+  console.log('  ✅ Quick Settings & Dashboard buttons and floating popover dialog verified in header');
   console.log('  ✅ Strict single-row footer toolbar invariant certified (all 7 buttons in exact sequence)');
 }
 

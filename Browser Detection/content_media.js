@@ -2488,6 +2488,113 @@
     }, stepIntervalMs);
   }
 
+  // ---------------------------------------------------------------------------
+  // Sleep Advanced: Video Autoplay Block & YouTube Next Video Cancel
+  // ---------------------------------------------------------------------------
+  const sleepAutoplayBlockState = {
+    enabled: false,
+    sleepTimerActive: false,
+    observer: null
+  };
+
+  function isSleepAutoplayBlockActive() {
+    return sleepAutoplayBlockState.enabled && sleepAutoplayBlockState.sleepTimerActive;
+  }
+
+  function applyAutoplayBlockToVideo(video) {
+    if (!video) return;
+    try {
+      video.autoplay = false;
+      video.removeAttribute('autoplay');
+    } catch (_) {}
+  }
+
+  function disableYouTubeAutoplayToggle() {
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.hostname.includes('youtube.com')) {
+        const ytToggle = document.querySelector('.ytp-autonav-toggle-button[aria-checked="true"]');
+        if (ytToggle) {
+          ytToggle.click();
+        }
+      }
+    } catch (_) {}
+  }
+
+  function applySleepAutoplayBlock() {
+    if (!isSleepAutoplayBlockActive()) return;
+    const videos = document.querySelectorAll('video');
+    videos.forEach(v => applyAutoplayBlockToVideo(v));
+    disableYouTubeAutoplayToggle();
+
+    if (!sleepAutoplayBlockState.observer && typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      sleepAutoplayBlockState.observer = new MutationObserver((mutations) => {
+        if (!isSleepAutoplayBlockActive()) return;
+        for (const m of mutations) {
+          for (const node of m.addedNodes) {
+            if (node.nodeType === 1) {
+              if (node.tagName === 'VIDEO') {
+                applyAutoplayBlockToVideo(node);
+              } else if (node.querySelectorAll) {
+                node.querySelectorAll('video').forEach(v => applyAutoplayBlockToVideo(v));
+              }
+            }
+          }
+        }
+        disableYouTubeAutoplayToggle();
+      });
+      sleepAutoplayBlockState.observer.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+    }
+  }
+
+  function onSleepVideoEnded(e) {
+    if (!isSleepAutoplayBlockActive()) return;
+    try {
+      const v = e.target;
+      if (v && typeof v.pause === 'function') v.pause();
+      const cancelBtn = document.querySelector('.ytp-autonav-endscreen-button-cancel');
+      if (cancelBtn) cancelBtn.click();
+    } catch (_) {}
+  }
+
+  function initSleepAutoplayBlock() {
+    if (typeof document === 'undefined') return;
+    document.addEventListener('ended', onSleepVideoEnded, true);
+
+    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
+      browserAPI.storage.local.get(['sentinel_sleep_adv_autoplay_block', 'sentinel_sleep_timer'], (res) => {
+        if (!res) return;
+        sleepAutoplayBlockState.enabled = res.sentinel_sleep_adv_autoplay_block === true || res.sentinel_sleep_adv_autoplay_block === 'true';
+        const st = res.sentinel_sleep_timer;
+        sleepAutoplayBlockState.sleepTimerActive = !!(st && (st.state === 'RUNNING' || st.state === 'FADING'));
+        if (isSleepAutoplayBlockActive()) {
+          applySleepAutoplayBlock();
+        }
+      });
+    }
+
+    if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+      browserAPI.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        let changed = false;
+        if (changes.sentinel_sleep_adv_autoplay_block) {
+          sleepAutoplayBlockState.enabled = changes.sentinel_sleep_adv_autoplay_block.newValue === true || changes.sentinel_sleep_adv_autoplay_block.newValue === 'true';
+          changed = true;
+        }
+        if (changes.sentinel_sleep_timer) {
+          const st = changes.sentinel_sleep_timer.newValue;
+          sleepAutoplayBlockState.sleepTimerActive = !!(st && (st.state === 'RUNNING' || st.state === 'FADING'));
+          changed = true;
+        }
+        if (changed && isSleepAutoplayBlockActive()) {
+          applySleepAutoplayBlock();
+        }
+      });
+    }
+  }
+
   // Runtime IPC Message Listener (Queries & Controls)
   browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (isContextInvalidated || !isExtensionContextValid()) {
@@ -2620,11 +2727,31 @@
       return true;
     }
 
+    // 10. Sleep Advanced: Autoplay Block
+    if (msgType === 'SET_SLEEP_AUTOPLAY_BLOCK' || msgAction === 'SET_SLEEP_AUTOPLAY_BLOCK') {
+      sleepAutoplayBlockState.enabled = message.enabled !== false;
+      if (message.sleepTimerActive !== undefined) {
+        sleepAutoplayBlockState.sleepTimerActive = !!message.sleepTimerActive;
+      }
+      if (isSleepAutoplayBlockActive()) {
+        applySleepAutoplayBlock();
+      }
+      safeSendResponse({ success: true, active: isSleepAutoplayBlockActive() });
+      return true;
+    }
+
     return true;
   });
 
   // Expose Sentinel Smart Automations hooks for testing and inspection
   if (typeof window !== 'undefined') {
+    window.__SentinelSleepAutoplayBlock = {
+      init: initSleepAutoplayBlock,
+      applySleepAutoplayBlock,
+      isSleepAutoplayBlockActive,
+      getState: () => ({ ...sleepAutoplayBlockState }),
+      setState: (st) => { Object.assign(sleepAutoplayBlockState, st); }
+    };
     window.__SentinelDoomScrollGuard = {
       init: initDoomScrollGuard,
       initDoomScrollGuard,
@@ -2847,6 +2974,9 @@
         if (isFeedHost()) {
           initDoomScrollGuard();
         }
+      } catch (_) {}
+      try {
+        initSleepAutoplayBlock();
       } catch (_) {}
     }
 

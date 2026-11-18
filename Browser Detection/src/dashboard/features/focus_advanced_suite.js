@@ -43,6 +43,43 @@
         localStorage.setItem(key, String(val));
       }
     } catch (_) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ [key]: val }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  /**
+   * Asynchronously hydrates state from chrome.storage.local
+   */
+  function hydrateFocusFromChromeStorage(elems) {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+    chrome.storage.local.get([
+      'sentinel_focus_adv_integrity',
+      'sentinel_focus_adv_automute_bg',
+      'sentinel_focus_adv_breathe_nudge',
+      'sentinel_focus_adv_posture_alert',
+      'sentinel_focus_soundscape'
+    ]).then((res) => {
+      if (!res) return;
+      if (elems.toggleIntegrity && res.sentinel_focus_adv_integrity !== undefined) {
+        elems.toggleIntegrity.checked = res.sentinel_focus_adv_integrity === true || res.sentinel_focus_adv_integrity === 'true';
+      }
+      if (elems.toggleAutoMute && res.sentinel_focus_adv_automute_bg !== undefined) {
+        elems.toggleAutoMute.checked = res.sentinel_focus_adv_automute_bg === true || res.sentinel_focus_adv_automute_bg === 'true';
+      }
+      if (elems.toggleBreathe && res.sentinel_focus_adv_breathe_nudge !== undefined) {
+        elems.toggleBreathe.checked = res.sentinel_focus_adv_breathe_nudge === true || res.sentinel_focus_adv_breathe_nudge === 'true';
+      }
+      if (elems.toggle2020 && res.sentinel_focus_adv_posture_alert !== undefined) {
+        elems.toggle2020.checked = res.sentinel_focus_adv_posture_alert === true || res.sentinel_focus_adv_posture_alert === 'true';
+      }
+      if (elems.selectSoundscape && res.sentinel_focus_soundscape) {
+        elems.selectSoundscape.value = res.sentinel_focus_soundscape;
+      }
+      syncIntegrityBadgeUI();
+    }).catch(() => {});
   }
 
   /**
@@ -55,6 +92,7 @@
     const toggleAutoMute = document.getElementById('toggleFocusAutoMuteBg');
     const toggleBreathe = document.getElementById('toggleFocusBreatheNudge');
     const toggle2020 = document.getElementById('toggleFocus2020Alert');
+    const selectSoundscape = document.getElementById('selectFocusSoundscape');
 
     if (toggleIntegrity) {
       toggleIntegrity.checked = getStoredItem('sentinel_focus_adv_integrity', 'false') === 'true';
@@ -68,13 +106,12 @@
     if (toggle2020) {
       toggle2020.checked = getStoredItem('sentinel_focus_adv_posture_alert', 'false') === 'true';
     }
-
-    const selectSoundscape = document.getElementById('selectFocusSoundscape');
     if (selectSoundscape && !selectSoundscape.value) {
       selectSoundscape.value = getStoredItem('sentinel_focus_soundscape', 'none');
     }
 
     syncIntegrityBadgeUI();
+    hydrateFocusFromChromeStorage({ toggleIntegrity, toggleAutoMute, toggleBreathe, toggle2020, selectSoundscape });
   }
 
   /**
@@ -251,6 +288,16 @@
     if (!toast) return;
 
     toast.classList.remove('hidden');
+    try {
+      if (typeof chrome !== 'undefined' && chrome.notifications && chrome.notifications.create) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon128.png',
+          title: '👀 20-20-20 Eye & Posture Alert',
+          message: 'Look at an object 20 feet away for 20 seconds and adjust your posture!'
+        });
+      }
+    } catch (_) {}
     if (state.postureAlertTimeout) clearTimeout(state.postureAlertTimeout);
     state.postureAlertTimeout = setTimeout(() => {
       hide2020PostureAlert();
@@ -278,6 +325,26 @@
     state.cumulativeFocusSeconds += 1;
     if (state.cumulativeFocusSeconds % 1200 === 0) {
       trigger2020PostureAlert();
+    }
+  }
+
+  /**
+   * Binds overlay and dialog button event listeners
+   */
+  function bindOverlayListeners() {
+    const btnBreatheReturn = document.getElementById('btnBreatheReturnTask');
+    if (btnBreatheReturn) {
+      btnBreatheReturn.addEventListener('click', hideBreatheNudgeOverlay);
+    }
+
+    const btnBreatheAllow = document.getElementById('btnBreatheAllowTemp');
+    if (btnBreatheAllow) {
+      btnBreatheAllow.addEventListener('click', hideBreatheNudgeOverlay);
+    }
+
+    const btnClose2020 = document.getElementById('btnClose2020Alert');
+    if (btnClose2020) {
+      btnClose2020.addEventListener('click', hide2020PostureAlert);
     }
   }
 
@@ -316,20 +383,14 @@
       });
     }
 
-    const btnBreatheReturn = document.getElementById('btnBreatheReturnTask');
-    if (btnBreatheReturn) {
-      btnBreatheReturn.addEventListener('click', hideBreatheNudgeOverlay);
+    const selectSoundscape = document.getElementById('selectFocusSoundscape');
+    if (selectSoundscape) {
+      selectSoundscape.addEventListener('change', () => {
+        setStoredItem('sentinel_focus_soundscape', selectSoundscape.value);
+      });
     }
 
-    const btnBreatheAllow = document.getElementById('btnBreatheAllowTemp');
-    if (btnBreatheAllow) {
-      btnBreatheAllow.addEventListener('click', hideBreatheNudgeOverlay);
-    }
-
-    const btnClose2020 = document.getElementById('btnClose2020Alert');
-    if (btnClose2020) {
-      btnClose2020.addEventListener('click', hide2020PostureAlert);
-    }
+    bindOverlayListeners();
   }
 
   // Focus Advanced Suite Public API Object

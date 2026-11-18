@@ -200,6 +200,54 @@
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
+/* Footer Theme Toggle Button (Uniform 31.5px x 32px Toolbar Capsule with Centered 16x16px Icon) */
+.footer-btn.btn-theme-toggle {
+  height: 32px;
+  flex: 0 0 31.5px;
+  min-width: 30px;
+  max-width: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  box-sizing: border-box;
+}
+
+.footer-btn.btn-theme-toggle .theme-toggle-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease, filter 0.2s ease, color 0.2s ease;
+}
+
+.footer-btn.btn-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.footer-btn.btn-theme-toggle:hover .theme-toggle-icon {
+  transform: rotate(20deg) scale(1.1);
+  color: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.45));
+}
+
+.footer-btn.btn-theme-toggle:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.footer-btn.btn-theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-emerald);
+  outline-offset: 1px;
+}
+
 .footer-btn.danger:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.3);

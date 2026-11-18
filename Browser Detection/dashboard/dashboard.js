@@ -5208,6 +5208,12 @@ function initPomodoroWidget() {
     updateFocusRadialDial(state.remainingSeconds, totalSec, state.mode, state.status);
     updateFocusFinishTime(state.remainingSeconds, state.status);
 
+    if (state.status === 'running' && state.mode === 'focus') {
+      if (typeof FocusAdvancedSuite !== 'undefined' && FocusAdvancedSuite.handlePomodoroFocusTick) {
+        FocusAdvancedSuite.handlePomodoroFocusTick('focus', state.remainingSeconds);
+      }
+    }
+
     // Active status indicator dot
     if (activeDot) {
       if (state.status === 'running') {
@@ -5294,6 +5300,10 @@ function initPomodoroWidget() {
       playSyntheticFocusChime();
     }
 
+    if (typeof FocusAdvancedSuite !== 'undefined') {
+      FocusAdvancedSuite.executeAutoMuteBackgroundTabs(false);
+    }
+
     updateUI(state);
     showToast(currentLang === 'hi' ? '🧘 फोकस ब्लॉक पूर्ण! 5 मिनट का ब्रेक लें।' : '🧘 Focus block complete! Take a 5-minute break.', false);
   };
@@ -5302,6 +5312,11 @@ function initPomodoroWidget() {
     const chimeToggle = document.getElementById('toggleFocusChime');
     if (chimeToggle && chimeToggle.checked) {
       playSyntheticFocusChime();
+    }
+
+    if (typeof FocusAdvancedSuite !== 'undefined') {
+      FocusAdvancedSuite.resetFocusIntegrityScore();
+      FocusAdvancedSuite.executeAutoMuteBackgroundTabs(true);
     }
 
     updateUI(state);
@@ -5458,9 +5473,19 @@ function initPomodoroWidget() {
       const curState = pomodoroController.getState();
       if (curState.status === 'running') {
         pomodoroController.pause({ onTick: updateUI });
+        if (typeof FocusAdvancedSuite !== 'undefined') {
+          FocusAdvancedSuite.executeAutoMuteBackgroundTabs(false);
+        }
       } else if (curState.status === 'paused') {
         pomodoroController.resume({ onTick: updateUI });
+        if (typeof FocusAdvancedSuite !== 'undefined') {
+          FocusAdvancedSuite.executeAutoMuteBackgroundTabs(true);
+        }
       } else {
+        if (typeof FocusAdvancedSuite !== 'undefined') {
+          FocusAdvancedSuite.resetFocusIntegrityScore();
+          FocusAdvancedSuite.executeAutoMuteBackgroundTabs(true);
+        }
         pomodoroController.start({
           onTick: updateUI,
           onBreak: onBreakTrigger,
@@ -5473,12 +5498,19 @@ function initPomodoroWidget() {
   if (btnPause) {
     btnPause.addEventListener('click', () => {
       pomodoroController.pause({ onTick: updateUI });
+      if (typeof FocusAdvancedSuite !== 'undefined') {
+        FocusAdvancedSuite.executeAutoMuteBackgroundTabs(false);
+      }
       updateUI(pomodoroController.getState());
     });
   }
   if (btnReset) {
     btnReset.addEventListener('click', () => {
       pomodoroController.reset({ onTick: updateUI });
+      if (typeof FocusAdvancedSuite !== 'undefined') {
+        FocusAdvancedSuite.resetFocusIntegrityScore();
+        FocusAdvancedSuite.executeAutoMuteBackgroundTabs(false);
+      }
       updateUI(pomodoroController.getState());
       updateFocusRadialDial(25 * 60, 25 * 60, 'focus', 'idle');
     });
@@ -5692,6 +5724,18 @@ function initPomodoroWidget() {
       }
       if (msg && (msg.type === 'FOCUS_BREAK_COMPLETED' || msg.action === 'FOCUS_BREAK_COMPLETED')) {
         onFocusTrigger(pomodoroController.getState());
+      }
+      if (msg && (msg.type === 'FOCUS_DISTRACTION_EVENT' || msg.action === 'FOCUS_DISTRACTION_EVENT')) {
+        if (typeof FocusAdvancedSuite !== 'undefined') {
+          const toggleIntegrity = document.getElementById('toggleFocusIntegrityScore');
+          if (toggleIntegrity && toggleIntegrity.checked) {
+            FocusAdvancedSuite.updateFocusIntegrityScore(-5, msg.reason || 'distraction');
+          }
+          const toggleBreathe = document.getElementById('toggleFocusBreatheNudge');
+          if (toggleBreathe && toggleBreathe.checked) {
+            FocusAdvancedSuite.triggerBreatheNudgeOverlay(msg.domain || '');
+          }
+        }
       }
     });
   }
@@ -11043,12 +11087,19 @@ function renderDashSleepTimer(timer) {
     if (isFading || (isRunning && remainingMs <= 60000)) {
       SleepAdvancedSuite.triggerScreenDimmer();
     }
-    if (isFading) {
+    if (isFading || (isRunning && remainingMs <= 30000)) {
       SleepAdvancedSuite.applySleepVolumeRamp(0, 30);
     }
     if (timer.state === 'TRIGGERED') {
       SleepAdvancedSuite.executeSleepTabHibernation();
       SleepAdvancedSuite.stopSleepAidSoundscape();
+      if (SleepAdvancedSuite.getState().powerNapActive) {
+        if (typeof playAcousticChime === 'function') {
+          playAcousticChime('solfeggio528');
+        }
+        showToast('⚡ Power-Nap Complete! Wake up refreshed!', false);
+        SleepAdvancedSuite.resetPowerNap();
+      }
     }
   }
 
@@ -11326,6 +11377,16 @@ function initSleepSentinelHub() {
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg && (msg.type === 'SLEEP_TIMER_STATE_CHANGED' || msg.type === 'SLEEP_TIMER_EXPIRED')) {
         renderDashSleepTimer(msg.state);
+        if (msg.type === 'SLEEP_TIMER_EXPIRED' || (msg.state && msg.state.state === 'TRIGGERED')) {
+          if (typeof SleepAdvancedSuite !== 'undefined' && SleepAdvancedSuite.getState().powerNapActive) {
+            SleepAdvancedSuite.stopSleepAidSoundscape();
+            if (typeof playAcousticChime === 'function') {
+              playAcousticChime('solfeggio528');
+            }
+            showToast('⚡ Power-Nap Complete! Wake up refreshed!', false);
+            SleepAdvancedSuite.resetPowerNap();
+          }
+        }
       }
     });
   }

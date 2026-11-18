@@ -23,15 +23,16 @@ console.log('Test 1: HTML Structure & Button Placement Verification');
   // Popup footer verification
   assert(popupHtml.includes('id="btnSwitchMediaTab"'), 'Popup must have #btnSwitchMediaTab');
   assert(popupHtml.includes('id="btnReconnectWs"'), 'Popup must have #btnReconnectWs');
+  assert(popupHtml.includes('id="btnThemeToggle"'), 'Popup must have #btnThemeToggle');
   assert(popupHtml.includes('id="btnOpenDashboard"'), 'Popup must have #btnOpenDashboard');
 
-  // Verify order in popup footer: btnReconnectWs -> btnSwitchMediaTab -> btnOpenDashboard
+  // Verify order in popup footer: btnReconnectWs -> btnSwitchMediaTab -> btnThemeToggle
   const reconnectIdx = popupHtml.indexOf('id="btnReconnectWs"');
   const switchTabIdx = popupHtml.indexOf('id="btnSwitchMediaTab"');
-  const dashboardIdx = popupHtml.indexOf('id="btnOpenDashboard"');
+  const themeToggleIdx = popupHtml.indexOf('id="btnThemeToggle"');
 
   assert(reconnectIdx < switchTabIdx, '#btnSwitchMediaTab must be placed after #btnReconnectWs');
-  assert(switchTabIdx < dashboardIdx, '#btnSwitchMediaTab must be placed before #btnOpenDashboard');
+  assert(switchTabIdx < themeToggleIdx, '#btnSwitchMediaTab must be placed before #btnThemeToggle');
 
   // Verify #btnOpenDashboard text is clean "📊 Dashboard" (no mixed Hindi/English)
   assert(popupHtml.includes('>📊 Dashboard<'), '#btnOpenDashboard must contain clean "📊 Dashboard"');
@@ -42,7 +43,7 @@ console.log('Test 1: HTML Structure & Button Placement Verification');
   assert(dashboardHtml.includes('id="btnHeroSwitchTab"'), 'Dashboard must have #btnHeroSwitchTab in Live Media hero card');
   assert(dashboardHtml.includes('id="settingLanguage"'), 'Dashboard must have #settingLanguage in Settings');
 
-  console.log('  ✅ Popup footer contains #btnSwitchMediaTab in correct sequence between HUD and Dashboard');
+  console.log('  ✅ Popup footer contains #btnSwitchMediaTab in correct sequence between HUD and Theme Toggle');
   console.log('  ✅ Popup #btnOpenDashboard updated to clean "📊 Dashboard" without mixed text');
   console.log('  ✅ Dashboard contains #btnLangToggle, #btnHeroSwitchTab, and #settingLanguage');
 }

@@ -1417,6 +1417,25 @@ async function scheduleSleepTimerAlarms(state) {
 }
 
 /**
+ * Memory-saver tab hibernation: discards background non-pinned tabs on sleep timer expire
+ */
+async function executeTabHibernationOnSleepExpire() {
+  try {
+    const hibData = await browserAPI.storage.local.get(['sentinel_sleep_adv_tab_hibernate']);
+    const isHibernate = hibData && (hibData.sentinel_sleep_adv_tab_hibernate === true || hibData.sentinel_sleep_adv_tab_hibernate === 'true');
+    if (!isHibernate) return;
+    if (browserAPI && browserAPI.tabs && typeof browserAPI.tabs.query === 'function' && typeof browserAPI.tabs.discard === 'function') {
+      const tabs = await browserAPI.tabs.query({ active: false, pinned: false });
+      for (const tab of tabs) {
+        if (tab && tab.id) {
+          browserAPI.tabs.discard(tab.id).catch(() => {});
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+/**
  * Triggers sleep timer expiration: marks TRIGGERED, clears badge, pauses media, commits tracking
  */
 async function triggerSleepTimerExpiration() {
@@ -1453,6 +1472,10 @@ async function triggerSleepTimerExpiration() {
   if (sleepTimerState.pauseTracking) {
     commitActiveInterval();
     scheduleStorageSave(true);
+  }
+
+  if (typeof executeTabHibernationOnSleepExpire === 'function') {
+    await executeTabHibernationOnSleepExpire();
   }
 
   safeSendRuntimeMessage({
@@ -1921,6 +1944,63 @@ async function pauseAllMediaTabs() {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Focus Advanced Hub: Distraction Detection & Background Auto-Mute Helpers
+// -----------------------------------------------------------------------------
+const DEFAULT_DISTRACTING_DOMAINS = [
+  'youtube.com', 'twitter.com', 'x.com', 'reddit.com',
+  'instagram.com', 'facebook.com', 'netflix.com', 'tiktok.com'
+];
+
+function isDistractingDomain(domain, url = '') {
+  if (!domain) return false;
+  const d = String(domain).toLowerCase();
+  if (DEFAULT_DISTRACTING_DOMAINS.some(bad => d === bad || d.endsWith('.' + bad))) {
+    return true;
+  }
+  if (typeof matchesTrackingBlacklist === 'function' && url && matchesTrackingBlacklist(url)) {
+    return true;
+  }
+  return false;
+}
+
+let autoMutedFocusTabIds = new Set();
+
+async function checkAndAutoMuteBackgroundTab(tabId) {
+  try {
+    const data = await browserAPI.storage.local.get(['sentinel_focus_adv_automute_bg']);
+    const isAutoMute = data && (data.sentinel_focus_adv_automute_bg === true || data.sentinel_focus_adv_automute_bg === 'true');
+    if (!isAutoMute) return;
+    const tab = await browserAPI.tabs.get(tabId);
+    if (tab && !tab.active && tab.audible && !tab.mutedInfo?.muted) {
+      await browserAPI.tabs.update(tabId, { muted: true });
+      autoMutedFocusTabIds.add(tabId);
+    }
+  } catch (_) {}
+}
+
+async function executeAutoMuteBackgroundTabs(isMute) {
+  try {
+    if (isMute) {
+      const data = await browserAPI.storage.local.get(['sentinel_focus_adv_automute_bg']);
+      const isAutoMute = data && (data.sentinel_focus_adv_automute_bg === true || data.sentinel_focus_adv_automute_bg === 'true');
+      if (!isAutoMute) return;
+      const tabs = await browserAPI.tabs.query({ active: false });
+      for (const tab of tabs) {
+        if (tab.audible && !tab.mutedInfo?.muted) {
+          await browserAPI.tabs.update(tab.id, { muted: true }).catch(() => {});
+          autoMutedFocusTabIds.add(tab.id);
+        }
+      }
+    } else {
+      for (const tabId of autoMutedFocusTabIds) {
+        await browserAPI.tabs.update(tabId, { muted: false }).catch(() => {});
+      }
+      autoMutedFocusTabIds.clear();
+    }
+  } catch (_) {}
+}
+
 /**
  * Starts a new focus or break session with specified duration
  */
@@ -1961,6 +2041,10 @@ async function startFocusTimer(durationMinutes, mode = 'focus') {
     await pauseAllMediaTabs();
   }
 
+  if (mode === 'focus') {
+    await executeAutoMuteBackgroundTabs(true);
+  }
+
   if (focusTimerSettings.showBadgeCountdown) {
     updateFocusActionBadge(durationMs);
   }
@@ -1996,6 +2080,8 @@ async function pauseFocusTimer() {
     targetTime: null,
     updatedAt: now
   };
+
+  await executeAutoMuteBackgroundTabs(false);
 
   if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
     clearActionBadge();
@@ -2036,6 +2122,10 @@ async function resumeFocusTimer() {
   try {
     browserAPI.alarms.create(focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: targetTime });
   } catch (_) {}
+
+  if (focusTimerState.mode === 'focus') {
+    await executeAutoMuteBackgroundTabs(true);
+  }
 
   if (focusTimerSettings.showBadgeCountdown) {
     updateFocusActionBadge(remainingSec * 1000);
@@ -2102,6 +2192,8 @@ async function resetFocusTimer() {
     updatedAt: Date.now()
   };
 
+  await executeAutoMuteBackgroundTabs(false);
+
   if (!sleepTimerState || sleepTimerState.state !== 'RUNNING') {
     clearActionBadge();
   }
@@ -2118,6 +2210,8 @@ async function resetFocusTimer() {
 async function handleFocusTimerExpired() {
   await ensureStorageLoaded();
   console.info('[FocusSentinel] 🧘 Focus block completed! Incrementing metrics and updating state.');
+
+  await executeAutoMuteBackgroundTabs(false);
 
   const now = Date.now();
   const todayKey = new Date().toISOString().split('T')[0];
@@ -3961,6 +4055,16 @@ browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
       } else {
         const domain = tab.url ? extractDomain(tab.url) : null;
         switchActiveDomain(domain, true);
+        if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
+          if (isDistractingDomain(domain, tab.url)) {
+            safeSendRuntimeMessage({
+              type: 'FOCUS_DISTRACTION_EVENT',
+              action: 'FOCUS_DISTRACTION_EVENT',
+              domain: domain || 'unknown',
+              reason: 'distracting_domain'
+            });
+          }
+        }
       }
     } else {
       switchActiveDomain(null, false);
@@ -4003,6 +4107,16 @@ browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     } else {
       const domain = extractDomain(changeInfo.url);
       switchActiveDomain(domain, false);
+      if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
+        if (isDistractingDomain(domain, changeInfo.url)) {
+          safeSendRuntimeMessage({
+            type: 'FOCUS_DISTRACTION_EVENT',
+            action: 'FOCUS_DISTRACTION_EVENT',
+            domain: domain || 'unknown',
+            reason: 'distracting_domain'
+          });
+        }
+      }
     }
   }
 
@@ -4023,6 +4137,11 @@ browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   // Audio state change (tab.audible becomes true / false)
   if (changeInfo.audible !== undefined) {
     handleTabAudibleStateChange(tabId, changeInfo.audible, tab);
+    if (changeInfo.audible === true && focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
+      if (tabId !== activeTabId) {
+        checkAndAutoMuteBackgroundTab(tabId).catch(() => {});
+      }
+    }
   }
 
   // Clear stale media state if tab reloads or navigates to a new page
@@ -4119,6 +4238,21 @@ function hasAnyActivePlayingMedia() {
  * @param {number} now
  */
 async function checkInactivityAutoSleep(now = Date.now()) {
+  if (sleepTimerState && (sleepTimerState.state === 'RUNNING' || sleepTimerState.state === 'FADING') && !isUserActive && userIdleStartTime) {
+    try {
+      const advData = await browserAPI.storage.local.get(['sentinel_sleep_adv_inactivity_cutoff']);
+      const isFastCutoff = advData && (advData.sentinel_sleep_adv_inactivity_cutoff === true || advData.sentinel_sleep_adv_inactivity_cutoff === 'true');
+      if (isFastCutoff) {
+        const elapsedIdleMs = (now - userIdleStartTime) + (CONFIG.IDLE_THRESHOLD_SECONDS * 1000);
+        if (elapsedIdleMs >= 5 * 60 * 1000) {
+          console.info('[MediaSentinel] Sleep fast-inactivity cutoff triggered (5m idle). Expiring sleep timer.');
+          await triggerSleepTimerExpiration();
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
   if (!sleepTimerSettings || sleepTimerSettings.enableInactivityAutoSleep !== true) {
     return;
   }
@@ -5764,6 +5898,12 @@ if (typeof globalThis !== 'undefined') {
   globalThis.FOCUS_BREAK_ALARM_NAME = FOCUS_BREAK_ALARM_NAME;
   globalThis.DEFAULT_FOCUS_SETTINGS = DEFAULT_FOCUS_SETTINGS;
   globalThis.INITIAL_FOCUS_TIMER_STATE = INITIAL_FOCUS_TIMER_STATE;
+  globalThis.isDistractingDomain = isDistractingDomain;
+  globalThis.DEFAULT_DISTRACTING_DOMAINS = DEFAULT_DISTRACTING_DOMAINS;
+  globalThis.executeAutoMuteBackgroundTabs = executeAutoMuteBackgroundTabs;
+  globalThis.checkAndAutoMuteBackgroundTab = checkAndAutoMuteBackgroundTab;
+  globalThis.autoMutedFocusTabIds = autoMutedFocusTabIds;
+  globalThis.executeTabHibernationOnSleepExpire = executeTabHibernationOnSleepExpire;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
@@ -5877,6 +6017,12 @@ if (typeof module !== 'undefined' && module.exports) {
     FOCUS_BREAK_ALARM_NAME,
     DEFAULT_FOCUS_SETTINGS,
     INITIAL_FOCUS_TIMER_STATE,
+    isDistractingDomain,
+    DEFAULT_DISTRACTING_DOMAINS,
+    executeAutoMuteBackgroundTabs,
+    checkAndAutoMuteBackgroundTab,
+    autoMutedFocusTabIds,
+    executeTabHibernationOnSleepExpire,
     resolveCandidatePrimaryTab,
     handleSoloTabExecution,
     handleSoloTabClearExecution,
