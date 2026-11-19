@@ -3397,6 +3397,9 @@ function setupEventListeners() {
   const popupFocusBadge = document.getElementById('popupFocusBadge');
   const popupActiveGoalChip = document.getElementById('popupActiveGoalChip');
   const txtPopupActiveGoal = document.getElementById('txtPopupActiveGoal');
+  const popupFocusDialProgress = document.getElementById('popupFocusDialProgress');
+  const popupFocusDialState = document.getElementById('popupFocusDialState');
+  const POPUP_FOCUS_CIRCUMFERENCE = 339.292; // 2 * Math.PI * 54 for r=54
 
   // Load any active focus goal from storage
   try {
@@ -3426,6 +3429,60 @@ function setupEventListeners() {
     return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
   }
 
+  function updatePopupFocusDial(remainingSec, totalSec, mode) {
+    if (!popupFocusDialProgress) return;
+    const total = Math.max(1, totalSec || (popupFocusBackendState.durationMinutes || 25) * 60);
+    const rem = Math.max(0, Math.min(total, remainingSec));
+    const ratio = rem / total;
+    const offset = Math.max(0, Math.min(POPUP_FOCUS_CIRCUMFERENCE, +(POPUP_FOCUS_CIRCUMFERENCE * (1 - ratio)).toFixed(3)));
+    popupFocusDialProgress.style.strokeDashoffset = String(offset);
+
+    const activeMode = mode || (popupFocusBackendState && popupFocusBackendState.mode);
+    if (activeMode === 'break') {
+      popupFocusDialProgress.setAttribute('stroke', 'url(#breakGlowGradient)');
+    } else {
+      popupFocusDialProgress.setAttribute('stroke', 'url(#focusGlowGradient)');
+    }
+  }
+  const updatePopupFocusDialProgress = updatePopupFocusDial;
+
+  function updatePopupFocusDialStateText(isRunning, isPaused, mode) {
+    if (!popupFocusDialState) return;
+    if (isRunning) {
+      popupFocusDialState.textContent = mode === 'break' ? 'Break Time' : 'Deep Focus';
+    } else if (isPaused) {
+      popupFocusDialState.textContent = 'Paused';
+    } else {
+      popupFocusDialState.textContent = 'Ready';
+    }
+  }
+
+  function updatePopupFocusBadgesAndButtons(status, isRunning, isPaused, mode, mins) {
+    if (popupFocusBadge) {
+      popupFocusBadge.className = 'popup-focus-badge ' + status;
+      if (isRunning) {
+        popupFocusBadge.textContent = mode === 'break' ? 'Break' : 'Active';
+      } else if (isPaused) {
+        popupFocusBadge.textContent = 'Paused';
+      } else {
+        popupFocusBadge.textContent = `${mins || 25}m`;
+      }
+    }
+
+    if (btnPopupFocusToggle) {
+      if (isRunning) {
+        btnPopupFocusToggle.textContent = '⏸️';
+        btnPopupFocusToggle.title = 'Pause Focus';
+      } else if (isPaused) {
+        btnPopupFocusToggle.textContent = '▶️';
+        btnPopupFocusToggle.title = 'Resume Focus';
+      } else {
+        btnPopupFocusToggle.textContent = '▶️';
+        btnPopupFocusToggle.title = 'Start Focus';
+      }
+    }
+  }
+
   function renderPopupFocusTick() {
     let remaining = popupFocusBackendState.remainingSeconds;
     const isRunning = (popupFocusBackendState.state === 'RUNNING_FOCUS' || popupFocusBackendState.state === 'RUNNING_BREAK');
@@ -3435,6 +3492,8 @@ function setupEventListeners() {
     if (popupFocusClock) {
       popupFocusClock.textContent = formatPopupFocusClock(remaining);
     }
+    const duration = (popupFocusBackendState.durationMinutes || 25) * 60;
+    updatePopupFocusDial(remaining, duration, popupFocusBackendState.mode);
   }
 
   function syncPopupFocusState(bgState) {
@@ -3455,40 +3514,18 @@ function setupEventListeners() {
       popupFocusClock.textContent = formatPopupFocusClock(remaining);
     }
 
-    if (popupFocusBadge) {
-      popupFocusBadge.className = 'popup-focus-badge ' + status;
-      if (isRunning) {
-        popupFocusBadge.textContent = popupFocusBackendState.mode === 'break' ? 'Break' : 'Active';
-      } else if (isPaused) {
-        popupFocusBadge.textContent = 'Paused';
-      } else {
-        const mins = popupFocusBackendState.durationMinutes || 25;
-        popupFocusBadge.textContent = `${mins}m`;
-      }
-    }
-
-    if (btnPopupFocusToggle) {
-      if (isRunning) {
-        btnPopupFocusToggle.textContent = '⏸️';
-        btnPopupFocusToggle.title = 'Pause Focus';
-      } else if (isPaused) {
-        btnPopupFocusToggle.textContent = '▶️';
-        btnPopupFocusToggle.title = 'Resume Focus';
-      } else {
-        btnPopupFocusToggle.textContent = '▶️';
-        btnPopupFocusToggle.title = 'Start Focus';
-      }
-    }
+    const duration = (popupFocusBackendState.durationMinutes || 25) * 60;
+    updatePopupFocusDial(remaining, duration, popupFocusBackendState.mode);
+    updatePopupFocusDialStateText(isRunning, isPaused, popupFocusBackendState.mode);
+    updatePopupFocusBadgesAndButtons(status, isRunning, isPaused, popupFocusBackendState.mode, popupFocusBackendState.durationMinutes);
 
     if (isRunning) {
       if (!popupFocusTicker) {
         popupFocusTicker = setInterval(renderPopupFocusTick, 1000);
       }
-    } else {
-      if (popupFocusTicker) {
-        clearInterval(popupFocusTicker);
-        popupFocusTicker = null;
-      }
+    } else if (popupFocusTicker) {
+      clearInterval(popupFocusTicker);
+      popupFocusTicker = null;
     }
   }
 

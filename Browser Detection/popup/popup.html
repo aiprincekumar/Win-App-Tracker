@@ -749,7 +749,7 @@
 
       <!-- Digital Wellness & Focus Cards -->
       <section id="cardFocusWellness" class="focus-wellness-card">
-        <!-- Compact Focus Time Sentinel Card -->
+        <!-- Compact Focus Time Sentinel Card (Revamped with Circular Radial Dial) -->
         <div id="cardPopupFocusTimer" class="popup-focus-card">
           <div class="popup-focus-header">
             <span class="popup-focus-title">🧘 Focus Block</span>
@@ -759,12 +759,39 @@
             <span class="popup-goal-icon">🎯</span>
             <span id="txtPopupActiveGoal" class="popup-goal-text">Deep Work</span>
           </div>
-          <div class="popup-focus-body">
-            <span id="popupFocusClock" class="popup-focus-clock">25:00</span>
-            <div class="popup-focus-actions">
-              <button type="button" id="btnPopupFocusToggle" class="popup-focus-btn primary" title="Start Focus">▶️</button>
-              <button type="button" id="btnPopupFocusReset" class="popup-focus-btn secondary" title="Reset Timer">🔄</button>
+          
+          <!-- Center Radial SVG Countdown Dial (Sleep-Timer Style) -->
+          <div class="popup-focus-dial-wrapper">
+            <svg id="popupFocusDialSvg" class="popup-focus-svg-dial" viewBox="0 0 140 140" width="130" height="130" role="img" aria-label="Focus Countdown Radial Dial">
+              <defs>
+                <linearGradient id="focusGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="50%" stop-color="#06b6d4" />
+                  <stop offset="100%" stop-color="#3b82f6" />
+                </linearGradient>
+                <linearGradient id="breakGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#f59e0b" />
+                  <stop offset="100%" stop-color="#fbbf24" />
+                </linearGradient>
+              </defs>
+              <!-- Background Track Ring -->
+              <circle class="popup-focus-dial-track" cx="70" cy="70" r="54" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="7" />
+              <!-- Progress Glow Ring -->
+              <circle id="popupFocusDialProgress" class="popup-focus-dial-progress" cx="70" cy="70" r="54" fill="none" 
+                      stroke="url(#focusGlowGradient)" stroke-width="7" stroke-linecap="round" 
+                      stroke-dasharray="339.292" stroke-dashoffset="0" transform="rotate(-90 70 70)" />
+            </svg>
+            <!-- Centered Telemetry Overlay -->
+            <div class="popup-focus-dial-content">
+              <span id="popupFocusClock" class="popup-focus-clock" aria-live="polite">25:00</span>
+              <span id="popupFocusDialState" class="popup-focus-dial-state">Deep Focus</span>
             </div>
+          </div>
+
+          <!-- Focus Controls Action Row -->
+          <div class="popup-focus-actions">
+            <button type="button" id="btnPopupFocusToggle" class="popup-focus-btn primary" title="Start Focus">▶️</button>
+            <button type="button" id="btnPopupFocusReset" class="popup-focus-btn secondary" title="Reset Timer">🔄</button>
           </div>
         </div>
 
@@ -875,16 +902,6 @@
         <span id="btnToggleTrackingPauseText" class="btn-label">Tracking</span>
       </button>
 
-      <!-- 4. Sleep Timer Launcher Button -->
-      <button id="btnSleepTimerTrigger" class="footer-btn toolbar-btn" title="Sleep Timer Options" aria-label="Sleep Timer Options" aria-haspopup="dialog" aria-expanded="false">
-        <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        <span id="lblSleepTimerText" class="btn-label">Timer</span>
-        <span id="sleepTimerActiveDot" class="timer-active-dot hidden"></span>
-      </button>
-
       <!-- 4. HUD Bridge Button -->
       <button id="btnReconnectWs" class="footer-btn toolbar-btn btn-hud-action" title="Launch & Connect Video Detector HUD" aria-label="Launch and Connect Video Detector HUD">
         <svg class="sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -893,7 +910,7 @@
         <span id="btnReconnectWsText" class="btn-label">HUD</span>
       </button>
 
-      <!-- 6. Quick Settings Toolbar Button -->
+      <!-- 5. Quick Settings Toolbar Button -->
       <button id="btnQuickSettings" class="footer-btn toolbar-btn btn-quick-settings" title="Quick Settings" aria-label="Quick Settings" aria-haspopup="dialog" aria-expanded="false" type="button">
         <svg class="badge-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
@@ -902,7 +919,7 @@
         <span id="btnQuickSettingsText" class="btn-label sr-only">Settings</span>
       </button>
 
-      <!-- 7. Theme Toggle Toolbar Button -->
+      <!-- 6. Theme Toggle Toolbar Button -->
       <button id="btnThemeToggle" class="footer-btn toolbar-btn btn-theme-toggle" title="Toggle Dark/Light Mode" aria-label="Toggle Dark/Light Mode" type="button">
         <svg class="theme-toggle-icon sentinel-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
