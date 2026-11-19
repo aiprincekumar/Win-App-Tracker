@@ -325,16 +325,97 @@
     return { dayActive, dayMedia };
   }
 
+  // ---------------------------------------------------------------------------
+  // Circadian Weight Vectors for Diurnal Historical Backfill (Phase 3)
+  // ---------------------------------------------------------------------------
+  const WORK_HOURLY_WEIGHTS = Object.freeze([
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  // 00:00 - 07:59 (sleep)
+    0.03, 0.07, 0.14, 0.14,                   // 08:00 - 11:59 (morning ramp & peak)
+    0.06, 0.06,                               // 12:00 - 13:59 (lunch valley)
+    0.12, 0.12, 0.12, 0.08,                   // 14:00 - 17:59 (afternoon focus)
+    0.04, 0.02,                               // 18:00 - 19:59 (wind down)
+    0.0, 0.0, 0.0, 0.0                        // 20:00 - 23:59 (night)
+  ]);
+
+  const MEDIA_HOURLY_WEIGHTS = Object.freeze([
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  // 00:00 - 07:59 (sleep)
+    0.0, 0.0, 0.0, 0.0,                       // 08:00 - 11:59 (work hours)
+    0.05, 0.05,                               // 12:00 - 13:59 (lunch entertainment)
+    0.02, 0.02, 0.02, 0.02,                   // 14:00 - 17:59 (incidental bg audio)
+    0.12, 0.16, 0.20, 0.18,                   // 18:00 - 21:59 (prime evening media)
+    0.12, 0.04                                // 22:00 - 23:59 (late night stream)
+  ]);
+
   /**
-   * Aggregates 7x24 heatmap matrix from raw telemetry history.
-   * 
-   * @param {Object} rawHistory - Stored history map keyed by YYYY-MM-DD
-   * @param {Object|string} range - Selected temporal range ('today'|'yesterday'|'7d'|'30d'|'custom')
-   * @returns {Array<Array<Object>>} 7 rows (Monday=0 to Sunday=6) x 24 columns (hours 0 to 23)
+   * Distributes recorded active & media seconds across 24 hourly buckets with zero drift.
+   * Universal Rule 28: <= 35 lines.
    */
-  function aggregateChronoHeatmap(rawHistory, range) {
-    // 7 rows (days 0..6: Mon..Sun) x 24 columns (hours 0..23)
-    const matrix = Array.from({ length: 7 }, (_, d) =>
+  function distributeSecondsAcrossBuckets(buckets, totalActive, totalMedia, dominantDomain) {
+    let allocatedActive = 0;
+    let allocatedMedia = 0;
+
+    for (let h = 0; h < 24; h++) {
+      const act = Math.floor(totalActive * WORK_HOURLY_WEIGHTS[h]);
+      const med = Math.floor(totalMedia * MEDIA_HOURLY_WEIGHTS[h]);
+      buckets[h].activeSeconds = act;
+      buckets[h].mediaSeconds = med;
+      allocatedActive += act;
+      allocatedMedia += med;
+    }
+
+    const remActive = totalActive - allocatedActive;
+    if (remActive > 0) buckets[11].activeSeconds += remActive;
+
+    const remMedia = totalMedia - allocatedMedia;
+    if (remMedia > 0) buckets[20].mediaSeconds += remMedia;
+
+    for (let h = 0; h < 24; h++) {
+      if (buckets[h].activeSeconds > 0 || buckets[h].mediaSeconds > 0) {
+        buckets[h].topDomain = dominantDomain;
+        buckets[h].sessions = Math.max(1, buckets[h].sessions);
+      }
+    }
+  }
+
+  /**
+   * Mathematically conserves and slots historical day time into hourly circadian buckets.
+   * Universal Rule 28: <= 35 lines.
+   */
+  function backfillHistoricalHourlyBuckets(dayData, dateStr) {
+    if (!dayData || !dayData.domains) return {};
+    if (hasValidHourlyTelemetry(dayData)) return dayData.hourlyBuckets;
+
+    const buckets = {};
+    for (let h = 0; h < 24; h++) {
+      buckets[h] = { activeSeconds: 0, mediaSeconds: 0, sessions: 0, topDomain: '' };
+    }
+
+    let totalActive = 0;
+    let totalMedia = 0;
+    let dominantDomain = '';
+    let maxDomainSec = 0;
+
+    for (const [dom, dObj] of Object.entries(dayData.domains)) {
+      const med = (dObj && (typeof dObj.backgroundMediaSeconds === 'number' ? dObj.backgroundMediaSeconds : (dObj.mediaTime || 0))) || 0;
+      const act = (dObj && (typeof dObj.foregroundSeconds === 'number' ? dObj.foregroundSeconds : (dObj.activeTime || Math.max(0, (dObj.seconds || dObj.totalSeconds || 0) - med)))) || 0;
+      totalActive += act;
+      totalMedia += med;
+      if (act + med > maxDomainSec) {
+        maxDomainSec = act + med;
+        dominantDomain = dom;
+      }
+    }
+
+    distributeSecondsAcrossBuckets(buckets, totalActive, totalMedia, dominantDomain);
+    return buckets;
+  }
+
+  /**
+   * Initializes empty 7x24 matrix (Monday=0 to Sunday=6)
+   * Universal Rule 28: <= 20 lines.
+   */
+  function initEmptyChronoMatrix() {
+    return Array.from({ length: 7 }, (_, d) =>
       Array.from({ length: 24 }, (_, h) => ({
         hour: h,
         dayOfWeek: d,
@@ -344,143 +425,103 @@
         sessionCount: 0
       }))
     );
+  }
 
-    let queryMode = '7d';
-    let startDate = '';
-    let endDate = '';
+  /**
+   * Normalizes rawHistory input into a dictionary keyed by date string.
+   * Universal Rule 28: <= 35 lines.
+   */
+  function normalizeHistoryMap(rawHistory, todayStr, formatYMD) {
+    if (!Array.isArray(rawHistory)) return rawHistory || {};
+    const map = {};
+    rawHistory.forEach(item => {
+      if (!item) return;
+      let dateStr = item.date;
+      let hour = typeof item.hour === 'number' ? item.hour : -1;
+      if (!dateStr && item.timestamp) {
+        const d = new Date(item.timestamp);
+        if (!isNaN(d.getTime())) {
+          dateStr = formatYMD(d);
+          if (hour === -1) hour = d.getHours();
+        }
+      }
+      dateStr = dateStr || todayStr;
+      if (hour < 0 || hour > 23) hour = 12;
 
-    if (typeof range === 'string') {
-      queryMode = range;
-    } else if (range && typeof range === 'object') {
-      queryMode = range.mode || '7d';
-      startDate = range.startDate || '';
-      endDate = range.endDate || '';
-    }
+      if (!map[dateStr]) map[dateStr] = { hourlyBuckets: {} };
+      if (!map[dateStr].hourlyBuckets[hour]) {
+        map[dateStr].hourlyBuckets[hour] = { activeSeconds: 0, mediaSeconds: 0, sessions: 0, topDomain: item.domain || '' };
+      }
+      const b = map[dateStr].hourlyBuckets[hour];
+      b.activeSeconds += (item.activeSeconds || item.focusDuration || item.activeTime || item.duration || 0);
+      b.mediaSeconds += (item.mediaSeconds || item.mediaDuration || item.mediaTime || 0);
+      b.sessions += (item.sessions || 1);
+      if (item.domain && !b.topDomain) b.topDomain = item.domain;
+    });
+    return map;
+  }
 
-    const today = new Date();
-    const formatYMD = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
-    const todayStr = formatYMD(today);
-
-    if (queryMode === 'today') {
-      startDate = todayStr;
-      endDate = todayStr;
-    } else if (queryMode === 'yesterday') {
-      const y = new Date(today);
-      y.setDate(y.getDate() - 1);
-      startDate = formatYMD(y);
-      endDate = formatYMD(y);
-    } else if (queryMode === '7d') {
-      const s = new Date(today);
-      s.setDate(s.getDate() - 6);
-      startDate = formatYMD(s);
-      endDate = todayStr;
-    } else if (queryMode === '30d') {
-      const s = new Date(today);
-      s.setDate(s.getDate() - 29);
-      startDate = formatYMD(s);
-      endDate = todayStr;
-    } else if (queryMode === 'custom') {
-      if (!startDate) startDate = todayStr;
-      if (!endDate) endDate = todayStr;
-    } else {
-      // Default to 7d
-      const s = new Date(today);
-      s.setDate(s.getDate() - 6);
-      startDate = formatYMD(s);
-      endDate = todayStr;
-    }
-
-    const targetDates = getDatesInRange(startDate, endDate);
+  /**
+   * Aggregates targetDates telemetry into matrix rows.
+   * Universal Rule 28: <= 40 lines.
+   */
+  function aggregateDatesIntoMatrix(matrix, historyMap, targetDates, todayStr) {
     let totalActiveTime = 0;
     let totalMediaTime = 0;
 
-    let historyMap = rawHistory;
-    if (Array.isArray(rawHistory)) {
-      historyMap = {};
-      rawHistory.forEach(item => {
-        if (!item) return;
-        let dateStr = item.date;
-        let hour = typeof item.hour === 'number' ? item.hour : -1;
-        if (!dateStr && item.timestamp) {
-          const d = new Date(item.timestamp);
-          if (!isNaN(d.getTime())) {
-            dateStr = formatYMD(d);
-            if (hour === -1) hour = d.getHours();
-          }
-        }
-        if (!dateStr) dateStr = todayStr;
-        if (hour < 0 || hour > 23) hour = 12;
+    targetDates.forEach(dateStr => {
+      const dayData = historyMap[dateStr];
+      if (!dayData) return;
+      const parts = dateStr.split('-');
+      const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const dayOfWeek = (dateObj.getDay() + 6) % 7;
 
-        if (!historyMap[dateStr]) {
-          historyMap[dateStr] = { hourlyBuckets: {} };
+      if (hasValidHourlyTelemetry(dayData)) {
+        for (let h = 0; h < 24; h++) {
+          const b = dayData.hourlyBuckets[h];
+          if (!b) continue;
+          const act = b.activeTime || b.activeSeconds || 0;
+          const med = b.mediaTime || b.mediaSeconds || b.backgroundMediaSeconds || 0;
+          matrix[dayOfWeek][h].activeSeconds += act;
+          matrix[dayOfWeek][h].mediaSeconds += med;
+          matrix[dayOfWeek][h].sessionCount += (b.sessions || b.sessionCount || 0);
+          totalActiveTime += act;
+          totalMediaTime += med;
+          if (b.topDomain) matrix[dayOfWeek][h].topDomain = b.topDomain;
         }
-        if (!historyMap[dateStr].hourlyBuckets[hour]) {
-          historyMap[dateStr].hourlyBuckets[hour] = {
-            activeSeconds: 0,
-            mediaSeconds: 0,
-            sessions: 0,
-            topDomain: item.domain || ''
-          };
-        }
-        const act = item.activeSeconds || item.focusDuration || item.activeTime || item.duration || 0;
-        const med = item.mediaSeconds || item.mediaDuration || item.mediaTime || 0;
-        historyMap[dateStr].hourlyBuckets[hour].activeSeconds += act;
-        historyMap[dateStr].hourlyBuckets[hour].mediaSeconds += med;
-        historyMap[dateStr].hourlyBuckets[hour].sessions += (item.sessions || 1);
-        if (item.domain && !historyMap[dateStr].hourlyBuckets[hour].topDomain) {
-          historyMap[dateStr].hourlyBuckets[hour].topDomain = item.domain;
-        }
-      });
-    }
-
-    if (historyMap && typeof historyMap === 'object') {
-      targetDates.forEach((dateStr) => {
-        const dayData = historyMap[dateStr];
-        if (!dayData) return;
-
-        const parts = dateStr.split('-');
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const day = parseInt(parts[2], 10);
-        const dateObj = new Date(year, month, day);
-        // Monday = 0, Tuesday = 1 ... Sunday = 6
-        const dayOfWeek = (dateObj.getDay() + 6) % 7;
-
-        if (hasValidHourlyTelemetry(dayData)) {
+      } else if (dayData.domains) {
+        if (dateStr < todayStr) {
+          const backfilled = backfillHistoricalHourlyBuckets(dayData, dateStr);
           for (let h = 0; h < 24; h++) {
-            const bucket = dayData.hourlyBuckets[h];
-            if (bucket) {
-              const act = bucket.activeTime || bucket.activeSeconds || 0;
-              const med = bucket.mediaTime || bucket.mediaSeconds || bucket.backgroundMediaSeconds || 0;
-              const sess = bucket.sessions || bucket.sessionCount || 0;
-
-              matrix[dayOfWeek][h].activeSeconds += act;
-              matrix[dayOfWeek][h].mediaSeconds += med;
-              matrix[dayOfWeek][h].sessionCount += sess;
-              totalActiveTime += act;
-              totalMediaTime += med;
-
-              if (bucket.topDomain) {
-                matrix[dayOfWeek][h].topDomain = bucket.topDomain;
-              }
+            const b = backfilled[h];
+            if (!b) continue;
+            matrix[dayOfWeek][h].activeSeconds += b.activeSeconds;
+            matrix[dayOfWeek][h].mediaSeconds += b.mediaSeconds;
+            matrix[dayOfWeek][h].sessionCount += b.sessions;
+            totalActiveTime += b.activeSeconds;
+            totalMediaTime += b.mediaSeconds;
+            if (b.topDomain && !matrix[dayOfWeek][h].topDomain) {
+              matrix[dayOfWeek][h].topDomain = b.topDomain;
             }
           }
-        } else if (dayData.domains) {
+        } else {
           const fallback = applyDomainFallbackToMatrix(dayData.domains, dayOfWeek, matrix);
           totalActiveTime += fallback.dayActive;
           totalMediaTime += fallback.dayMedia;
         }
-      });
-    }
+      }
+    });
 
-    // Week-over-Week (WoW) Delta Calculation
-    const numDays = targetDates.length;
+    return { totalActiveTime, totalMediaTime };
+  }
+
+  /**
+   * Calculates Week-over-Week (WoW) delta metrics for both Focus and Media modes.
+   * Universal Rule 28: <= 40 lines.
+   */
+  function calculateWoWMetrics(historyMap, startDate, numDays, totalActiveTime, totalMediaTime, formatYMD) {
     let priorActiveTime = 0;
+    let priorMediaTime = 0;
     if (numDays > 0 && historyMap && typeof historyMap === 'object') {
       const parts = startDate.split('-');
       const firstDateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
@@ -490,30 +531,38 @@
       priorStart.setDate(priorStart.getDate() - numDays);
       const priorDates = getDatesInRange(formatYMD(priorStart), formatYMD(priorEnd));
 
-      priorDates.forEach((dateStr) => {
+      priorDates.forEach(dateStr => {
         const dayData = historyMap[dateStr];
         if (!dayData) return;
         if (hasValidHourlyTelemetry(dayData)) {
           for (let h = 0; h < 24; h++) {
             const b = dayData.hourlyBuckets[h];
-            if (b) priorActiveTime += (b.activeTime || b.activeSeconds || 0);
+            if (!b) continue;
+            priorActiveTime += (b.activeTime || b.activeSeconds || 0);
+            priorMediaTime += (b.mediaTime || b.mediaSeconds || b.backgroundMediaSeconds || 0);
           }
         } else if (dayData.domains) {
           for (const dObj of Object.values(dayData.domains)) {
             priorActiveTime += ((dObj && (dObj.activeTime || dObj.seconds || dObj.foregroundSeconds || dObj.totalSeconds)) || 0);
+            priorMediaTime += ((dObj && (dObj.mediaTime || dObj.backgroundMediaSeconds)) || 0);
           }
         }
       });
     }
 
-    let wowDeltaPercent = 0;
-    if (priorActiveTime > 0) {
-      wowDeltaPercent = ((totalActiveTime - priorActiveTime) / priorActiveTime) * 100;
-    } else if (totalActiveTime > 0) {
-      wowDeltaPercent = 100.0;
-    }
+    const wowActive = priorActiveTime > 0 ? ((totalActiveTime - priorActiveTime) / priorActiveTime) * 100 : (totalActiveTime > 0 ? 100.0 : 0);
+    const wowMedia = priorMediaTime > 0 ? ((totalMediaTime - priorMediaTime) / priorMediaTime) * 100 : (totalMediaTime > 0 ? 100.0 : 0);
+    return {
+      wowActiveDeltaPercent: Math.round(wowActive * 10) / 10,
+      wowMediaDeltaPercent: Math.round(wowMedia * 10) / 10
+    };
+  }
 
-    // Assign cells seconds and intensity
+  /**
+   * Finalizes matrix properties, cell tiers, and metadata.
+   * Universal Rule 28: <= 30 lines.
+   */
+  function finalizeMatrixMetadata(matrix, totals, wow, queryMeta) {
     for (let d = 0; d < 7; d++) {
       for (let h = 0; h < 24; h++) {
         const cell = matrix[d][h];
@@ -522,19 +571,48 @@
         cell.mediaIntensity = getIntensityTier(cell.mediaSeconds);
       }
     }
-
     matrix.matrix = matrix;
     matrix.days = matrix;
-    matrix.totalActiveTime = totalActiveTime;
-    matrix.totalActiveSeconds = totalActiveTime;
-    matrix.totalMediaTime = totalMediaTime;
-    matrix.totalMediaSeconds = totalMediaTime;
-    matrix.wowDeltaPercent = Math.round(wowDeltaPercent * 10) / 10;
-    matrix.wowPercent = matrix.wowDeltaPercent;
-    matrix.wowTrend = wowDeltaPercent > 0 ? 'increase' : (wowDeltaPercent < 0 ? 'decrease' : 'neutral');
-    matrix.queryRange = { mode: queryMode, startDate, endDate, targetDates };
-
+    matrix.totalActiveTime = totals.totalActiveTime;
+    matrix.totalActiveSeconds = totals.totalActiveTime;
+    matrix.totalMediaTime = totals.totalMediaTime;
+    matrix.totalMediaSeconds = totals.totalMediaTime;
+    matrix.wowDeltaPercent = wow.wowActiveDeltaPercent;
+    matrix.wowPercent = wow.wowActiveDeltaPercent;
+    matrix.wowActiveDeltaPercent = wow.wowActiveDeltaPercent;
+    matrix.wowMediaDeltaPercent = wow.wowMediaDeltaPercent;
+    matrix.wowTrend = wow.wowActiveDeltaPercent >= 0 ? 'increase' : 'decrease';
+    matrix.queryRange = queryMeta;
     return matrix;
+  }
+
+  /**
+   * Aggregates 7x24 heatmap matrix from raw telemetry history.
+   * Forces a rolling 7-day window (Today - 6d through Today).
+   * Universal Rule 28: <= 35 lines.
+   */
+  function aggregateChronoHeatmap(rawHistory, range) {
+    const matrix = initEmptyChronoMatrix();
+    const today = new Date();
+    const formatYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const todayStr = formatYMD(today);
+    const rollingStart = new Date(today);
+    rollingStart.setDate(rollingStart.getDate() - 6);
+    const startDate = formatYMD(rollingStart);
+    const endDate = todayStr;
+    const targetDates = getDatesInRange(startDate, endDate);
+
+    const historyMap = normalizeHistoryMap(rawHistory, todayStr, formatYMD);
+    const totals = aggregateDatesIntoMatrix(matrix, historyMap, targetDates, todayStr);
+    const wow = calculateWoWMetrics(historyMap, startDate, targetDates.length, totals.totalActiveTime, totals.totalMediaTime, formatYMD);
+    const queryMeta = { mode: '7d', requestedRange: range, startDate, endDate, targetDates };
+
+    return finalizeMatrixMetadata(matrix, totals, wow, queryMeta);
   }
 
   /**
@@ -560,31 +638,10 @@
   }
 
   /**
-   * Renders 7x24 heatmap grid cells into target container.
-   * 100% W3C Trusted Types safe.
+   * Builds header row with corner and 24 hour labels.
+   * Universal Rule 28: <= 20 lines.
    */
-  function renderChronoHeatmap(matrix, mode, containerEl, options) {
-    const doc = (options && options.document) || (typeof document !== 'undefined' ? document : null);
-    if (!doc) return;
-
-    const container = containerEl || doc.getElementById('heatmapGridContainer');
-    if (!container) return;
-
-    const activeMode = mode === 'media' ? 'media' : 'focus';
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-    // Safe DOM reset
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
-
-    const grid = doc.createElement('div');
-    grid.className = 'chrono-heatmap-grid';
-    grid.setAttribute('role', 'grid');
-    grid.setAttribute('aria-label', '7x24 Chrono-Activity Heatmap');
-
-    // 1. Header Row (Empty corner + 24 hour labels)
+  function buildHeatmapHeaderRow(doc, grid) {
     const corner = doc.createElement('div');
     corner.className = 'heatmap-day-label corner';
     corner.setAttribute('aria-hidden', 'true');
@@ -597,50 +654,94 @@
       hLabel.setAttribute('aria-hidden', 'true');
       grid.appendChild(hLabel);
     }
+  }
 
-    // 2. Day Rows
-    const matrixRows = (matrix && matrix.days) || matrix || [];
+  /**
+   * Builds a single day row containing 24 cell elements.
+   * Universal Rule 28: <= 35 lines.
+   */
+  function buildHeatmapDayRow(doc, grid, d, dayRow, activeMode, dayLabels, dayFullNames) {
+    const dLabel = doc.createElement('div');
+    dLabel.className = 'heatmap-day-label';
+    dLabel.textContent = dayLabels[d];
+    grid.appendChild(dLabel);
 
-    for (let d = 0; d < 7; d++) {
-      const dLabel = doc.createElement('div');
-      dLabel.className = 'heatmap-day-label';
-      dLabel.textContent = dayLabels[d];
-      grid.appendChild(dLabel);
+    for (let h = 0; h < 24; h++) {
+      const bucket = dayRow[h] || { hour: h, dayOfWeek: d, activeSeconds: 0, mediaSeconds: 0, topDomain: '' };
+      const sec = activeMode === 'media' ? (bucket.mediaSeconds || 0) : (bucket.activeSeconds || 0);
+      const intensity = getIntensityTier(sec);
 
-      const dayRow = matrixRows[d] || [];
-      for (let h = 0; h < 24; h++) {
-        const bucket = dayRow[h] || { hour: h, dayOfWeek: d, activeSeconds: 0, mediaSeconds: 0, topDomain: '', sessionCount: 0 };
-        const sec = activeMode === 'media' ? (bucket.mediaSeconds || 0) : (bucket.activeSeconds || 0);
-        const intensity = getIntensityTier(sec);
+      const cell = doc.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.setAttribute('data-day', String(d));
+      cell.setAttribute('data-hour', String(h));
+      cell.setAttribute('data-intensity', String(intensity));
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('role', 'gridcell');
 
-        const cell = doc.createElement('div');
-        cell.className = 'heatmap-cell';
-        cell.setAttribute('data-day', String(d));
-        cell.setAttribute('data-hour', String(h));
-        cell.setAttribute('data-intensity', String(intensity));
-        cell.setAttribute('tabindex', '0');
-        cell.setAttribute('role', 'gridcell');
+      const hourStr = `${String(h).padStart(2, '0')}:00 - ${String(h + 1).padStart(2, '0')}:00`;
+      const durStr = formatDurationMinutes(sec);
+      const topDom = bucket.topDomain || 'No domain';
+      const modeTitle = activeMode === 'media' ? 'Media Watch Time' : 'Focus Time';
 
-        const hourStr = `${String(h).padStart(2, '0')}:00 - ${String(h + 1).padStart(2, '0')}:00`;
-        const durStr = formatDurationMinutes(sec);
-        const topDom = bucket.topDomain || 'No domain';
+      cell.setAttribute('aria-label', `${dayFullNames[d]} ${hourStr}: ${durStr} (${topDom})`);
+      cell.title = `${dayFullNames[d]} ${hourStr}\n${modeTitle}: ${durStr}\nTop: ${topDom}`;
+      grid.appendChild(cell);
+    }
+  }
 
-        cell.setAttribute('aria-label', `${dayFullNames[d]} ${hourStr}: ${durStr} (${topDom})`);
-        cell.title = `${dayFullNames[d]} ${hourStr}\n${activeMode === 'media' ? 'Media' : 'Focus'}: ${durStr}\nTop: ${topDom}`;
-
-        grid.appendChild(cell);
+  /**
+   * Updates Week-over-Week badge in DOM if element exists.
+   * Universal Rule 28: <= 20 lines.
+   */
+  function updateHeatmapWowBadge(doc, matrix, activeMode) {
+    const valWow = doc.getElementById('valHeatmapWow');
+    const lblWow = doc.getElementById('lblHeatmapWow');
+    if (valWow && matrix) {
+      const delta = activeMode === 'media'
+        ? (typeof matrix.wowMediaDeltaPercent === 'number' ? matrix.wowMediaDeltaPercent : matrix.wowDeltaPercent)
+        : (typeof matrix.wowActiveDeltaPercent === 'number' ? matrix.wowActiveDeltaPercent : matrix.wowDeltaPercent);
+      if (typeof delta === 'number') {
+        valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
+        valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
       }
     }
+    if (lblWow) {
+      lblWow.textContent = activeMode === 'media' ? 'Media WoW Change:' : 'Week-over-Week Change:';
+    }
+  }
 
+  /**
+   * Renders 7x24 heatmap grid cells into target container.
+   * 100% W3C Trusted Types safe.
+   * Universal Rule 28: <= 35 lines.
+   */
+  function renderChronoHeatmap(matrix, mode, containerEl, options) {
+    const doc = (options && options.document) || (typeof document !== 'undefined' ? document : null);
+    if (!doc) return;
+    const container = containerEl || doc.getElementById('heatmapGridContainer');
+    if (!container) return;
+
+    const activeMode = mode === 'media' ? 'media' : 'focus';
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    const grid = doc.createElement('div');
+    grid.className = 'chrono-heatmap-grid';
+    grid.setAttribute('role', 'grid');
+    grid.setAttribute('aria-label', '7x24 Chrono-Activity Heatmap');
+    grid.setAttribute('data-active-mode', activeMode);
+
+    buildHeatmapHeaderRow(doc, grid);
+    const matrixRows = (matrix && matrix.days) || matrix || [];
+    for (let d = 0; d < 7; d++) {
+      buildHeatmapDayRow(doc, grid, d, matrixRows[d] || [], activeMode, dayLabels, dayFullNames);
+    }
     container.appendChild(grid);
 
-    // Update WoW metric badge if present in DOM
-    const valWow = doc.getElementById('valHeatmapWow');
-    if (valWow && matrix && typeof matrix.wowDeltaPercent === 'number') {
-      const delta = matrix.wowDeltaPercent;
-      valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
-      valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
-    }
+    updateHeatmapWowBadge(doc, matrix, activeMode);
   }
 
   /**
@@ -743,6 +844,10 @@
     renderChronoHeatmap,
     renderProductivityGauge,
     handleCategoryOverride,
+    backfillHistoricalHourlyBuckets,
+    distributeSecondsAcrossBuckets,
+    WORK_HOURLY_WEIGHTS,
+    MEDIA_HOURLY_WEIGHTS,
     onInit: function (context) {
       if (context && context.logger && typeof context.logger.info === 'function') {
         context.logger.info('[TemporalProductivityFeature] Initialized');

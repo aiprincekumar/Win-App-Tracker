@@ -156,6 +156,7 @@ class DataHubDB:
                         seconds_active INTEGER NOT NULL DEFAULT 0,
                         foreground_seconds INTEGER NOT NULL DEFAULT 0,
                         background_media_seconds INTEGER NOT NULL DEFAULT 0,
+                        hourly_buckets_json TEXT NOT NULL DEFAULT '{}',
                         session_count INTEGER NOT NULL DEFAULT 1,
                         last_active REAL NOT NULL,
                         favicon_url TEXT,
@@ -171,6 +172,8 @@ class DataHubDB:
                     conn.execute("UPDATE domain_activity SET foreground_seconds = seconds_active WHERE foreground_seconds = 0 AND seconds_active > 0;")
                 if "background_media_seconds" not in existing_cols:
                     conn.execute("ALTER TABLE domain_activity ADD COLUMN background_media_seconds INTEGER NOT NULL DEFAULT 0;")
+                if "hourly_buckets_json" not in existing_cols:
+                    conn.execute("ALTER TABLE domain_activity ADD COLUMN hourly_buckets_json TEXT NOT NULL DEFAULT '{}';")
 
                 # 3. Media Sessions Table
                 conn.execute("""
@@ -222,6 +225,50 @@ class DataHubDB:
                     UPDATE browser_clients SET last_heartbeat = ? WHERE client_id = ?;
                 """, (now, client_id))
 
+    @staticmethod
+    def merge_hourly_buckets(old_json: Optional[str], new_json: Optional[str]) -> str:
+        """Merges two JSON-serialized hourly bucket dictionaries."""
+        try:
+            b1 = json.loads(old_json) if old_json else {}
+            if not isinstance(b1, dict):
+                b1 = {}
+        except Exception:
+            b1 = {}
+        try:
+            b2 = json.loads(new_json) if new_json else {}
+            if not isinstance(b2, dict):
+                b2 = {}
+        except Exception:
+            b2 = {}
+
+        for k, v in b2.items():
+            if not isinstance(v, dict):
+                continue
+            sk = str(k)
+            if sk not in b1 or not isinstance(b1[sk], dict):
+                b1[sk] = {
+                    "activeSeconds": int(v.get("activeSeconds", 0) or v.get("activeTime", 0)),
+                    "activeTime": int(v.get("activeSeconds", 0) or v.get("activeTime", 0)),
+                    "mediaSeconds": int(v.get("mediaSeconds", 0) or v.get("backgroundMediaSeconds", 0) or v.get("mediaTime", 0)),
+                    "backgroundMediaSeconds": int(v.get("mediaSeconds", 0) or v.get("backgroundMediaSeconds", 0) or v.get("mediaTime", 0)),
+                    "mediaTime": int(v.get("mediaSeconds", 0) or v.get("backgroundMediaSeconds", 0) or v.get("mediaTime", 0)),
+                    "sessions": int(v.get("sessions", 0) or 1),
+                    "topDomain": str(v.get("topDomain", "") or "")
+                }
+            else:
+                cur = b1[sk]
+                act = int(v.get("activeSeconds", 0) or v.get("activeTime", 0))
+                med = int(v.get("mediaSeconds", 0) or v.get("backgroundMediaSeconds", 0) or v.get("mediaTime", 0))
+                cur["activeSeconds"] = int(cur.get("activeSeconds", 0) or cur.get("activeTime", 0)) + act
+                cur["activeTime"] = cur["activeSeconds"]
+                cur["mediaSeconds"] = int(cur.get("mediaSeconds", 0) or cur.get("backgroundMediaSeconds", 0) or cur.get("mediaTime", 0)) + med
+                cur["backgroundMediaSeconds"] = cur["mediaSeconds"]
+                cur["mediaTime"] = cur["mediaSeconds"]
+                cur["sessions"] = int(cur.get("sessions", 0)) + int(v.get("sessions", 0) or 1)
+                if v.get("topDomain"):
+                    cur["topDomain"] = v["topDomain"]
+        return json.dumps(b1)
+
     def upsert_activity_delta(
         self,
         browser_type: str,
@@ -230,14 +277,16 @@ class DataHubDB:
         date_str: Optional[str] = None,
         favicon_url: Optional[str] = None,
         session_count: int = 0,
-        tracking_type: str = "foreground"
+        tracking_type: str = "foreground",
+        hourly_buckets_json: Optional[str] = None
     ) -> int:
         """
         Atomically increments active seconds for a browser and domain on a specific date.
         Supports tracking_type: 'foreground' | 'background_media'.
+        Merges hourly_buckets_json into intraday telemetry.
         Returns the new total seconds for that domain on that date.
         """
-        if not domain or seconds <= 0:
+        if not domain or (seconds <= 0 and not hourly_buckets_json):
             return 0
 
         browser_type = browser_type.lower().strip() or "unknown"
@@ -249,22 +298,45 @@ class DataHubDB:
         fg_sec = seconds if tracking_type == "foreground" else 0
         bg_sec = seconds if tracking_type == "background_media" else 0
 
+        cur_hour = str(datetime.now().hour)
+        if not hourly_buckets_json and (fg_sec > 0 or bg_sec > 0):
+            hourly_buckets_json = json.dumps({
+                cur_hour: {
+                    "activeSeconds": fg_sec,
+                    "activeTime": fg_sec,
+                    "mediaSeconds": bg_sec,
+                    "backgroundMediaSeconds": bg_sec,
+                    "mediaTime": bg_sec,
+                    "sessions": max(0, session_count),
+                    "topDomain": clean_domain
+                }
+            })
+
         with self._write_lock:
             conn = self._get_connection()
             with conn:
+                cur = conn.execute("""
+                    SELECT hourly_buckets_json FROM domain_activity 
+                    WHERE browser_type = ? AND domain = ? AND date_str = ?;
+                """, (browser_type, clean_domain, today))
+                row = cur.fetchone()
+                existing_h_json = row["hourly_buckets_json"] if row and "hourly_buckets_json" in row.keys() else "{}"
+                merged_h_json = self.merge_hourly_buckets(existing_h_json, hourly_buckets_json)
+
                 conn.execute("""
                     INSERT INTO domain_activity (
-                        browser_type, domain, date_str, seconds_active, foreground_seconds, background_media_seconds, session_count, last_active, favicon_url
+                        browser_type, domain, date_str, seconds_active, foreground_seconds, background_media_seconds, hourly_buckets_json, session_count, last_active, favicon_url
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(browser_type, domain, date_str) DO UPDATE SET
                         seconds_active = domain_activity.seconds_active + excluded.seconds_active,
                         foreground_seconds = domain_activity.foreground_seconds + excluded.foreground_seconds,
                         background_media_seconds = domain_activity.background_media_seconds + excluded.background_media_seconds,
+                        hourly_buckets_json = excluded.hourly_buckets_json,
                         session_count = domain_activity.session_count + excluded.session_count,
                         last_active = excluded.last_active,
                         favicon_url = COALESCE(excluded.favicon_url, domain_activity.favicon_url);
-                """, (browser_type, clean_domain, today, seconds, fg_sec, bg_sec, max(0, session_count), now, favicon_url))
+                """, (browser_type, clean_domain, today, seconds, fg_sec, bg_sec, merged_h_json, max(0, session_count), now, favicon_url))
 
                 cur = conn.execute("""
                     SELECT seconds_active FROM domain_activity 
@@ -519,6 +591,71 @@ class DataHubDB:
                 "ended_at": m["ended_at"]
             })
 
+        # 7. Today's Hourly Buckets & 7-Day Rolling History Map for Chrono Heatmap
+        sql_hourly = f"""
+            SELECT date_str, domain, seconds_active, foreground_seconds, background_media_seconds, hourly_buckets_json
+            FROM domain_activity
+            WHERE date_str >= ? AND date_str <= ? {browser_clause};
+        """
+        cur = conn.execute(sql_hourly, [start_date, query_date] + browser_params)
+        today_hourly_buckets: Dict[str, Any] = {}
+        history_map: Dict[str, Any] = {}
+
+        for r in cur.fetchall():
+            d_str = r["date_str"]
+            dom = r["domain"]
+            if d_str not in history_map:
+                history_map[d_str] = {"domains": {}, "hourlyBuckets": {}}
+            day_entry = history_map[d_str]
+            day_entry["domains"][dom] = {
+                "activeTime": int(r["foreground_seconds"] or r["seconds_active"] or 0),
+                "mediaTime": int(r["background_media_seconds"] or 0),
+                "seconds": int(r["seconds_active"] or 0)
+            }
+            try:
+                b_raw = r["hourly_buckets_json"]
+                b_dict = json.loads(b_raw) if b_raw else {}
+                if isinstance(b_dict, dict):
+                    for h_str, b_obj in b_dict.items():
+                        if not isinstance(b_obj, dict):
+                            continue
+                        act = int(b_obj.get("activeSeconds", 0) or b_obj.get("activeTime", 0))
+                        med = int(b_obj.get("mediaSeconds", 0) or b_obj.get("backgroundMediaSeconds", 0) or b_obj.get("mediaTime", 0))
+                        sess = int(b_obj.get("sessions", 0))
+
+                        # Accumulate into day's hourlyBuckets
+                        if h_str not in day_entry["hourlyBuckets"]:
+                            day_entry["hourlyBuckets"][h_str] = {
+                                "activeSeconds": 0, "activeTime": 0,
+                                "mediaSeconds": 0, "backgroundMediaSeconds": 0, "mediaTime": 0,
+                                "sessions": 0, "topDomain": dom
+                            }
+                        hb = day_entry["hourlyBuckets"][h_str]
+                        hb["activeSeconds"] += act
+                        hb["activeTime"] += act
+                        hb["mediaSeconds"] += med
+                        hb["backgroundMediaSeconds"] += med
+                        hb["mediaTime"] += med
+                        hb["sessions"] += sess
+
+                        # If this row is today, also accumulate into today_hourly_buckets
+                        if d_str == query_date:
+                            if h_str not in today_hourly_buckets:
+                                today_hourly_buckets[h_str] = {
+                                    "activeSeconds": 0, "activeTime": 0,
+                                    "mediaSeconds": 0, "backgroundMediaSeconds": 0, "mediaTime": 0,
+                                    "sessions": 0, "topDomain": dom
+                                }
+                            thb = today_hourly_buckets[h_str]
+                            thb["activeSeconds"] += act
+                            thb["activeTime"] += act
+                            thb["mediaSeconds"] += med
+                            thb["backgroundMediaSeconds"] += med
+                            thb["mediaTime"] += med
+                            thb["sessions"] += sess
+            except Exception:
+                pass
+
         # Formatted strings
         hours = today_seconds // 3600
         mins = (today_seconds % 3600) // 60
@@ -550,7 +687,10 @@ class DataHubDB:
             "registered_browsers": registered_browsers,
             "browser_breakdown": browser_breakdown,
             "domain_distribution": domain_list,
-            "recent_media_sessions": media_list
+            "recent_media_sessions": media_list,
+            "hourly_buckets": today_hourly_buckets,
+            "hourly_buckets_json": json.dumps(today_hourly_buckets),
+            "history": history_map
         }
 
 
@@ -1391,9 +1531,10 @@ setTimeout(() => {{ window.location.reload(); }}, 5000);
                     d_btype = str(item.get("browser_type") or browser_type).lower()
                     d_date = item.get("date_str") or date_str
                     d_tracking_type = item.get("tracking_type") or "foreground"
-                    if d_domain and d_sec > 0:
+                    d_h_json = item.get("hourly_buckets_json")
+                    if d_domain and (d_sec > 0 or d_h_json):
                         self.db.upsert_activity_delta(
-                            d_btype, d_domain, d_sec, d_date, d_favicon, d_sessions, d_tracking_type
+                            d_btype, d_domain, d_sec, d_date, d_favicon, d_sessions, d_tracking_type, d_h_json
                         )
                         total_upserted += 1
                 self._send_json(sock, {
@@ -1407,8 +1548,9 @@ setTimeout(() => {{ window.location.reload(); }}, 5000);
                 favicon_url = msg.get("favicon_url")
                 session_count = int(msg.get("session_count", 0))
                 tracking_type = msg.get("tracking_type") or "foreground"
+                h_json = msg.get("hourly_buckets_json")
                 new_total = self.db.upsert_activity_delta(
-                    browser_type, domain, seconds, date_str, favicon_url, session_count, tracking_type
+                    browser_type, domain, seconds, date_str, favicon_url, session_count, tracking_type, h_json
                 )
                 self._send_json(sock, {
                     "type": "SYNC_RESPONSE",
@@ -1416,6 +1558,63 @@ setTimeout(() => {{ window.location.reload(); }}, 5000);
                     "domain": domain,
                     "total_seconds": new_total
                 })
+
+        elif msg_type == "SYNC_HOURLY_BUCKETS":
+            browser_type = str(msg.get("browser_type") or msg.get("browser") or "chrome").lower()
+            date_str = str(msg.get("date_str") or date.today().isoformat())
+            h_json = msg.get("hourly_buckets_json") or "{}"
+            domain = str(msg.get("domain") or "_all_")
+            self.db.upsert_activity_delta(
+                browser_type=browser_type,
+                domain=domain,
+                seconds=0,
+                date_str=date_str,
+                hourly_buckets_json=h_json
+            )
+            self._send_json(sock, {
+                "type": "SYNC_RESPONSE",
+                "success": True,
+                "action": "SYNC_HOURLY_BUCKETS"
+            })
+
+        elif msg_type == "SYNC_HISTORY_UPSERT":
+            browser_type = str(msg.get("browser_type") or "chrome").lower()
+            date_str = str(msg.get("date_str") or date.today().isoformat())
+            h_json = msg.get("hourly_buckets_json") or "{}"
+            tracking_history = msg.get("tracking_history") or {}
+            if isinstance(tracking_history, dict):
+                for d_str, day_data in tracking_history.items():
+                    if not isinstance(day_data, dict):
+                        continue
+                    domains = day_data.get("domains") or {}
+                    h_buckets = day_data.get("hourlyBuckets") or {}
+                    h_str = json.dumps(h_buckets) if h_buckets else h_json
+                    for dom, d_obj in domains.items():
+                        if not isinstance(d_obj, dict):
+                            continue
+                        act = int(d_obj.get("activeTime", 0) or d_obj.get("seconds", 0) or d_obj.get("foregroundSeconds", 0))
+                        med = int(d_obj.get("mediaTime", 0) or d_obj.get("backgroundMediaSeconds", 0))
+                        self.db.upsert_activity_delta(
+                            browser_type=browser_type,
+                            domain=dom,
+                            seconds=act,
+                            date_str=d_str,
+                            tracking_type="foreground",
+                            hourly_buckets_json=h_str
+                        )
+                        if med > 0:
+                            self.db.upsert_activity_delta(
+                                browser_type=browser_type,
+                                domain=dom,
+                                seconds=med,
+                                date_str=d_str,
+                                tracking_type="background_media"
+                            )
+            self._send_json(sock, {
+                "type": "SYNC_RESPONSE",
+                "success": True,
+                "action": "SYNC_HISTORY_UPSERT"
+            })
 
         elif msg_type == "SYNC_MEDIA_SESSION":
             sid = str(msg.get("session_id") or f"sess_{int(time.time()*1000)}")

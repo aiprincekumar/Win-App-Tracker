@@ -2414,91 +2414,191 @@ button.spinning .refresh-spinner-icon,
 
 /* 1. Chrono-Heatmap Container & 7x24 Matrix Grid */
 .chrono-heatmap-container {
-  overflow-x: auto;
-  padding: 1rem 0;
-  width: 100%;
+  overflow-x: hidden !important;
+  padding: 0.75rem 0;
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
 .chrono-heatmap-grid {
   display: grid;
-  grid-template-columns: 50px repeat(24, minmax(28px, 1fr));
-  gap: 4px;
+  grid-template-columns: minmax(36px, 48px) repeat(24, minmax(0, 1fr)) !important;
+  gap: 3px !important;
   align-items: center;
-  min-width: 760px;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .heatmap-day-label, .heatmap-hour-label {
-  font-size: 0.75rem;
+  font-size: clamp(9px, 0.75vw, 11px);
   color: var(--text-muted, #94a3b8);
   font-weight: 500;
   text-align: center;
   user-select: none;
 }
 
+.heatmap-hour-label {
+  font-family: var(--font-mono, monospace);
+}
+
 .heatmap-day-label {
+  font-size: clamp(10px, 0.8vw, 12px);
+  font-weight: 600;
   text-align: right;
-  padding-right: 8px;
+  padding-right: 6px;
 }
 
 .heatmap-cell {
-  aspect-ratio: 1;
-  border-radius: 4px;
+  width: 100% !important;
+  height: clamp(14px, 1.8vw, 22px) !important;
+  border-radius: 3px !important;
   cursor: pointer;
-  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 120ms ease, background-color 150ms ease;
   position: relative;
 }
 
 .heatmap-cell:hover, .heatmap-cell:focus-visible {
-  transform: scale(1.18);
-  z-index: 5;
-  outline: 2px solid var(--accent-emerald, #10b981);
-  outline-offset: 1px;
+  transform: scale(1.22) !important;
+  z-index: 10;
+  outline: none;
 }
 
-/* Dark Theme Intensity Tiers */
-.heatmap-cell[data-intensity="0"], .legend-cell.tier-0 {
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell:hover,
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell:hover {
+  box-shadow: 0 0 10px var(--accent-emerald, #10b981) !important;
+}
+
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell:hover {
+  box-shadow: 0 0 10px var(--accent-magenta, #ec4899) !important;
+}
+
+/* Dark Theme Intensity Tiers - Focus Mode (Emerald) */
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="0"],
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="0"],
+.legend-cell.tier-0 {
   background: #1e293b;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
-.heatmap-cell[data-intensity="1"], .legend-cell.tier-1 {
-  background: #064e3b;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="1"],
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="1"],
+.legend-cell.tier-1 {
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
-.heatmap-cell[data-intensity="2"], .legend-cell.tier-2 {
-  background: #047857;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="2"],
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="2"],
+.legend-cell.tier-2 {
+  background: rgba(16, 185, 129, 0.50);
+  border: 1px solid rgba(16, 185, 129, 0.5);
 }
-.heatmap-cell[data-intensity="3"], .legend-cell.tier-3 {
-  background: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.6);
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="3"],
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="3"],
+.legend-cell.tier-3 {
+  background: rgba(16, 185, 129, 0.75);
+  border: 1px solid rgba(16, 185, 129, 0.7);
 }
-.heatmap-cell[data-intensity="4"], .legend-cell.tier-4 {
+.chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="4"],
+.chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="4"],
+.legend-cell.tier-4 {
   background: #10b981;
   border: 1px solid #34d399;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
+/* Dark Theme Intensity Tiers - Media Mode (Violet / Fuchsia) */
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="0"] {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="1"] {
+  background: rgba(168, 85, 247, 0.25);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="2"] {
+  background: rgba(168, 85, 247, 0.50);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+}
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="3"] {
+  background: rgba(236, 72, 153, 0.75);
+  border: 1px solid rgba(236, 72, 153, 0.7);
+}
+.chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="4"] {
+  background: #ec4899;
+  border: 1px solid #f472b6;
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+}
+
 /* Light Theme Intensity Tiers */
-body.theme-light .heatmap-cell[data-intensity="0"], body.theme-light .legend-cell.tier-0 {
+body.theme-light .chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="0"],
+body.theme-light .chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="0"],
+body.theme-light .legend-cell.tier-0 {
   background: #e2e8f0;
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
-body.theme-light .heatmap-cell[data-intensity="1"], body.theme-light .legend-cell.tier-1 {
+body.theme-light .chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="1"],
+body.theme-light .chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="1"],
+body.theme-light .legend-cell.tier-1 {
   background: #a7f3d0;
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
-body.theme-light .heatmap-cell[data-intensity="2"], body.theme-light .legend-cell.tier-2 {
+body.theme-light .chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="2"],
+body.theme-light .chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="2"],
+body.theme-light .legend-cell.tier-2 {
   background: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
-body.theme-light .heatmap-cell[data-intensity="3"], body.theme-light .legend-cell.tier-3 {
+body.theme-light .chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="3"],
+body.theme-light .chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="3"],
+body.theme-light .legend-cell.tier-3 {
   background: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.6);
 }
-body.theme-light .heatmap-cell[data-intensity="4"], body.theme-light .legend-cell.tier-4 {
+body.theme-light .chrono-heatmap-grid[data-active-mode="focus"] .heatmap-cell[data-intensity="4"],
+body.theme-light .chrono-heatmap-grid:not([data-active-mode="media"]) .heatmap-cell[data-intensity="4"],
+body.theme-light .legend-cell.tier-4 {
   background: #047857;
   border: 1px solid #064e3b;
   box-shadow: 0 0 10px rgba(4, 120, 87, 0.3);
+}
+
+body.theme-light .chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="0"] {
+  background: #e2e8f0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+body.theme-light .chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="1"] {
+  background: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+body.theme-light .chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="2"] {
+  background: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+body.theme-light .chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="3"] {
+  background: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.6);
+}
+body.theme-light .chrono-heatmap-grid[data-active-mode="media"] .heatmap-cell[data-intensity="4"] {
+  background: #db2777;
+  border: 1px solid #be185d;
+  box-shadow: 0 0 10px rgba(219, 39, 119, 0.3);
+}
+
+#cardChronoHeatmap[data-active-mode="media"] .legend-cell.tier-1 {
+  background: rgba(168, 85, 247, 0.35);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+#cardChronoHeatmap[data-active-mode="media"] .legend-cell.tier-2 {
+  background: rgba(168, 85, 247, 0.65);
+  border-color: rgba(168, 85, 247, 0.7);
+}
+#cardChronoHeatmap[data-active-mode="media"] .legend-cell.tier-3 {
+  background: rgba(236, 72, 153, 0.85);
+  border-color: rgba(236, 72, 153, 0.9);
+}
+#cardChronoHeatmap[data-active-mode="media"] .legend-cell.tier-4 {
+  background: #ec4899;
+  border-color: #f472b6;
+  box-shadow: 0 0 8px rgba(236, 72, 153, 0.5);
 }
 
 /* 2. Heatmap Controls, Tooltip & Legend Bar */
@@ -8204,37 +8304,39 @@ body.theme-light .conflict-modal-card {
 /* ========================================================================= */
 
 .heatmap-card-compact {
-  max-height: 280px;
+  max-height: none;
+  overflow: visible;
 }
 
 .chrono-heatmap-wrapper {
-  overflow-x: auto;
+  overflow-x: hidden !important;
   padding: 0.5rem 0;
-  width: 100%;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .chrono-heatmap-grid {
   display: grid;
-  grid-template-columns: 44px repeat(24, minmax(14px, 20px)) !important;
+  grid-template-columns: minmax(36px, 48px) repeat(24, minmax(0, 1fr)) !important;
   gap: 3px !important;
   align-items: center;
-  justify-content: start;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .heatmap-cell {
   width: 100% !important;
-  max-width: 20px !important;
-  height: 16px !important;
+  height: clamp(14px, 1.8vw, 22px) !important;
   border-radius: 3px !important;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 120ms ease;
   position: relative;
 }
 
 .heatmap-cell:hover, .heatmap-cell:focus-visible {
-  transform: scale(1.25) !important;
+  transform: scale(1.22) !important;
   z-index: 10;
-  box-shadow: 0 0 8px var(--accent-emerald, #10b981) !important;
+  outline: none;
 }
 
 /* Floating Glassmorphism Heatmap Tooltip */

@@ -858,20 +858,54 @@ async function saveOfflineQueue() {
 }
 
 /**
+ * Transmits consolidated hourly activity buckets to Data Hub.
+ * Universal Rule 28: <= 30 lines.
+ */
+function syncHourlyBucketsToDataHub(dateStr, hourlyBuckets) {
+  if (!dataHubConnected || !dataHubRegistered || !dataHubWs || dataHubWs.readyState !== WebSocket.OPEN) {
+    return false;
+  }
+  const dateKey = dateStr || getTodayDateString();
+  const buckets = hourlyBuckets || {};
+  const populated = {};
+  for (const [h, b] of Object.entries(buckets)) {
+    if (b && ((b.activeSeconds || b.activeTime || 0) > 0 || (b.backgroundMediaSeconds || b.mediaTime || 0) > 0)) {
+      populated[h] = b;
+    }
+  }
+  return sendDataHubMessage({
+    type: 'SYNC_HOURLY_BUCKETS',
+    browser_type: detectedBrowser,
+    client_id: clientId,
+    date_str: dateKey,
+    hourly_buckets_json: JSON.stringify(populated),
+    timestamp: Date.now()
+  });
+}
+
+/**
  * Streams active seconds delta to Data Hub or offline queue.
  * Supports trackingType: 'foreground' | 'background_media'.
  */
 function streamActivityDelta(domain, seconds, isNewSession = false, trackingType = 'foreground') {
   if (!domain || seconds <= 0) return;
 
+  const todayStr = getTodayDateString();
+  let hourlyBucketsJson = '{}';
+  if (activityData && activityData.domains && activityData.domains[domain] && activityData.domains[domain].days && activityData.domains[domain].days[todayStr]) {
+    const hb = activityData.domains[domain].days[todayStr].hourlyBuckets;
+    if (hb) hourlyBucketsJson = JSON.stringify(hb);
+  }
+
   const delta = {
     domain,
     seconds,
     tracking_type: trackingType,
-    date_str: getTodayDateString(),
+    date_str: todayStr,
     browser_type: detectedBrowser,
     favicon_url: getFaviconUrl(domain),
-    session_count: isNewSession ? 1 : 0
+    session_count: isNewSession ? 1 : 0,
+    hourly_buckets_json: hourlyBucketsJson
   };
 
   if (dataHubConnected && dataHubRegistered && dataHubWs && dataHubWs.readyState === WebSocket.OPEN) {
@@ -884,6 +918,7 @@ function streamActivityDelta(domain, seconds, isNewSession = false, trackingType
       date_str: delta.date_str,
       favicon_url: delta.favicon_url,
       session_count: delta.session_count,
+      hourly_buckets_json: delta.hourly_buckets_json,
       timestamp: Date.now()
     };
     sendDataHubMessage(msg);
@@ -5639,11 +5674,19 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       await ensureStorageLoaded();
       const history = message.tracking_history || message.data || {};
+      const dateStr = message.date || getTodayDateString();
+      const dayEntry = history[dateStr] || {};
+      const hourlyBuckets = dayEntry.hourlyBuckets || {};
+      const hourlyBucketsJson = JSON.stringify(hourlyBuckets);
+
       if (dataHubConnected && dataHubWs && dataHubWs.readyState === WebSocket.OPEN) {
         sendDataHubMessage({
           type: 'SYNC_HISTORY_UPSERT',
           client_id: clientId,
+          browser_type: detectedBrowser,
+          date_str: dateStr,
           tracking_history: history,
+          hourly_buckets_json: hourlyBucketsJson,
           timestamp: Date.now()
         });
         sendResponse({ success: true, forwardedToHub: true });

@@ -2766,17 +2766,20 @@ function createChronoCellElement(doc, d, h, matrix, mode) {
   const durMinutes = Math.round(sec / 60);
   const durStr = durMinutes > 0 ? `${durMinutes}m` : (sec > 0 ? `${sec}s` : '0m');
   const topDom = bucket.topDomain || 'No domain';
+  const modeTitle = activeMode === 'media' ? 'Media Watch Time' : 'Focus Time';
 
   cell.setAttribute('aria-label', `${CHRONO_HEATMAP_FULL_DAYS[d]} ${hourStr}: ${durStr} (${topDom})`);
-  cell.title = `${CHRONO_HEATMAP_FULL_DAYS[d]} ${hourStr}\n${activeMode === 'media' ? 'Media' : 'Focus'}: ${durStr}\nTop: ${topDom}`;
+  cell.title = `${CHRONO_HEATMAP_FULL_DAYS[d]} ${hourStr}\n${modeTitle}: ${durStr}\nTop: ${topDom}`;
   return cell;
 }
 
 function buildChronoGridElement(doc, matrix, mode) {
+  const activeMode = mode === 'media' ? 'media' : 'focus';
   const grid = doc.createElement('div');
   grid.className = 'chrono-heatmap-grid';
   grid.setAttribute('role', 'grid');
   grid.setAttribute('aria-label', '7x24 Chrono-Activity Heatmap');
+  grid.setAttribute('data-active-mode', activeMode);
 
   const corner = doc.createElement('div');
   corner.className = 'heatmap-day-label corner';
@@ -2798,7 +2801,7 @@ function buildChronoGridElement(doc, matrix, mode) {
     grid.appendChild(dLabel);
 
     for (let h = 0; h < 24; h++) {
-      grid.appendChild(createChronoCellElement(doc, d, h, matrix, mode));
+      grid.appendChild(createChronoCellElement(doc, d, h, matrix, activeMode));
     }
   }
   return grid;
@@ -2812,17 +2815,26 @@ function renderChronoHeatmap(matrix, mode = 'focus') {
   const container = document.getElementById('heatmapGridContainer');
   if (!container) return;
 
+  const activeMode = mode === 'media' ? 'media' : 'focus';
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
-  const grid = buildChronoGridElement(document, matrix, mode);
+  const grid = buildChronoGridElement(document, matrix, activeMode);
   container.appendChild(grid);
 
   const valWow = document.getElementById('valHeatmapWow');
-  if (valWow && matrix && typeof matrix.wowDeltaPercent === 'number') {
-    const delta = matrix.wowDeltaPercent;
-    valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
-    valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
+  const lblWow = document.getElementById('lblHeatmapWow');
+  if (valWow && matrix) {
+    const delta = activeMode === 'media'
+      ? (typeof matrix.wowMediaDeltaPercent === 'number' ? matrix.wowMediaDeltaPercent : matrix.wowDeltaPercent)
+      : (typeof matrix.wowActiveDeltaPercent === 'number' ? matrix.wowActiveDeltaPercent : matrix.wowDeltaPercent);
+    if (typeof delta === 'number') {
+      valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
+      valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
+    }
+  }
+  if (lblWow) {
+    lblWow.textContent = activeMode === 'media' ? 'Media WoW Change:' : 'Week-over-Week Change:';
   }
 }
 
@@ -2991,6 +3003,30 @@ function aggregateDomainsHistoryMap(domains) {
   return historyMap;
 }
 
+/**
+ * Merges SQLite Data Hub 7-day hourly telemetry into local rawHistory cache.
+ * Universal Rule 28: <= 25 lines.
+ */
+function mergeDataHubHourlyHistory(rawHistory, hubHistory) {
+  if (!hubHistory || typeof hubHistory !== 'object') return;
+  for (const [dateStr, hubDay] of Object.entries(hubHistory)) {
+    if (!hubDay || !hubDay.hourlyBuckets) continue;
+    if (!rawHistory[dateStr]) rawHistory[dateStr] = { domains: {}, hourlyBuckets: {} };
+    if (!rawHistory[dateStr].hourlyBuckets) rawHistory[dateStr].hourlyBuckets = {};
+    for (const [h, hb] of Object.entries(hubDay.hourlyBuckets)) {
+      if (!hb) continue;
+      if (!rawHistory[dateStr].hourlyBuckets[h]) {
+        rawHistory[dateStr].hourlyBuckets[h] = { ...hb };
+      } else {
+        const cur = rawHistory[dateStr].hourlyBuckets[h];
+        cur.activeSeconds = Math.max(cur.activeSeconds || 0, hb.activeSeconds || 0);
+        cur.mediaSeconds = Math.max(cur.mediaSeconds || 0, hb.mediaSeconds || 0);
+        if (hb.topDomain && !cur.topDomain) cur.topDomain = hb.topDomain;
+      }
+    }
+  }
+}
+
 function updateChronoHeatmap(data) {
   let rawHistory = {};
   if (data && data.activityData && data.activityData.history) {
@@ -2999,6 +3035,10 @@ function updateChronoHeatmap(data) {
     rawHistory = aggregateDomainsHistoryMap(data.activityData.domains);
   } else if (data && typeof data === 'object') {
     rawHistory = data;
+  }
+
+  if (dataHubConnected && dataHubAnalytics && dataHubAnalytics.history) {
+    mergeDataHubHourlyHistory(rawHistory, dataHubAnalytics.history);
   }
 
   let range = temporalSubtab || '7d';
@@ -9873,6 +9913,7 @@ function setupEventListeners() {
 
   const btnHeatFocus = document.getElementById('btnHeatmapModeFocus');
   const btnHeatMedia = document.getElementById('btnHeatmapModeMedia');
+  const cardHeatmap = document.getElementById('cardChronoHeatmap');
   if (btnHeatFocus && btnHeatMedia) {
     btnHeatFocus.addEventListener('click', () => {
       btnHeatFocus.classList.add('active');
@@ -9880,8 +9921,11 @@ function setupEventListeners() {
       btnHeatMedia.classList.remove('active');
       btnHeatMedia.setAttribute('aria-pressed', 'false');
       currentHeatmapMode = 'focus';
+      if (cardHeatmap) cardHeatmap.setAttribute('data-active-mode', 'focus');
       if (dashboardData) {
         updateChronoHeatmap(dashboardData);
+      } else if (currentHeatmapMatrix) {
+        renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
       }
     });
     btnHeatMedia.addEventListener('click', () => {
@@ -9890,8 +9934,11 @@ function setupEventListeners() {
       btnHeatFocus.classList.remove('active');
       btnHeatFocus.setAttribute('aria-pressed', 'false');
       currentHeatmapMode = 'media';
+      if (cardHeatmap) cardHeatmap.setAttribute('data-active-mode', 'media');
       if (dashboardData) {
         updateChronoHeatmap(dashboardData);
+      } else if (currentHeatmapMatrix) {
+        renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
       }
     });
   }
