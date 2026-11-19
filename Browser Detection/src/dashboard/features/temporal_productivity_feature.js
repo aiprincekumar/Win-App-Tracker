@@ -270,6 +270,62 @@
   }
 
   /**
+   * Checks if dayData contains non-zero hourly telemetry
+   * @param {Object} dayData - Day telemetry record
+   * @returns {boolean} True if hourly telemetry has valid non-zero duration
+   */
+  function hasValidHourlyTelemetry(dayData) {
+    if (!dayData || !dayData.hourlyBuckets || typeof dayData.hourlyBuckets !== 'object') {
+      return false;
+    }
+    const keys = Object.keys(dayData.hourlyBuckets);
+    if (keys.length === 0) return false;
+    return keys.some(k => {
+      const b = dayData.hourlyBuckets[k];
+      return b && ((b.activeTime || b.activeSeconds || 0) > 0 || (b.mediaTime || b.mediaSeconds || b.backgroundMediaSeconds || 0) > 0);
+    });
+  }
+
+  /**
+   * Applies domain-based fallback distribution across business hours (10:00 to 18:00)
+   * @param {Object} domains - Map of domain records
+   * @param {number} dayOfWeek - Day index (0=Mon, 6=Sun)
+   * @param {Array<Array<Object>>} matrix - Heatmap matrix
+   * @returns {{dayActive: number, dayMedia: number}} Total active and media seconds
+   */
+  function applyDomainFallbackToMatrix(domains, dayOfWeek, matrix) {
+    let dayActive = 0;
+    let dayMedia = 0;
+    let dayTopDomain = '';
+    let maxSec = 0;
+
+    for (const [dom, dObj] of Object.entries(domains)) {
+      const s = (dObj && (dObj.activeTime || dObj.seconds || dObj.foregroundSeconds || dObj.totalSeconds)) || 0;
+      const m = (dObj && (dObj.mediaTime || dObj.backgroundMediaSeconds)) || 0;
+      dayActive += s;
+      dayMedia += m;
+      if (s > maxSec) {
+        maxSec = s;
+        dayTopDomain = dom;
+      }
+    }
+
+    if (dayActive > 0 || dayMedia > 0) {
+      const perHour = Math.round(dayActive / 8);
+      const perHourMedia = Math.round(dayMedia / 8);
+      for (let h = 10; h < 18; h++) {
+        matrix[dayOfWeek][h].activeSeconds += perHour;
+        matrix[dayOfWeek][h].mediaSeconds += perHourMedia;
+        if (!matrix[dayOfWeek][h].topDomain && dayTopDomain) {
+          matrix[dayOfWeek][h].topDomain = dayTopDomain;
+        }
+      }
+    }
+
+    return { dayActive, dayMedia };
+  }
+
+  /**
    * Aggregates 7x24 heatmap matrix from raw telemetry history.
    * 
    * @param {Object} rawHistory - Stored history map keyed by YYYY-MM-DD
@@ -395,12 +451,12 @@
         // Monday = 0, Tuesday = 1 ... Sunday = 6
         const dayOfWeek = (dateObj.getDay() + 6) % 7;
 
-        if (dayData.hourlyBuckets) {
+        if (hasValidHourlyTelemetry(dayData)) {
           for (let h = 0; h < 24; h++) {
             const bucket = dayData.hourlyBuckets[h];
             if (bucket) {
               const act = bucket.activeTime || bucket.activeSeconds || 0;
-              const med = bucket.mediaTime || bucket.mediaSeconds || 0;
+              const med = bucket.mediaTime || bucket.mediaSeconds || bucket.backgroundMediaSeconds || 0;
               const sess = bucket.sessions || bucket.sessionCount || 0;
 
               matrix[dayOfWeek][h].activeSeconds += act;
@@ -415,34 +471,9 @@
             }
           }
         } else if (dayData.domains) {
-          // Fallback if daily telemetry exists without hourly breakdown
-          let dayActive = 0;
-          let dayMedia = 0;
-          let dayTopDomain = '';
-          let maxSec = 0;
-          for (const [dom, dObj] of Object.entries(dayData.domains)) {
-            const s = (dObj && (dObj.activeTime || dObj.seconds || dObj.totalSeconds)) || 0;
-            const m = (dObj && (dObj.mediaTime || dObj.backgroundMediaSeconds)) || 0;
-            dayActive += s;
-            dayMedia += m;
-            if (s > maxSec) {
-              maxSec = s;
-              dayTopDomain = dom;
-            }
-          }
-          totalActiveTime += dayActive;
-          totalMediaTime += dayMedia;
-          if (dayActive > 0) {
-            const perHour = Math.round(dayActive / 8);
-            const perHourMedia = Math.round(dayMedia / 8);
-            for (let h = 10; h < 18; h++) {
-              matrix[dayOfWeek][h].activeSeconds += perHour;
-              matrix[dayOfWeek][h].mediaSeconds += perHourMedia;
-              if (!matrix[dayOfWeek][h].topDomain && dayTopDomain) {
-                matrix[dayOfWeek][h].topDomain = dayTopDomain;
-              }
-            }
-          }
+          const fallback = applyDomainFallbackToMatrix(dayData.domains, dayOfWeek, matrix);
+          totalActiveTime += fallback.dayActive;
+          totalMediaTime += fallback.dayMedia;
         }
       });
     }
@@ -462,14 +493,14 @@
       priorDates.forEach((dateStr) => {
         const dayData = historyMap[dateStr];
         if (!dayData) return;
-        if (dayData.hourlyBuckets) {
+        if (hasValidHourlyTelemetry(dayData)) {
           for (let h = 0; h < 24; h++) {
             const b = dayData.hourlyBuckets[h];
             if (b) priorActiveTime += (b.activeTime || b.activeSeconds || 0);
           }
         } else if (dayData.domains) {
           for (const dObj of Object.values(dayData.domains)) {
-            priorActiveTime += ((dObj && (dObj.activeTime || dObj.seconds || dObj.totalSeconds)) || 0);
+            priorActiveTime += ((dObj && (dObj.activeTime || dObj.seconds || dObj.foregroundSeconds || dObj.totalSeconds)) || 0);
           }
         }
       });
