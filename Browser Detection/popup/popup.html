@@ -718,35 +718,6 @@
 
     <!-- TAB 8: Dedicated Focus View Pane -->
     <div id="viewFocusPane" class="tab-pane" role="tabpanel" aria-labelledby="mainTabFocus">
-      <!-- Added Toggle Here -->
-      <section id="cardFocusModeToggle" class="focus-section-card">
-        <div class="focus-toggle-row">
-          <div class="focus-toggle-info">
-            <span class="focus-toggle-title">Real-time Cell Editing</span>
-            <span class="focus-toggle-sub">Enable real-time editing & execution</span>
-          </div>
-          <label class="switch-toggle-sm">
-            <input type="checkbox" id="toggleRealTimeEditing">
-            <span class="slider-round-sm"></span>
-          </label>
-        </div>
-      </section>
-
-      <!-- Focus Hero Banner -->
-      <section id="cardFocusPlaceholder" class="focus-hero-card">
-        <div class="focus-placeholder-header">
-          <span class="focus-placeholder-icon">🎯</span>
-          <h3 id="focusPlaceholderTitle" class="focus-placeholder-title">Focus & Productivity</h3>
-        </div>
-        <p id="focusPlaceholderDesc" class="focus-placeholder-desc">
-          Deep work timer, focus ratio balance, and intentional browsing sentinel.
-        </p>
-        <div class="focus-placeholder-badge">
-          <span class="badge-dot">●</span>
-          <span id="focusStatusText" class="badge-text">Focus Mode Active</span>
-        </div>
-      </section>
-
       <!-- Digital Wellness & Focus Cards -->
       <section id="cardFocusWellness" class="focus-wellness-card">
         <!-- Compact Focus Time Sentinel Card (Revamped with Circular Radial Dial) -->
@@ -784,16 +755,60 @@
             <!-- Centered Telemetry Overlay -->
             <div class="popup-focus-dial-content">
               <span id="popupFocusClock" class="popup-focus-clock" aria-live="polite">25:00</span>
+              <div id="popupFocusTargetTime" class="popup-focus-target-text">
+                <span id="popupFocusDialFinishTime">No active timer</span>
+              </div>
               <span id="popupFocusDialState" class="popup-focus-dial-state">Deep Focus</span>
             </div>
           </div>
 
-          <!-- Focus Controls Action Row -->
-          <div class="popup-focus-actions">
-            <button type="button" id="btnPopupFocusToggle" class="popup-focus-btn primary" title="Start Focus">▶️</button>
-            <button type="button" id="btnPopupFocusReset" class="popup-focus-btn secondary" title="Reset Timer">🔄</button>
+          <!-- Focus Controls Quick Action Row -->
+          <div class="popup-focus-quick-actions-row popup-focus-actions">
+            <button type="button" id="btnPopupFocusToggle" class="popup-focus-action-btn popup-focus-btn primary" title="Start Focus" aria-label="Start Focus">
+              <span id="btnPopupFocusToggleIcon">▶</span>
+              <span id="btnPopupFocusToggleText">Start</span>
+            </button>
+            <button type="button" id="btnPopupFocusReduce5m" class="popup-focus-action-btn popup-focus-btn extend" title="Subtract 5 Minutes" aria-label="Subtract 5 Minutes">
+              -5m
+            </button>
+            <button type="button" id="btnPopupFocusExtend5m" class="popup-focus-action-btn popup-focus-btn extend" title="Add 5 Minutes" aria-label="Add 5 Minutes">
+              +5m
+            </button>
+            <button type="button" id="btnPopupFocusExtend15m" class="popup-focus-action-btn popup-focus-btn extend" title="Add 15 Minutes" aria-label="Add 15 Minutes">
+              +15m
+            </button>
+            <button type="button" id="btnPopupFocusReset" class="popup-focus-action-btn popup-focus-btn reset secondary" title="Reset Timer" aria-label="Reset Timer">
+              ✕ Reset
+            </button>
           </div>
         </div>
+
+        <!-- Presets & Custom Duration Card -->
+        <section id="cardFocusPresetsAndCustom" class="focus-section-card">
+          <div class="section-micro-header">
+            <span class="micro-icon">⏱️</span>
+            <span class="micro-heading">DURATION PRESETS</span>
+          </div>
+          <div class="focus-tab-presets-grid">
+            <button type="button" class="focus-tab-preset-btn" data-minutes="15">15m</button>
+            <button type="button" class="focus-tab-preset-btn active" data-minutes="25">25m</button>
+            <button type="button" class="focus-tab-preset-btn" data-minutes="30">30m</button>
+            <button type="button" class="focus-tab-preset-btn" data-minutes="45">45m</button>
+            <button type="button" class="focus-tab-preset-btn" data-minutes="50">50m</button>
+            <button type="button" class="focus-tab-preset-btn" data-minutes="60">60m</button>
+          </div>
+
+          <!-- Custom Minute Input Form -->
+          <div class="focus-custom-input-row">
+            <label for="inputFocusCustomMinutes" class="focus-custom-label">Custom Duration:</label>
+            <div class="focus-custom-input-wrap">
+              <input type="number" id="inputFocusCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="focus-custom-input">
+              <input type="hidden" id="inputPopupFocusCustomMinutes">
+              <button type="button" id="btnSetFocusCustom" class="btn-focus-set-custom">Set</button>
+              <button type="button" id="btnSetPopupFocusCustom" style="display:none;" aria-hidden="true">Set</button>
+            </div>
+          </div>
+        </section>
 
         <!-- Focus Ratio Balance Bar -->
         <div id="focusRatioBarContainer" class="focus-ratio-container">

@@ -283,7 +283,29 @@ const I18N_POPUP = {
     theme_toggle_light: 'Switch to Light Mode',
     theme_toggle_dark: 'Switch to Dark Mode',
     theme_active_dark: 'Dark mode activated',
-    theme_active_light: 'Light mode activated'
+    theme_active_light: 'Light mode activated',
+    
+    // Focus Parity Enhancements
+    focus_no_timer: 'No active timer',
+    focus_finish_at: 'Finish at',
+    focus_finishing_soon: 'Finishing soon...',
+    focus_duration_presets: 'DURATION PRESETS',
+    focus_custom_duration: 'Custom Duration:',
+    btn_focus_set: 'Set',
+    btn_focus_reduce_5m_title: 'Subtract 5 Minutes',
+    btn_focus_extend_5m_title: 'Add 5 Minutes',
+    btn_focus_extend_15m_title: 'Add 15 Minutes',
+    btn_focus_reset_title: 'Reset Timer',
+    btn_focus_start_title: 'Start Focus',
+    btn_focus_pause_title: 'Pause Focus',
+    btn_focus_resume_title: 'Resume Focus',
+    toast_focus_adjusted: 'Focus time adjusted:',
+    toast_focus_started: 'Focus started:',
+    toast_focus_set: 'Focus set:',
+    toast_focus_paused: 'Focus timer paused',
+    toast_focus_resumed: 'Focus timer resumed',
+    toast_focus_reset: 'Focus timer reset',
+    toast_focus_valid_duration: 'Enter valid duration (1-720 min)'
   },
   hi: {
     brand_subtitle: 'गतिविधि व मीडिया टेलीमेट्री',
@@ -442,7 +464,29 @@ const I18N_POPUP = {
     theme_toggle_light: 'लाइट मोड पर स्विच करें',
     theme_toggle_dark: 'डार्क मोड पर स्विच करें',
     theme_active_dark: 'डार्क मोड सक्रिय',
-    theme_active_light: 'लाइट मोड सक्रिय'
+    theme_active_light: 'लाइट मोड सक्रिय',
+    
+    // Focus Parity Enhancements
+    focus_no_timer: 'कोई सक्रिय टाइमर नहीं',
+    focus_finish_at: 'समाप्त होगा',
+    focus_finishing_soon: 'जल्द समाप्त हो रहा है...',
+    focus_duration_presets: 'अवधि प्रीसेट',
+    focus_custom_duration: 'कस्टम अवधि:',
+    btn_focus_set: 'सेट करें',
+    btn_focus_reduce_5m_title: '5 मिनट घटाएं',
+    btn_focus_extend_5m_title: '5 मिनट जोड़ें',
+    btn_focus_extend_15m_title: '15 मिनट जोड़ें',
+    btn_focus_reset_title: 'टाइमर रीसेट करें',
+    btn_focus_start_title: 'फ़ोकस शुरू करें',
+    btn_focus_pause_title: 'फ़ोकस रोकें',
+    btn_focus_resume_title: 'फ़ोकस फिर से शुरू करें',
+    toast_focus_adjusted: 'फ़ोकस समय समायोजित किया गया:',
+    toast_focus_started: 'फ़ोकस शुरू किया गया:',
+    toast_focus_set: 'फ़ोकस सेट किया गया:',
+    toast_focus_paused: 'फ़ोकस टाइमर रोका गया',
+    toast_focus_resumed: 'फ़ोकस टाइमर फिर से शुरू हुआ',
+    toast_focus_reset: 'फ़ोकस टाइमर रीसेट हुआ',
+    toast_focus_valid_duration: 'मान्य अवधि दर्ज करें (1-720 मिनट)'
   }
 };
 
@@ -585,9 +629,6 @@ function applyPopupLanguage(lang) {
   setTxt('topTabDomainsText', 'tab_domains');
   setTxt('topTabSleepText', 'tab_sleep');
   setTxt('topTabFocusText', 'top_tab_focus');
-  setTxt('focusPlaceholderTitle', 'focus_placeholder_title');
-  setTxt('focusPlaceholderDesc', 'focus_placeholder_desc');
-  setTxt('focusStatusText', 'focus_status_ready');
   setTitle('tabMediaLiveDot', 'tab_media_active_title');
 
   // Tier 1 Segmented Category Navigation
@@ -662,6 +703,17 @@ function applyPopupLanguage(lang) {
     btnSettings.title = sTitle;
     btnSettings.setAttribute('aria-label', sTitle);
   }
+
+  const focusCustomLabel = document.querySelector('.focus-custom-label');
+  if (focusCustomLabel) focusCustomLabel.textContent = t('focus_custom_duration');
+  const focusPresetsHeader = document.querySelector('#cardFocusPresetsAndCustom .micro-heading');
+  if (focusPresetsHeader) focusPresetsHeader.textContent = t('focus_duration_presets');
+  const btnSetCustom = document.getElementById('btnSetFocusCustom') || document.getElementById('btnSetPopupFocusCustom');
+  if (btnSetCustom) btnSetCustom.textContent = t('btn_focus_set');
+  setTitle('btnPopupFocusReduce5m', 'btn_focus_reduce_5m_title');
+  setTitle('btnPopupFocusExtend5m', 'btn_focus_extend_5m_title');
+  setTitle('btnPopupFocusExtend15m', 'btn_focus_extend_15m_title');
+  setTitle('btnPopupFocusReset', 'btn_focus_reset_title');
 
   updateThemeToggleUI(currentTheme);
 

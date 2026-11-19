@@ -105,20 +105,24 @@ console.log('\nBattery 2: Wellness Sub-Tab Structure (Focus + Sleep)');
   assert(html.includes('id="topTabFocusText"'), '#mainTabFocus must contain #topTabFocusText label');
   assert(html.includes('id="tabFocusActiveDot"'), '#mainTabFocus must contain #tabFocusActiveDot indicator');
 
-  // #viewFocusPane structure
-  assert(html.includes('id="cardFocusPlaceholder"'), '#viewFocusPane must contain #cardFocusPlaceholder');
+  // #viewFocusPane structure & clean retirement of placeholder hero banner & obsolete toggles
+  assert(!html.includes('id="cardFocusPlaceholder"'), '#viewFocusPane must NOT contain retired #cardFocusPlaceholder');
+  assert(!html.includes('id="focusPlaceholderTitle"'), '#viewFocusPane must NOT contain retired #focusPlaceholderTitle');
+  assert(!html.includes('id="focusPlaceholderDesc"'), '#viewFocusPane must NOT contain retired #focusPlaceholderDesc');
+  assert(!html.includes('id="focusStatusText"'), '#viewFocusPane must NOT contain retired #focusStatusText');
+  assert(!html.includes('id="cardFocusModeToggle"'), '#viewFocusPane must NOT contain retired #cardFocusModeToggle');
+  assert(!html.includes('id="toggleRealTimeEditing"'), '#viewFocusPane must NOT contain retired #toggleRealTimeEditing');
+
   const wellnessIdx = html.indexOf('id="cardFocusWellness"');
   const focusPaneIdx = html.indexOf('id="viewFocusPane"');
   assert(wellnessIdx > focusPaneIdx, '#cardFocusWellness must be inside #viewFocusPane');
-  assert(html.includes('id="focusPlaceholderTitle"'), '#cardFocusPlaceholder must contain #focusPlaceholderTitle');
-  assert(html.includes('id="focusPlaceholderDesc"'), '#cardFocusPlaceholder must contain #focusPlaceholderDesc');
-  assert(html.includes('id="focusStatusText"'), '#cardFocusPlaceholder must contain #focusStatusText');
+  assert(html.includes('id="cardPopupFocusTimer"'), '#cardFocusWellness must contain #cardPopupFocusTimer');
 
   // Option in selectDefaultTab
   assert(html.includes('<option value="focus">'), '#selectDefaultTab must include option value="focus"');
 
   console.log('  ✅ #mainTabFocus correctly defined with data-group="wellness" and data-view="focus"');
-  console.log('  ✅ #viewFocusPane placeholder hero card integrated with icon, title, description, and status');
+  console.log('  ✅ Obsolete #cardFocusPlaceholder cleanly retired & #cardFocusWellness active in #viewFocusPane');
   console.log('  ✅ #selectDefaultTab includes "focus" option');
 }
 
@@ -321,17 +325,19 @@ console.log('\nBattery 5: 380px Fixed-Width Geometry & Zero-Scroll CSS');
   assert(css.includes('bottom: 48px;'), 'quick-settings-popover must declare bottom: 48px;');
   assert(css.includes('right: 8px;'), 'quick-settings-popover must declare right: 8px;');
 
-  // Focus card styling
-  assert(css.includes('.focus-hero-card'), 'popup.css must style .focus-hero-card');
-  assert(css.includes('.focus-placeholder-icon'), 'popup.css must style .focus-placeholder-icon');
-  assert(css.includes('.focus-placeholder-title'), 'popup.css must style .focus-placeholder-title');
+  // Focus card styling: Verify clean retirement of obsolete placeholder classes & active button accents preserved
+  assert(!css.includes('.focus-hero-card'), 'popup.css must not contain obsolete .focus-hero-card');
+  assert(!css.includes('.focus-placeholder-icon'), 'popup.css must not contain obsolete .focus-placeholder-icon');
+  assert(!css.includes('.focus-placeholder-title'), 'popup.css must not contain obsolete .focus-placeholder-title');
+  assert(!css.includes('.focus-placeholder-desc'), 'popup.css must not contain obsolete .focus-placeholder-desc');
+  assert(!css.includes('.focus-placeholder-badge'), 'popup.css must not contain obsolete .focus-placeholder-badge');
 
   // Focus tab active accent in tabsCss or css
   assert(tabsCss.includes('[data-view="focus"].active') || css.includes('[data-view="focus"].active'), 'Tabs style must declare active accent for focus tab');
 
   console.log('  ✅ Fixed 380px width & overflow-x: hidden geometry certified');
   console.log('  ✅ .quick-settings-popover correctly configured as bottom-docked popover (bottom: 48px; right: 8px;)');
-  console.log('  ✅ Focus placeholder card and active button accents styled for dark and light modes');
+  console.log('  ✅ Obsolete focus placeholder CSS retired cleanly & active focus tab accents preserved');
 }
 
 // ===========================================================================
