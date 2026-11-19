@@ -808,44 +808,65 @@
         </section>
 
         <!-- Focus Ratio Balance Bar -->
-        <div id="focusRatioBarContainer" class="focus-ratio-container">
+        <div id="focusRatioBarContainer" class="focus-ratio-container focus-ratio-card">
           <div class="focus-ratio-header">
-            <span class="focus-ratio-title">⚖️ Focus Ratio</span>
-            <span id="focusRatioPercentText" class="focus-ratio-readout">75% Productive</span>
-            <span id="focusRatioText" class="hidden">75% Productive</span>
+            <div class="focus-ratio-title-wrap">
+              <span class="focus-ratio-icon" aria-hidden="true">⚖️</span>
+              <span class="focus-ratio-title" id="lblFocusRatioTitle">Focus Ratio</span>
+            </div>
+            <span id="focusRatioPercentText" class="focus-ratio-readout ratio-badge ratio-optimal" title="Overall Productive Browsing Ratio">75% Productive</span>
+            <span id="focusRatioText" class="hidden" aria-hidden="true">75% Productive</span>
           </div>
-          <div class="ratio-progress-track">
+          <div class="ratio-progress-track" role="progressbar" aria-label="Productivity Balance Ratio" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
             <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
             <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
-            <div id="focusRatioProductiveBar" class="hidden"></div>
+            <div id="focusRatioProductiveBar" class="hidden" aria-hidden="true"></div>
           </div>
           <div class="ratio-labels-row">
-            <span class="ratio-lbl prod">🟢 Productive</span>
-            <span class="ratio-lbl ent">🟠 Media & Social</span>
+            <div class="ratio-lbl ratio-pill prod" id="focusRatioProdPill" title="Productive Work Browsing">
+              <span class="ratio-dot dot-prod" aria-hidden="true">🟢</span>
+              <span class="ratio-lbl-name" id="lblRatioWork">Work:</span>
+              <span id="focusRatioProdPct" class="ratio-pct-val">75%</span>
+            </div>
+            <div class="ratio-lbl ratio-pill ent" id="focusRatioEntPill" title="Entertainment & Media Browsing">
+              <span class="ratio-dot dot-ent" aria-hidden="true">🟠</span>
+              <span class="ratio-lbl-name" id="lblRatioMedia">Media:</span>
+              <span id="focusRatioEntPct" class="ratio-pct-val">25%</span>
+            </div>
           </div>
         </div>
 
-        <!-- Doomscroll Breaker Card -->
-        <div id="doomscrollBreakerCard" class="doomscroll-breaker-row">
+        <!-- Doomscroll Breaker Micro-Card -->
+        <div id="doomscrollBreakerCard" class="doomscroll-breaker-card doomscroll-breaker-row">
           <div class="doomscroll-info">
-            <span class="doomscroll-title">🛑 Doomscroll Breaker</span>
-            <span class="doomscroll-sub">Gentle pause nudge every</span>
+            <div class="doomscroll-title-wrap">
+              <span class="doomscroll-icon-badge" aria-hidden="true">🛑</span>
+              <span class="doomscroll-title" id="lblDoomscrollTitle">Doomscroll Breaker</span>
+              <span id="doomscrollStatusBadge" class="doomscroll-status-badge standby">
+                <span class="doomscroll-status-dot" aria-hidden="true"></span>
+                <span id="doomscrollStatusText" class="doomscroll-status-text">Standby</span>
+              </span>
+            </div>
+            <span class="doomscroll-sub" id="lblDoomscrollSub">Gentle pause nudge every</span>
           </div>
           <div class="doomscroll-controls">
-            <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval">
-              <option value="15">15 min</option>
-              <option value="30" selected>30 min</option>
-              <option value="45">45 min</option>
-              <option value="60">60 min</option>
-            </select>
+            <div class="doomscroll-select-wrap">
+              <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval" title="Nudge Frequency Interval">
+                <option value="15">15 min</option>
+                <option value="30" selected>30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">60 min</option>
+              </select>
+              <span class="doomscroll-chevron" aria-hidden="true">▾</span>
+            </div>
             <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
               <option value="15">15 min</option>
               <option value="30" selected>30 min</option>
               <option value="45">45 min</option>
               <option value="60">60 min</option>
             </select>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleDoomscrollBreaker">
+            <label class="switch-toggle-sm doomscroll-switch" title="Toggle Doomscroll Breaker">
+              <input type="checkbox" id="toggleDoomscrollBreaker" aria-label="Toggle Doomscroll Breaker">
               <span class="slider-round-sm"></span>
             </label>
           </div>

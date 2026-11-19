@@ -511,5 +511,12 @@
   "top_tab_focus": "Focus",
   "focus_placeholder_title": "Focus & Productivity",
   "focus_placeholder_desc": "Deep work timer and digital wellness integration coming soon. Use the Sleep tab for bedtime routines.",
-  "focus_status_ready": "Focus Mode Ready"
+  "focus_status_ready": "Focus Mode Ready",
+  "focus_ratio_title": "Focus Ratio",
+  "focus_ratio_work": "Work:",
+  "focus_ratio_media": "Media:",
+  "doomscroll_title": "Doomscroll Breaker",
+  "doomscroll_sub": "Gentle pause nudge every",
+  "doomscroll_status_active": "Active",
+  "doomscroll_status_standby": "Standby"
 }

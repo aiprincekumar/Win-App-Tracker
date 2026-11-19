@@ -305,7 +305,16 @@ const I18N_POPUP = {
     toast_focus_paused: 'Focus timer paused',
     toast_focus_resumed: 'Focus timer resumed',
     toast_focus_reset: 'Focus timer reset',
-    toast_focus_valid_duration: 'Enter valid duration (1-720 min)'
+    toast_focus_valid_duration: 'Enter valid duration (1-720 min)',
+    
+    // Focus Ratio & Doomscroll Breaker Elevation
+    focus_ratio_title: 'Focus Ratio',
+    focus_ratio_work: 'Work:',
+    focus_ratio_media: 'Media:',
+    doomscroll_title: 'Doomscroll Breaker',
+    doomscroll_sub: 'Gentle pause nudge every',
+    doomscroll_status_active: 'Active',
+    doomscroll_status_standby: 'Standby'
   },
   hi: {
     brand_subtitle: 'गतिविधि व मीडिया टेलीमेट्री',
@@ -486,7 +495,16 @@ const I18N_POPUP = {
     toast_focus_paused: 'फ़ोकस टाइमर रोका गया',
     toast_focus_resumed: 'फ़ोकस टाइमर फिर से शुरू हुआ',
     toast_focus_reset: 'फ़ोकस टाइमर रीसेट हुआ',
-    toast_focus_valid_duration: 'मान्य अवधि दर्ज करें (1-720 मिनट)'
+    toast_focus_valid_duration: 'मान्य अवधि दर्ज करें (1-720 मिनट)',
+    
+    // Focus Ratio & Doomscroll Breaker Elevation
+    focus_ratio_title: 'फ़ोकस अनुपात',
+    focus_ratio_work: 'कार्य:',
+    focus_ratio_media: 'मीडिया:',
+    doomscroll_title: 'डूमस्क्रॉल ब्रेकर',
+    doomscroll_sub: 'प्रत्येक अंतराल पर विराम चेतावनी',
+    doomscroll_status_active: 'सक्रिय',
+    doomscroll_status_standby: 'स्टैंडबाय'
   }
 };
 
@@ -713,6 +731,14 @@ function applyPopupLanguage(lang) {
   setTitle('btnPopupFocusReduce5m', 'btn_focus_reduce_5m_title');
   setTitle('btnPopupFocusExtend5m', 'btn_focus_extend_5m_title');
   setTitle('btnPopupFocusReset', 'btn_focus_reset_title');
+
+  // Focus Ratio & Doomscroll Breaker Localization
+  setTxt('lblFocusRatioTitle', 'focus_ratio_title');
+  setTxt('lblRatioWork', 'focus_ratio_work');
+  setTxt('lblRatioMedia', 'focus_ratio_media');
+  setTxt('lblDoomscrollTitle', 'doomscroll_title');
+  setTxt('lblDoomscrollSub', 'doomscroll_sub');
+  updateDoomscrollStatusUI(Boolean(focusSettings && focusSettings.doomscroll_enabled));
 
   updateThemeToggleUI(currentTheme);
 
@@ -2512,7 +2538,17 @@ function updateFocusRatio(items, totalSeconds) {
   const ratioText = document.getElementById('focusRatioPercentText') || document.getElementById('focusRatioText');
   if (prodBar) prodBar.style.width = prodPercent + '%';
   if (entBar) entBar.style.width = entPercent + '%';
-  if (ratioText) ratioText.textContent = `${prodPercent}% Productive`;
+  if (ratioText) {
+    ratioText.textContent = `${prodPercent}% Productive`;
+    ratioText.classList.toggle('ratio-optimal', prodPercent >= 50);
+    ratioText.classList.toggle('ratio-warning', prodPercent < 50);
+  }
+  const prodPctEl = document.getElementById('focusRatioProdPct');
+  const entPctEl = document.getElementById('focusRatioEntPct');
+  if (prodPctEl) prodPctEl.textContent = `${prodPercent}%`;
+  if (entPctEl) entPctEl.textContent = `${entPercent}%`;
+  const track = document.querySelector('.ratio-progress-track');
+  if (track) track.setAttribute('aria-valuenow', String(prodPercent));
 }
 
 let popupListenersAttached = false;
@@ -3423,12 +3459,30 @@ function setupEventListeners() {
     };
   }
 
+function updateDoomscrollStatusUI(isEnabled) {
+  const badge = document.getElementById('doomscrollStatusBadge');
+  const text = document.getElementById('doomscrollStatusText');
+  const card = document.getElementById('doomscrollBreakerCard');
+  const active = Boolean(isEnabled);
+  if (badge) {
+    badge.classList.toggle('active', active);
+    badge.classList.toggle('standby', !active);
+  }
+  if (text) {
+    text.textContent = active ? t('doomscroll_status_active') : t('doomscroll_status_standby');
+  }
+  if (card) {
+    card.classList.toggle('active-nudge', active);
+  }
+}
+
   // Focus & Digital Wellness
   const toggleDoomscroll = document.getElementById('toggleDoomscrollBreaker');
   const selectDoomscroll = document.getElementById('selectDoomscrollInterval') || document.getElementById('doomscrollIntervalSelect');
   if (toggleDoomscroll) {
     toggleDoomscroll.addEventListener('change', () => {
       focusSettings.doomscroll_enabled = toggleDoomscroll.checked;
+      updateDoomscrollStatusUI(focusSettings.doomscroll_enabled);
       browserAPI.storage.local.set({ focus_settings: focusSettings });
       showPopupToast(focusSettings.doomscroll_enabled ? 'Doomscroll breaker enabled' : 'Doomscroll breaker disabled');
     });
@@ -5120,6 +5174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tDoom) tDoom.checked = Boolean(focusSettings.doomscroll_enabled);
       const sDoom = document.getElementById('selectDoomscrollInterval') || document.getElementById('doomscrollIntervalSelect');
       if (sDoom) sDoom.value = String(focusSettings.doomscroll_interval_minutes || 30);
+      updateDoomscrollStatusUI(focusSettings.doomscroll_enabled);
     }
 
     if (res && res.quick_settings) {

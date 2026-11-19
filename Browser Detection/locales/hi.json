@@ -511,5 +511,12 @@
   "top_tab_focus": "फ़ोकस",
   "focus_placeholder_title": "फ़ोकस और उत्पादकता",
   "focus_placeholder_desc": "गहन कार्य टाइमर और डिजिटल वेलनेस एकीकरण जल्द आ रहा है। सोने की दिनचर्या के लिए स्लीप टैब का उपयोग करें।",
-  "focus_status_ready": "फ़ोकस मोड तैयार"
+  "focus_status_ready": "फ़ोकस मोड तैयार",
+  "focus_ratio_title": "फ़ोकस अनुपात",
+  "focus_ratio_work": "कार्य:",
+  "focus_ratio_media": "मीडिया:",
+  "doomscroll_title": "डूमस्क्रॉल ब्रेकर",
+  "doomscroll_sub": "प्रत्येक अंतराल पर विराम चेतावनी",
+  "doomscroll_status_active": "सक्रिय",
+  "doomscroll_status_standby": "स्टैंडबाय"
 }
