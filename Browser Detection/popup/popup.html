@@ -626,94 +626,108 @@
         </div>
       </section>
 
-      <!-- 2. Presets & Custom Duration Card -->
-      <section id="cardSleepPresetsAndCustom" class="sleep-section-card">
-        <div class="section-micro-header">
-          <span class="micro-icon">⏱️</span>
-          <span class="micro-heading">DURATION PRESETS</span>
-        </div>
-        <div class="sleep-tab-presets-grid">
-          <button class="sleep-tab-preset-btn" data-minutes="15">15m</button>
-          <button class="sleep-tab-preset-btn" data-minutes="30">30m</button>
-          <button class="sleep-tab-preset-btn" data-minutes="45">45m</button>
-          <button class="sleep-tab-preset-btn" data-minutes="60">60m</button>
-          <button class="sleep-tab-preset-btn" data-minutes="90">90m</button>
-          <button class="sleep-tab-preset-btn" data-minutes="120">120m</button>
-        </div>
+      <!-- Collapsible Settings Drawer -->
+      <div id="sleepSettingsDrawer" class="popup-settings-drawer">
+        <button type="button" id="btnToggleSleepSettingsDrawer" class="drawer-toggle-btn" aria-expanded="false" aria-controls="sleepSettingsDrawerBody" title="Toggle Presets and Automations">
+          <div class="drawer-title-wrap">
+            <span class="drawer-icon" aria-hidden="true">⚙️</span>
+            <span class="drawer-title" id="lblSleepDrawerTitle">Presets & Automations</span>
+          </div>
+          <span class="drawer-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="sleepSettingsDrawerBody" class="drawer-expandable-wrap" role="region" aria-labelledby="btnToggleSleepSettingsDrawer">
+          <div class="drawer-inner-content">
+            <!-- 2. Presets & Custom Duration Card -->
+            <section id="cardSleepPresetsAndCustom" class="sleep-section-card">
+              <div class="section-micro-header">
+                <span class="micro-icon">⏱️</span>
+                <span class="micro-heading">DURATION PRESETS</span>
+              </div>
+              <div class="sleep-tab-presets-grid">
+                <button class="sleep-tab-preset-btn" data-minutes="15">15m</button>
+                <button class="sleep-tab-preset-btn" data-minutes="30">30m</button>
+                <button class="sleep-tab-preset-btn" data-minutes="45">45m</button>
+                <button class="sleep-tab-preset-btn" data-minutes="60">60m</button>
+                <button class="sleep-tab-preset-btn" data-minutes="90">90m</button>
+                <button class="sleep-tab-preset-btn" data-minutes="120">120m</button>
+              </div>
 
-        <!-- Custom Minute Input Form -->
-        <div class="sleep-custom-input-row">
-          <label for="inputSleepCustomMinutes" class="sleep-custom-label">Custom Duration:</label>
-          <div class="sleep-custom-input-wrap">
-            <input type="number" id="inputSleepCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="sleep-custom-input">
-            <input type="hidden" id="sleepCustomMinutesInput">
-            <button id="btnSetSleepCustom" class="btn-sleep-set-custom">Set</button>
+              <!-- Custom Minute Input Form -->
+              <div class="sleep-custom-input-row">
+                <label for="inputSleepCustomMinutes" class="sleep-custom-label">Custom Duration:</label>
+                <div class="sleep-custom-input-wrap">
+                  <input type="number" id="inputSleepCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="sleep-custom-input">
+                  <input type="hidden" id="sleepCustomMinutesInput">
+                  <button id="btnSetSleepCustom" class="btn-sleep-set-custom">Set</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- 3. Smart Sleep Automations Card -->
+            <section id="cardSleepAutomations" class="sleep-section-card">
+              <div class="section-micro-header">
+                <span class="micro-icon">✨</span>
+                <span class="micro-heading">SLEEP AUTOMATIONS</span>
+              </div>
+
+              <!-- Toggle 1: End of Video Smart Pause -->
+              <div class="sleep-toggle-row">
+                <div class="sleep-toggle-info">
+                  <span class="sleep-toggle-title">End of Current Video</span>
+                  <span class="sleep-toggle-sub">Pause cleanly when active video ends</span>
+                </div>
+                <label class="switch-toggle-sm">
+                  <input type="checkbox" id="toggleSleepEndOfVideo" checked>
+                  <span class="slider-round-sm"></span>
+                </label>
+              </div>
+
+              <!-- Toggle 2: Audio Decibel Fade-out Curve -->
+              <div class="sleep-toggle-row">
+                <div class="sleep-toggle-info">
+                  <span class="sleep-toggle-title">Audio Fade-Out Curve</span>
+                  <span class="sleep-toggle-sub">30s gentle volume decrease</span>
+                </div>
+                <div class="sleep-toggle-controls" style="display:flex;align-items:center;gap:6px;">
+                  <select id="selectSleepFadeCurve" class="setting-select-sm" aria-label="Fade Curve Duration" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:1px 3px;">
+                    <option value="30" selected>30s</option>
+                    <option value="60">60s</option>
+                  </select>
+                  <label class="switch-toggle-sm">
+                    <input type="checkbox" id="toggleSleepFadeCurve" checked>
+                    <span class="slider-round-sm"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Toggle 3: Inactivity Sentinel Auto-Sleep -->
+              <div class="sleep-toggle-row">
+                <div class="sleep-toggle-info">
+                  <span class="sleep-toggle-title">Inactivity Auto-Sleep</span>
+                  <span class="sleep-toggle-sub">Pause playback if idle for 15m</span>
+                </div>
+                <label class="switch-toggle-sm">
+                  <input type="checkbox" id="toggleSleepInactivitySentinel">
+                  <span class="slider-round-sm"></span>
+                </label>
+              </div>
+
+              <!-- Option: Sleep Timeout Action -->
+              <div class="sleep-toggle-row">
+                <div class="sleep-toggle-info">
+                  <span class="sleep-toggle-title">On Timeout Action</span>
+                  <span class="sleep-toggle-sub">Action when timer reaches zero</span>
+                </div>
+                <select id="selectSleepTimeoutAction" class="setting-select-sm" aria-label="Sleep Timeout Action" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:2px 4px;">
+                  <option value="pause" selected>Pause Playback</option>
+                  <option value="mute">Mute Audio</option>
+                  <option value="close_tab">Close Media Tab</option>
+                </select>
+              </div>
+            </section>
           </div>
         </div>
-      </section>
-
-      <!-- 3. Smart Sleep Automations Card -->
-      <section id="cardSleepAutomations" class="sleep-section-card">
-        <div class="section-micro-header">
-          <span class="micro-icon">✨</span>
-          <span class="micro-heading">SLEEP AUTOMATIONS</span>
-        </div>
-
-        <!-- Toggle 1: End of Video Smart Pause -->
-        <div class="sleep-toggle-row">
-          <div class="sleep-toggle-info">
-            <span class="sleep-toggle-title">End of Current Video</span>
-            <span class="sleep-toggle-sub">Pause cleanly when active video ends</span>
-          </div>
-          <label class="switch-toggle-sm">
-            <input type="checkbox" id="toggleSleepEndOfVideo" checked>
-            <span class="slider-round-sm"></span>
-          </label>
-        </div>
-
-        <!-- Toggle 2: Audio Decibel Fade-out Curve -->
-        <div class="sleep-toggle-row">
-          <div class="sleep-toggle-info">
-            <span class="sleep-toggle-title">Audio Fade-Out Curve</span>
-            <span class="sleep-toggle-sub">30s gentle volume decrease</span>
-          </div>
-          <div class="sleep-toggle-controls" style="display:flex;align-items:center;gap:6px;">
-            <select id="selectSleepFadeCurve" class="setting-select-sm" aria-label="Fade Curve Duration" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:1px 3px;">
-              <option value="30" selected>30s</option>
-              <option value="60">60s</option>
-            </select>
-            <label class="switch-toggle-sm">
-              <input type="checkbox" id="toggleSleepFadeCurve" checked>
-              <span class="slider-round-sm"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Toggle 3: Inactivity Sentinel Auto-Sleep -->
-        <div class="sleep-toggle-row">
-          <div class="sleep-toggle-info">
-            <span class="sleep-toggle-title">Inactivity Auto-Sleep</span>
-            <span class="sleep-toggle-sub">Pause playback if idle for 15m</span>
-          </div>
-          <label class="switch-toggle-sm">
-            <input type="checkbox" id="toggleSleepInactivitySentinel">
-            <span class="slider-round-sm"></span>
-          </label>
-        </div>
-
-        <!-- Option: Sleep Timeout Action -->
-        <div class="sleep-toggle-row">
-          <div class="sleep-toggle-info">
-            <span class="sleep-toggle-title">On Timeout Action</span>
-            <span class="sleep-toggle-sub">Action when timer reaches zero</span>
-          </div>
-          <select id="selectSleepTimeoutAction" class="setting-select-sm" aria-label="Sleep Timeout Action" style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);color:var(--text-secondary);border-radius:4px;font-size:10px;padding:2px 4px;">
-            <option value="pause" selected>Pause Playback</option>
-            <option value="mute">Mute Audio</option>
-            <option value="close_tab">Close Media Tab</option>
-          </select>
-        </div>
-      </section>
+      </div>
     </div>
 
     <!-- TAB 8: Dedicated Focus View Pane -->
@@ -780,95 +794,109 @@
           </div>
         </div>
 
-        <!-- Presets & Custom Duration Card -->
-        <section id="cardFocusPresetsAndCustom" class="focus-section-card">
-          <div class="section-micro-header">
-            <span class="micro-icon">⏱️</span>
-            <span class="micro-heading">DURATION PRESETS</span>
-          </div>
-          <div class="focus-tab-presets-grid">
-            <button type="button" class="focus-tab-preset-btn" data-minutes="15">15m</button>
-            <button type="button" class="focus-tab-preset-btn active" data-minutes="25">25m</button>
-            <button type="button" class="focus-tab-preset-btn" data-minutes="30">30m</button>
-            <button type="button" class="focus-tab-preset-btn" data-minutes="45">45m</button>
-            <button type="button" class="focus-tab-preset-btn" data-minutes="50">50m</button>
-            <button type="button" class="focus-tab-preset-btn" data-minutes="60">60m</button>
-          </div>
+        <!-- Collapsible Settings Drawer -->
+        <div id="focusSettingsDrawer" class="popup-settings-drawer">
+          <button type="button" id="btnToggleFocusSettingsDrawer" class="drawer-toggle-btn" aria-expanded="false" aria-controls="focusSettingsDrawerBody" title="Toggle Presets and Wellness Tools">
+            <div class="drawer-title-wrap">
+              <span class="drawer-icon" aria-hidden="true">⚙️</span>
+              <span class="drawer-title" id="lblFocusDrawerTitle">Presets & Wellness Tools</span>
+            </div>
+            <span class="drawer-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div id="focusSettingsDrawerBody" class="drawer-expandable-wrap" role="region" aria-labelledby="btnToggleFocusSettingsDrawer">
+            <div class="drawer-inner-content">
+              <!-- Presets & Custom Duration Card -->
+              <section id="cardFocusPresetsAndCustom" class="focus-section-card">
+                <div class="section-micro-header">
+                  <span class="micro-icon">⏱️</span>
+                  <span class="micro-heading">DURATION PRESETS</span>
+                </div>
+                <div class="focus-tab-presets-grid">
+                  <button type="button" class="focus-tab-preset-btn" data-minutes="15">15m</button>
+                  <button type="button" class="focus-tab-preset-btn active" data-minutes="25">25m</button>
+                  <button type="button" class="focus-tab-preset-btn" data-minutes="30">30m</button>
+                  <button type="button" class="focus-tab-preset-btn" data-minutes="45">45m</button>
+                  <button type="button" class="focus-tab-preset-btn" data-minutes="50">50m</button>
+                  <button type="button" class="focus-tab-preset-btn" data-minutes="60">60m</button>
+                </div>
 
-          <!-- Custom Minute Input Form -->
-          <div class="focus-custom-input-row">
-            <label for="inputFocusCustomMinutes" class="focus-custom-label">Custom Duration:</label>
-            <div class="focus-custom-input-wrap">
-              <input type="number" id="inputFocusCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="focus-custom-input">
-              <input type="hidden" id="inputPopupFocusCustomMinutes">
-              <button type="button" id="btnSetFocusCustom" class="btn-focus-set-custom">Set</button>
-              <button type="button" id="btnSetPopupFocusCustom" style="display:none;" aria-hidden="true">Set</button>
-            </div>
-          </div>
-        </section>
+                <!-- Custom Minute Input Form -->
+                <div class="focus-custom-input-row">
+                  <label for="inputFocusCustomMinutes" class="focus-custom-label">Custom Duration:</label>
+                  <div class="focus-custom-input-wrap">
+                    <input type="number" id="inputFocusCustomMinutes" min="1" max="1440" placeholder="Min (1-1440)" class="focus-custom-input">
+                    <input type="hidden" id="inputPopupFocusCustomMinutes">
+                    <button type="button" id="btnSetFocusCustom" class="btn-focus-set-custom">Set</button>
+                    <button type="button" id="btnSetPopupFocusCustom" style="display:none;" aria-hidden="true">Set</button>
+                  </div>
+                </div>
+              </section>
 
-        <!-- Focus Ratio Balance Bar -->
-        <div id="focusRatioBarContainer" class="focus-ratio-container focus-ratio-card">
-          <div class="focus-ratio-header">
-            <div class="focus-ratio-title-wrap">
-              <span class="focus-ratio-icon" aria-hidden="true">⚖️</span>
-              <span class="focus-ratio-title" id="lblFocusRatioTitle">Focus Ratio</span>
-            </div>
-            <span id="focusRatioPercentText" class="focus-ratio-readout ratio-badge ratio-optimal" title="Overall Productive Browsing Ratio">75% Productive</span>
-            <span id="focusRatioText" class="hidden" aria-hidden="true">75% Productive</span>
-          </div>
-          <div class="ratio-progress-track" role="progressbar" aria-label="Productivity Balance Ratio" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-            <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
-            <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
-            <div id="focusRatioProductiveBar" class="hidden" aria-hidden="true"></div>
-          </div>
-          <div class="ratio-labels-row">
-            <div class="ratio-lbl ratio-pill prod" id="focusRatioProdPill" title="Productive Work Browsing">
-              <span class="ratio-dot dot-prod" aria-hidden="true">🟢</span>
-              <span class="ratio-lbl-name" id="lblRatioWork">Work:</span>
-              <span id="focusRatioProdPct" class="ratio-pct-val">75%</span>
-            </div>
-            <div class="ratio-lbl ratio-pill ent" id="focusRatioEntPill" title="Entertainment & Media Browsing">
-              <span class="ratio-dot dot-ent" aria-hidden="true">🟠</span>
-              <span class="ratio-lbl-name" id="lblRatioMedia">Media:</span>
-              <span id="focusRatioEntPct" class="ratio-pct-val">25%</span>
-            </div>
-          </div>
-        </div>
+              <!-- Focus Ratio Balance Bar -->
+              <div id="focusRatioBarContainer" class="focus-ratio-container focus-ratio-card">
+                <div class="focus-ratio-header">
+                  <div class="focus-ratio-title-wrap">
+                    <span class="focus-ratio-icon" aria-hidden="true">⚖️</span>
+                    <span class="focus-ratio-title" id="lblFocusRatioTitle">Focus Ratio</span>
+                  </div>
+                  <span id="focusRatioPercentText" class="focus-ratio-readout ratio-badge ratio-optimal" title="Overall Productive Browsing Ratio">75% Productive</span>
+                  <span id="focusRatioText" class="hidden" aria-hidden="true">75% Productive</span>
+                </div>
+                <div class="ratio-progress-track" role="progressbar" aria-label="Productivity Balance Ratio" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
+                  <div id="focusRatioProductiveFill" class="ratio-bar-productive" style="width: 75%;" title="Productive Browsing"></div>
+                  <div id="focusRatioEntertainmentBar" class="ratio-bar-entertainment" style="width: 25%;" title="Entertainment / Social Media"></div>
+                  <div id="focusRatioProductiveBar" class="hidden" aria-hidden="true"></div>
+                </div>
+                <div class="ratio-labels-row">
+                  <div class="ratio-lbl ratio-pill prod" id="focusRatioProdPill" title="Productive Work Browsing">
+                    <span class="ratio-dot dot-prod" aria-hidden="true">🟢</span>
+                    <span class="ratio-lbl-name" id="lblRatioWork">Work:</span>
+                    <span id="focusRatioProdPct" class="ratio-pct-val">75%</span>
+                  </div>
+                  <div class="ratio-lbl ratio-pill ent" id="focusRatioEntPill" title="Entertainment & Media Browsing">
+                    <span class="ratio-dot dot-ent" aria-hidden="true">🟠</span>
+                    <span class="ratio-lbl-name" id="lblRatioMedia">Media:</span>
+                    <span id="focusRatioEntPct" class="ratio-pct-val">25%</span>
+                  </div>
+                </div>
+              </div>
 
-        <!-- Doomscroll Breaker Micro-Card -->
-        <div id="doomscrollBreakerCard" class="doomscroll-breaker-card doomscroll-breaker-row">
-          <div class="doomscroll-info">
-            <div class="doomscroll-title-wrap">
-              <span class="doomscroll-icon-badge" aria-hidden="true">🛑</span>
-              <span class="doomscroll-title" id="lblDoomscrollTitle">Doomscroll Breaker</span>
-              <span id="doomscrollStatusBadge" class="doomscroll-status-badge standby">
-                <span class="doomscroll-status-dot" aria-hidden="true"></span>
-                <span id="doomscrollStatusText" class="doomscroll-status-text">Standby</span>
-              </span>
+              <!-- Doomscroll Breaker Micro-Card -->
+              <div id="doomscrollBreakerCard" class="doomscroll-breaker-card doomscroll-breaker-row">
+                <div class="doomscroll-info">
+                  <div class="doomscroll-title-wrap">
+                    <span class="doomscroll-icon-badge" aria-hidden="true">🛑</span>
+                    <span class="doomscroll-title" id="lblDoomscrollTitle">Doomscroll Breaker</span>
+                    <span id="doomscrollStatusBadge" class="doomscroll-status-badge standby">
+                      <span class="doomscroll-status-dot" aria-hidden="true"></span>
+                      <span id="doomscrollStatusText" class="doomscroll-status-text">Standby</span>
+                    </span>
+                  </div>
+                  <span class="doomscroll-sub" id="lblDoomscrollSub">Gentle pause nudge every</span>
+                </div>
+                <div class="doomscroll-controls">
+                  <div class="doomscroll-select-wrap">
+                    <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval" title="Nudge Frequency Interval">
+                      <option value="15">15 min</option>
+                      <option value="30" selected>30 min</option>
+                      <option value="45">45 min</option>
+                      <option value="60">60 min</option>
+                    </select>
+                    <span class="doomscroll-chevron" aria-hidden="true">▾</span>
+                  </div>
+                  <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">60 min</option>
+                  </select>
+                  <label class="switch-toggle-sm doomscroll-switch" title="Toggle Doomscroll Breaker">
+                    <input type="checkbox" id="toggleDoomscrollBreaker" aria-label="Toggle Doomscroll Breaker">
+                    <span class="slider-round-sm"></span>
+                  </label>
+                </div>
+              </div>
             </div>
-            <span class="doomscroll-sub" id="lblDoomscrollSub">Gentle pause nudge every</span>
-          </div>
-          <div class="doomscroll-controls">
-            <div class="doomscroll-select-wrap">
-              <select id="selectDoomscrollInterval" class="doomscroll-select" aria-label="Nudge Interval" title="Nudge Frequency Interval">
-                <option value="15">15 min</option>
-                <option value="30" selected>30 min</option>
-                <option value="45">45 min</option>
-                <option value="60">60 min</option>
-              </select>
-              <span class="doomscroll-chevron" aria-hidden="true">▾</span>
-            </div>
-            <select id="doomscrollIntervalSelect" class="hidden" aria-hidden="true">
-              <option value="15">15 min</option>
-              <option value="30" selected>30 min</option>
-              <option value="45">45 min</option>
-              <option value="60">60 min</option>
-            </select>
-            <label class="switch-toggle-sm doomscroll-switch" title="Toggle Doomscroll Breaker">
-              <input type="checkbox" id="toggleDoomscrollBreaker" aria-label="Toggle Doomscroll Breaker">
-              <span class="slider-round-sm"></span>
-            </label>
           </div>
         </div>
       </section>

@@ -314,7 +314,13 @@ const I18N_POPUP = {
     doomscroll_title: 'Doomscroll Breaker',
     doomscroll_sub: 'Gentle pause nudge every',
     doomscroll_status_active: 'Active',
-    doomscroll_status_standby: 'Standby'
+    doomscroll_status_standby: 'Standby',
+
+    // Collapsible Settings Drawers
+    sleep_drawer_title: 'Presets & Automations',
+    focus_drawer_title: 'Presets & Wellness Tools',
+    drawer_expand_tooltip: 'Expand Settings',
+    drawer_collapse_tooltip: 'Collapse Settings'
   },
   hi: {
     brand_subtitle: 'गतिविधि व मीडिया टेलीमेट्री',
@@ -504,7 +510,13 @@ const I18N_POPUP = {
     doomscroll_title: 'डूमस्क्रॉल ब्रेकर',
     doomscroll_sub: 'प्रत्येक अंतराल पर विराम चेतावनी',
     doomscroll_status_active: 'सक्रिय',
-    doomscroll_status_standby: 'स्टैंडबाय'
+    doomscroll_status_standby: 'स्टैंडबाय',
+
+    // Collapsible Settings Drawers
+    sleep_drawer_title: 'प्रीसेट और ऑटोमेशन',
+    focus_drawer_title: 'प्रीसेट और वेलनेस टूल्स',
+    drawer_expand_tooltip: 'सेटिंग्स खोलें',
+    drawer_collapse_tooltip: 'सेटिंग्स बंद करें'
   }
 };
 
@@ -739,6 +751,10 @@ function applyPopupLanguage(lang) {
   setTxt('lblDoomscrollTitle', 'doomscroll_title');
   setTxt('lblDoomscrollSub', 'doomscroll_sub');
   updateDoomscrollStatusUI(Boolean(focusSettings && focusSettings.doomscroll_enabled));
+
+  // Collapsible Settings Drawers Localization
+  setTxt('lblSleepDrawerTitle', 'sleep_drawer_title');
+  setTxt('lblFocusDrawerTitle', 'focus_drawer_title');
 
   updateThemeToggleUI(currentTheme);
 
@@ -4989,10 +5005,67 @@ function updateDoomscrollStatusUI(isEnabled) {
   }
 }
 
+// =============================================================================
+// Collapsible Settings Drawers (Zero-Scroll Pattern & Storage Persistence)
+// =============================================================================
+
+/**
+ * Initializes an accessible, persistent collapsible drawer in the popup.
+ * Adheres to W3C Trusted Types zero-innerHTML and Universal Rule 28 (<= 50 lines).
+ */
+function initCollapsibleDrawer(drawerId, toggleBtnId, bodyId, storageKey) {
+  const drawerEl = document.getElementById(drawerId);
+  const toggleBtn = document.getElementById(toggleBtnId);
+  if (!drawerEl || !toggleBtn) return;
+
+  function updateDrawerState(isOpen, persist = true) {
+    drawerEl.classList.toggle('open', isOpen);
+    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    const storage = (typeof chrome !== 'undefined' && chrome.storage?.local)
+      ? chrome.storage.local
+      : (typeof browserAPI !== 'undefined' && browserAPI?.storage?.local ? browserAPI.storage.local : null);
+    if (persist && storage) {
+      storage.set({ [storageKey]: isOpen });
+    }
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    const isCurrentlyOpen = drawerEl.classList.contains('open');
+    updateDrawerState(!isCurrentlyOpen, true);
+  });
+
+  const storage = (typeof chrome !== 'undefined' && chrome.storage?.local)
+    ? chrome.storage.local
+    : (typeof browserAPI !== 'undefined' && browserAPI?.storage?.local ? browserAPI.storage.local : null);
+  if (storage) {
+    storage.get([storageKey], (res) => {
+      if (res && res[storageKey] === true) {
+        updateDrawerState(true, false);
+      }
+    });
+  }
+}
+
+function initPopupCollapsibleDrawers() {
+  initCollapsibleDrawer(
+    'sleepSettingsDrawer', 
+    'btnToggleSleepSettingsDrawer', 
+    'sleepSettingsDrawerBody', 
+    'sleepSettingsDrawerOpen'
+  );
+  initCollapsibleDrawer(
+    'focusSettingsDrawer', 
+    'btnToggleFocusSettingsDrawer', 
+    'focusSettingsDrawerBody', 
+    'focusSettingsDrawerOpen'
+  );
+}
+
 // Bootstrap Initialization
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   syncSleepTimerState();
+  initPopupCollapsibleDrawers();
 
   if (!sleepTimerInterval) {
     sleepTimerInterval = setInterval(() => {
@@ -5297,6 +5370,8 @@ if (typeof window !== 'undefined') {
     DataHubService: _DataHubService,
     FeatureRegistry: _FeatureRegistry,
     PopupFeatureManager: _PopupFeatureManager,
-    FocusModeToggle: _FocusModeToggle
+    FocusModeToggle: _FocusModeToggle,
+    initCollapsibleDrawer: initCollapsibleDrawer,
+    initPopupCollapsibleDrawers: initPopupCollapsibleDrawers
   };
 }

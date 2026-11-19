@@ -518,5 +518,9 @@
   "doomscroll_title": "Doomscroll Breaker",
   "doomscroll_sub": "Gentle pause nudge every",
   "doomscroll_status_active": "Active",
-  "doomscroll_status_standby": "Standby"
+  "doomscroll_status_standby": "Standby",
+  "sleep_drawer_title": "Presets & Automations",
+  "focus_drawer_title": "Presets & Wellness Tools",
+  "drawer_expand_tooltip": "Expand Settings",
+  "drawer_collapse_tooltip": "Collapse Settings"
 }

@@ -12,6 +12,9 @@
   flex-direction: column;
   gap: 10px;
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  max-height: 540px;
+  scrollbar-width: thin;
 }
 
 #viewSleepPane.active {
@@ -397,4 +400,56 @@
   border-color: rgba(99, 102, 241, 0.4);
   color: #4338ca;
   box-shadow: 0 1px 4px rgba(99, 102, 241, 0.2);
+}
+
+/* ==========================================================================
+   5. Collapsible Sleep Settings Drawer Styles
+   ========================================================================== */
+#sleepSettingsDrawer.popup-settings-drawer {
+  margin-top: 4px;
+}
+
+#sleepSettingsDrawer .drawer-toggle-btn {
+  padding: 8px 10px;
+}
+
+#sleepSettingsDrawer .drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#sleepSettingsDrawer .drawer-icon {
+  font-size: 12px;
+}
+
+#sleepSettingsDrawer .drawer-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+#sleepSettingsDrawer .drawer-chevron {
+  font-size: 10px;
+}
+
+#sleepSettingsDrawer .drawer-expandable-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#sleepSettingsDrawer.open .drawer-expandable-wrap {
+  grid-template-rows: 1fr;
+}
+
+#sleepSettingsDrawer .drawer-inner-content {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+#sleepSettingsDrawer.open .drawer-inner-content {
+  opacity: 1;
 }

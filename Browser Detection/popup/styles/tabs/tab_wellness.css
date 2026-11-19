@@ -762,3 +762,61 @@ body.high-contrast-mode .doomscroll-select {
   border: 2px solid #ffffff !important;
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   Zero-Scroll & Collapsible Focus Settings Drawer Styles
+   ========================================================================== */
+#viewFocusPane {
+  overflow-y: auto;
+  max-height: 540px;
+  scrollbar-width: thin;
+}
+
+#focusSettingsDrawer.popup-settings-drawer {
+  margin-top: 4px;
+}
+
+#focusSettingsDrawer .drawer-toggle-btn {
+  padding: 8px 10px;
+}
+
+#focusSettingsDrawer .drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#focusSettingsDrawer .drawer-icon {
+  font-size: 12px;
+}
+
+#focusSettingsDrawer .drawer-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+#focusSettingsDrawer .drawer-chevron {
+  font-size: 10px;
+}
+
+#focusSettingsDrawer .drawer-expandable-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#focusSettingsDrawer.open .drawer-expandable-wrap {
+  grid-template-rows: 1fr;
+}
+
+#focusSettingsDrawer .drawer-inner-content {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+#focusSettingsDrawer.open .drawer-inner-content {
+  opacity: 1;
+}

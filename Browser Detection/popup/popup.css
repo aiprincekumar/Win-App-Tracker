@@ -5457,3 +5457,161 @@ body.high-contrast-mode .tier1-segmented-nav .tier1-nav-btn.active {
   color: #047857;
   box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
 }
+
+/* ==========================================================================
+   Collapsible Settings Drawer Architecture (Zero-Scroll Pattern)
+   ========================================================================== */
+.popup-settings-drawer {
+  margin-top: 8px;
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background: var(--bg-card, rgba(18, 24, 38, 0.65));
+  transition: border-color 200ms ease, background 200ms ease;
+  overflow: hidden;
+}
+
+.popup-settings-drawer:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.popup-settings-drawer.open {
+  border-color: rgba(129, 140, 248, 0.3);
+  background: var(--bg-card-active, rgba(18, 24, 38, 0.85));
+}
+
+.drawer-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: background 180ms ease;
+}
+
+.drawer-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-icon {
+  font-size: 12px;
+}
+
+.drawer-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary, #94a3b8);
+  transition: color 180ms ease;
+}
+
+.drawer-toggle-btn:hover .drawer-title,
+.popup-settings-drawer.open .drawer-title {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.drawer-chevron {
+  font-size: 10px;
+  color: var(--text-muted, #64748b);
+  display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), color 180ms ease;
+}
+
+.popup-settings-drawer.open .drawer-chevron {
+  transform: rotate(180deg);
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* 60fps Fluid Grid Transition */
+.drawer-expandable-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popup-settings-drawer.open .drawer-expandable-wrap {
+  grid-template-rows: 1fr;
+}
+
+.drawer-inner-content {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 200ms ease, padding 280ms ease;
+}
+
+.popup-settings-drawer.open .drawer-inner-content {
+  opacity: 1;
+  padding: 4px 4px 8px 4px;
+}
+
+/* Zero-Scroll Popup Height Adjustment */
+#viewSleepPane, #viewFocusPane {
+  overflow-y: auto;
+  max-height: 540px;
+  scrollbar-width: thin;
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] .popup-settings-drawer {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .popup-settings-drawer:hover {
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .popup-settings-drawer.open {
+  background: #ffffff;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+[data-theme="light"] .drawer-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .drawer-title {
+  color: #64748b;
+}
+
+[data-theme="light"] .drawer-toggle-btn:hover .drawer-title,
+[data-theme="light"] .popup-settings-drawer.open .drawer-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .drawer-chevron {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .popup-settings-drawer.open .drawer-chevron {
+  color: #475569;
+}
+
+/* Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .popup-settings-drawer,
+  .drawer-toggle-btn,
+  .drawer-title,
+  .drawer-chevron,
+  .drawer-expandable-wrap,
+  .drawer-inner-content {
+    transition: none !important;
+  }
+}

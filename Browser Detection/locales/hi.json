@@ -518,5 +518,9 @@
   "doomscroll_title": "डूमस्क्रॉल ब्रेकर",
   "doomscroll_sub": "प्रत्येक अंतराल पर विराम चेतावनी",
   "doomscroll_status_active": "सक्रिय",
-  "doomscroll_status_standby": "स्टैंडबाय"
+  "doomscroll_status_standby": "स्टैंडबाय",
+  "sleep_drawer_title": "प्रीसेट और ऑटोमेशन",
+  "focus_drawer_title": "प्रीसेट और वेलनेस टूल्स",
+  "drawer_expand_tooltip": "सेटिंग्स खोलें",
+  "drawer_collapse_tooltip": "सेटिंग्स बंद करें"
 }
