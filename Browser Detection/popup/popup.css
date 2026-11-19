@@ -109,16 +109,43 @@ body {
   user-select: none;
 }
 
-/* Custom Scrollbar */
-body::-webkit-scrollbar {
-  width: 5px;
+/* Custom Sleek Cyber-Dark Scrollbars (Native Scrollbar Suppression) */
+body,
+.tab-pane,
+.drawer-inner-content,
+.drawer-expandable-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
-body::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+
+body::-webkit-scrollbar,
+.tab-pane::-webkit-scrollbar,
+.drawer-inner-content::-webkit-scrollbar,
+.drawer-expandable-wrap::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
-body::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+
+body::-webkit-scrollbar-track,
+.tab-pane::-webkit-scrollbar-track,
+.drawer-inner-content::-webkit-scrollbar-track,
+.drawer-expandable-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb,
+.tab-pane::-webkit-scrollbar-thumb,
+.drawer-inner-content::-webkit-scrollbar-thumb,
+.drawer-expandable-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.tab-pane::-webkit-scrollbar-thumb:hover,
+.drawer-inner-content::-webkit-scrollbar-thumb:hover,
+.drawer-expandable-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .sentinel-app {
@@ -4005,11 +4032,25 @@ body.high-contrast-mode .doomscroll-select {
 }
 
 /* Custom Scrollbars in Light Mode */
-[data-theme="light"] body::-webkit-scrollbar {
-  width: 5px;
+[data-theme="light"] body,
+[data-theme="light"] .tab-pane,
+[data-theme="light"] .drawer-inner-content,
+[data-theme="light"] .drawer-expandable-wrap {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+[data-theme="light"] body::-webkit-scrollbar,
+[data-theme="light"] .tab-pane::-webkit-scrollbar,
+[data-theme="light"] .drawer-inner-content::-webkit-scrollbar,
+[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
 
 [data-theme="light"] body::-webkit-scrollbar-track,
+[data-theme="light"] .tab-pane::-webkit-scrollbar-track,
+[data-theme="light"] .drawer-inner-content::-webkit-scrollbar-track,
+[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar-track,
 [data-theme="light"] .domains-list::-webkit-scrollbar-track,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-track,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-track {
@@ -4017,18 +4058,24 @@ body.high-contrast-mode .doomscroll-select {
 }
 
 [data-theme="light"] body::-webkit-scrollbar-thumb,
+[data-theme="light"] .tab-pane::-webkit-scrollbar-thumb,
+[data-theme="light"] .drawer-inner-content::-webkit-scrollbar-thumb,
+[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar-thumb,
 [data-theme="light"] .domains-list::-webkit-scrollbar-thumb,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-thumb,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 999px;
 }
 
 [data-theme="light"] body::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .tab-pane::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .drawer-inner-content::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] .domains-list::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 /* 2. Header & Status Badges */

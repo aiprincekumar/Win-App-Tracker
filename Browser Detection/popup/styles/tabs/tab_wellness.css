@@ -770,41 +770,26 @@ body.high-contrast-mode .doomscroll-select {
   overflow-y: auto;
   max-height: 540px;
   scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.45) transparent;
+}
+
+.popup-focus-card {
+  flex-shrink: 0;
 }
 
 #focusSettingsDrawer.popup-settings-drawer {
   margin-top: 4px;
-}
-
-#focusSettingsDrawer .drawer-toggle-btn {
-  padding: 8px 10px;
-}
-
-#focusSettingsDrawer .drawer-title-wrap {
   display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-#focusSettingsDrawer .drawer-icon {
-  font-size: 12px;
-}
-
-#focusSettingsDrawer .drawer-title {
-  font-size: 10.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-#focusSettingsDrawer .drawer-chevron {
-  font-size: 10px;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 #focusSettingsDrawer .drawer-expandable-wrap {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 0;
 }
 
 #focusSettingsDrawer.open .drawer-expandable-wrap {
@@ -815,8 +800,68 @@ body.high-contrast-mode .doomscroll-select {
   min-height: 0;
   overflow: hidden;
   opacity: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px;
+  transition: opacity 200ms ease, padding 280ms ease;
 }
 
 #focusSettingsDrawer.open .drawer-inner-content {
   opacity: 1;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 4px 6px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.45) transparent;
+}
+
+/* Compact Drawer Internal Spacing */
+#focusSettingsDrawer .focus-section-card {
+  padding: 8px 10px;
+}
+
+#focusSettingsDrawer .focus-ratio-container,
+#focusSettingsDrawer .doomscroll-breaker-card {
+  margin-top: 0;
+}
+
+/* Sleek Cyber-Dark Scrollbars for Focus View */
+#viewFocusPane::-webkit-scrollbar,
+#focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+#viewFocusPane::-webkit-scrollbar-track,
+#focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#viewFocusPane::-webkit-scrollbar-thumb,
+#focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.45);
+  border-radius: 999px;
+}
+
+#viewFocusPane::-webkit-scrollbar-thumb:hover,
+#focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.75);
+}
+
+/* Light Theme Scrollbars for Focus View */
+[data-theme="light"] #viewFocusPane,
+[data-theme="light"] #focusSettingsDrawer .drawer-inner-content {
+  scrollbar-color: rgba(15, 118, 110, 0.35) transparent;
+}
+
+[data-theme="light"] #viewFocusPane::-webkit-scrollbar-thumb,
+[data-theme="light"] #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
+  background: rgba(15, 118, 110, 0.35);
+}
+
+[data-theme="light"] #viewFocusPane::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 118, 110, 0.6);
 }

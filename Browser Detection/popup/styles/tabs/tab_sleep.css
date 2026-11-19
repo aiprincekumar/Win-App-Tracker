@@ -12,9 +12,10 @@
   flex-direction: column;
   gap: 10px;
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow-y: auto;
+  overflow: hidden;
   max-height: 540px;
   scrollbar-width: thin;
+  scrollbar-color: rgba(129, 140, 248, 0.45) transparent;
 }
 
 #viewSleepPane.active {
@@ -25,6 +26,7 @@
    1. Radial Bedtime Dial Hero Card
    ========================================================================== */
 .sleep-hero-card {
+  flex-shrink: 0;
   background: rgba(18, 24, 38, 0.75);
   border: 1px solid rgba(129, 140, 248, 0.22);
   border-radius: 12px;
@@ -407,6 +409,10 @@
    ========================================================================== */
 #sleepSettingsDrawer.popup-settings-drawer {
   margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 #sleepSettingsDrawer .drawer-toggle-btn {
@@ -438,6 +444,7 @@
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 0;
 }
 
 #sleepSettingsDrawer.open .drawer-expandable-wrap {
@@ -448,8 +455,58 @@
   min-height: 0;
   overflow: hidden;
   opacity: 0;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: opacity 200ms ease, padding 280ms ease;
 }
 
 #sleepSettingsDrawer.open .drawer-inner-content {
   opacity: 1;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 4px 8px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(129, 140, 248, 0.45) transparent;
+}
+
+/* Custom Sleek Cyber-Dark Sleep Scrollbars */
+#viewSleepPane::-webkit-scrollbar,
+#sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+#viewSleepPane::-webkit-scrollbar-track,
+#sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#viewSleepPane::-webkit-scrollbar-thumb,
+#sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
+  background: rgba(129, 140, 248, 0.45);
+  border-radius: 999px;
+}
+
+#viewSleepPane::-webkit-scrollbar-thumb:hover,
+#sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.75);
+}
+
+/* Light Theme Overrides for Sleep Scrollbars */
+[data-theme="light"] #viewSleepPane,
+[data-theme="light"] #sleepSettingsDrawer .drawer-inner-content {
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+}
+
+[data-theme="light"] #viewSleepPane::-webkit-scrollbar-thumb,
+[data-theme="light"] #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+[data-theme="light"] #viewSleepPane::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.7);
 }
