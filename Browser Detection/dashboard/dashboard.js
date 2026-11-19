@@ -71,6 +71,7 @@ const _PrecisionScrubber = (typeof globalThis !== 'undefined' && globalThis.Prec
 const _FeatureRegistry = (typeof globalThis !== 'undefined' && globalThis.SentinelFeatureRegistry) ? globalThis.SentinelFeatureRegistry : _safeRequire('./src/core/feature_registry.js', '../src/core/feature_registry.js');
 const _DashboardFeatureManager = (typeof globalThis !== 'undefined' && globalThis.DashboardFeatureManager) ? globalThis.DashboardFeatureManager : _safeRequire('./src/dashboard/features/dashboard_feature_manager.js', '../src/dashboard/features/dashboard_feature_manager.js');
 const _TemporalProductivity = (typeof globalThis !== 'undefined' && globalThis.TemporalProductivityFeature) ? globalThis.TemporalProductivityFeature : _safeRequire('./src/dashboard/features/temporal_productivity_feature.js', '../src/dashboard/features/temporal_productivity_feature.js');
+const _TemporalDateFilter = (typeof globalThis !== 'undefined' && globalThis.TemporalDateFilter) ? globalThis.TemporalDateFilter : _safeRequire('./src/dashboard/filters/temporal_date_filter.js', '../src/dashboard/filters/temporal_date_filter.js');
 let _MediaDeckVisualizer = (typeof window !== 'undefined' && window.MediaDeckVisualizerFeature)
   || (typeof globalThis !== 'undefined' && globalThis.MediaDeckVisualizerFeature)
   || _safeRequire('./src/dashboard/features/media_deck_visualizer_feature.js', '../src/dashboard/features/media_deck_visualizer_feature.js');
@@ -108,6 +109,7 @@ if (typeof window !== 'undefined') {
     FeatureRegistry: _FeatureRegistry,
     DashboardFeatureManager: _DashboardFeatureManager,
     TemporalProductivity: _TemporalProductivity,
+    TemporalDateFilter: _TemporalDateFilter,
     get MediaDeckVisualizer() {
       return getResolvedVisualizer();
     },
@@ -216,7 +218,7 @@ const DASHBOARD_I18N = {
     
     // Tab A: Charts & Table
     heading_usage_dist: 'Website Usage Time Distribution',
-    caption_usage_dist: 'Select time range: Today, Daily Average, or Total Time',
+    caption_usage_dist: 'Select time range: Today, Yesterday, Last 7 Days, Last 30 Days, Daily Average, or Total Time',
     subtab_today: '📅 Today',
     subtab_yesterday: '⏪ Yesterday',
     subtab_7days: '📊 Last 7 Days',
@@ -405,6 +407,10 @@ const DASHBOARD_I18N = {
     btn_pomodoro_pause: '⏸️ Pause',
     btn_pomodoro_reset: '🔄 Reset',
     donut_center_today: "Today's Total Time",
+    donut_center_yesterday: "Yesterday's Total",
+    donut_center_7days: "Last 7 Days Total",
+    donut_center_30days: "Last 30 Days Total",
+    donut_center_custom: "Custom Range Total",
     donut_center_daily: 'Daily Average Time',
     donut_center_total: 'Total Tracked Time',
     donut_empty: 'No browsing activity recorded',
@@ -779,7 +785,7 @@ const DASHBOARD_I18N = {
     
     // Tab A: Charts & Table
     heading_usage_dist: 'वेबसाइट उपयोग समय वितरण',
-    caption_usage_dist: 'समय सीमा चुनें: आज, दैनिक औसत या कुल समय',
+    caption_usage_dist: 'समय सीमा चुनें: आज, कल, पिछले 7 दिन, पिछले 30 दिन, दैनिक औसत, या कुल समय',
     subtab_today: '📅 आज',
     subtab_yesterday: '⏪ बीता हुआ कल',
     subtab_7days: '📊 पिछले 7 दिन',
@@ -968,6 +974,10 @@ const DASHBOARD_I18N = {
     btn_pomodoro_pause: '⏸️ विराम',
     btn_pomodoro_reset: '🔄 रीसेट',
     donut_center_today: 'आज का कुल समय',
+    donut_center_yesterday: 'कल का कुल समय',
+    donut_center_7days: 'पिछले 7 दिनों का कुल समय',
+    donut_center_30days: 'पिछले 30 दिनों का कुल समय',
+    donut_center_custom: 'कस्टम अवधि का कुल समय',
     donut_center_daily: 'दैनिक औसत समय',
     donut_center_total: 'कुल ट्रैक किया गया समय',
     donut_empty: 'ब्राउज़िंग गतिविधि उपलब्ध नहीं है',
@@ -2716,21 +2726,76 @@ function renderChronoHeatmap(matrix, mode = 'focus') {
   }
 }
 
+function parseYMD(dateStr) {
+  if (_TemporalDateFilter && typeof _TemporalDateFilter.parseYMD === 'function') {
+    return _TemporalDateFilter.parseYMD(dateStr);
+  }
+  if (!dateStr || typeof dateStr !== 'string') return new Date();
+  const parts = dateStr.split('-').map(n => parseInt(n, 10));
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return new Date();
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function formatYMD(d) {
+  if (_TemporalDateFilter && typeof _TemporalDateFilter.formatYMD === 'function') {
+    return _TemporalDateFilter.formatYMD(d);
+  }
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getDatesInRangeFallback(startStr, endStr) {
+  if (_TemporalDateFilter && typeof _TemporalDateFilter.getDatesInRangeFallback === 'function') {
+    return _TemporalDateFilter.getDatesInRangeFallback(startStr, endStr);
+  }
+  if (!startStr || !endStr) return [startStr || endStr || ''];
+  const curr = parseYMD(startStr);
+  const end = parseYMD(endStr);
+  if (isNaN(curr.getTime()) || isNaN(end.getTime()) || curr > end) return [startStr];
+  const dates = [];
+  while (curr <= end) {
+    dates.push(formatYMD(curr));
+    curr.setDate(curr.getDate() + 1);
+  }
+  return dates;
+}
+
 function getDatesInRange(startStr, endStr) {
   if (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function') {
     return _TemporalProductivity.getDatesInRange(startStr, endStr);
   }
-  const dates = [];
-  const cur = new Date(startStr);
-  const end = new Date(endStr);
-  while (cur <= end) {
-    const y = cur.getFullYear();
-    const m = String(cur.getMonth() + 1).padStart(2, '0');
-    const d = String(cur.getDate()).padStart(2, '0');
-    dates.push(`${y}-${m}-${d}`);
-    cur.setDate(cur.getDate() + 1);
+  return getDatesInRangeFallback(startStr, endStr);
+}
+
+function resolveTemporalDateRange(temporalMode, todayStr, customStart, customEnd) {
+  if (_TemporalDateFilter && typeof _TemporalDateFilter.resolveTemporalDateRange === 'function') {
+    return _TemporalDateFilter.resolveTemporalDateRange(temporalMode, todayStr, customStart, customEnd, getDatesInRange);
   }
-  return dates;
+  const validToday = (todayStr && typeof todayStr === 'string') ? todayStr : formatYMD(new Date());
+  if (temporalMode === 'today') return [validToday];
+  const anchor = parseYMD(validToday);
+  let startStr = validToday;
+  let endStr = validToday;
+  if (temporalMode === 'yesterday') {
+    const y = new Date(anchor);
+    y.setDate(y.getDate() - 1);
+    startStr = formatYMD(y);
+    endStr = startStr;
+  } else if (temporalMode === '7d') {
+    const s = new Date(anchor);
+    s.setDate(s.getDate() - 6);
+    startStr = formatYMD(s);
+    endStr = validToday;
+  } else if (temporalMode === '30d') {
+    const s = new Date(anchor);
+    s.setDate(s.getDate() - 29);
+    startStr = formatYMD(s);
+    endStr = validToday;
+  } else if (temporalMode === 'custom') {
+    startStr = customStart || validToday;
+    endStr = customEnd || validToday;
+  }
+  return getDatesInRange(startStr, endStr);
 }
 
 function updateProductivityMetrics(items) {
@@ -6312,125 +6377,132 @@ function getDomainSecondsForMode(d, mode = selectedTrackingMode) {
   return d.seconds || 0;
 }
 
+function aggregateDomainRangeStatsFallback(domainObj, datesList, selectedTrackingMode) {
+  let rangeFgSec = 0, rangeBgSec = 0, rangeCombinedSec = 0;
+  if (domainObj && domainObj.days && Array.isArray(datesList)) {
+    datesList.forEach(ds => {
+      const dItem = domainObj.days[ds];
+      if (dItem) {
+        rangeFgSec += (typeof dItem.foregroundSeconds === 'number' ? dItem.foregroundSeconds : (dItem.seconds || 0));
+        rangeBgSec += (typeof dItem.backgroundMediaSeconds === 'number' ? dItem.backgroundMediaSeconds : 0);
+        rangeCombinedSec += (typeof dItem.seconds === 'number' ? dItem.seconds : (dItem.totalSeconds || 0));
+      }
+    });
+  }
+  const computedSec = (selectedTrackingMode === 'foreground') ? rangeFgSec : (selectedTrackingMode === 'background_media') ? rangeBgSec : rangeCombinedSec;
+  return { computedSec, rangeFgSec, rangeBgSec, rangeCombinedSec };
+}
+
+function processDomainItem(domainName, domainObj, params) {
+  const { temporalMode, todayStr, datesList, isRangeMode, historyDays, rawHistoryDays } = params;
+  const isInternal = isInternalDomain(domainName);
+  if (selectedDomainCategory === 'web' && isInternal) return null;
+  if (selectedDomainCategory === 'internal' && !isInternal) return null;
+
+  const combinedTotalSec = domainObj.totalSeconds || 0;
+  const fgTotalSec = (typeof domainObj.foregroundSeconds === 'number') ? domainObj.foregroundSeconds : combinedTotalSec;
+  const bgMediaTotalSec = domainObj.backgroundMediaSeconds || 0;
+
+  const todayObj = (domainObj.days && domainObj.days[todayStr]) || null;
+  const combinedTodaySec = todayObj ? (todayObj.seconds || 0) : 0;
+  const fgTodaySec = (todayObj && typeof todayObj.foregroundSeconds === 'number') ? todayObj.foregroundSeconds : combinedTodaySec;
+  const bgMediaTodaySec = (todayObj && typeof todayObj.backgroundMediaSeconds === 'number') ? todayObj.backgroundMediaSeconds : 0;
+
+  const targetTotalSec = (selectedTrackingMode === 'foreground') ? fgTotalSec : (selectedTrackingMode === 'background_media') ? bgMediaTotalSec : combinedTotalSec;
+  const targetTodaySec = (selectedTrackingMode === 'foreground') ? fgTodaySec : (selectedTrackingMode === 'background_media') ? bgMediaTodaySec : combinedTodaySec;
+
+  let computedSec = 0, rangeFg = 0, rangeBg = 0, rangeCombined = 0;
+  if (temporalMode === 'today') {
+    computedSec = targetTodaySec;
+    rangeFg = fgTodaySec;
+    rangeBg = bgMediaTodaySec;
+    rangeCombined = combinedTodaySec;
+  } else if (isRangeMode) {
+    const rangeStats = (_TemporalDateFilter && typeof _TemporalDateFilter.aggregateDomainRangeStats === 'function')
+      ? _TemporalDateFilter.aggregateDomainRangeStats(domainObj, datesList, selectedTrackingMode)
+      : aggregateDomainRangeStatsFallback(domainObj, datesList, selectedTrackingMode);
+    computedSec = rangeStats.computedSec;
+    rangeFg = rangeStats.rangeFgSec;
+    rangeBg = rangeStats.rangeBgSec;
+    rangeCombined = rangeStats.rangeCombinedSec;
+  } else if (temporalMode === 'daily') {
+    computedSec = Math.round(targetTotalSec / rawHistoryDays);
+    rangeFg = Math.round(fgTotalSec / rawHistoryDays);
+    rangeBg = Math.round(bgMediaTotalSec / rawHistoryDays);
+    rangeCombined = Math.round(combinedTotalSec / rawHistoryDays);
+  } else {
+    computedSec = targetTotalSec;
+    rangeFg = fgTotalSec;
+    rangeBg = bgMediaTotalSec;
+    rangeCombined = combinedTotalSec;
+  }
+
+  if (computedSec <= 0 && !(selectedTrackingMode !== 'background_media' && temporalMode === 'total' && combinedTotalSec > 0)) {
+    return { targetTotalSec, targetTodaySec, item: null };
+  }
+
+  const item = {
+    domain: domainName,
+    favicon: domainObj.favicon || getFaviconUrl(domainName),
+    computedSeconds: computedSec,
+    totalSeconds: targetTotalSec,
+    foregroundSeconds: (temporalMode === 'today' ? fgTodaySec : (temporalMode === 'total' || temporalMode === 'daily') ? fgTotalSec : rangeFg),
+    backgroundMediaSeconds: (temporalMode === 'today' ? bgMediaTodaySec : (temporalMode === 'total' || temporalMode === 'daily') ? bgMediaTotalSec : rangeBg),
+    combinedSeconds: (temporalMode === 'today' ? combinedTodaySec : (temporalMode === 'total' || temporalMode === 'daily') ? combinedTotalSec : rangeCombined),
+    todaySeconds: targetTodaySec,
+    dailyAvgSeconds: Math.round(isRangeMode ? (computedSec / historyDays) : (targetTotalSec / rawHistoryDays)),
+    sessions: domainObj.sessionCount || 1,
+    lastActive: domainObj.lastActive || Date.now(),
+    isInternal
+  };
+  return { targetTotalSec, targetTodaySec, item };
+}
+
 function processTimeTrackingData(actData, temporalMode, todayStr) {
   if (!actData || !actData.domains) {
     return { items: [], totalSec: 0, todaySec: 0, dailyAvgSec: 0, topDomain: null };
   }
 
-  const domains = actData.domains;
-  const historyDays = Math.max(1, actData.historyDaysCount || 1);
-  let totalTrackedSec = 0;
-  let todayTotalSec = 0;
+  const rawHistoryDays = Math.max(1, actData.historyDaysCount || 1);
+  const isRangeMode = (temporalMode === 'yesterday' || temporalMode === '7d' || temporalMode === '30d' || temporalMode === 'custom');
+  const datesList = isRangeMode ? resolveTemporalDateRange(temporalMode, todayStr, customStartDate, customEndDate) : [];
+
+  const historyDays = (_TemporalDateFilter && typeof _TemporalDateFilter.computeEffectiveHistoryDays === 'function')
+    ? _TemporalDateFilter.computeEffectiveHistoryDays(temporalMode, datesList.length, rawHistoryDays)
+    : (temporalMode === '7d' ? Math.max(1, Math.min(7, rawHistoryDays))
+      : temporalMode === '30d' ? Math.max(1, Math.min(30, rawHistoryDays))
+      : (temporalMode === 'yesterday' || temporalMode === 'today') ? 1
+      : (temporalMode === 'custom' && datesList.length > 0) ? Math.max(1, Math.min(datesList.length, rawHistoryDays))
+      : rawHistoryDays);
+
+  let totalTrackedSec = 0, todayTotalSec = 0;
   const processedList = [];
+  const params = { temporalMode, todayStr, datesList, isRangeMode, historyDays, rawHistoryDays };
 
-  for (const [domainName, domainObj] of Object.entries(domains)) {
-    const isInternal = isInternalDomain(domainName);
-    if (selectedDomainCategory === 'web' && isInternal) continue;
-    if (selectedDomainCategory === 'internal' && !isInternal) continue;
-
-    const combinedTotalSec = domainObj.totalSeconds || 0;
-    const fgTotalSec = (typeof domainObj.foregroundSeconds === 'number') ? domainObj.foregroundSeconds : combinedTotalSec;
-    const bgMediaTotalSec = domainObj.backgroundMediaSeconds || 0;
-
-    const todayObj = (domainObj.days && domainObj.days[todayStr]) || null;
-    const combinedTodaySec = todayObj ? (todayObj.seconds || 0) : 0;
-    const fgTodaySec = (todayObj && typeof todayObj.foregroundSeconds === 'number') ? todayObj.foregroundSeconds : combinedTodaySec;
-    const bgMediaTodaySec = (todayObj && typeof todayObj.backgroundMediaSeconds === 'number') ? todayObj.backgroundMediaSeconds : 0;
-
-    let targetTotalSec = combinedTotalSec;
-    let targetTodaySec = combinedTodaySec;
-    if (selectedTrackingMode === 'foreground') {
-      targetTotalSec = fgTotalSec;
-      targetTodaySec = fgTodaySec;
-    } else if (selectedTrackingMode === 'background_media') {
-      targetTotalSec = bgMediaTotalSec;
-      targetTodaySec = bgMediaTodaySec;
-    }
-
-    totalTrackedSec += targetTotalSec;
-    todayTotalSec += targetTodaySec;
-
-    let computedSec = 0;
-    if (temporalMode === 'today') {
-      computedSec = targetTodaySec;
-    } else if (temporalMode === 'yesterday') {
-      const yDate = new Date();
-      yDate.setDate(yDate.getDate() - 1);
-      const yStr = `${yDate.getFullYear()}-${String(yDate.getMonth() + 1).padStart(2, '0')}-${String(yDate.getDate()).padStart(2, '0')}`;
-      const yObj = (domainObj.days && domainObj.days[yStr]) || null;
-      computedSec = yObj ? (selectedTrackingMode === 'foreground' ? (typeof yObj.foregroundSeconds === 'number' ? yObj.foregroundSeconds : (yObj.seconds || 0)) : selectedTrackingMode === 'background_media' ? (yObj.backgroundMediaSeconds || 0) : (yObj.seconds || 0)) : 0;
-    } else if (temporalMode === '7d' || temporalMode === '30d' || temporalMode === 'custom') {
-      let datesList = [];
-      const formatYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (temporalMode === '7d') {
-        const s = new Date();
-        s.setDate(s.getDate() - 6);
-        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
-          ? _TemporalProductivity.getDatesInRange(formatYMD(s), todayStr)
-          : [todayStr];
-      } else if (temporalMode === '30d') {
-        const s = new Date();
-        s.setDate(s.getDate() - 29);
-        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
-          ? _TemporalProductivity.getDatesInRange(formatYMD(s), todayStr)
-          : [todayStr];
-      } else {
-        datesList = (_TemporalProductivity && typeof _TemporalProductivity.getDatesInRange === 'function')
-          ? _TemporalProductivity.getDatesInRange(customStartDate || todayStr, customEndDate || todayStr)
-          : [todayStr];
-      }
-      computedSec = 0;
-      if (domainObj.days) {
-        datesList.forEach((ds) => {
-          const dItem = domainObj.days[ds];
-          if (dItem) {
-            computedSec += (selectedTrackingMode === 'foreground' ? (typeof dItem.foregroundSeconds === 'number' ? dItem.foregroundSeconds : (dItem.seconds || 0)) : selectedTrackingMode === 'background_media' ? (dItem.backgroundMediaSeconds || 0) : (dItem.seconds || 0));
-          }
-        });
-      }
-    } else if (temporalMode === 'daily') {
-      computedSec = Math.round(targetTotalSec / historyDays);
-    } else {
-      computedSec = targetTotalSec;
-    }
-
-    if (computedSec > 0 || (selectedTrackingMode !== 'background_media' && temporalMode === 'total' && combinedTotalSec > 0)) {
-      processedList.push({
-        domain: domainName,
-        favicon: domainObj.favicon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domainName)}&sz=32`,
-        computedSeconds: computedSec,
-        totalSeconds: targetTotalSec,
-        foregroundSeconds: (temporalMode === 'today' ? fgTodaySec : fgTotalSec),
-        backgroundMediaSeconds: (temporalMode === 'today' ? bgMediaTodaySec : bgMediaTotalSec),
-        combinedSeconds: (temporalMode === 'today' ? combinedTodaySec : combinedTotalSec),
-        todaySeconds: targetTodaySec,
-        dailyAvgSeconds: Math.round(targetTotalSec / historyDays),
-        sessions: domainObj.sessionCount || 1,
-        lastActive: domainObj.lastActive || Date.now(),
-        isInternal: isInternalDomain(domainName)
-      });
-    }
+  for (const [domainName, domainObj] of Object.entries(actData.domains)) {
+    const res = processDomainItem(domainName, domainObj, params);
+    if (!res) continue;
+    totalTrackedSec += res.targetTotalSec;
+    todayTotalSec += res.targetTodaySec;
+    if (res.item) processedList.push(res.item);
   }
 
   let activeTemporalSum = 0;
-  processedList.forEach(item => {
-    activeTemporalSum += item.computedSeconds;
-  });
-
+  processedList.forEach(item => { activeTemporalSum += item.computedSeconds; });
   processedList.forEach(item => {
     item.ratio = activeTemporalSum > 0 ? (item.computedSeconds / activeTemporalSum) : 0;
     item.ratioPercent = (item.ratio * 100).toFixed(1);
   });
-
   processedList.sort((a, b) => b.computedSeconds - a.computedSeconds);
 
   const topDomain = (processedList.length > 0 && processedList[0].computedSeconds > 0) ? processedList[0] : null;
+  const dailyAvgSec = Math.round(isRangeMode ? (activeTemporalSum / historyDays) : (totalTrackedSec / rawHistoryDays));
 
   return {
     items: processedList,
     totalSec: totalTrackedSec,
     todaySec: todayTotalSec,
-    dailyAvgSec: Math.round(totalTrackedSec / historyDays),
+    dailyAvgSec,
     historyDays,
     firstTrackedDate: actData.firstTrackedDate || todayStr,
     activeTemporalSum,
@@ -6560,72 +6632,80 @@ function renderTimeTrackingTab(data) {
     const allTimeSec = rawAllTimeList.reduce((acc, curr) => acc + getDomainSecondsForMode(curr, selectedTrackingMode), 0);
     const dailyAvgSec = Math.round(allTimeSec / historyDays);
 
-    let rawItems = [];
-    let activeTemporalSum = 0;
+    const isRangeMode = (temporalSubtab === 'yesterday' || temporalSubtab === '7d' || temporalSubtab === '30d' || temporalSubtab === 'custom');
 
-    if (temporalSubtab === 'today') {
-      rawItems = rawTodayList;
-      activeTemporalSum = todaySec;
-    } else if (temporalSubtab === 'daily') {
-      rawItems = rawAllTimeList;
-      activeTemporalSum = dailyAvgSec;
-    } else { // 'total'
-      rawItems = rawAllTimeList;
-      activeTemporalSum = allTimeSec;
-    }
+    if (isRangeMode && data && data.activityData && data.activityData.domains) {
+      const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
+      stats = processTimeTrackingData(data.activityData, temporalSubtab, todayStr);
+      stats.totalSec = allTimeSec || stats.totalSec;
+      stats.todaySec = todaySec || stats.todaySec;
+      stats.firstTrackedDate = firstTrackedDate || stats.firstTrackedDate;
+    } else {
+      let rawItems = [];
+      let activeTemporalSum = 0;
 
-    const items = rawItems.map(d => {
-      const modeSec = getDomainSecondsForMode(d, selectedTrackingMode);
-      let computedSec = modeSec;
-      if (temporalSubtab === 'daily') {
-        computedSec = (dailyAvgSec > 0 && allTimeSec > 0)
-          ? Math.round(dailyAvgSec * (modeSec / allTimeSec))
-          : Math.round(modeSec / historyDays);
-      } else if (temporalSubtab === 'total') {
-        computedSec = modeSec;
-      } else { // 'today'
-        computedSec = modeSec;
+      if (temporalSubtab === 'today') {
+        rawItems = rawTodayList;
+        activeTemporalSum = todaySec;
+      } else if (temporalSubtab === 'daily') {
+        rawItems = rawAllTimeList;
+        activeTemporalSum = dailyAvgSec;
+      } else { // 'total' or fallback
+        rawItems = rawAllTimeList;
+        activeTemporalSum = allTimeSec;
       }
 
-      const ratio = activeTemporalSum > 0 ? (computedSec / activeTemporalSum) : 0;
-      const ratioPercent = (ratio * 100).toFixed(1);
+      const items = rawItems.map(d => {
+        const modeSec = getDomainSecondsForMode(d, selectedTrackingMode);
+        let computedSec = modeSec;
+        if (temporalSubtab === 'daily') {
+          computedSec = (dailyAvgSec > 0 && allTimeSec > 0)
+            ? Math.round(dailyAvgSec * (modeSec / allTimeSec))
+            : Math.round(modeSec / historyDays);
+        } else {
+          computedSec = modeSec;
+        }
 
-      return {
-        domain: d.domain,
-        favicon: d.favicon_url || getFaviconUrl(d.domain),
-        computedSeconds: computedSec,
-        totalSeconds: modeSec,
-        foregroundSeconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : (d.foregroundSeconds || d.seconds || 0)),
-        backgroundMediaSeconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : (d.backgroundMediaSeconds || 0)),
-        combinedSeconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : (d.combinedSeconds || d.totalSeconds || d.seconds || 0)),
-        todaySeconds: (temporalSubtab === 'today' ? modeSec : 0),
-        dailyAvgSeconds: Math.round(modeSec / historyDays),
-        sessions: d.session_count || d.sessionCount || 1,
-        lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : (d.lastActive || Date.now())),
-        ratio,
-        ratioPercent,
-        isInternal: isInternalDomain(d.domain)
+        const ratio = activeTemporalSum > 0 ? (computedSec / activeTemporalSum) : 0;
+        const ratioPercent = (ratio * 100).toFixed(1);
+
+        return {
+          domain: d.domain,
+          favicon: d.favicon_url || getFaviconUrl(d.domain),
+          computedSeconds: computedSec,
+          totalSeconds: modeSec,
+          foregroundSeconds: (typeof d.foreground_seconds === 'number' ? d.foreground_seconds : (d.foregroundSeconds || d.seconds || 0)),
+          backgroundMediaSeconds: (typeof d.background_media_seconds === 'number' ? d.background_media_seconds : (d.backgroundMediaSeconds || 0)),
+          combinedSeconds: (typeof d.combined_seconds === 'number' ? d.combined_seconds : (d.combinedSeconds || d.totalSeconds || d.seconds || 0)),
+          todaySeconds: (temporalSubtab === 'today' ? modeSec : 0),
+          dailyAvgSeconds: Math.round(modeSec / historyDays),
+          sessions: d.session_count || d.sessionCount || 1,
+          lastActive: (d.last_active ? (d.last_active > 1e11 ? d.last_active : d.last_active * 1000) : (d.lastActive || Date.now())),
+          ratio,
+          ratioPercent,
+          isInternal: isInternalDomain(d.domain)
+        };
+      }).filter(item => {
+        if (selectedTrackingMode === 'background_media') {
+          return item.computedSeconds > 0;
+        }
+        return item.computedSeconds > 0 || (temporalSubtab === 'total' && item.combinedSeconds > 0);
+      });
+
+      items.sort((a, b) => b.computedSeconds - a.computedSeconds);
+      const topDomain = (items.length > 0 && items[0].computedSeconds > 0) ? items[0] : null;
+
+      stats = {
+        items,
+        totalSec: allTimeSec,
+        todaySec: todaySec,
+        dailyAvgSec: dailyAvgSec,
+        historyDays: historyDays,
+        firstTrackedDate: firstTrackedDate,
+        activeTemporalSum: activeTemporalSum,
+        topDomain
       };
-    }).filter(item => {
-      if (selectedTrackingMode === 'background_media') {
-        return item.computedSeconds > 0;
-      }
-      return item.computedSeconds > 0 || (temporalSubtab === 'total' && item.combinedSeconds > 0);
-    });
-
-    items.sort((a, b) => b.computedSeconds - a.computedSeconds);
-    const topDomain = (items.length > 0 && items[0].computedSeconds > 0) ? items[0] : null;
-
-    stats = {
-      items,
-      totalSec: allTimeSec,
-      todaySec: todaySec,
-      dailyAvgSec: dailyAvgSec,
-      historyDays: historyDays,
-      firstTrackedDate: firstTrackedDate,
-      activeTemporalSum: activeTemporalSum,
-      topDomain
-    };
+    }
   } else {
     const actData = data.activityData || {};
     const todayStr = data.todayStr || new Date().toISOString().split('T')[0];

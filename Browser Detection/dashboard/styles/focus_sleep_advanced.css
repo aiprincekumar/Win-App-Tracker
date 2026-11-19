@@ -67,7 +67,8 @@
 }
 
 .switch-input:checked + .slider-round {
-  background-color: var(--accent-emerald, #10b981);
+  background: linear-gradient(135deg, var(--accent-emerald, #10b981) 0%, #059669 100%);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
 }
 
 .switch-input:checked + .slider-round:before {

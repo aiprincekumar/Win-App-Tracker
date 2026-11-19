@@ -91,12 +91,11 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
   assert(html.includes('id="selectDefaultTab"'), 'quickSettingsPopover must contain #selectDefaultTab');
   assert(html.includes('id="selectSyncInterval"'), 'quickSettingsPopover must contain #selectSyncInterval');
 
-  // Invariant Footer: exactly 6 buttons (Switch Tab relocated to header)
+  // Invariant Footer: redundant #btnSleepTimerTrigger retired in favor of dedicated #mainTabSleep
   const footerButtons = [
     'btnRefresh',
     'btnGlobalMediaToggle',
     'btnToggleTrackingPause',
-    'btnSleepTimerTrigger',
     'btnReconnectWs',
     'btnThemeToggle'
   ];
@@ -113,6 +112,9 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
     lastIdx = idx;
   });
 
+  assert(!html.includes('id="btnSleepTimerTrigger"'), 'Footer must not contain retired #btnSleepTimerTrigger');
+  assert(html.includes('id="mainTabSleep"'), 'popup.html must contain #mainTabSleep for dedicated sleep timer navigation');
+
   // Header badges: contains #btnSwitchMediaTab, #btnOpenDashboard, and #btnQuickSettings
   assert(html.includes('id="btnSwitchMediaTab"'), 'Header badges must contain #btnSwitchMediaTab');
   assert(html.includes('id="btnOpenDashboard"'), 'Header badges must contain #btnOpenDashboard');
@@ -124,7 +126,7 @@ console.log('\nTest 2: Header Quick Settings & Invariant Footer Toolbar');
   assert(dashHeaderIdx < qsHeaderIdx, '#btnOpenDashboard must precede #btnQuickSettings in header badges');
 
   console.log('  ✅ Quick Settings, Dashboard, and Switch Tab buttons and floating popover dialog verified in header');
-  console.log('  ✅ Strict single-row footer toolbar invariant certified (all 6 buttons in exact sequence)');
+  console.log('  ✅ Strict single-row footer toolbar invariant certified (clean layout with dedicated #mainTabSleep navigation)');
 }
 
 // ---------------------------------------------------------------------------

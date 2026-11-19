@@ -136,13 +136,17 @@ console.log('\nTest 3: Canonical DOM Element IDs Invariant');
     'cardSmartAutomations', 'toggleAutoPauseNewTab', 'toggleAutoAdSilencer', 'toggleDomainSpeedMemory',
     'cardFocusWellness', 'focusRatioBarContainer', 'doomscrollBreakerCard',
     'domainSearchInput', 'browserFilterSelect', 'trackingModeSelect', 'domainCategorySelect', 'domainsListContainer', 'emptyDomainStateText',
-    'btnRefresh', 'btnGlobalMediaToggle', 'btnToggleTrackingPause', 'btnSleepTimerTrigger', 'btnReconnectWs', 'btnSwitchMediaTab', 'btnThemeToggle', 'btnOpenDashboard',
+    'btnRefresh', 'btnGlobalMediaToggle', 'btnToggleTrackingPause', 'mainTabSleep', 'btnReconnectWs', 'btnSwitchMediaTab', 'btnThemeToggle', 'btnOpenDashboard',
     'selectDefaultTab', 'selectSyncInterval'
   ];
 
   canonicalIds.forEach(id => {
     assert(html.includes(`id="${id}"`), `Canonical DOM ID #${id} must exist in popup.html`);
   });
+
+  assert(!html.includes('id="btnSleepTimerTrigger"'), 'popup.html must not contain retired #btnSleepTimerTrigger');
+  assert(html.includes('id="mainTabSleep"'), 'popup.html must contain #mainTabSleep');
+  assert(html.includes('id="viewSleepPane"'), 'popup.html must contain #viewSleepPane');
 
   console.log(`  ✅ All ${canonicalIds.length} verified canonical DOM IDs are 100% preserved`);
 }

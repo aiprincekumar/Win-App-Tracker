@@ -77,7 +77,13 @@
       <!-- Sidebar Compact Telemetry HUD Cluster -->
       <div class="sidebar-hud-group" role="region" aria-label="Service Status Indicators">
         <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
-        <div id="wellbeingLiveMicroWidget" class="sidebar-hud-card wellbeing-micro-hud" title="Focus &amp; Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)" style="cursor: pointer;">
+        <div id="wellbeingLiveMicroWidget"
+             class="sidebar-hud-card wellbeing-micro-hud interactive-hud-card"
+             role="button"
+             tabindex="0"
+             aria-label="Focus Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+             title="Focus &amp; Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+             style="cursor: pointer;">
           <div class="hud-card-header">
             <span class="hud-card-title">🧘 Focus Sentinel</span>
             <span id="wellbeingMicroStatusDot" class="hud-dot idle" aria-label="Focus Sentinel Status"></span>
@@ -439,7 +445,7 @@
               <div class="card-top-bar">
                 <div class="card-title-group">
                   <h3 id="headingUsageDist" class="card-heading">Website Usage Time Distribution</h3>
-                  <span id="captionUsageDist" class="card-caption">Select time range: Today, Daily Average, or Total Time</span>
+                  <span id="captionUsageDist" class="card-caption">Select time range: Today, Yesterday, Last 7 Days, Last 30 Days, Daily Average, or Total Time</span>
                 </div>
 
                 <!-- Temporal Subtabs Toggle (Features 1 & Extended Ranges) -->
@@ -1566,10 +1572,10 @@
             <!-- Pillar 1B: Focus Advanced Cards Split -->
             <div id="widgetFocusAdvanced" class="bento-card liquid-glass-card bento-span-6 pomodoro-advanced-card">
               <div class="card-header-row settings-card-header">
-                <span class="card-icon settings-card-icon">🎵</span>
+                <span class="card-icon settings-card-icon">⚙️</span>
                 <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtFocusAdvancedTitle" class="card-heading settings-card-title" data-i18n="focus_advanced_title">Session Planner & Soundscapes</h3>
-                  <span id="txtFocusAdvancedDesc" class="settings-card-sub" data-i18n="focus_advanced_desc">Custom goals, ambient soundscapes, acoustic chimes & rhythm aids</span>
+                  <h3 id="txtFocusAdvancedTitle" class="card-heading settings-card-title" data-i18n="focus_advanced_title">Focus Advanced Controls</h3>
+                  <span id="txtFocusAdvancedDesc" class="settings-card-sub" data-i18n="focus_advanced_desc">Custom goals, ambient soundscapes, acoustic chimes & smart shields</span>
                 </div>
               </div>
               <div class="pomodoro-advanced-body controls-2col-grid">
@@ -1635,11 +1641,24 @@
                     <button type="button" id="btnPreviewChime" class="btn-chime-preview" title="Preview chime tone" data-i18n="btn_preview_chime">▶ Test</button>
                   </div>
                 </div>
-                <!-- Bottom Row -->
+                <!-- Bottom Full-Span Row: Focus & Settings Toggles Container -->
                 <div class="controls-full-span-group">
                   <div class="extended-toggles-divider"></div>
-                  <div class="dash-advanced-toggles-grid">
-                    <div class="control-toggle-item">
+                  <div class="dash-focus-toggles-container">
+                    <!-- 1. Auto-pause Media -->
+                    <div class="dash-focus-toggle-row">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_autopause">Auto-pause Media</span>
+                        <span class="toggle-desc" data-i18n="toggle_focus_autopause_desc">Auto-pause media during focus</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusAutoPauseMedia">
+                        <input type="checkbox" id="toggleFocusAutoPauseMedia" role="switch" class="switch-input" aria-label="Auto-pause Media" checked>
+                        <span class="slider-round"></span>
+                      </label>
+                    </div>
+
+                    <!-- 2. Sound Chime -->
+                    <div class="dash-focus-toggle-row">
                       <div class="toggle-text-group">
                         <span class="toggle-title" data-i18n="toggle_focus_chime">Sound Chime</span>
                         <span class="toggle-desc" data-i18n="toggle_focus_chime_desc">Sound chime on cycle completion</span>
@@ -1649,148 +1668,67 @@
                         <span class="slider-round"></span>
                       </label>
                     </div>
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_autorestart_break">Auto-Restart Breaks</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_autorestart_break">Automatically trigger next interval</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleFocusAutoRestartBreak">
-                        <input type="checkbox" id="toggleFocusAutoRestartBreak" role="switch" class="switch-input" aria-label="Auto-Restart Breaks">
-                        <span class="slider-round"></span>
-                      </label>
-                    </div>
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_ticking">Acoustic Clock Rhythm</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_ticking">Gentle synthesized clock tick pacing</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleFocusTicking">
-                        <input type="checkbox" id="toggleFocusTicking" role="switch" class="switch-input" aria-label="Acoustic Clock Rhythm">
-                        <span class="slider-round"></span>
-                      </label>
-                    </div>
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_ambient_lighting">Ambient Accent Glow</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_ambient_lighting">Sync glass border glow with timer</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleFocusAmbientLighting">
-                        <input type="checkbox" id="toggleFocusAmbientLighting" role="switch" class="switch-input" aria-label="Ambient Accent Glow">
-                        <span class="slider-round"></span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <div id="widgetFocusAdvancedShields" class="bento-card liquid-glass-card bento-span-6 pomodoro-advanced-card">
-              <div class="card-header-row settings-card-header">
-                <span class="card-icon settings-card-icon">🛡️</span>
-                <div class="card-title-group settings-card-title-group">
-                  <h3 id="txtFocusShieldsTitle" class="card-heading settings-card-title" data-i18n="focus_shields_title">Smart Shields & Attention Integrity</h3>
-                  <span id="txtFocusShieldsDesc" class="settings-card-sub" data-i18n="focus_shields_desc">Attention scoring, media shielding, breathing nudges & ergonomics</span>
-                </div>
-              </div>
-              <div class="pomodoro-advanced-body controls-2col-grid">
-                <div class="controls-col-panel">
-                  <div class="control-toggle-item focus-integrity-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="lbl_focus_integrity">Focus Integrity Score</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_integrity">Live attention score and distraction tally</span>
+                    <!-- 3. Strict Distraction Shield -->
+                    <div class="dash-focus-toggle-row">
+                      <div class="toggle-text-group">
+                        <span class="toggle-title" data-i18n="toggle_focus_shield">🛡️ Strict Shield</span>
+                        <span class="toggle-desc" data-i18n="toggle_focus_shield_desc">Nudge and shield on distracting domains during focus</span>
+                      </div>
+                      <label class="switch-toggle" for="toggleFocusDistractionShield">
+                        <input type="checkbox" id="toggleFocusDistractionShield" role="switch" class="switch-input" aria-label="Strict Shield">
+                        <span class="slider-round"></span>
+                      </label>
                     </div>
-                    <div class="focus-integrity-meta-group">
-                      <span id="badgeFocusIntegrityScore" class="badge-integrity-score">100%</span>
-                      <span id="cntFocusDistractions" class="badge-distraction-counter" title="Distraction tab switches count">0</span>
+
+                    <!-- 4. Focus Integrity Score with Badges -->
+                    <div class="dash-focus-toggle-row focus-integrity-card">
+                      <div class="toggle-text-group">
+                        <div class="toggle-title-badge-wrap">
+                          <span class="toggle-title" data-i18n="lbl_focus_integrity">Focus Integrity Score</span>
+                          <span id="badgeFocusIntegrityScore" class="badge-integrity-score">100%</span>
+                          <span id="cntFocusDistractions" class="badge-distraction-counter" title="Distraction tab switches count">0</span>
+                        </div>
+                        <span class="toggle-desc" data-i18n="desc_focus_integrity">Live attention score and distraction tally</span>
+                      </div>
                       <label class="switch-toggle" for="toggleFocusIntegrityScore">
                         <input type="checkbox" id="toggleFocusIntegrityScore" role="switch" class="switch-input" aria-label="Focus Integrity Score">
                         <span class="slider-round"></span>
                       </label>
                     </div>
-                  </div>
-                  <div class="control-toggle-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_autopause">Auto-pause Media</span>
-                      <span class="toggle-desc" data-i18n="toggle_focus_autopause_desc">Auto-pause media during focus</span>
-                    </div>
-                    <label class="switch-toggle" for="toggleFocusAutoPauseMedia">
-                      <input type="checkbox" id="toggleFocusAutoPauseMedia" role="switch" class="switch-input" aria-label="Auto-pause Media" checked>
-                      <span class="slider-round"></span>
-                    </label>
-                  </div>
-                  <div class="control-toggle-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_automute_bg">Auto-Mute Background Tabs</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_automute_bg">Mute noisy background tabs during focus</span>
-                    </div>
-                    <label class="switch-toggle" for="toggleFocusAutoMuteBg">
-                      <input type="checkbox" id="toggleFocusAutoMuteBg" role="switch" class="switch-input" aria-label="Auto-Mute Background Tabs">
-                      <span class="slider-round"></span>
-                    </label>
-                  </div>
-                </div>
-                <div class="controls-col-panel">
-                  <div class="control-toggle-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_shield">🛡️ Strict Shield</span>
-                      <span class="toggle-desc" data-i18n="toggle_focus_shield_desc">Nudge and shield on distracting domains during focus</span>
-                    </div>
-                    <label class="switch-toggle" for="toggleFocusDistractionShield">
-                      <input type="checkbox" id="toggleFocusDistractionShield" role="switch" class="switch-input" aria-label="Strict Shield">
-                      <span class="slider-round"></span>
-                    </label>
-                  </div>
-                  <div class="control-toggle-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_breathe_nudge">Soft-Nudge Breathe Overlay</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_breathe_nudge">12s box-breathing prompt on distracting domains</span>
-                    </div>
-                    <label class="switch-toggle" for="toggleFocusBreatheNudge">
-                      <input type="checkbox" id="toggleFocusBreatheNudge" role="switch" class="switch-input" aria-label="Soft-Nudge Breathe Overlay">
-                      <span class="slider-round"></span>
-                    </label>
-                  </div>
-                  <div class="control-toggle-item">
-                    <div class="toggle-text-group">
-                      <span class="toggle-title" data-i18n="toggle_focus_2020_alert">20-20-20 Screen-Break & Posture</span>
-                      <span class="toggle-desc" data-i18n="desc_focus_2020_alert">Remind every 20m to look 20ft away for 20s and check posture</span>
-                    </div>
-                    <label class="switch-toggle" for="toggleFocus2020Alert">
-                      <input type="checkbox" id="toggleFocus2020Alert" role="switch" class="switch-input" aria-label="20-20-20 Screen-Break & Posture">
-                      <span class="slider-round"></span>
-                    </label>
-                  </div>
-                </div>
-                <div class="controls-full-span-group">
-                  <div class="extended-toggles-divider"></div>
-                  <div class="dash-advanced-toggles-grid">
-                    <div class="control-toggle-item">
+
+                    <!-- 5. Auto-Mute Background Tabs -->
+                    <div class="dash-focus-toggle-row">
                       <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_hard_blockade">Hard Domain Blockade</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_hard_blockade">Immediately intercept blacklisted tabs</span>
+                        <span class="toggle-title" data-i18n="toggle_focus_automute_bg">Auto-Mute Background Tabs</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_automute_bg">Mute noisy background tabs during focus</span>
                       </div>
-                      <label class="switch-toggle" for="toggleFocusHardBlockade">
-                        <input type="checkbox" id="toggleFocusHardBlockade" role="switch" class="switch-input" aria-label="Hard Domain Blockade">
+                      <label class="switch-toggle" for="toggleFocusAutoMuteBg">
+                        <input type="checkbox" id="toggleFocusAutoMuteBg" role="switch" class="switch-input" aria-label="Auto-Mute Background Tabs">
                         <span class="slider-round"></span>
                       </label>
                     </div>
-                    <div class="control-toggle-item">
+
+                    <!-- 6. Soft-Nudge Breathe Overlay -->
+                    <div class="dash-focus-toggle-row">
                       <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_dnd_notifications">DND Notification Silencer</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_dnd_notifications">Suppress desktop notifications during focus</span>
+                        <span class="toggle-title" data-i18n="toggle_focus_breathe_nudge">Soft-Nudge Breathe Overlay</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_breathe_nudge">12s box-breathing prompt on distracting domains</span>
                       </div>
-                      <label class="switch-toggle" for="toggleFocusDndNotifications">
-                        <input type="checkbox" id="toggleFocusDndNotifications" role="switch" class="switch-input" aria-label="DND Notification Silencer">
+                      <label class="switch-toggle" for="toggleFocusBreatheNudge">
+                        <input type="checkbox" id="toggleFocusBreatheNudge" role="switch" class="switch-input" aria-label="Soft-Nudge Breathe Overlay">
                         <span class="slider-round"></span>
                       </label>
                     </div>
-                    <div class="control-toggle-item">
+
+                    <!-- 7. 20-20-20 Screen-Break & Posture (Full Width Span) -->
+                    <div class="dash-focus-toggle-row focus-toggle-span-full">
                       <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_focus_tab_freeze">Tab Memory Discard</span>
-                        <span class="toggle-desc" data-i18n="desc_focus_tab_freeze">Freeze background tab execution</span>
+                        <span class="toggle-title" data-i18n="toggle_focus_2020_alert">20-20-20 Screen-Break & Posture</span>
+                        <span class="toggle-desc" data-i18n="desc_focus_2020_alert">Remind every 20m to look 20ft away for 20s and check posture</span>
                       </div>
-                      <label class="switch-toggle" for="toggleFocusTabFreeze">
-                        <input type="checkbox" id="toggleFocusTabFreeze" role="switch" class="switch-input" aria-label="Tab Memory Discard">
+                      <label class="switch-toggle" for="toggleFocus2020Alert">
+                        <input type="checkbox" id="toggleFocus2020Alert" role="switch" class="switch-input" aria-label="20-20-20 Screen-Break & Posture">
                         <span class="slider-round"></span>
                       </label>
                     </div>
@@ -2788,6 +2726,7 @@
   <script src="../src/dashboard/features/sleep_advanced_suite.js"></script>
   <script src="../src/dashboard/features/time_tracking_kpi_feature.js"></script>
   <script src="../src/dashboard/features/media_analytics_kpi_feature.js"></script>
+  <script src="../src/dashboard/filters/temporal_date_filter.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

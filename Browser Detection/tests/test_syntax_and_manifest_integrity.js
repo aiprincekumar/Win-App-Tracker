@@ -861,13 +861,15 @@ console.log('\nTest 6: Safe Tab & Runtime Messaging Rejection Handling Test Suit
     assert(popupHtml.includes('svgTrackingPauseIcon'), 'popup.html must include #svgTrackingPauseIcon');
     assert(popupHtml.includes('btnToggleTrackingPauseText'), 'popup.html must include #btnToggleTrackingPauseText');
     
-    // Invariant: Placed inside footer between btnGlobalMediaToggle and btnSleepTimerTrigger
+    // Invariant: Placed inside footer between btnGlobalMediaToggle and btnReconnectWs (redundant btnSleepTimerTrigger retired; sleep timer accessible via dedicated #mainTabSleep)
     const mediaToggleIdx = popupHtml.indexOf('id="btnGlobalMediaToggle"');
     const trackingPauseIdx = popupHtml.indexOf('id="btnToggleTrackingPause"');
-    const sleepTimerIdx = popupHtml.indexOf('id="btnSleepTimerTrigger"');
-    assert(mediaToggleIdx !== -1 && trackingPauseIdx !== -1 && sleepTimerIdx !== -1, 'All footer buttons must exist');
-    assert(mediaToggleIdx < trackingPauseIdx && trackingPauseIdx < sleepTimerIdx, 'btnToggleTrackingPause must be placed right beside btnGlobalMediaToggle and before btnSleepTimerTrigger');
-    console.log('  ✅ popup.html footer placement verified: Single-row toolbar between Global Media and Sleep Timer');
+    const reconnectWsIdx = popupHtml.indexOf('id="btnReconnectWs"');
+    assert(mediaToggleIdx !== -1 && trackingPauseIdx !== -1 && reconnectWsIdx !== -1, 'All footer buttons must exist');
+    assert(mediaToggleIdx < trackingPauseIdx && trackingPauseIdx < reconnectWsIdx, 'btnToggleTrackingPause must be placed right beside btnGlobalMediaToggle and before btnReconnectWs');
+    assert(!popupHtml.includes('id="btnSleepTimerTrigger"'), 'Redundant #btnSleepTimerTrigger must be retired from toolbar');
+    assert(popupHtml.includes('id="mainTabSleep"'), 'Dedicated #mainTabSleep must remain active for sleep timer access');
+    console.log('  ✅ popup.html footer placement verified: Single-row toolbar between Global Media and HUD Bridge; sleep timer active via #mainTabSleep');
 
     // 14B. CSS Single-Row & Amber Accent Styling
     assert(popupCss.includes('.btn-tracking-pause'), 'popup.css must define .btn-tracking-pause');

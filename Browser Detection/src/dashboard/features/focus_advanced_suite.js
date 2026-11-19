@@ -393,6 +393,59 @@
     bindOverlayListeners();
   }
 
+  let focusHighlightTimerId = null;
+
+  /**
+   * Deep-links directly to Focus Sentinel card and highlights the Start Focus button
+   */
+  function navigateToFocusSentinel() {
+    if (typeof window !== 'undefined' && window.sentinelHaptics?.playClick) {
+      window.sentinelHaptics.playClick();
+    } else if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics?.playClick) {
+      sentinelHaptics.playClick();
+    }
+    if (typeof window !== 'undefined' && typeof window.switchTab === 'function') {
+      window.switchTab('wellbeing');
+    } else if (typeof switchTab === 'function') {
+      switchTab('wellbeing');
+    }
+
+    const card = typeof document !== 'undefined' ? document.getElementById('widgetPomodoroSentinel') : null;
+    const btn = typeof document !== 'undefined' ? document.getElementById('btnStartPomodoro') : null;
+    if (!card) return;
+
+    if (focusHighlightTimerId) {
+      clearTimeout(focusHighlightTimerId);
+      focusHighlightTimerId = null;
+    }
+
+    const prefersReduced = (typeof window !== 'undefined' && window.matchMedia)
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false;
+
+    setTimeout(() => {
+      card.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+      card.classList.remove('focus-card-highlight');
+      if (btn) btn.classList.remove('highlight-pulse');
+      void card.offsetWidth;
+      if (btn) void btn.offsetWidth;
+
+      card.classList.add('focus-card-highlight');
+      if (btn) {
+        btn.classList.add('highlight-pulse');
+        if (typeof btn.focus === 'function') {
+          btn.focus({ preventScroll: true });
+        }
+      }
+
+      focusHighlightTimerId = setTimeout(() => {
+        card.classList.remove('focus-card-highlight');
+        if (btn) btn.classList.remove('highlight-pulse');
+        focusHighlightTimerId = null;
+      }, 2000);
+    }, 60);
+  }
+
   // Focus Advanced Suite Public API Object
   const FocusAdvancedSuite = {
     initFocusAdvancedState,
@@ -406,6 +459,7 @@
     hide2020PostureAlert,
     handlePomodoroFocusTick,
     bindFocusAdvancedEventListeners,
+    navigateToFocusSentinel,
     getState: () => ({ ...state })
   };
 
@@ -413,7 +467,14 @@
     module.exports = FocusAdvancedSuite;
   }
   global.FocusAdvancedSuite = FocusAdvancedSuite;
-  if (typeof globalThis !== 'undefined') globalThis.FocusAdvancedSuite = FocusAdvancedSuite;
-  if (typeof window !== 'undefined') window.FocusAdvancedSuite = FocusAdvancedSuite;
+  global.navigateToFocusSentinel = navigateToFocusSentinel;
+  if (typeof globalThis !== 'undefined') {
+    globalThis.FocusAdvancedSuite = FocusAdvancedSuite;
+    globalThis.navigateToFocusSentinel = navigateToFocusSentinel;
+  }
+  if (typeof window !== 'undefined') {
+    window.FocusAdvancedSuite = FocusAdvancedSuite;
+    window.navigateToFocusSentinel = navigateToFocusSentinel;
+  }
 
 })(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this);

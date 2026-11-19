@@ -230,6 +230,46 @@
   }
 
   /**
+   * Resolves list of consecutive date strings anchored to todayStr.
+   * Universal Rule 28 compliant (<= 35 lines, nesting <= 3).
+   */
+  function resolveTemporalDateRange(temporalMode, todayStr, customStart, customEnd) {
+    let tStr = todayStr;
+    if (!tStr || typeof tStr !== 'string') {
+      const now = new Date();
+      tStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    if (temporalMode === 'today') return [tStr];
+
+    const sParts = tStr.split('-');
+    const anchor = new Date(parseInt(sParts[0], 10), parseInt(sParts[1], 10) - 1, parseInt(sParts[2], 10));
+    let startStr = tStr;
+    let endStr = tStr;
+
+    if (temporalMode === 'yesterday') {
+      const y = new Date(anchor);
+      y.setDate(y.getDate() - 1);
+      startStr = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+      endStr = startStr;
+    } else if (temporalMode === '7d') {
+      const s = new Date(anchor);
+      s.setDate(s.getDate() - 6);
+      startStr = `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}-${String(s.getDate()).padStart(2, '0')}`;
+      endStr = tStr;
+    } else if (temporalMode === '30d') {
+      const s = new Date(anchor);
+      s.setDate(s.getDate() - 29);
+      startStr = `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}-${String(s.getDate()).padStart(2, '0')}`;
+      endStr = tStr;
+    } else if (temporalMode === 'custom') {
+      startStr = customStart || tStr;
+      endStr = customEnd || tStr;
+    }
+
+    return getDatesInRange(startStr, endStr);
+  }
+
+  /**
    * Aggregates 7x24 heatmap matrix from raw telemetry history.
    * 
    * @param {Object} rawHistory - Stored history map keyed by YYYY-MM-DD
@@ -666,6 +706,7 @@
     getDomainCategory,
     calculateProductivityScore,
     getDatesInRange,
+    resolveTemporalDateRange,
     aggregateChronoHeatmap,
     getIntensityTier,
     renderChronoHeatmap,

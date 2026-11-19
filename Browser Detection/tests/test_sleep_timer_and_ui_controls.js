@@ -8,7 +8,7 @@
  * 4. Dynamic Badge Text Formatting Engine (>= 60s formats as XXm, < 60s formats as XXs, expired/idle formats as "")
  * 5. Storage Schema Contract Serialization (sentinel_sleep_timer, sentinel_sleep_settings)
  * 6. Inactivity Auto-Sleep Sentinel Logic (idle state trigger and media pause action)
- * 7. DOM Structure & Element Presence in popup/popup.html (#btnRefresh, #btnGlobalMediaToggle, #btnSleepTimerTrigger, #btnReconnectWs, #btnThemeToggle, #sleepTimerPopover, #todayHeaderTimeBadge)
+ * 7. DOM Structure & Element Presence in popup/popup.html (#btnRefresh, #btnGlobalMediaToggle, #btnReconnectWs, #btnThemeToggle, #mainTabSleep, #sleepTimerPopover, #todayHeaderTimeBadge)
  * 8. DOM Structure & Element Presence in dashboard/dashboard.html (#cardSleepSettings, #settingDefaultSleepDuration, #settingSleepFadeToggle, #settingInactivitySleepToggle, #btnSaveSleepSettings)
  * 9. Modern SVG Vector Markup Integrity (all toolbar buttons contain valid <svg> elements with viewBox="0 0 24 24", width="16", height="16", stroke="currentColor")
  * 10. Zero innerHTML & W3C Trusted Types Audit (scan popup.js, dashboard.js, content_media.js for innerHTML assignments; certifying 0 insecure innerHTML assignments)
@@ -429,18 +429,20 @@ console.log('\nTest 7: DOM Structure & Element Presence in `popup/popup.html`');
   assert(fs.existsSync(popupHtmlPath), 'popup/popup.html must exist');
   const html = fs.readFileSync(popupHtmlPath, 'utf8');
 
-  // Required toolbar action buttons
+  // Required toolbar action buttons (redundant btnSleepTimerTrigger retired in favor of #mainTabSleep)
   const requiredToolbarIds = [
     'btnRefresh',
     'btnGlobalMediaToggle',
-    'btnSleepTimerTrigger',
     'btnReconnectWs',
     'btnThemeToggle'
   ];
   requiredToolbarIds.forEach((id) => {
     assert(html.includes(`id="${id}"`), `popup.html must contain #${id}`);
   });
-  console.log('  ✅ All 5 primary toolbar buttons exist (#btnRefresh, #btnGlobalMediaToggle, #btnSleepTimerTrigger, #btnReconnectWs, #btnThemeToggle)');
+  assert(!html.includes('id="btnSleepTimerTrigger"'), 'popup.html must not contain retired #btnSleepTimerTrigger in toolbar');
+  assert(html.includes('id="mainTabSleep"'), 'popup.html must contain #mainTabSleep for dedicated sleep timer navigation');
+  assert(html.includes('id="viewSleepPane"'), 'popup.html must contain #viewSleepPane');
+  console.log('  ✅ Primary toolbar buttons exist (#btnRefresh, #btnGlobalMediaToggle, #btnReconnectWs, #btnThemeToggle) & dedicated #mainTabSleep verified');
 
   // Sleep timer popover dialog
   assert(html.includes('id="sleepTimerPopover"'), 'popup.html must contain #sleepTimerPopover');
@@ -497,7 +499,6 @@ console.log('\nTest 9: Modern SVG Vector Markup Integrity');
   const toolbarButtons = [
     'btnRefresh',
     'btnGlobalMediaToggle',
-    'btnSleepTimerTrigger',
     'btnReconnectWs',
     'btnThemeToggle'
   ];

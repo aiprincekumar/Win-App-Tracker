@@ -12,7 +12,6 @@
     'btnRefresh',
     'btnGlobalMediaToggle',
     'btnTrackingPauseToggle',
-    'btnSleepTimerTrigger',
     'btnJumpMediaTab',
     'btnReconnectWs',
     'btnOpenDashboard'

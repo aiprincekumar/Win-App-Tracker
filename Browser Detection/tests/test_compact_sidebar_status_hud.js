@@ -197,7 +197,8 @@ console.log('\nTest 5: AST Syntax & Telemetry Logic Verification in dashboard/da
   // Verify microWidget click listener is registered
   assert(
     jsCode.includes("getElementById('wellbeingLiveMicroWidget')") &&
-    jsCode.includes("microWidget.addEventListener('click', () => switchTab('wellbeing'))"),
+    (jsCode.includes("microWidget.addEventListener('click', () => switchTab('wellbeing'))") ||
+     jsCode.includes("microWidget.addEventListener('click', () => navigateToFocusSentinel())")),
     'dashboard.js must bind click listener on #wellbeingLiveMicroWidget to navigate to wellbeing tab'
   );
   console.log('  ✅ #wellbeingLiveMicroWidget tab click switchTab verified in code');
