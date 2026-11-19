@@ -2713,16 +2713,116 @@ function handleCategoryOverride(domain, newCategory) {
   }
 }
 
+const CHRONO_HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const CHRONO_HEATMAP_FULL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function generateDefaultChronoMatrix() {
+  const matrix = [];
+  for (let d = 0; d < 7; d++) {
+    const hours = [];
+    for (let h = 0; h < 24; h++) {
+      hours.push({
+        hour: h,
+        activeSeconds: 0,
+        mediaSeconds: 0,
+        score: 0,
+        intensityTier: 0,
+        topDomain: ''
+      });
+    }
+    matrix.push({
+      dayOfWeek: d,
+      dayName: CHRONO_HEATMAP_DAYS[d],
+      hours
+    });
+  }
+  return matrix;
+}
+
 function aggregateChronoHeatmap(rawHistory, range) {
   if (_TemporalProductivity && typeof _TemporalProductivity.aggregateChronoHeatmap === 'function') {
     return _TemporalProductivity.aggregateChronoHeatmap(rawHistory, range);
   }
-  return [];
+  return generateDefaultChronoMatrix();
+}
+
+function createChronoCellElement(doc, d, h, matrix, mode) {
+  const dayItem = (matrix && (matrix.matrix || matrix.days || matrix)[d]) || null;
+  const hours = (dayItem && dayItem.hours) || (Array.isArray(dayItem) ? dayItem : []);
+  const bucket = hours[h] || (dayItem && dayItem[h]) || {};
+  const activeMode = mode === 'media' ? 'media' : 'focus';
+  const sec = activeMode === 'media' ? (bucket.mediaSeconds || 0) : (bucket.activeSeconds || 0);
+  const intensity = (sec > 0) ? (sec <= 900 ? 1 : sec <= 1800 ? 2 : sec <= 2700 ? 3 : 4) : (bucket.intensityTier || 0);
+
+  const cell = doc.createElement('div');
+  cell.className = 'heatmap-cell';
+  cell.setAttribute('data-day', String(d));
+  cell.setAttribute('data-hour', String(h));
+  cell.setAttribute('data-intensity', String(intensity));
+  cell.setAttribute('tabindex', '0');
+  cell.setAttribute('role', 'gridcell');
+
+  const hourStr = `${String(h).padStart(2, '0')}:00 - ${String(h + 1).padStart(2, '0')}:00`;
+  const durMinutes = Math.round(sec / 60);
+  const durStr = durMinutes > 0 ? `${durMinutes}m` : (sec > 0 ? `${sec}s` : '0m');
+  const topDom = bucket.topDomain || 'No domain';
+
+  cell.setAttribute('aria-label', `${CHRONO_HEATMAP_FULL_DAYS[d]} ${hourStr}: ${durStr} (${topDom})`);
+  cell.title = `${CHRONO_HEATMAP_FULL_DAYS[d]} ${hourStr}\n${activeMode === 'media' ? 'Media' : 'Focus'}: ${durStr}\nTop: ${topDom}`;
+  return cell;
+}
+
+function buildChronoGridElement(doc, matrix, mode) {
+  const grid = doc.createElement('div');
+  grid.className = 'chrono-heatmap-grid';
+  grid.setAttribute('role', 'grid');
+  grid.setAttribute('aria-label', '7x24 Chrono-Activity Heatmap');
+
+  const corner = doc.createElement('div');
+  corner.className = 'heatmap-day-label corner';
+  corner.setAttribute('aria-hidden', 'true');
+  grid.appendChild(corner);
+
+  for (let h = 0; h < 24; h++) {
+    const hLabel = doc.createElement('div');
+    hLabel.className = 'heatmap-hour-label';
+    hLabel.textContent = String(h).padStart(2, '0');
+    hLabel.setAttribute('aria-hidden', 'true');
+    grid.appendChild(hLabel);
+  }
+
+  for (let d = 0; d < 7; d++) {
+    const dLabel = doc.createElement('div');
+    dLabel.className = 'heatmap-day-label';
+    dLabel.textContent = CHRONO_HEATMAP_DAYS[d];
+    grid.appendChild(dLabel);
+
+    for (let h = 0; h < 24; h++) {
+      grid.appendChild(createChronoCellElement(doc, d, h, matrix, mode));
+    }
+  }
+  return grid;
 }
 
 function renderChronoHeatmap(matrix, mode = 'focus') {
   if (_TemporalProductivity && typeof _TemporalProductivity.renderChronoHeatmap === 'function') {
     return _TemporalProductivity.renderChronoHeatmap(matrix, mode, null, { document, t });
+  }
+  if (typeof document === 'undefined') return;
+  const container = document.getElementById('heatmapGridContainer');
+  if (!container) return;
+
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  const grid = buildChronoGridElement(document, matrix, mode);
+  container.appendChild(grid);
+
+  const valWow = document.getElementById('valHeatmapWow');
+  if (valWow && matrix && typeof matrix.wowDeltaPercent === 'number') {
+    const delta = matrix.wowDeltaPercent;
+    valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
+    valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
   }
 }
 
@@ -12465,6 +12565,8 @@ if (typeof module !== 'undefined' && module.exports) {
     // Phase 1 Temporal Engine & Productivity Classifier exports
     aggregateChronoHeatmap,
     renderChronoHeatmap,
+    buildChronoGridElement,
+    generateDefaultChronoMatrix,
     calculateProductivityScore,
     renderProductivityGauge,
     handleCategoryOverride,
@@ -12563,6 +12665,8 @@ if (typeof window !== 'undefined') {
   window.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
   window.aggregateChronoHeatmap = aggregateChronoHeatmap;
   window.renderChronoHeatmap = renderChronoHeatmap;
+  window.buildChronoGridElement = buildChronoGridElement;
+  window.generateDefaultChronoMatrix = generateDefaultChronoMatrix;
   window.calculateProductivityScore = calculateProductivityScore;
   window.renderProductivityGauge = renderProductivityGauge;
   window.handleCategoryOverride = handleCategoryOverride;
@@ -12666,6 +12770,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.updateFocusIntegrityScore = updateFocusIntegrityScore;
   globalThis.aggregateChronoHeatmap = aggregateChronoHeatmap;
   globalThis.renderChronoHeatmap = renderChronoHeatmap;
+  globalThis.buildChronoGridElement = buildChronoGridElement;
+  globalThis.generateDefaultChronoMatrix = generateDefaultChronoMatrix;
   globalThis.calculateProductivityScore = calculateProductivityScore;
   globalThis.renderProductivityGauge = renderProductivityGauge;
   globalThis.handleCategoryOverride = handleCategoryOverride;

@@ -157,6 +157,10 @@ body.theme-light .sidebar-hud-card {
   border-color: var(--border-dim);
 }
 
+body.theme-light .sidebar-hud-cluster .sidebar-hud-card:last-child {
+  border-top-color: var(--border-dim, rgba(0, 0, 0, 0.08));
+}
+
 body.theme-light .brand-title {
   background: linear-gradient(135deg, #0f172a, #059669);
   -webkit-background-clip: text;

@@ -76,75 +76,81 @@
 
       <!-- Sidebar Compact Telemetry HUD Cluster -->
       <div class="sidebar-hud-group" role="region" aria-label="Service Status Indicators">
-        <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
-        <div id="wellbeingLiveMicroWidget"
-             class="sidebar-hud-card wellbeing-micro-hud interactive-hud-card"
-             role="button"
-             tabindex="0"
-             aria-label="Focus Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
-             title="Focus &amp; Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
-             style="cursor: pointer;">
-          <div class="hud-card-header">
-            <span class="hud-card-title">🧘 Focus Sentinel</span>
-            <span id="wellbeingMicroStatusDot" class="hud-dot idle" aria-label="Focus Sentinel Status"></span>
+        <!-- Live Sentinel Monitors Cluster (Focus & Sleep) -->
+        <div class="sidebar-hud-cluster sentinel-cluster" role="group" aria-label="Live Sentinel Monitors">
+          <!-- Sidebar Focus Sentinel Live Micro-Widget HUD -->
+          <div id="wellbeingLiveMicroWidget"
+               class="sidebar-hud-card wellbeing-micro-hud interactive-hud-card"
+               role="button"
+               tabindex="0"
+               aria-label="Focus Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+               title="Focus &amp; Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+               style="cursor: pointer;">
+            <div class="hud-card-header">
+              <span class="hud-card-title">🧘 Focus Sentinel</span>
+              <span id="wellbeingMicroStatusDot" class="hud-dot idle" aria-label="Focus Sentinel Status"></span>
+            </div>
+            <div class="hud-card-body">
+              <span id="wellbeingMicroClock" class="hud-micro-clock">25:00</span>
+              <span id="wellbeingMicroMode" class="hud-micro-mode">Focus Idle</span>
+            </div>
           </div>
-          <div class="hud-card-body">
-            <span id="wellbeingMicroClock" class="hud-micro-clock">25:00</span>
-            <span id="wellbeingMicroMode" class="hud-micro-mode">Focus Idle</span>
+
+          <!-- Sidebar Sleep Sentinel Live Micro-Widget HUD -->
+          <div id="sleepLiveMicroWidget"
+               class="sidebar-hud-card sleep-micro-hud interactive-hud-card"
+               role="button"
+               tabindex="0"
+               aria-label="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+               title="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+               style="cursor: pointer;">
+            <div class="hud-card-header">
+              <span class="hud-card-title">🌙 Sleep Sentinel</span>
+              <span id="sleepMicroStatusDot" class="hud-dot idle" aria-label="Sleep Sentinel Status"></span>
+            </div>
+            <div class="hud-card-body">
+              <span id="sleepMicroClock" class="hud-micro-clock">00:00</span>
+              <span id="sleepMicroMode" class="hud-micro-mode">Sleep Idle</span>
+            </div>
           </div>
         </div>
 
-        <!-- Sidebar Sleep Sentinel Live Micro-Widget HUD -->
-        <div id="sleepLiveMicroWidget"
-             class="sidebar-hud-card sleep-micro-hud interactive-hud-card"
-             role="button"
-             tabindex="0"
-             aria-label="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
-             title="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
-             style="cursor: pointer;">
-          <div class="hud-card-header">
-            <span class="hud-card-title">🌙 Sleep Sentinel</span>
-            <span id="sleepMicroStatusDot" class="hud-dot idle" aria-label="Sleep Sentinel Status"></span>
+        <!-- Telemetry & Hardware Bridges Cluster (SQLite Data Hub & Video Detector HUD) -->
+        <div class="sidebar-hud-cluster bridge-cluster" role="group" aria-label="Telemetry & Hardware Bridges">
+          <!-- Sidebar Footer Data Hub Status Widget (Interactive Telemetry) -->
+          <div id="sidebarDataHubCard"
+               class="sidebar-hud-card interactive-hud-card"
+               role="button"
+               tabindex="0"
+               title="SQLite Data Hub (ws://127.0.0.1:65433 WAL) - Click to manage or reconnect in Settings"
+               aria-label="SQLite Data Hub Status Indicator. Click or press Enter to configure in Settings"
+               aria-controls="cardHardwareBridges">
+            <div class="hud-card-header">
+              <span class="hud-card-title">SQLite Data Hub</span>
+              <span id="dataHubSidebarDot" class="hud-dot offline" aria-label="SQLite Data Hub Status"></span>
+            </div>
+            <div class="hud-card-body">
+              <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
+              <span id="dataHubSidebarLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">Hub Offline</span>
+            </div>
           </div>
-          <div class="hud-card-body">
-            <span id="sleepMicroClock" class="hud-micro-clock">00:00</span>
-            <span id="sleepMicroMode" class="hud-micro-mode">Sleep Idle</span>
-          </div>
-        </div>
 
-        <!-- Sidebar Footer Data Hub Status Widget (Interactive Telemetry) -->
-        <div id="sidebarDataHubCard"
-             class="sidebar-hud-card interactive-hud-card"
-             role="button"
-             tabindex="0"
-             title="SQLite Data Hub (ws://127.0.0.1:65433 WAL) - Click to manage or reconnect in Settings"
-             aria-label="SQLite Data Hub Status Indicator. Click or press Enter to configure in Settings"
-             aria-controls="cardHardwareBridges">
-          <div class="hud-card-header">
-            <span class="hud-card-title">SQLite Data Hub</span>
-            <span id="dataHubSidebarDot" class="hud-dot offline" aria-label="SQLite Data Hub Status"></span>
-          </div>
-          <div class="hud-card-body">
-            <span class="hud-address">ws://127.0.0.1:65433 (WAL)</span>
-            <span id="dataHubSidebarLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">Hub Offline</span>
-          </div>
-        </div>
-
-        <!-- Sidebar Footer HUD Status Widget (Interactive Telemetry) -->
-        <div id="sidebarHudCard"
-             class="sidebar-hud-card interactive-hud-card"
-             role="button"
-             tabindex="0"
-             title="Video Detector HUD (ws://127.0.0.1:65432) - Click to manage or reconnect in Settings"
-             aria-label="Video Detector HUD Status Indicator. Click or press Enter to configure in Settings"
-             aria-controls="cardHardwareBridges">
-          <div class="hud-card-header">
-            <span class="hud-card-title">Video Detector HUD</span>
-            <span id="hudStatusDot" class="hud-dot offline" aria-label="Video Detector HUD Status"></span>
-          </div>
-          <div class="hud-card-body">
-            <span class="hud-address">ws://127.0.0.1:65432</span>
-            <span id="hudStatusLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">HUD Offline</span>
+          <!-- Sidebar Footer HUD Status Widget (Interactive Telemetry) -->
+          <div id="sidebarHudCard"
+               class="sidebar-hud-card interactive-hud-card"
+               role="button"
+               tabindex="0"
+               title="Video Detector HUD (ws://127.0.0.1:65432) - Click to manage or reconnect in Settings"
+               aria-label="Video Detector HUD Status Indicator. Click or press Enter to configure in Settings"
+               aria-controls="cardHardwareBridges">
+            <div class="hud-card-header">
+              <span class="hud-card-title">Video Detector HUD</span>
+              <span id="hudStatusDot" class="hud-dot offline" aria-label="Video Detector HUD Status"></span>
+            </div>
+            <div class="hud-card-body">
+              <span class="hud-address">ws://127.0.0.1:65432</span>
+              <span id="hudStatusLabel" class="hud-status-text hud-status-hidden" aria-hidden="true">HUD Offline</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2756,6 +2762,10 @@
   <script src="../src/dashboard/features/sleep_advanced_suite.js"></script>
   <script src="../src/dashboard/features/time_tracking_kpi_feature.js"></script>
   <script src="../src/dashboard/features/media_analytics_kpi_feature.js"></script>
+  <script src="../src/dashboard/features/temporal_productivity_feature.js"></script>
+  <script src="../src/dashboard/features/backup_hub_digest_feature.js"></script>
+  <script src="../src/dashboard/features/wellbeing_blacklist_feature.js"></script>
+  <script src="../src/dashboard/features/dashboard_feature_manager.js"></script>
   <script src="../src/dashboard/filters/temporal_date_filter.js"></script>
   <script src="dashboard.js"></script>
 </body>

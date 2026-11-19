@@ -282,9 +282,19 @@ body.theme-dark {
 .sidebar-hud-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-top: auto;
   margin-bottom: 10px;
+}
+
+/* Grouped cluster container for unified HUD micro-widgets */
+.sidebar-hud-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-sm, 6px);
 }
 
 .sidebar-hud-card {
@@ -298,6 +308,43 @@ body.theme-dark {
   -webkit-backdrop-filter: blur(8px);
   transition: border-color 0.2s ease, transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   user-select: none;
+}
+
+/* Seamless connected styling for cards inside a cluster */
+.sidebar-hud-cluster .sidebar-hud-card {
+  margin: 0;
+  border-radius: 0;
+  position: relative;
+}
+
+.sidebar-hud-cluster .sidebar-hud-card:first-child {
+  border-top-left-radius: var(--radius-sm, 6px);
+  border-top-right-radius: var(--radius-sm, 6px);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+}
+
+.sidebar-hud-cluster .sidebar-hud-card:last-child {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--radius-sm, 6px);
+  border-bottom-right-radius: var(--radius-sm, 6px);
+  border-top: 1px solid var(--border-dim, rgba(255, 255, 255, 0.08));
+  margin-bottom: 0 !important;
+}
+
+.sidebar-hud-cluster .sidebar-hud-card:hover {
+  position: relative;
+  z-index: 1;
+  transform: none;
+}
+
+.sidebar-hud-cluster .sidebar-hud-card:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 2px solid var(--accent-primary, #6366f1);
+  outline-offset: 2px;
 }
 
 .sidebar-hud-card:hover {
