@@ -2138,28 +2138,34 @@ async function resumeFocusTimer() {
 }
 
 /**
- * Extends active or paused focus timer by extra minutes
+ * Extends active or paused focus timer by extra minutes (supports negative delta, clamped to >= 60s)
  */
 async function extendFocusTimer(extraMinutes = 5) {
   await ensureStorageLoaded();
   const minsToAdd = parseInt(extraMinutes, 10);
-  if (isNaN(minsToAdd) || minsToAdd <= 0) {
+  if (isNaN(minsToAdd) || minsToAdd === 0) {
     return { success: false, error: 'Invalid extraMinutes', state: focusTimerState };
   }
 
   const extraSec = minsToAdd * 60;
-  focusTimerState.remainingSeconds = (focusTimerState.remainingSeconds || 0) + extraSec;
-  focusTimerState.durationMinutes = (focusTimerState.durationMinutes || 25) + minsToAdd;
+  const currentSec = focusTimerState.remainingSeconds || (focusTimerState.durationMinutes || 25) * 60;
+  const newSec = Math.max(60, currentSec + extraSec); // Enforce minimum 60s floor
+  
+  focusTimerState.remainingSeconds = newSec;
+  focusTimerState.durationMinutes = Math.max(1, Math.round(newSec / 60));
 
   const now = Date.now();
   if (focusTimerState.state === 'RUNNING_FOCUS' || focusTimerState.state === 'RUNNING_BREAK') {
-    focusTimerState.targetTime = (focusTimerState.targetTime || now) + (minsToAdd * 60000);
+    focusTimerState.targetTime = now + (newSec * 1000);
     try {
       await browserAPI.alarms.clear(FOCUS_TIMER_ALARM_NAME);
       await browserAPI.alarms.clear(FOCUS_BREAK_ALARM_NAME);
     } catch (_) {}
     try {
-      browserAPI.alarms.create(focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME, { when: focusTimerState.targetTime });
+      browserAPI.alarms.create(
+        focusTimerState.mode === 'focus' ? FOCUS_TIMER_ALARM_NAME : FOCUS_BREAK_ALARM_NAME,
+        { when: focusTimerState.targetTime }
+      );
     } catch (_) {}
     if (focusTimerSettings.showBadgeCountdown) {
       updateFocusActionBadge(focusTimerState.targetTime - now);
@@ -2886,6 +2892,7 @@ function commitActiveInterval() {
     const dayEntry = domainEntry.days[today];
     dayEntry.seconds += validSec;
     dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
+    updateHourlyBucket(dayEntry, validSec, true, now);
 
     // Reset interval anchor
     intervalStartTime = now;
@@ -2895,6 +2902,38 @@ function commitActiveInterval() {
 
     // Debounced auto-save ensures freshly tracked seconds are never lost on reload
     scheduleStorageSave(false);
+  }
+}
+
+/**
+ * Records real-time hourly bucket telemetry per domain day entry
+ * @param {Object} dayEntry - Domain daily statistics entry
+ * @param {number} validSec - Tracked seconds delta
+ * @param {boolean} isForeground - True for active foreground, false for background media
+ * @param {number} now - Epoch timestamp
+ */
+function updateHourlyBucket(dayEntry, validSec, isForeground, now) {
+  if (!dayEntry) return;
+  if (!dayEntry.hourlyBuckets) {
+    dayEntry.hourlyBuckets = {};
+  }
+  const currentHour = new Date(now).getHours();
+  if (!dayEntry.hourlyBuckets[currentHour]) {
+    dayEntry.hourlyBuckets[currentHour] = {
+      activeSeconds: 0,
+      activeTime: 0,
+      backgroundMediaSeconds: 0,
+      mediaTime: 0,
+      sessions: isForeground ? 1 : 0
+    };
+  }
+  const hourBucket = dayEntry.hourlyBuckets[currentHour];
+  if (isForeground) {
+    hourBucket.activeSeconds = (hourBucket.activeSeconds || 0) + validSec;
+    hourBucket.activeTime = hourBucket.activeSeconds;
+  } else {
+    hourBucket.backgroundMediaSeconds = (hourBucket.backgroundMediaSeconds || 0) + validSec;
+    hourBucket.mediaTime = hourBucket.backgroundMediaSeconds;
   }
 }
 
@@ -2930,6 +2969,7 @@ function commitBackgroundMediaDelta(domain, seconds) {
   const dayEntry = domainEntry.days[today];
   dayEntry.seconds += validSec;
   dayEntry.backgroundMediaSeconds = (dayEntry.backgroundMediaSeconds || 0) + validSec;
+  updateHourlyBucket(dayEntry, validSec, false, now);
 
   // Stream delta to Data Hub with tracking_type = 'background_media'
   streamActivityDelta(domain, validSec, false, 'background_media');
@@ -5351,7 +5391,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (msgType === 'EXTEND_FOCUS_TIMER' || message.action === 'EXTEND_FOCUS_TIMER') {
     (async () => {
       await ensureStorageLoaded();
-      const mins = message.extraMinutes || message.minutes || 5;
+      const mins = message.extraMinutes !== undefined ? message.extraMinutes : (message.minutes !== undefined ? message.minutes : 5);
       const res = await extendFocusTimer(mins);
       sendResponse(res);
     })();

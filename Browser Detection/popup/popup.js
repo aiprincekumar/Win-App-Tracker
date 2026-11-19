@@ -3444,6 +3444,11 @@ function setupEventListeners() {
 
   // Popup Focus Time Mini-Controller (#cardPopupFocusTimer)
   const btnPopupFocusToggle = document.getElementById('btnPopupFocusToggle');
+  const btnPopupFocusToggleIcon = document.getElementById('btnPopupFocusToggleIcon');
+  const btnPopupFocusToggleText = document.getElementById('btnPopupFocusToggleText');
+  const btnPopupFocusReduce5m = document.getElementById('btnPopupFocusReduce5m');
+  const btnPopupFocusExtend5m = document.getElementById('btnPopupFocusExtend5m');
+  const btnPopupFocusExtend15m = document.getElementById('btnPopupFocusExtend15m');
   const btnPopupFocusReset = document.getElementById('btnPopupFocusReset');
   const popupFocusClock = document.getElementById('popupFocusClock');
   const popupFocusBadge = document.getElementById('popupFocusBadge');
@@ -3451,6 +3456,8 @@ function setupEventListeners() {
   const txtPopupActiveGoal = document.getElementById('txtPopupActiveGoal');
   const popupFocusDialProgress = document.getElementById('popupFocusDialProgress');
   const popupFocusDialState = document.getElementById('popupFocusDialState');
+  const popupFocusDialFinishTime = document.getElementById('popupFocusDialFinishTime');
+  const popupFocusTargetTime = document.getElementById('popupFocusTargetTime');
   const POPUP_FOCUS_CIRCUMFERENCE = 339.292; // 2 * Math.PI * 54 for r=54
 
   // Load any active focus goal from storage
@@ -3481,6 +3488,28 @@ function setupEventListeners() {
     return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
   }
 
+  function formatPopupFocusFinishTime(targetTime, isRunning, isPaused) {
+    const finishEl = popupFocusDialFinishTime || popupFocusTargetTime;
+    if (!finishEl) return;
+    if (!isRunning && !isPaused) {
+      finishEl.textContent = 'No active timer';
+      return;
+    }
+    const projectedTarget = isPaused
+      ? (Date.now() + ((popupFocusBackendState.remainingSeconds || 0) * 1000))
+      : targetTime;
+    if (!projectedTarget || projectedTarget <= Date.now()) {
+      finishEl.textContent = 'Finishing soon...';
+      return;
+    }
+    const d = new Date(projectedTarget);
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    finishEl.textContent = `Finish at ${hours}:${minutes} ${ampm}`;
+  }
+
   function updatePopupFocusDial(remainingSec, totalSec, mode) {
     if (!popupFocusDialProgress) return;
     const total = Math.max(1, totalSec || (popupFocusBackendState.durationMinutes || 25) * 60);
@@ -3509,6 +3538,14 @@ function setupEventListeners() {
     }
   }
 
+  function updateFocusPresetHighlights(currentMinutes) {
+    const mins = currentMinutes || popupFocusBackendState.durationMinutes || 25;
+    document.querySelectorAll('.focus-tab-preset-btn').forEach(btn => {
+      const btnMins = parseInt(btn.getAttribute('data-minutes'), 10);
+      btn.classList.toggle('active', btnMins === mins);
+    });
+  }
+
   function updatePopupFocusBadgesAndButtons(status, isRunning, isPaused, mode, mins) {
     if (popupFocusBadge) {
       popupFocusBadge.className = 'popup-focus-badge ' + status;
@@ -3522,17 +3559,54 @@ function setupEventListeners() {
     }
 
     if (btnPopupFocusToggle) {
-      if (isRunning) {
-        btnPopupFocusToggle.textContent = '⏸️';
-        btnPopupFocusToggle.title = 'Pause Focus';
-      } else if (isPaused) {
-        btnPopupFocusToggle.textContent = '▶️';
-        btnPopupFocusToggle.title = 'Resume Focus';
+      if (btnPopupFocusToggleIcon && btnPopupFocusToggleText) {
+        if (isRunning) {
+          btnPopupFocusToggleIcon.textContent = '⏸';
+          btnPopupFocusToggleText.textContent = 'Pause';
+          btnPopupFocusToggle.title = 'Pause Focus';
+        } else if (isPaused) {
+          btnPopupFocusToggleIcon.textContent = '▶';
+          btnPopupFocusToggleText.textContent = 'Resume';
+          btnPopupFocusToggle.title = 'Resume Focus';
+        } else {
+          btnPopupFocusToggleIcon.textContent = '▶';
+          btnPopupFocusToggleText.textContent = 'Start';
+          btnPopupFocusToggle.title = 'Start Focus';
+        }
       } else {
-        btnPopupFocusToggle.textContent = '▶️';
-        btnPopupFocusToggle.title = 'Start Focus';
+        btnPopupFocusToggle.textContent = isRunning ? '⏸️' : '▶️';
+        btnPopupFocusToggle.title = isRunning ? 'Pause Focus' : (isPaused ? 'Resume Focus' : 'Start Focus');
       }
     }
+  }
+
+  function adjustPopupFocusMinutes(deltaMinutes) {
+    if (!browserAPI?.runtime?.sendMessage) return;
+    const req = { action: 'EXTEND_FOCUS_TIMER', extraMinutes: deltaMinutes };
+    browserAPI.runtime.sendMessage(req, (res) => {
+      if (!res?.state) return;
+      syncPopupFocusState(res.state);
+      const sign = deltaMinutes > 0 ? `+${deltaMinutes}` : `${deltaMinutes}`;
+      showPopupToast(`Focus time adjusted: ${sign}m`);
+    });
+  }
+
+  function handleSetFocusCustom() {
+    const inputEl = document.getElementById('inputFocusCustomMinutes') || document.getElementById('inputPopupFocusCustomMinutes');
+    if (!inputEl) return;
+    const rawVal = parseInt(inputEl.value, 10);
+    if (isNaN(rawVal) || rawVal < 1) {
+      showPopupToast('Enter valid duration (1-720 min)', 'danger');
+      return;
+    }
+    const mins = Math.min(1440, rawVal);
+    if (!browserAPI?.runtime?.sendMessage) return;
+    const req = { action: 'START_FOCUS_TIMER', durationMinutes: mins, mode: 'focus' };
+    browserAPI.runtime.sendMessage(req, (res) => {
+      if (!res?.state) return;
+      syncPopupFocusState(res.state);
+      showPopupToast(`Focus set: ${mins}m`);
+    });
   }
 
   function renderPopupFocusTick() {
@@ -3546,6 +3620,7 @@ function setupEventListeners() {
     }
     const duration = (popupFocusBackendState.durationMinutes || 25) * 60;
     updatePopupFocusDial(remaining, duration, popupFocusBackendState.mode);
+    formatPopupFocusFinishTime(popupFocusBackendState.targetTime, isRunning, false);
   }
 
   function syncPopupFocusState(bgState) {
@@ -3569,6 +3644,8 @@ function setupEventListeners() {
     const duration = (popupFocusBackendState.durationMinutes || 25) * 60;
     updatePopupFocusDial(remaining, duration, popupFocusBackendState.mode);
     updatePopupFocusDialStateText(isRunning, isPaused, popupFocusBackendState.mode);
+    formatPopupFocusFinishTime(popupFocusBackendState.targetTime, isRunning, isPaused);
+    updateFocusPresetHighlights(popupFocusBackendState.durationMinutes);
     updatePopupFocusBadgesAndButtons(status, isRunning, isPaused, popupFocusBackendState.mode, popupFocusBackendState.durationMinutes);
 
     if (isRunning) {
@@ -3605,14 +3682,25 @@ function setupEventListeners() {
         }
         showPopupToast('Focus timer resumed');
       } else {
+        const targetMins = popupFocusBackendState.durationMinutes || 25;
         if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-          browserAPI.runtime.sendMessage({ action: 'START_FOCUS_TIMER', durationMinutes: 25, mode: 'focus' }, (res) => {
+          browserAPI.runtime.sendMessage({ action: 'START_FOCUS_TIMER', durationMinutes: targetMins, mode: 'focus' }, (res) => {
             if (res && res.state) syncPopupFocusState(res.state);
           });
         }
-        showPopupToast('Focus timer started (25m)');
+        showPopupToast(`Focus timer started (${targetMins}m)`);
       }
     });
+  }
+
+  if (btnPopupFocusReduce5m) {
+    btnPopupFocusReduce5m.addEventListener('click', () => adjustPopupFocusMinutes(-5));
+  }
+  if (btnPopupFocusExtend5m) {
+    btnPopupFocusExtend5m.addEventListener('click', () => adjustPopupFocusMinutes(5));
+  }
+  if (btnPopupFocusExtend15m) {
+    btnPopupFocusExtend15m.addEventListener('click', () => adjustPopupFocusMinutes(15));
   }
 
   if (btnPopupFocusReset) {
@@ -3623,6 +3711,36 @@ function setupEventListeners() {
         });
       }
       showPopupToast('Focus timer reset');
+    });
+  }
+
+  document.querySelectorAll('.focus-tab-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mins = parseInt(btn.getAttribute('data-minutes'), 10);
+      if (!mins) return;
+      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
+        browserAPI.runtime.sendMessage({
+          action: 'START_FOCUS_TIMER',
+          durationMinutes: mins,
+          mode: 'focus'
+        }, (res) => {
+          if (res && res.state) {
+            syncPopupFocusState(res.state);
+            showPopupToast(`Focus started: ${mins}m`);
+          }
+        });
+      }
+    });
+  });
+
+  const btnFocusSetCustom = document.getElementById('btnSetFocusCustom') || document.getElementById('btnSetPopupFocusCustom');
+  if (btnFocusSetCustom) {
+    btnFocusSetCustom.addEventListener('click', handleSetFocusCustom);
+  }
+  const inputFocusCustom = document.getElementById('inputFocusCustomMinutes') || document.getElementById('inputPopupFocusCustomMinutes');
+  if (inputFocusCustom) {
+    inputFocusCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSetFocusCustom();
     });
   }
 
