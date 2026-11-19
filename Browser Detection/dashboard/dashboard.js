@@ -2825,37 +2825,78 @@ function updateProductivityMetrics(items) {
   return summary;
 }
 
+/**
+ * Merges a single domain's hourly bucket into date entry
+ */
+function mergeDomainHourlyBucket(dateEntry, dom, h, b) {
+  if (!dateEntry.hourlyBuckets[h]) {
+    dateEntry.hourlyBuckets[h] = { activeTime: 0, mediaTime: 0, sessions: 0, topDomain: dom };
+  }
+  const bActive = b.activeTime || b.activeSeconds || 0;
+  const bMedia = b.mediaTime || b.backgroundMediaSeconds || 0;
+  const bTotal = bActive + bMedia;
+
+  const targetBucket = dateEntry.hourlyBuckets[h];
+  targetBucket.activeTime += bActive;
+  targetBucket.mediaTime += bMedia;
+  targetBucket.sessions += (b.sessions || 0);
+
+  if (!dateEntry._hourlyDomainTimes[h]) {
+    dateEntry._hourlyDomainTimes[h] = {};
+  }
+  const times = dateEntry._hourlyDomainTimes[h];
+  times[dom] = (times[dom] || 0) + bTotal;
+
+  const currentTop = targetBucket.topDomain;
+  const currentTopTime = times[currentTop] || 0;
+  if (times[dom] >= currentTopTime) {
+    targetBucket.topDomain = dom;
+  }
+}
+
+/**
+ * Merges dayStats of a domain into the historyMap
+ */
+function mergeDomainDayStats(historyMap, dom, dateStr, dayStats) {
+  if (!dayStats) return;
+  if (!historyMap[dateStr]) {
+    historyMap[dateStr] = { domains: {}, hourlyBuckets: {}, _hourlyDomainTimes: {} };
+  }
+  historyMap[dateStr].domains[dom] = {
+    activeTime: dayStats.seconds || dayStats.foregroundSeconds || 0,
+    mediaTime: dayStats.backgroundMediaSeconds || 0,
+    sessions: dayStats.sessions || 1
+  };
+  if (!dayStats.hourlyBuckets) return;
+
+  for (const [h, b] of Object.entries(dayStats.hourlyBuckets)) {
+    if (!b) continue;
+    mergeDomainHourlyBucket(historyMap[dateStr], dom, h, b);
+  }
+}
+
+/**
+ * Aggregates per-domain history records into daily historyMap with hourlyBuckets
+ */
+function aggregateDomainsHistoryMap(domains) {
+  const historyMap = {};
+  if (!domains || typeof domains !== 'object') return historyMap;
+
+  for (const [dom, dObj] of Object.entries(domains)) {
+    if (!dObj || !dObj.days) continue;
+    for (const [dateStr, dayStats] of Object.entries(dObj.days)) {
+      mergeDomainDayStats(historyMap, dom, dateStr, dayStats);
+    }
+  }
+  return historyMap;
+}
+
 function updateChronoHeatmap(data) {
   let rawHistory = {};
   if (data && data.activityData && data.activityData.history) {
     rawHistory = data.activityData.history;
   } else if (data && data.activityData && data.activityData.domains) {
-    const historyMap = {};
-    for (const [dom, dObj] of Object.entries(data.activityData.domains)) {
-      if (dObj.days) {
-        for (const [dateStr, dayStats] of Object.entries(dObj.days)) {
-          if (!historyMap[dateStr]) {
-            historyMap[dateStr] = { domains: {}, hourlyBuckets: {} };
-          }
-          historyMap[dateStr].domains[dom] = {
-            activeTime: dayStats.seconds || dayStats.foregroundSeconds || 0,
-            mediaTime: dayStats.backgroundMediaSeconds || 0,
-            sessions: dayStats.sessions || 1
-          };
-          if (dayStats.hourlyBuckets) {
-            for (const [h, b] of Object.entries(dayStats.hourlyBuckets)) {
-              if (!historyMap[dateStr].hourlyBuckets[h]) {
-                historyMap[dateStr].hourlyBuckets[h] = { activeTime: 0, mediaTime: 0, sessions: 0, topDomain: dom };
-              }
-              historyMap[dateStr].hourlyBuckets[h].activeTime += (b.activeTime || 0);
-              historyMap[dateStr].hourlyBuckets[h].mediaTime += (b.mediaTime || 0);
-              historyMap[dateStr].hourlyBuckets[h].sessions += (b.sessions || 0);
-            }
-          }
-        }
-      }
-    }
-    rawHistory = historyMap;
+    rawHistory = aggregateDomainsHistoryMap(data.activityData.domains);
   } else if (data && typeof data === 'object') {
     rawHistory = data;
   }
@@ -4899,6 +4940,64 @@ function navigateToFocusSentinel() {
       focusHighlightTimerId = null;
     }, 2000);
   }, 60);
+}
+
+let sleepHighlightTimerId = null;
+
+function triggerSleepSentinelHighlight(card, btn, prefersReduced) {
+  if (typeof card.scrollIntoView === 'function') {
+    card.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+  }
+  card.classList.remove('sleep-card-highlight');
+  if (btn) btn.classList.remove('highlight-pulse');
+  void card.offsetWidth;
+  if (btn) void btn.offsetWidth;
+
+  card.classList.add('sleep-card-highlight');
+  if (btn) {
+    btn.classList.add('highlight-pulse');
+    if (typeof btn.focus === 'function') btn.focus({ preventScroll: true });
+  }
+
+  sleepHighlightTimerId = setTimeout(() => {
+    if (card) card.classList.remove('sleep-card-highlight');
+    if (btn) btn.classList.remove('highlight-pulse');
+    sleepHighlightTimerId = null;
+  }, 2000);
+}
+
+/**
+ * Deep-links directly to Sleep Sentinel Hub card and highlights the primary toggle button
+ */
+function navigateToSleepSentinel() {
+  if (typeof SleepAdvancedSuite !== 'undefined' && typeof SleepAdvancedSuite.navigateToSleepSentinel === 'function') {
+    SleepAdvancedSuite.navigateToSleepSentinel();
+    return;
+  }
+  if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics && typeof sentinelHaptics.playClick === 'function') {
+    sentinelHaptics.playClick();
+  }
+  if (typeof switchTab === 'function') {
+    switchTab('wellbeing');
+  }
+  const card = (typeof document !== 'undefined')
+    ? (document.getElementById('cardSleepSentinelHub') || document.getElementById('widgetSleepSentinel'))
+    : null;
+  const btn = (typeof document !== 'undefined')
+    ? (document.getElementById('btnDashSleepToggle') || document.getElementById('btnStartSleepTimer'))
+    : null;
+  if (!card) return;
+
+  if (sleepHighlightTimerId) {
+    clearTimeout(sleepHighlightTimerId);
+    sleepHighlightTimerId = null;
+  }
+
+  const prefersReduced = (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+
+  setTimeout(() => triggerSleepSentinelHighlight(card, btn, prefersReduced), 60);
 }
 
 function startSoundscape(type) {
@@ -9465,6 +9564,16 @@ function setupEventListeners() {
       }
     });
   }
+  const sleepMicroWidget = document.getElementById('sleepLiveMicroWidget');
+  if (sleepMicroWidget) {
+    sleepMicroWidget.addEventListener('click', () => navigateToSleepSentinel());
+    sleepMicroWidget.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        navigateToSleepSentinel();
+      }
+    });
+  }
   const navTabSettings = document.getElementById('navTabSettings');
   if (navTabSettings) {
     navTabSettings.addEventListener('click', () => switchTab('settings'));
@@ -11282,6 +11391,41 @@ function updateDashSleepDial(remainingMs, totalDurationMs, isRunning, isPaused, 
 }
 
 /**
+ * Synchronizes real-time telemetry into the left navigation sleep micro-widget
+ * @param {string} timeStr - Formatted time display string (e.g. '00:00' or '25:00')
+ * @param {string} timerState - Current state string: 'IDLE' | 'RUNNING' | 'PAUSED' | 'FADING' | 'CANCELLED' | 'TRIGGERED'
+ * @param {boolean} isIdle - Whether timer is idle or cancelled
+ */
+function updateSleepMicroWidget(timeStr, timerState, isIdle) {
+  if (typeof document === 'undefined') return;
+  const microClock = document.getElementById('sleepMicroClock');
+  const microMode = document.getElementById('sleepMicroMode');
+  const microDot = document.getElementById('sleepMicroStatusDot');
+  if (!microClock && !microMode && !microDot) return;
+
+  if (isIdle) {
+    if (microClock) microClock.textContent = '00:00';
+    if (microMode) microMode.textContent = 'Sleep Idle';
+    if (microDot) microDot.className = 'hud-dot idle';
+    return;
+  }
+
+  const isRunning = timerState === 'RUNNING';
+  const isFading = timerState === 'FADING';
+  const isPaused = timerState === 'PAUSED';
+
+  if (microClock) microClock.textContent = timeStr || '00:00';
+  if (microMode) {
+    microMode.textContent = isRunning
+      ? 'Sleep Active'
+      : (isFading ? 'Sleep Fading' : (isPaused ? 'Sleep Paused' : 'Sleep Idle'));
+  }
+  if (microDot) {
+    microDot.className = 'hud-dot ' + (isRunning ? 'online' : ((isFading || isPaused) ? 'warn' : 'idle'));
+  }
+}
+
+/**
  * Renders sleep timer state into the dashboard hub DOM elements
  */
 function renderDashSleepTimer(timer) {
@@ -11311,6 +11455,9 @@ function renderDashSleepTimer(timer) {
     if (btnToggleIcon) btnToggleIcon.textContent = '▶️';
     if (btnToggleText) btnToggleText.textContent = 'Start Sleep Timer';
     if (btnToggle) btnToggle.className = 'btn-sleep-primary';
+    if (typeof updateSleepMicroWidget === 'function') {
+      updateSleepMicroWidget('00:00', timer ? timer.state : 'IDLE', true);
+    }
     updateDashSleepDial(0, 1, false, false, false);
     stopDashSleepTicker();
     return;
@@ -11335,6 +11482,9 @@ function renderDashSleepTimer(timer) {
     : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
   if (countdownEl) countdownEl.textContent = timeStr;
+  if (typeof updateSleepMicroWidget === 'function') {
+    updateSleepMicroWidget(timeStr, timer.state, false);
+  }
 
   if (finishTimeEl) {
     const projectedTarget = isPaused ? (now + remainingMs) : timer.targetTime;
@@ -12276,6 +12426,8 @@ if (typeof module !== 'undefined' && module.exports) {
     switchTab,
     navigateToBridgeService,
     navigateToFocusSentinel,
+    navigateToSleepSentinel,
+    updateSleepMicroWidget,
     // Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers exports
     formatHHMMSS,
     formatTimeHHMMSS,
@@ -12404,6 +12556,8 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.navigateToBridgeService = navigateToBridgeService;
   window.navigateToFocusSentinel = navigateToFocusSentinel;
+  window.navigateToSleepSentinel = navigateToSleepSentinel;
+  window.updateSleepMicroWidget = updateSleepMicroWidget;
   window.updateHUDStatus = updateHUDStatus;
   window.updateDataHubStatus = updateDataHubStatus;
   window.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
@@ -12496,6 +12650,8 @@ if (typeof window !== 'undefined') {
 if (typeof globalThis !== 'undefined') {
   globalThis.navigateToBridgeService = navigateToBridgeService;
   globalThis.navigateToFocusSentinel = navigateToFocusSentinel;
+  globalThis.navigateToSleepSentinel = navigateToSleepSentinel;
+  globalThis.updateSleepMicroWidget = updateSleepMicroWidget;
   globalThis.updateHUDStatus = updateHUDStatus;
   globalThis.updateDataHubStatus = updateDataHubStatus;
   globalThis.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;

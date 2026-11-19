@@ -521,6 +521,65 @@
     bindSleepSoundscapeControls();
   }
 
+  let sleepHighlightTimerId = null;
+
+  function triggerSleepSentinelHighlight(card, btn, prefersReduced) {
+    if (typeof card.scrollIntoView === 'function') {
+      card.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+    }
+    card.classList.remove('sleep-card-highlight');
+    if (btn) btn.classList.remove('highlight-pulse');
+    void card.offsetWidth;
+    if (btn) void btn.offsetWidth;
+
+    card.classList.add('sleep-card-highlight');
+    if (btn) {
+      btn.classList.add('highlight-pulse');
+      if (typeof btn.focus === 'function') btn.focus({ preventScroll: true });
+    }
+
+    sleepHighlightTimerId = setTimeout(() => {
+      if (card) card.classList.remove('sleep-card-highlight');
+      if (btn) btn.classList.remove('highlight-pulse');
+      sleepHighlightTimerId = null;
+    }, 2000);
+  }
+
+  /**
+   * Deep-links directly to Sleep Sentinel Hub card and highlights the primary toggle button
+   */
+  function navigateToSleepSentinel() {
+    if (typeof window !== 'undefined' && window.sentinelHaptics?.playClick) {
+      window.sentinelHaptics.playClick();
+    } else if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics?.playClick) {
+      sentinelHaptics.playClick();
+    }
+    if (typeof window !== 'undefined' && typeof window.switchTab === 'function') {
+      window.switchTab('wellbeing');
+    } else if (typeof switchTab === 'function') {
+      switchTab('wellbeing');
+    }
+
+    const card = typeof document !== 'undefined'
+      ? (document.getElementById('cardSleepSentinelHub') || document.getElementById('widgetSleepSentinel'))
+      : null;
+    const btn = typeof document !== 'undefined'
+      ? (document.getElementById('btnDashSleepToggle') || document.getElementById('btnStartSleepTimer'))
+      : null;
+    if (!card) return;
+
+    if (sleepHighlightTimerId) {
+      clearTimeout(sleepHighlightTimerId);
+      sleepHighlightTimerId = null;
+    }
+
+    const prefersReduced = (typeof window !== 'undefined' && window.matchMedia)
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false;
+
+    setTimeout(() => triggerSleepSentinelHighlight(card, btn, prefersReduced), 60);
+  }
+
   // Sleep Advanced Suite Public API Object
   const SleepAdvancedSuite = {
     initSleepAdvancedState,
@@ -533,6 +592,7 @@
     triggerPowerNapMode,
     resetPowerNap,
     bindSleepAdvancedEventListeners,
+    navigateToSleepSentinel,
     getState: () => ({ ...state })
   };
 
@@ -540,7 +600,14 @@
     module.exports = SleepAdvancedSuite;
   }
   global.SleepAdvancedSuite = SleepAdvancedSuite;
-  if (typeof globalThis !== 'undefined') globalThis.SleepAdvancedSuite = SleepAdvancedSuite;
-  if (typeof window !== 'undefined') window.SleepAdvancedSuite = SleepAdvancedSuite;
+  global.navigateToSleepSentinel = navigateToSleepSentinel;
+  if (typeof globalThis !== 'undefined') {
+    globalThis.SleepAdvancedSuite = SleepAdvancedSuite;
+    globalThis.navigateToSleepSentinel = navigateToSleepSentinel;
+  }
+  if (typeof window !== 'undefined') {
+    window.SleepAdvancedSuite = SleepAdvancedSuite;
+    window.navigateToSleepSentinel = navigateToSleepSentinel;
+  }
 
 })(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this);

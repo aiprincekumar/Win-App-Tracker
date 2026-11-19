@@ -94,6 +94,24 @@
           </div>
         </div>
 
+        <!-- Sidebar Sleep Sentinel Live Micro-Widget HUD -->
+        <div id="sleepLiveMicroWidget"
+             class="sidebar-hud-card sleep-micro-hud interactive-hud-card"
+             role="button"
+             tabindex="0"
+             aria-label="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+             title="Sleep Sentinel State (Click to switch to Focus &amp; Sleep Hub)"
+             style="cursor: pointer;">
+          <div class="hud-card-header">
+            <span class="hud-card-title">🌙 Sleep Sentinel</span>
+            <span id="sleepMicroStatusDot" class="hud-dot idle" aria-label="Sleep Sentinel Status"></span>
+          </div>
+          <div class="hud-card-body">
+            <span id="sleepMicroClock" class="hud-micro-clock">00:00</span>
+            <span id="sleepMicroMode" class="hud-micro-mode">Sleep Idle</span>
+          </div>
+        </div>
+
         <!-- Sidebar Footer Data Hub Status Widget (Interactive Telemetry) -->
         <div id="sidebarDataHubCard"
              class="sidebar-hud-card interactive-hud-card"
@@ -1854,9 +1872,10 @@
                   <span id="txtSleepAutomationDesc" class="settings-card-sub" data-i18n="sleep_automation_desc">Automated playback cutoff, tab hibernation & inactivity triggers</span>
                 </div>
               </div>
-              <div class="sleep-advanced-body controls-2col-grid">
-                <div class="controls-col-panel">
-                  <div class="control-toggle-item">
+              <div class="sleep-advanced-body">
+                <div class="dash-sleep-toggles-container">
+                  <!-- 1. Stop at End of Video -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="lbl_sleep_end_of_video">Stop at End of Video</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_end_of_video">Trigger cutoff as soon as the current playing video finishes</span>
@@ -1866,7 +1885,9 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                  <div class="control-toggle-item">
+
+                  <!-- 2. Auto-Disable Video Autoplay -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_autoplay_block">Auto-Disable Video Autoplay</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_autoplay_block">Block next video autoplay during bedtime</span>
@@ -1876,7 +1897,9 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                  <div class="control-toggle-item">
+
+                  <!-- 3. Pause if idle 15m -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="lbl_inactivity_auto_sleep">Pause if idle 15m</span>
                       <span class="toggle-desc" data-i18n="desc_inactivity_auto_sleep">Trigger sleep timer cutoff when user is idle for 15 minutes</span>
@@ -1886,7 +1909,9 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                  <div class="control-toggle-item">
+
+                  <!-- 4. Inactivity Fast-Cutoff (5m) -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_inactivity_cutoff">Inactivity Fast-Cutoff (5m)</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_inactivity_cutoff">Cut off media if idle for 5m during countdown</span>
@@ -1896,9 +1921,9 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                </div>
-                <div class="controls-col-panel">
-                  <div class="control-select-item">
+
+                  <!-- 5. On Timeout Action -->
+                  <div class="dash-sleep-toggle-row dash-sleep-select-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="lbl_timeout_action">On Timeout Action</span>
                       <span class="toggle-desc" data-i18n="desc_timeout_action">Action to dispatch when sleep countdown reaches zero</span>
@@ -1909,7 +1934,9 @@
                       <option value="close_tab" data-i18n="opt_timeout_close">Pause & Close Tab</option>
                     </select>
                   </div>
-                  <div class="control-toggle-item">
+
+                  <!-- 6. Progressive Screen Dimmer -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_screen_dimmer">Progressive Screen Dimmer</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_screen_dimmer">Circadian screen dimming during final countdown</span>
@@ -1919,7 +1946,9 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                  <div class="control-toggle-item">
+
+                  <!-- 7. Memory-Saver Tab Hibernation -->
+                  <div class="dash-sleep-toggle-row">
                     <div class="toggle-text-group">
                       <span class="toggle-title" data-i18n="toggle_sleep_tab_hibernate">Memory-Saver Tab Hibernation</span>
                       <span class="toggle-desc" data-i18n="desc_sleep_tab_hibernate">Suspend idle tabs on timeout to quiet cooling fans</span>
@@ -1929,40 +1958,41 @@
                       <span class="slider-round"></span>
                     </label>
                   </div>
-                </div>
-                <div class="controls-full-span-group">
-                  <div class="extended-toggles-divider"></div>
-                  <div class="dash-advanced-toggles-grid">
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_sleep_close_all_media_tabs">Close All Media Tabs</span>
-                        <span class="toggle-desc" data-i18n="desc_sleep_close_all_media_tabs">Safely close all inactive media tabs across browser windows</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleSleepCloseAllMediaTabs">
-                        <input type="checkbox" id="toggleSleepCloseAllMediaTabs" role="switch" class="switch-input" aria-label="Close All Media Tabs">
-                        <span class="slider-round"></span>
-                      </label>
+
+                  <!-- 8. Close All Media Tabs -->
+                  <div class="dash-sleep-toggle-row">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_close_all_media_tabs">Close All Media Tabs</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_close_all_media_tabs">Safely close all inactive media tabs across browser windows</span>
                     </div>
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_sleep_darken_display">OLED Full Blackout</span>
-                        <span class="toggle-desc" data-i18n="desc_sleep_darken_display">Render pure 100% black overlay on cutoff to eliminate night glow</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleSleepDarkenDisplay">
-                        <input type="checkbox" id="toggleSleepDarkenDisplay" role="switch" class="switch-input" aria-label="OLED Full Blackout">
-                        <span class="slider-round"></span>
-                      </label>
+                    <label class="switch-toggle" for="toggleSleepCloseAllMediaTabs">
+                      <input type="checkbox" id="toggleSleepCloseAllMediaTabs" role="switch" class="switch-input dash-sleep-switch-input" aria-label="Close All Media Tabs">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <!-- 9. OLED Full Blackout -->
+                  <div class="dash-sleep-toggle-row">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_darken_display">OLED Full Blackout</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_darken_display">Render pure 100% black overlay on cutoff to eliminate night glow</span>
                     </div>
-                    <div class="control-toggle-item">
-                      <div class="toggle-text-group">
-                        <span class="toggle-title" data-i18n="toggle_sleep_system_inactivity_sync">System Inactivity Sync</span>
-                        <span class="toggle-desc" data-i18n="desc_sleep_system_inactivity_sync">Bridge OS-level sleep state to sync countdown timer</span>
-                      </div>
-                      <label class="switch-toggle" for="toggleSleepSystemInactivitySync">
-                        <input type="checkbox" id="toggleSleepSystemInactivitySync" role="switch" class="switch-input" aria-label="System Inactivity Sync">
-                        <span class="slider-round"></span>
-                      </label>
+                    <label class="switch-toggle" for="toggleSleepDarkenDisplay">
+                      <input type="checkbox" id="toggleSleepDarkenDisplay" role="switch" class="switch-input dash-sleep-switch-input" aria-label="OLED Full Blackout">
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <!-- 10. System Inactivity Sync -->
+                  <div class="dash-sleep-toggle-row">
+                    <div class="toggle-text-group">
+                      <span class="toggle-title" data-i18n="toggle_sleep_system_inactivity_sync">System Inactivity Sync</span>
+                      <span class="toggle-desc" data-i18n="desc_sleep_system_inactivity_sync">Bridge OS-level sleep state to sync countdown timer</span>
                     </div>
+                    <label class="switch-toggle" for="toggleSleepSystemInactivitySync">
+                      <input type="checkbox" id="toggleSleepSystemInactivitySync" role="switch" class="switch-input dash-sleep-switch-input" aria-label="System Inactivity Sync">
+                      <span class="slider-round"></span>
+                    </label>
                   </div>
                 </div>
               </div>
