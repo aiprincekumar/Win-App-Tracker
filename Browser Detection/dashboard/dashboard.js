@@ -6743,13 +6743,18 @@ function renderDonutChart(items, totalSeconds, subtab) {
 
   centerTimeEl.textContent = formatDuration(totalSeconds);
 
-  if (subtab === 'today') {
-    centerLabelEl.textContent = t('donut_center_today');
-  } else if (subtab === 'daily') {
-    centerLabelEl.textContent = t('donut_center_daily');
-  } else {
-    centerLabelEl.textContent = t('donut_center_total');
-  }
+  const centerKey = (_TemporalDateFilter && typeof _TemporalDateFilter.getDonutCenterLabelKey === 'function')
+    ? _TemporalDateFilter.getDonutCenterLabelKey(subtab)
+    : ({
+        today: 'donut_center_today',
+        yesterday: 'donut_center_yesterday',
+        '7d': 'donut_center_7days',
+        '30d': 'donut_center_30days',
+        custom: 'donut_center_custom',
+        daily: 'donut_center_daily',
+        total: 'donut_center_total'
+      }[subtab] || 'donut_center_total');
+  centerLabelEl.textContent = t(centerKey);
 
   if (totalSeconds === 0 || items.length === 0) {
     let emptyMsg = t('donut_empty');
@@ -6825,13 +6830,7 @@ function renderDonutChart(items, totalSeconds, subtab) {
         const faviconImg = centerInfo.querySelector('.donut-center-favicon');
         if (faviconImg) faviconImg.style.display = 'none';
         centerTimeEl.textContent = formatDuration(totalSeconds);
-        if (subtab === 'today') {
-          centerLabelEl.textContent = t('donut_center_today');
-        } else if (subtab === 'daily') {
-          centerLabelEl.textContent = t('donut_center_daily');
-        } else {
-          centerLabelEl.textContent = t('donut_center_total');
-        }
+        centerLabelEl.textContent = t(centerKey);
       }
     });
 
@@ -12322,6 +12321,11 @@ if (typeof module !== 'undefined' && module.exports) {
     updateProductivityMetrics,
     updateChronoHeatmap,
     getDatesInRange,
+    resolveTemporalDateRange,
+    parseYMD,
+    formatYMD,
+    getDatesInRangeFallback,
+    TemporalDateFilter: _TemporalDateFilter,
     TemporalProductivityFeature: _TemporalProductivity,
     getDomainCategoryOverrides: () => domainCategoryOverrides,
     setDomainCategoryOverrides: (val) => { domainCategoryOverrides = val; },
