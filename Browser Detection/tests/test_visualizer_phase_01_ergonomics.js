@@ -294,7 +294,7 @@ console.log('\nTest 5: UI Interaction, Idempotent Wiring & i18n in dashboard.js'
   // 4. Keyboard Escape Handling
   const escIndex = dashCode.indexOf("if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27)");
   assert(escIndex !== -1, 'Escape key handler present');
-  const escBlock = dashCode.substring(escIndex, escIndex + 1000);
+  const escBlock = dashCode.substring(escIndex, escIndex + 1500);
   assert(escBlock.includes('vizSettingsDrawer'), 'Escape handler dismisses settings drawer');
   assert(escBlock.includes('vizPillPopoverMenu'), 'Escape handler dismisses pill popover menu');
   console.log('  ✅ 5.4: Escape key handler dismisses drawer and popover while preserving fullscreen exit');

@@ -114,6 +114,125 @@ assert.strictEqual(TimeTrackingKpiFeature.computePeakActivityHour(sampleData, '2
 // Longest session
 assert.strictEqual(TimeTrackingKpiFeature.computeLongestContinuousSession(null, sampleItems), 3600);
 
+// Clean Brand / Website Name Formatting
+assert(typeof TimeTrackingKpiFeature.formatCleanWebsiteName === 'function', 'formatCleanWebsiteName not a function');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('www.youtube.com'), 'YouTube');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('https://youtu.be/xyz'), 'YouTube');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('music.youtube.com'), 'YouTube');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('www.google.com'), 'Google');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('mail.google.com'), 'Gmail');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('gmail.com'), 'Gmail');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('github.com'), 'GitHub');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('linkedin.com'), 'LinkedIn');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('chatgpt.com'), 'ChatGPT');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('openai.com'), 'ChatGPT');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('netflix.com'), 'Netflix');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('spotify.com'), 'Spotify');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('reddit.com'), 'Reddit');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('twitter.com'), 'X (Twitter)');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('x.com'), 'X (Twitter)');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('facebook.com'), 'Facebook');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('fb.com'), 'Facebook');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('instagram.com'), 'Instagram');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('twitch.tv'), 'Twitch');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('discord.com'), 'Discord');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('discord.gg'), 'Discord');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('stackoverflow.com'), 'Stack Overflow');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('amazon.com'), 'Amazon');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('amazon.in'), 'Amazon');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('wikipedia.org'), 'Wikipedia');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('notion.so'), 'Notion');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('figma.com'), 'Figma');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('slack.com'), 'Slack');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('chrome://extensions'), 'Chrome');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('edge://settings'), 'Edge');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('localhost:3000'), 'Localhost');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('my-cool-portal.co.uk'), 'My Cool Portal');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName(''), '-');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName(null), '-');
+
+// Multi-tier ccTLD parsing (.co.uk, .com.au, .co.in, .org.uk, etc.) and standard gTLDs (.io, .net, .org)
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('news.com.au'), 'News');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('service.co.in'), 'Service');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('charity.org.uk'), 'Charity');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('tech-startup.io'), 'Tech Startup');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('developer-network.net'), 'Developer Network');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('open-source.org'), 'Open Source');
+
+// Subdomain handling (www., m., web., deep subdomains)
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('m.facebook.com'), 'Facebook');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('web.telegram.org'), 'Telegram');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('https://music.youtube.com/watch?v=123'), 'YouTube');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('http://mail.google.com/mail/u/0/'), 'Gmail');
+
+// Algorithmic fallback title-casing
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('my-domain.com'), 'My Domain');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('awesome_product_hub.io'), 'Awesome Product Hub');
+
+// Edge cases: null, undefined, empty string, raw IPs, internal schemes
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName(undefined), '-');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('   '), '-');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('192.168.1.1'), '192.168.1.1');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('http://10.0.0.1:8080/admin'), '10.0.0.1');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('chrome://version'), 'Chrome');
+assert.strictEqual(TimeTrackingKpiFeature.formatCleanWebsiteName('edge://flags'), 'Edge');
+
+// Top Domain cleanName enrichment in aggregateTimeTrackingKpis
+const sampleAgg = TimeTrackingKpiFeature.aggregateTimeTrackingKpis({
+  stats: {
+    topDomain: { domain: 'www.youtube.com', computedSeconds: 3600, ratioPercent: 45 }
+  }
+});
+assert(sampleAgg.topDomain, 'sampleAgg.topDomain is null');
+assert.strictEqual(sampleAgg.topDomain.domain, 'www.youtube.com');
+assert.strictEqual(sampleAgg.topDomain.cleanName, 'YouTube');
+
+// aggregateTimeTrackingKpis edge cases (null topDomain)
+const emptyAgg = TimeTrackingKpiFeature.aggregateTimeTrackingKpis({});
+assert.strictEqual(emptyAgg.topDomain, null);
+
+// DOM binding verification: textContent holds clean brand name, title attribute holds raw domain URL
+{
+  const mockElements = {
+    trackMetricTodayTime: { dataset: {} },
+    trackMetricDailyAvg: { dataset: {} },
+    trackMetricTotalTime: { dataset: {} },
+    trackMetricHistoryDays: {},
+    trackMetricFirstDate: {},
+    trackMetricTopDomain: { textContent: '', title: '', setAttribute(k, v) { this[k] = v; }, removeAttribute(k) { delete this[k]; } },
+    trackMetricTopDomainTime: { textContent: '' }
+  };
+  const mockDoc = {
+    getElementById: (id) => mockElements[id] || null
+  };
+  const mockT = (key, val) => key === 'no_data' ? 'No Data' : `${key}:${val}`;
+  const mockFormatDuration = (sec) => `${sec}s`;
+  const mockAnimateRoll = () => {};
+
+  // Case A: Valid topDomain present
+  const kpiWithTop = {
+    todaySec: 100, dailyAvgSec: 50, totalSec: 500, historyDays: 5, firstTrackedDate: '2026-11-01',
+    topDomain: { domain: 'www.youtube.com', computedSeconds: 1200, ratioPercent: 45, cleanName: 'YouTube' }
+  };
+  const dashCode = fs.readFileSync(path.join(__dirname, '..', 'dashboard', 'dashboard.js'), 'utf8');
+  const fnMatch = dashCode.match(/function renderPrimaryTimeMetrics\(kpi\)\s*\{[\s\S]*?\n\}/);
+  assert(fnMatch, 'renderPrimaryTimeMetrics function not found in dashboard.js');
+  const runRender = new Function('kpi', 'TimeTrackingKpiFeature', 'document', 't', 'formatDuration', 'animateNumberRoll', `(${fnMatch[0]})(kpi)`);
+
+  runRender(kpiWithTop, TimeTrackingKpiFeature, mockDoc, mockT, mockFormatDuration, mockAnimateRoll);
+  assert.strictEqual(mockElements.trackMetricTopDomain.textContent, 'YouTube', 'Top Domain textContent must display clean brand name');
+  assert.strictEqual(mockElements.trackMetricTopDomain.title, 'www.youtube.com', 'Top Domain title attribute must retain raw domain URL for tooltip hover transparency');
+
+  // Case B: No top domain (computedSeconds <= 0 or null)
+  const kpiNoTop = {
+    todaySec: 0, dailyAvgSec: 0, totalSec: 0, historyDays: 1, firstTrackedDate: 'today',
+    topDomain: null
+  };
+  runRender(kpiNoTop, TimeTrackingKpiFeature, mockDoc, mockT, mockFormatDuration, mockAnimateRoll);
+  assert.strictEqual(mockElements.trackMetricTopDomain.textContent, 'No Data', 'Top Domain textContent must display localized no_data when empty');
+  assert.strictEqual(mockElements.trackMetricTopDomain.title, undefined, 'Top Domain title attribute must be removed when no domain exists');
+}
+
 // Test MediaAnalyticsKpiFeature
 assert(typeof MediaAnalyticsKpiFeature.computeTopMediaPlatform === 'function', 'computeTopMediaPlatform not a function');
 assert(typeof MediaAnalyticsKpiFeature.computeActiveLiveStreamsCount === 'function', 'computeActiveLiveStreamsCount not a function');
@@ -236,6 +355,7 @@ auditFunctionLengths(jsPath, [
 ]);
 
 auditFunctionLengths(path.join(__dirname, '..', 'src/dashboard/features/time_tracking_kpi_feature.js'), [
+  'formatCleanWebsiteName',
   'computeActiveDomainsCount',
   'computeDistractionStats',
   'computePeakActivityHour',

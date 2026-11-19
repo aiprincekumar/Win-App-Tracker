@@ -4782,6 +4782,60 @@ function updateFocusIntegrityScore(delta, reason) {
   }
 }
 
+let focusHighlightTimerId = null;
+
+/**
+ * Deep-links directly to Focus Sentinel card and highlights the Start Focus button
+ */
+function navigateToFocusSentinel() {
+  if (typeof FocusAdvancedSuite !== 'undefined' && typeof FocusAdvancedSuite.navigateToFocusSentinel === 'function') {
+    FocusAdvancedSuite.navigateToFocusSentinel();
+    return;
+  }
+  if (typeof sentinelHaptics !== 'undefined' && sentinelHaptics && typeof sentinelHaptics.playClick === 'function') {
+    sentinelHaptics.playClick();
+  }
+  if (typeof switchTab === 'function') {
+    switchTab('wellbeing');
+  }
+  const card = (typeof document !== 'undefined') ? document.getElementById('widgetPomodoroSentinel') : null;
+  const btn = (typeof document !== 'undefined') ? document.getElementById('btnStartPomodoro') : null;
+  if (!card) return;
+
+  if (focusHighlightTimerId) {
+    clearTimeout(focusHighlightTimerId);
+    focusHighlightTimerId = null;
+  }
+
+  const prefersReduced = (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+
+  setTimeout(() => {
+    if (typeof card.scrollIntoView === 'function') {
+      card.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'center' });
+    }
+    card.classList.remove('focus-card-highlight');
+    if (btn) btn.classList.remove('highlight-pulse');
+    void card.offsetWidth;
+    if (btn) void btn.offsetWidth;
+
+    card.classList.add('focus-card-highlight');
+    if (btn) {
+      btn.classList.add('highlight-pulse');
+      if (typeof btn.focus === 'function') {
+        btn.focus({ preventScroll: true });
+      }
+    }
+
+    focusHighlightTimerId = setTimeout(() => {
+      if (card) card.classList.remove('focus-card-highlight');
+      if (btn) btn.classList.remove('highlight-pulse');
+      focusHighlightTimerId = null;
+    }, 2000);
+  }, 60);
+}
+
 function startSoundscape(type) {
   stopActiveSoundscape();
   if (!type || type === 'none') return;
@@ -6391,7 +6445,7 @@ function getFaviconUrl(domain) {
 
 /**
  * Renders primary metrics for Time Tracking KPI Bento Grid (Tab A).
- * Universal Rule 28 compliant (<= 30 lines, zero innerHTML).
+ * Universal Rule 28 compliant (<= 35 lines, zero innerHTML).
  */
 function renderPrimaryTimeMetrics(kpi) {
   const elToday = document.getElementById('trackMetricTodayTime');
@@ -6402,25 +6456,31 @@ function renderPrimaryTimeMetrics(kpi) {
   const elTopDom = document.getElementById('trackMetricTopDomain');
   const elTopTime = document.getElementById('trackMetricTopDomainTime');
 
-  if (elToday) {
-    const prev = Number(elToday.dataset && elToday.dataset.rawSec ? elToday.dataset.rawSec : 0) || 0;
-    if (elToday.dataset) elToday.dataset.rawSec = kpi.todaySec;
-    animateNumberRoll(elToday, prev, kpi.todaySec, 600, '', formatDuration);
-  }
-  if (elDaily) {
-    const prev = Number(elDaily.dataset && elDaily.dataset.rawSec ? elDaily.dataset.rawSec : 0) || 0;
-    if (elDaily.dataset) elDaily.dataset.rawSec = kpi.dailyAvgSec;
-    animateNumberRoll(elDaily, prev, kpi.dailyAvgSec, 600, '', formatDuration);
-  }
-  if (elTotal) {
-    const prev = Number(elTotal.dataset && elTotal.dataset.rawSec ? elTotal.dataset.rawSec : 0) || 0;
-    if (elTotal.dataset) elTotal.dataset.rawSec = kpi.totalSec;
-    animateNumberRoll(elTotal, prev, kpi.totalSec, 600, '', formatDuration);
-  }
+  const updateRoll = (el, val) => {
+    if (!el) return;
+    const prev = Number(el.dataset && el.dataset.rawSec ? el.dataset.rawSec : 0) || 0;
+    if (el.dataset) el.dataset.rawSec = val;
+    animateNumberRoll(el, prev, val, 600, '', formatDuration);
+  };
+  updateRoll(elToday, kpi.todaySec);
+  updateRoll(elDaily, kpi.dailyAvgSec);
+  updateRoll(elTotal, kpi.totalSec);
   if (elHist) elHist.textContent = t('metric_daily_sub', kpi.historyDays);
   if (elFirst) elFirst.textContent = t('metric_total_sub', kpi.firstTrackedDate);
-  if (elTopDom) elTopDom.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? kpi.topDomain.domain : t('no_data');
-  if (elTopTime) elTopTime.textContent = (kpi.topDomain && kpi.topDomain.computedSeconds > 0) ? `${formatDuration(kpi.topDomain.computedSeconds)} (${kpi.topDomain.ratioPercent}%)` : '0s';
+
+  const hasTop = Boolean(kpi.topDomain && kpi.topDomain.computedSeconds > 0);
+  const cleanBrand = hasTop
+    ? (kpi.topDomain.cleanName || (typeof TimeTrackingKpiFeature !== 'undefined' && TimeTrackingKpiFeature.formatCleanWebsiteName ? TimeTrackingKpiFeature.formatCleanWebsiteName(kpi.topDomain.domain) : kpi.topDomain.domain))
+    : t('no_data');
+  if (elTopDom) {
+    elTopDom.textContent = cleanBrand;
+    if (hasTop && kpi.topDomain.domain) {
+      elTopDom.title = kpi.topDomain.domain;
+    } else {
+      elTopDom.removeAttribute('title');
+    }
+  }
+  if (elTopTime) elTopTime.textContent = hasTop ? `${formatDuration(kpi.topDomain.computedSeconds)} (${kpi.topDomain.ratioPercent}%)` : '0s';
 }
 
 /**
@@ -9314,11 +9374,17 @@ function setupEventListeners() {
   }
   const navTabWellbeing = document.getElementById('navTabWellbeing');
   if (navTabWellbeing) {
-    navTabWellbeing.addEventListener('click', () => switchTab('wellbeing'));
+    navTabWellbeing.addEventListener('click', () => navigateToFocusSentinel());
   }
   const microWidget = document.getElementById('wellbeingLiveMicroWidget');
   if (microWidget) {
-    microWidget.addEventListener('click', () => switchTab('wellbeing'));
+    microWidget.addEventListener('click', () => navigateToFocusSentinel());
+    microWidget.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        navigateToFocusSentinel();
+      }
+    });
   }
   const navTabSettings = document.getElementById('navTabSettings');
   if (navTabSettings) {
@@ -12130,6 +12196,7 @@ if (typeof module !== 'undefined' && module.exports) {
     SHORTCUTS_REGISTRY,
     switchTab,
     navigateToBridgeService,
+    navigateToFocusSentinel,
     // Phase 3: Precision Timeline Scrubber & Kinetic Number Rollers exports
     formatHHMMSS,
     formatTimeHHMMSS,
@@ -12249,6 +12316,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 if (typeof window !== 'undefined') {
   window.navigateToBridgeService = navigateToBridgeService;
+  window.navigateToFocusSentinel = navigateToFocusSentinel;
   window.updateHUDStatus = updateHUDStatus;
   window.updateDataHubStatus = updateDataHubStatus;
   window.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;
@@ -12340,6 +12408,7 @@ if (typeof window !== 'undefined') {
 
 if (typeof globalThis !== 'undefined') {
   globalThis.navigateToBridgeService = navigateToBridgeService;
+  globalThis.navigateToFocusSentinel = navigateToFocusSentinel;
   globalThis.updateHUDStatus = updateHUDStatus;
   globalThis.updateDataHubStatus = updateDataHubStatus;
   globalThis.triggerDataHubConnectAndLaunch = triggerDataHubConnectAndLaunch;

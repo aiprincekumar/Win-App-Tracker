@@ -17,6 +17,72 @@
     'hulu.com', 'disneyplus.com', 'pinterest.com', 'roblox.com'
   ]);
 
+  const BRAND_DICT = Object.freeze({
+    'mail.google.com': 'Gmail',
+    'gmail.com': 'Gmail',
+    'youtube.com': 'YouTube',
+    'youtu.be': 'YouTube',
+    'google.com': 'Google',
+    'github.com': 'GitHub',
+    'linkedin.com': 'LinkedIn',
+    'chatgpt.com': 'ChatGPT',
+    'openai.com': 'ChatGPT',
+    'netflix.com': 'Netflix',
+    'spotify.com': 'Spotify',
+    'reddit.com': 'Reddit',
+    'twitter.com': 'X (Twitter)',
+    'x.com': 'X (Twitter)',
+    'facebook.com': 'Facebook',
+    'fb.com': 'Facebook',
+    'instagram.com': 'Instagram',
+    'twitch.tv': 'Twitch',
+    'discord.com': 'Discord',
+    'discord.gg': 'Discord',
+    'stackoverflow.com': 'Stack Overflow',
+    'amazon.com': 'Amazon',
+    'amazon.in': 'Amazon',
+    'wikipedia.org': 'Wikipedia',
+    'notion.so': 'Notion',
+    'figma.com': 'Figma',
+    'slack.com': 'Slack'
+  });
+
+  /**
+   * Formats a raw URL or domain into a clean brand name.
+   * Compliant with Universal Rule 28 (<= 45 lines, nesting depth <= 3).
+   * @param {string} raw
+   * @returns {string}
+   */
+  function formatCleanWebsiteName(raw) {
+    if (!raw || typeof raw !== 'string') return '-';
+    let host = raw.trim().toLowerCase();
+    if (!host) return '-';
+    if (host.startsWith('chrome://')) return 'Chrome';
+    if (host.startsWith('edge://')) return 'Edge';
+    if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) return 'Localhost';
+
+    host = host.replace(/^[a-zA-Z]+:\/\//, '').split(/[/?#]/)[0];
+    host = host.replace(/.*@/, '').replace(/:\d+$/, '').replace(/^(?:www|m|web)\./i, '');
+    if (!host) return '-';
+    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || host === '[::1]' || host === '::1') return host;
+
+    if (BRAND_DICT[host]) return BRAND_DICT[host];
+    for (const key of Object.keys(BRAND_DICT)) {
+      if (host.endsWith('.' + key)) return BRAND_DICT[key];
+    }
+
+    let slug = host.replace(/\.(?:co|com|org|net|gov|edu|ac)\.[a-z]{2}$/i, '');
+    slug = slug.replace(/\.[a-z]{2,12}$/i, '');
+    const parts = slug.split('.');
+    const brand = parts[parts.length - 1] || host;
+
+    return brand
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ') || '-';
+  }
+
   /**
    * Computes active domain count for the active temporal range.
    * @param {Array<Object>} items - Array of domain stats items.
@@ -107,13 +173,20 @@
     const items = Array.isArray(stats.items) ? stats.items : [];
     const totalSec = stats.todaySec || stats.activeTemporalSum || 0;
 
+    let topDomain = null;
+    if (stats.topDomain) {
+      topDomain = Object.assign({}, stats.topDomain, {
+        cleanName: formatCleanWebsiteName(stats.topDomain.domain)
+      });
+    }
+
     return {
       todaySec: stats.todaySec || 0,
       dailyAvgSec: stats.dailyAvgSec || 0,
       totalSec: stats.totalSec || 0,
       historyDays: stats.historyDays || 1,
       firstTrackedDate: stats.firstTrackedDate || todayStr || 'today',
-      topDomain: stats.topDomain || null,
+      topDomain: topDomain,
       focusTimeSec: (data && data.focusTimeSec) ? data.focusTimeSec : 0,
       focusSessionsCount: (data && data.focusSessionsCount) ? data.focusSessionsCount : 0,
       activeDomainsCount: computeActiveDomainsCount(items),
@@ -127,6 +200,7 @@
     id: 'time_tracking_kpi_feature',
     name: 'Time Tracking KPI Feature',
     version: '1.0.0',
+    formatCleanWebsiteName,
     computeActiveDomainsCount,
     computeDistractionStats,
     computePeakActivityHour,
