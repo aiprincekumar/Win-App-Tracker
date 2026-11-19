@@ -41,8 +41,8 @@ console.log('Battery 1: SVG Dial DOM Markup in popup/popup.html');
   assert.ok(popupHtml.includes('id="popupFocusDialSvg"'), 'popup.html must contain #popupFocusDialSvg');
   assert.ok(popupHtml.includes('class="popup-focus-svg-dial"'), 'SVG dial must have class popup-focus-svg-dial');
   assert.ok(popupHtml.includes('viewBox="0 0 140 140"'), 'SVG dial must define viewBox="0 0 140 140"');
-  assert.ok(popupHtml.includes('width="130"'), 'SVG dial must have width="130"');
-  assert.ok(popupHtml.includes('height="130"'), 'SVG dial must have height="130"');
+  assert.ok(popupHtml.includes('width="140"'), 'SVG dial must have width="140" (Sleep Timer Parity)');
+  assert.ok(popupHtml.includes('height="140"'), 'SVG dial must have height="140" (Sleep Timer Parity)');
 
   // SVG Linear Gradients
   assert.ok(popupHtml.includes('id="focusGlowGradient"'), 'Must contain linearGradient #focusGlowGradient');

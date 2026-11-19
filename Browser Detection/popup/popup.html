@@ -733,7 +733,7 @@
           
           <!-- Center Radial SVG Countdown Dial (Sleep-Timer Style) -->
           <div class="popup-focus-dial-wrapper">
-            <svg id="popupFocusDialSvg" class="popup-focus-svg-dial" viewBox="0 0 140 140" width="130" height="130" role="img" aria-label="Focus Countdown Radial Dial">
+            <svg id="popupFocusDialSvg" class="popup-focus-svg-dial" viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="Focus Countdown Radial Dial">
               <defs>
                 <linearGradient id="focusGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#10b981" />
@@ -746,10 +746,10 @@
                 </linearGradient>
               </defs>
               <!-- Background Track Ring -->
-              <circle class="popup-focus-dial-track" cx="70" cy="70" r="54" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="7" />
+              <circle class="popup-focus-dial-track" cx="70" cy="70" r="54" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="8" />
               <!-- Progress Glow Ring -->
               <circle id="popupFocusDialProgress" class="popup-focus-dial-progress" cx="70" cy="70" r="54" fill="none" 
-                      stroke="url(#focusGlowGradient)" stroke-width="7" stroke-linecap="round" 
+                      stroke="url(#focusGlowGradient)" stroke-width="8" stroke-linecap="round" 
                       stroke-dasharray="339.292" stroke-dashoffset="0" transform="rotate(-90 70 70)" />
             </svg>
             <!-- Centered Telemetry Overlay -->
@@ -773,9 +773,6 @@
             </button>
             <button type="button" id="btnPopupFocusExtend5m" class="popup-focus-action-btn popup-focus-btn extend" title="Add 5 Minutes" aria-label="Add 5 Minutes">
               +5m
-            </button>
-            <button type="button" id="btnPopupFocusExtend15m" class="popup-focus-action-btn popup-focus-btn extend" title="Add 15 Minutes" aria-label="Add 15 Minutes">
-              +15m
             </button>
             <button type="button" id="btnPopupFocusReset" class="popup-focus-action-btn popup-focus-btn reset secondary" title="Reset Timer" aria-label="Reset Timer">
               ✕ Reset

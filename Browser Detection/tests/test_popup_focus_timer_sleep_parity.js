@@ -49,13 +49,14 @@ console.log('Battery 1: Popup HTML Architecture Parity (#cardPopupFocusTimer)');
   assert.ok(popupHtml.includes('id="popupFocusDialFinishTime"'), 'Must contain #popupFocusDialFinishTime');
   assert.ok(popupHtml.includes('No active timer'), 'Must contain default Finish readout text');
 
-  // Quick actions row
+  // Quick actions row (4 buttons in a clean single row)
   assert.ok(popupHtml.includes('id="btnPopupFocusToggleIcon"'), 'Must contain #btnPopupFocusToggleIcon');
   assert.ok(popupHtml.includes('id="btnPopupFocusToggleText"'), 'Must contain #btnPopupFocusToggleText');
   assert.ok(popupHtml.includes('id="btnPopupFocusReduce5m"'), 'Must contain decrement button #btnPopupFocusReduce5m');
   assert.ok(popupHtml.includes('id="btnPopupFocusExtend5m"'), 'Must contain extender button #btnPopupFocusExtend5m');
-  assert.ok(popupHtml.includes('id="btnPopupFocusExtend15m"'), 'Must contain extender button #btnPopupFocusExtend15m');
+  assert.ok(!popupHtml.includes('id="btnPopupFocusExtend15m"'), 'Must remove +15m button #btnPopupFocusExtend15m');
   assert.ok(popupHtml.includes('id="btnPopupFocusReset"'), 'Must contain reset button #btnPopupFocusReset');
+  assert.ok(popupHtml.includes('width="140"') && popupHtml.includes('height="140"'), 'SVG dial must match Sleep Timer dimensions (140x140)');
 
   // Presets and Custom Duration Card
   assert.ok(popupHtml.includes('id="cardFocusPresetsAndCustom"'), 'Must contain #cardFocusPresetsAndCustom');
@@ -98,6 +99,9 @@ console.log('\nBattery 2: CSS Cyber-Dark & Light Theme Styling in tab_wellness.c
   for (const sel of requiredSelectors) {
     assert.ok(tabWellnessCss.includes(sel), `tab_wellness.css must define ${sel}`);
   }
+
+  // Single row nowrap enforcement
+  assert.ok(tabWellnessCss.includes('flex-wrap: nowrap'), 'tab_wellness.css must enforce flex-wrap: nowrap for single row layout');
 
   // Light theme overrides
   const lightOverrides = [
@@ -161,7 +165,6 @@ console.log('\nBattery 4: Popup JS State Management & Controls Wiring (popup/pop
   const expectedBindings = [
     'btnPopupFocusReduce5m',
     'btnPopupFocusExtend5m',
-    'btnPopupFocusExtend15m',
     'popupFocusDialFinishTime',
     'formatPopupFocusFinishTime',
     'updateFocusPresetHighlights',
@@ -175,7 +178,7 @@ console.log('\nBattery 4: Popup JS State Management & Controls Wiring (popup/pop
   // Button handlers
   assert.ok(popupJs.includes('adjustPopupFocusMinutes(-5)'), 'Must bind -5m to adjustPopupFocusMinutes(-5)');
   assert.ok(popupJs.includes('adjustPopupFocusMinutes(5)'), 'Must bind +5m to adjustPopupFocusMinutes(5)');
-  assert.ok(popupJs.includes('adjustPopupFocusMinutes(15)'), 'Must bind +15m to adjustPopupFocusMinutes(15)');
+  assert.ok(!popupJs.includes('btnPopupFocusExtend15m'), 'Must not bind removed btnPopupFocusExtend15m');
   assert.ok(popupJs.includes('btnPopupFocusToggleIcon'), 'Must manage toggle button icon');
   assert.ok(popupJs.includes('btnPopupFocusToggleText'), 'Must manage toggle button text');
 

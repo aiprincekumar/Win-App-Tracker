@@ -712,7 +712,6 @@ function applyPopupLanguage(lang) {
   if (btnSetCustom) btnSetCustom.textContent = t('btn_focus_set');
   setTitle('btnPopupFocusReduce5m', 'btn_focus_reduce_5m_title');
   setTitle('btnPopupFocusExtend5m', 'btn_focus_extend_5m_title');
-  setTitle('btnPopupFocusExtend15m', 'btn_focus_extend_15m_title');
   setTitle('btnPopupFocusReset', 'btn_focus_reset_title');
 
   updateThemeToggleUI(currentTheme);
@@ -3448,7 +3447,6 @@ function setupEventListeners() {
   const btnPopupFocusToggleText = document.getElementById('btnPopupFocusToggleText');
   const btnPopupFocusReduce5m = document.getElementById('btnPopupFocusReduce5m');
   const btnPopupFocusExtend5m = document.getElementById('btnPopupFocusExtend5m');
-  const btnPopupFocusExtend15m = document.getElementById('btnPopupFocusExtend15m');
   const btnPopupFocusReset = document.getElementById('btnPopupFocusReset');
   const popupFocusClock = document.getElementById('popupFocusClock');
   const popupFocusBadge = document.getElementById('popupFocusBadge');
@@ -3698,9 +3696,6 @@ function setupEventListeners() {
   }
   if (btnPopupFocusExtend5m) {
     btnPopupFocusExtend5m.addEventListener('click', () => adjustPopupFocusMinutes(5));
-  }
-  if (btnPopupFocusExtend15m) {
-    btnPopupFocusExtend15m.addEventListener('click', () => adjustPopupFocusMinutes(15));
   }
 
   if (btnPopupFocusReset) {
