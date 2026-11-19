@@ -115,15 +115,15 @@ body,
 .drawer-inner-content,
 .drawer-expandable-wrap {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
 body::-webkit-scrollbar,
 .tab-pane::-webkit-scrollbar,
 .drawer-inner-content::-webkit-scrollbar,
 .drawer-expandable-wrap::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 2px;
+  height: 2px;
 }
 
 body::-webkit-scrollbar-track,
@@ -137,7 +137,7 @@ body::-webkit-scrollbar-thumb,
 .tab-pane::-webkit-scrollbar-thumb,
 .drawer-inner-content::-webkit-scrollbar-thumb,
 .drawer-expandable-wrap::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 }
 
@@ -145,7 +145,7 @@ body::-webkit-scrollbar-thumb:hover,
 .tab-pane::-webkit-scrollbar-thumb:hover,
 .drawer-inner-content::-webkit-scrollbar-thumb:hover,
 .drawer-expandable-wrap::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .sentinel-app {
@@ -1806,17 +1806,27 @@ button.spinning .refresh-spinner-icon,
   margin-top: 2px;
 }
 
+.domains-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
 .domains-list::-webkit-scrollbar {
-  width: 4px;
+  width: 2px;
+  height: 2px;
 }
 
 .domains-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
 }
 
 .domains-list::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.domains-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .domain-item {
@@ -2030,12 +2040,23 @@ button.spinning .refresh-spinner-icon,
   gap: 6px;
   padding-right: 2px;
 }
+.studio-items-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
 .studio-items-list::-webkit-scrollbar {
-  width: 4px;
+  width: 2px;
+  height: 2px;
+}
+.studio-items-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 .studio-items-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.studio-items-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 .empty-state-sm {
   font-size: 10.5px;
@@ -2118,6 +2139,22 @@ button.spinning .refresh-spinner-icon,
   gap: 6px;
   max-height: 120px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.screenshots-grid::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+.screenshots-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.screenshots-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.screenshots-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 .screenshot-thumb-wrap {
   position: relative;
@@ -4035,16 +4072,22 @@ body.high-contrast-mode .doomscroll-select {
 [data-theme="light"] body,
 [data-theme="light"] .tab-pane,
 [data-theme="light"] .drawer-inner-content,
-[data-theme="light"] .drawer-expandable-wrap {
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+[data-theme="light"] .drawer-expandable-wrap,
+[data-theme="light"] .domains-list,
+[data-theme="light"] .studio-items-list,
+[data-theme="light"] .screenshots-grid {
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 
 [data-theme="light"] body::-webkit-scrollbar,
 [data-theme="light"] .tab-pane::-webkit-scrollbar,
 [data-theme="light"] .drawer-inner-content::-webkit-scrollbar,
-[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+[data-theme="light"] .drawer-expandable-wrap::-webkit-scrollbar,
+[data-theme="light"] .domains-list::-webkit-scrollbar,
+[data-theme="light"] .studio-items-list::-webkit-scrollbar,
+[data-theme="light"] .screenshots-grid::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
 }
 
 [data-theme="light"] body::-webkit-scrollbar-track,
@@ -4054,7 +4097,7 @@ body.high-contrast-mode .doomscroll-select {
 [data-theme="light"] .domains-list::-webkit-scrollbar-track,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-track,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 
 [data-theme="light"] body::-webkit-scrollbar-thumb,
@@ -4064,7 +4107,7 @@ body.high-contrast-mode .doomscroll-select {
 [data-theme="light"] .domains-list::-webkit-scrollbar-thumb,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-thumb,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 999px;
 }
 
@@ -4075,7 +4118,7 @@ body.high-contrast-mode .doomscroll-select {
 [data-theme="light"] .domains-list::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] .studio-items-list::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] .screenshots-grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* 2. Header & Status Badges */

@@ -10,7 +10,7 @@
  * Validates:
  * 1. Battery 1: Sleep Tab Pinning & Docking (.sleep-hero-card flex-shrink: 0, #viewSleepPane containment)
  * 2. Battery 2: Bounded Drawer Scroll Geometry (max-height: 220px, overflow-y: auto)
- * 3. Battery 3: Custom Sleek Cyber-Dark Scrollbars (WebKit 4px width, transparent track, standard scrollbar-width/color)
+ * 3. Battery 3: Custom Sleek Cyber-Dark Scrollbars (WebKit 2px hairline width, transparent track, ghost opacity tokens)
  * 4. Battery 4: Compact Spacing in Focus Settings Drawer (reduced padding, 6px gaps, normalized zero margins)
  * 5. Battery 5: Encoding & Security (100% UTF-8 with BOM, zero-innerHTML safety)
  */
@@ -122,9 +122,9 @@ assert.ok(
 console.log('✅ Battery 2 Passed: Bounded 220px drawer internal scrolling verified on both drawers\n');
 
 // ===========================================================================
-// Battery 3: Custom Sleek Cyber-Dark Scrollbars
+// Battery 3: Custom Sleek Cyber-Dark Scrollbars (Hairline Ghost Geometry)
 // ===========================================================================
-console.log('--- Battery 3: Custom Sleek Cyber-Dark Scrollbars ---');
+console.log('--- Battery 3: Custom Sleek Cyber-Dark Scrollbars (Hairline Ghost Geometry) ---');
 
 // 1. Universal popup.css scrollbars (body, .tab-pane, .drawer-inner-content, .drawer-expandable-wrap)
 assert.ok(
@@ -132,21 +132,21 @@ assert.ok(
   'popup.css must declare scrollbar-width: thin for W3C compliance'
 );
 assert.ok(
-  popupCss.includes('scrollbar-color: rgba(255, 255, 255, 0.18) transparent;'),
+  popupCss.includes('scrollbar-color: rgba(255, 255, 255, 0.12) transparent;'),
   'popup.css must declare cyber scrollbar-color on dark mode'
 );
 
 // WebKit custom scrollbar rules in popup.css
 assert.ok(
-  popupCss.includes('width: 4px;') && popupCss.includes('height: 4px;'),
-  'popup.css must set sleek 4px scrollbar width/height'
+  popupCss.includes('width: 2px;') && popupCss.includes('height: 2px;'),
+  'popup.css must set sleek 2px hairline scrollbar width/height'
 );
 assert.ok(
   popupCss.includes('background: transparent;'),
   'popup.css must set transparent scrollbar track'
 );
 assert.ok(
-  popupCss.includes('background: rgba(255, 255, 255, 0.18);'),
+  popupCss.includes('background: rgba(255, 255, 255, 0.12);'),
   'popup.css must style scrollbar thumb with cyber dark opacity'
 );
 assert.ok(
@@ -161,8 +161,12 @@ assert.ok(
   'tab_sleep.css must define WebKit scrollbar rules for sleep pane and sleep drawer'
 );
 assert.ok(
-  sleepCss.includes('rgba(129, 140, 248, 0.45)'),
-  'tab_sleep.css must apply sleek indigo thumb color rgba(129, 140, 248, 0.45)'
+  sleepCss.includes('rgba(129, 140, 248, 0.16)'),
+  'tab_sleep.css must apply sleek indigo thumb color rgba(129, 140, 248, 0.16)'
+);
+assert.ok(
+  sleepCss.includes('rgba(129, 140, 248, 0.28)'),
+  'tab_sleep.css must apply sleek indigo hover thumb color rgba(129, 140, 248, 0.28)'
 );
 
 // 3. Tab Wellness / Focus specific scrollbars
@@ -172,21 +176,25 @@ assert.ok(
   'tab_wellness.css must define WebKit scrollbar rules for focus pane and focus drawer'
 );
 assert.ok(
-  wellnessCss.includes('rgba(6, 182, 212, 0.45)'),
-  'tab_wellness.css must apply sleek cyan thumb color rgba(6, 182, 212, 0.45)'
+  wellnessCss.includes('rgba(6, 182, 212, 0.16)'),
+  'tab_wellness.css must apply sleek cyan thumb color rgba(6, 182, 212, 0.16)'
+);
+assert.ok(
+  wellnessCss.includes('rgba(6, 182, 212, 0.28)'),
+  'tab_wellness.css must apply sleek cyan hover thumb color rgba(6, 182, 212, 0.28)'
 );
 
 // 4. Light theme scrollbar support
 assert.ok(
-  popupCss.includes('[data-theme="light"]') && popupCss.includes('scrollbar-color: rgba(0, 0, 0, 0.2) transparent;'),
+  popupCss.includes('[data-theme="light"]') && popupCss.includes('scrollbar-color: rgba(0, 0, 0, 0.12) transparent;'),
   'popup.css must provide sleek scrollbars in light theme'
 );
 assert.ok(
-  sleepCss.includes('[data-theme="light"]') && sleepCss.includes('rgba(99, 102, 241, 0.4)'),
+  sleepCss.includes('[data-theme="light"]') && sleepCss.includes('rgba(99, 102, 241, 0.15)'),
   'tab_sleep.css must provide light theme indigo scrollbars'
 );
 assert.ok(
-  wellnessCss.includes('[data-theme="light"]') && wellnessCss.includes('rgba(15, 118, 110, 0.35)'),
+  wellnessCss.includes('[data-theme="light"]') && wellnessCss.includes('rgba(15, 118, 110, 0.15)'),
   'tab_wellness.css must provide light theme cyan/teal scrollbars'
 );
 

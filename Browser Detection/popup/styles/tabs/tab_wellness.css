@@ -770,7 +770,7 @@ body.high-contrast-mode .doomscroll-select {
   overflow-y: auto;
   max-height: 540px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(6, 182, 212, 0.45) transparent;
+  scrollbar-color: rgba(6, 182, 212, 0.16) transparent;
 }
 
 .popup-focus-card {
@@ -814,7 +814,7 @@ body.high-contrast-mode .doomscroll-select {
   overflow-x: hidden;
   padding: 2px 4px 6px 4px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(6, 182, 212, 0.45) transparent;
+  scrollbar-color: rgba(6, 182, 212, 0.16) transparent;
 }
 
 /* Compact Drawer Internal Spacing */
@@ -830,8 +830,8 @@ body.high-contrast-mode .doomscroll-select {
 /* Sleek Cyber-Dark Scrollbars for Focus View */
 #viewFocusPane::-webkit-scrollbar,
 #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 2px;
+  height: 2px;
 }
 
 #viewFocusPane::-webkit-scrollbar-track,
@@ -841,27 +841,27 @@ body.high-contrast-mode .doomscroll-select {
 
 #viewFocusPane::-webkit-scrollbar-thumb,
 #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.45);
+  background: rgba(6, 182, 212, 0.16);
   border-radius: 999px;
 }
 
 #viewFocusPane::-webkit-scrollbar-thumb:hover,
 #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.75);
+  background: rgba(6, 182, 212, 0.28);
 }
 
 /* Light Theme Scrollbars for Focus View */
 [data-theme="light"] #viewFocusPane,
 [data-theme="light"] #focusSettingsDrawer .drawer-inner-content {
-  scrollbar-color: rgba(15, 118, 110, 0.35) transparent;
+  scrollbar-color: rgba(15, 118, 110, 0.15) transparent;
 }
 
 [data-theme="light"] #viewFocusPane::-webkit-scrollbar-thumb,
 [data-theme="light"] #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
-  background: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.15);
 }
 
 [data-theme="light"] #viewFocusPane::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 118, 110, 0.6);
+  background: rgba(15, 118, 110, 0.30);
 }

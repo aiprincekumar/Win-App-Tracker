@@ -15,7 +15,7 @@
   overflow: hidden;
   max-height: 540px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(129, 140, 248, 0.45) transparent;
+  scrollbar-color: rgba(129, 140, 248, 0.16) transparent;
 }
 
 #viewSleepPane.active {
@@ -469,14 +469,14 @@
   overflow-x: hidden;
   padding: 4px 4px 8px 4px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(129, 140, 248, 0.45) transparent;
+  scrollbar-color: rgba(129, 140, 248, 0.16) transparent;
 }
 
 /* Custom Sleek Cyber-Dark Sleep Scrollbars */
 #viewSleepPane::-webkit-scrollbar,
 #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 2px;
+  height: 2px;
 }
 
 #viewSleepPane::-webkit-scrollbar-track,
@@ -486,27 +486,27 @@
 
 #viewSleepPane::-webkit-scrollbar-thumb,
 #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
-  background: rgba(129, 140, 248, 0.45);
+  background: rgba(129, 140, 248, 0.16);
   border-radius: 999px;
 }
 
 #viewSleepPane::-webkit-scrollbar-thumb:hover,
 #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(129, 140, 248, 0.75);
+  background: rgba(129, 140, 248, 0.28);
 }
 
 /* Light Theme Overrides for Sleep Scrollbars */
 [data-theme="light"] #viewSleepPane,
 [data-theme="light"] #sleepSettingsDrawer .drawer-inner-content {
-  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+  scrollbar-color: rgba(99, 102, 241, 0.15) transparent;
 }
 
 [data-theme="light"] #viewSleepPane::-webkit-scrollbar-thumb,
 [data-theme="light"] #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 [data-theme="light"] #viewSleepPane::-webkit-scrollbar-thumb:hover,
 [data-theme="light"] #sleepSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.7);
+  background: rgba(99, 102, 241, 0.30);
 }
