@@ -5596,6 +5596,8 @@ body.high-contrast-mode .tier1-segmented-nav .tier1-nav-btn.active {
   background: var(--bg-card, rgba(18, 24, 38, 0.65));
   transition: border-color 200ms ease, background 200ms ease;
   overflow: hidden;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .popup-settings-drawer:hover {
@@ -5605,6 +5607,7 @@ body.high-contrast-mode .tier1-segmented-nav .tier1-nav-btn.active {
 .popup-settings-drawer.open {
   border-color: rgba(129, 140, 248, 0.3);
   background: var(--bg-card-active, rgba(18, 24, 38, 0.85));
+  flex: 1 1 auto;
 }
 
 .drawer-toggle-btn {

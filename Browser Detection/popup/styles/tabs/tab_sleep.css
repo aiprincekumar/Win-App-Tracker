@@ -414,8 +414,12 @@
   margin-top: 4px;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
+}
+
+#sleepSettingsDrawer.popup-settings-drawer.open {
+  flex: 1 1 auto;
 }
 
 #sleepSettingsDrawer .drawer-toggle-btn {

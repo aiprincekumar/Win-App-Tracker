@@ -152,8 +152,33 @@ const focusDrawerRegex = /#focusSettingsDrawer\.popup-settings-drawer\s*\{([^}]+
 const focusDrawerMatch = wellnessCss.match(focusDrawerRegex);
 assert.ok(focusDrawerMatch, '#focusSettingsDrawer.popup-settings-drawer must be defined');
 assert.ok(
-  /flex:\s*1\b/i.test(focusDrawerMatch[1]) && /min-height:\s*0\b/i.test(focusDrawerMatch[1]),
-  '#focusSettingsDrawer must have flex: 1 and min-height: 0 for proper flex child scrolling'
+  /flex:\s*0\s+0\s+auto\b/i.test(focusDrawerMatch[1]) && /min-height:\s*0\b/i.test(focusDrawerMatch[1]),
+  '#focusSettingsDrawer must have flex: 0 0 auto and min-height: 0 for collapsed zero-docking'
+);
+
+const focusDrawerOpenRegex = /#focusSettingsDrawer\.popup-settings-drawer\.open\s*\{([^}]+)\}/s;
+const focusDrawerOpenMatch = wellnessCss.match(focusDrawerOpenRegex);
+assert.ok(focusDrawerOpenMatch, '#focusSettingsDrawer.popup-settings-drawer.open must be defined');
+assert.ok(
+  /flex:\s*1\s+1\s+auto\b/i.test(focusDrawerOpenMatch[1]) || /flex:\s*1\b/i.test(focusDrawerOpenMatch[1]),
+  '#focusSettingsDrawer.open must expand with flex: 1 1 auto'
+);
+
+// 4. Sleep Settings Drawer container flex rules
+const sleepDrawerRegex = /#sleepSettingsDrawer\.popup-settings-drawer\s*\{([^}]+)\}/s;
+const sleepDrawerMatch = sleepCss.match(sleepDrawerRegex);
+assert.ok(sleepDrawerMatch, '#sleepSettingsDrawer.popup-settings-drawer must be defined');
+assert.ok(
+  /flex:\s*0\s+0\s+auto\b/i.test(sleepDrawerMatch[1]) && /min-height:\s*0\b/i.test(sleepDrawerMatch[1]),
+  '#sleepSettingsDrawer must have flex: 0 0 auto and min-height: 0 for collapsed zero-docking'
+);
+
+const sleepDrawerOpenRegex = /#sleepSettingsDrawer\.popup-settings-drawer\.open\s*\{([^}]+)\}/s;
+const sleepDrawerOpenMatch = sleepCss.match(sleepDrawerOpenRegex);
+assert.ok(sleepDrawerOpenMatch, '#sleepSettingsDrawer.popup-settings-drawer.open must be defined');
+assert.ok(
+  /flex:\s*1\s+1\s+auto\b/i.test(sleepDrawerOpenMatch[1]) || /flex:\s*1\b/i.test(sleepDrawerOpenMatch[1]),
+  '#sleepSettingsDrawer.open must expand with flex: 1 1 auto'
 );
 
 console.log('✅ Battery 2 Passed: Bounded 200px drawer internal scrolling verified on both drawers\n');
