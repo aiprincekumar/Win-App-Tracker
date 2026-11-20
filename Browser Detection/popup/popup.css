@@ -115,7 +115,7 @@ body {
   width: 380px;
   max-width: 380px;
   height: auto;
-  min-height: 520px;
+  min-height: 0;
   max-height: 600px;
   overflow: hidden !important; /* ZERO WINDOW SCROLLBAR */
   scrollbar-width: none !important;

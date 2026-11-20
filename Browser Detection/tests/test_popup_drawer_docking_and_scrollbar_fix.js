@@ -68,8 +68,8 @@ assert.ok(
   'body must enforce dynamic height: auto to fit content'
 );
 assert.ok(
-  /min-height:\s*520px\b/i.test(bodyMatch[1]),
-  'body must maintain min-height: 520px baseline layout'
+  /min-height:\s*0\b/i.test(bodyMatch[1]),
+  'body must maintain min-height: 0 dynamic height auto-hug'
 );
 assert.ok(
   /max-height:\s*600px\b/i.test(bodyMatch[1]),
