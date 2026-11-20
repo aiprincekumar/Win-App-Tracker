@@ -342,13 +342,29 @@
    Tab 4: Focus & Wellness Styles
    ========================================================================== */
 .focus-wellness-card {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+}
+
+[data-theme="light"] .focus-wellness-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+body.high-contrast-mode .focus-wellness-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 .focus-ratio-container {
   display: flex;

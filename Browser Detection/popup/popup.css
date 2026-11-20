@@ -96,12 +96,12 @@
 html {
   width: 380px;
   max-width: 380px;
-  height: 580px;
+  height: auto;
   max-height: 600px;
   overflow: hidden !important;
+  scrollbar-width: none !important;
   margin: 0;
   padding: 0;
-  scrollbar-width: none !important;
   box-sizing: border-box;
 }
 
@@ -114,15 +114,15 @@ html::-webkit-scrollbar {
 body {
   width: 380px;
   max-width: 380px;
-  height: 580px;
-  max-height: 600px;
+  height: auto;
   min-height: 520px;
+  max-height: 600px;
   overflow: hidden !important; /* ZERO WINDOW SCROLLBAR */
+  scrollbar-width: none !important;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  scrollbar-width: none !important;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-family);
@@ -174,7 +174,7 @@ body::-webkit-scrollbar {
 
 .sentinel-app {
   width: 100%;
-  height: 100%;
+  height: auto;
   max-height: 600px; /* Chrome extension window 600px ceiling */
   overflow: hidden;
   display: flex;
@@ -3342,13 +3342,15 @@ button.spinning .refresh-spinner-icon,
    Tab 4: Focus & Wellness Styles
    ========================================================================== */
 .focus-wellness-card {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 /* ========================================================================== */
 /* SECTION: REVAMPED FOCUS BLOCK SVG RADIAL DIAL (CYBER-DARK GLASSMORPHISM)   */
@@ -3357,6 +3359,8 @@ button.spinning .refresh-spinner-icon,
 #cardPopupFocusTimer,
 .popup-focus-card {
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.75);
@@ -3953,7 +3957,6 @@ body.high-contrast-mode .audio-card,
 body.high-contrast-mode .sub-card,
 body.high-contrast-mode .studio-card,
 body.high-contrast-mode .breakdown-section,
-body.high-contrast-mode .focus-wellness-card,
 body.high-contrast-mode .tracking-card,
 body.high-contrast-mode .quick-settings-popover,
 body.high-contrast-mode .media-playback-dock,
@@ -3962,6 +3965,13 @@ body.high-contrast-mode .chart-section {
   background: #000000 !important;
   border: 2px solid #ffffff !important;
   box-shadow: none !important;
+}
+
+body.high-contrast-mode .focus-wellness-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 body.high-contrast-mode .top-tab-btn {
@@ -4966,9 +4976,10 @@ body.high-contrast-mode .doomscroll-select {
 }
 
 [data-theme="light"] .focus-wellness-card {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 [data-theme="light"] .focus-ratio-container {

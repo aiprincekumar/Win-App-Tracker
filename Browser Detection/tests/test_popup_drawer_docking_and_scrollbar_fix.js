@@ -43,10 +43,14 @@ const popupJs = stripBom(fs.readFileSync(popupJsPath, 'utf8'));
 // ===========================================================================
 console.log('--- Battery 1: Sleep Tab Pinning, Docking & Root Viewport Containment ---');
 
-// 0. Verify Root Viewport Geometry (html, body, and .sentinel-app ceiling lockdown)
+// 0. Verify Root Viewport Geometry (Dynamic Auto-Height & 600px ceiling lockdown)
 const htmlRegex = /html\s*\{([^}]+)\}/s;
 const htmlMatch = popupCss.match(htmlRegex);
 assert.ok(htmlMatch, 'html selector must exist in popup.css');
+assert.ok(
+  /height:\s*auto\b/i.test(htmlMatch[1]),
+  'html must enforce dynamic height: auto to eliminate empty dead space'
+);
 assert.ok(
   /max-height:\s*600px\b/i.test(htmlMatch[1]),
   'html must have max-height: 600px ceiling lockdown'
@@ -60,6 +64,14 @@ const bodyRegex = /body\s*\{([^}]+)\}/s;
 const bodyMatch = popupCss.match(bodyRegex);
 assert.ok(bodyMatch, 'body selector must exist in popup.css');
 assert.ok(
+  /height:\s*auto\b/i.test(bodyMatch[1]),
+  'body must enforce dynamic height: auto to fit content'
+);
+assert.ok(
+  /min-height:\s*520px\b/i.test(bodyMatch[1]),
+  'body must maintain min-height: 520px baseline layout'
+);
+assert.ok(
   /max-height:\s*600px\b/i.test(bodyMatch[1]),
   'body must have max-height: 600px ceiling lockdown'
 );
@@ -71,6 +83,10 @@ assert.ok(
 const sentinelAppRegex = /\.sentinel-app\s*\{([^}]+)\}/s;
 const sentinelAppMatch = popupCss.match(sentinelAppRegex);
 assert.ok(sentinelAppMatch, '.sentinel-app selector must exist in popup.css');
+assert.ok(
+  /height:\s*auto\b/i.test(sentinelAppMatch[1]),
+  '.sentinel-app must enforce dynamic height: auto'
+);
 assert.ok(
   /max-height:\s*600px\b/i.test(sentinelAppMatch[1]),
   '.sentinel-app must enforce max-height: 600px containment'
@@ -106,7 +122,35 @@ assert.ok(
 assert.ok(html.includes('id="cardSleepHeroRing"'), 'popup.html must contain #cardSleepHeroRing');
 assert.ok(html.includes('id="sleepSettingsDrawer"'), 'popup.html must contain #sleepSettingsDrawer');
 
-console.log('✅ Battery 1 Passed: Root viewport 600px lockdown, sleep hero dial pinning, and pane overflow containment certified\n');
+// 4. Verify Focus Tab Elimination of Container-in-Container Nesting
+const focusWellnessCardRegex = /\.focus-wellness-card\s*\{([^}]+)\}/s;
+const focusWellnessMatch = wellnessCss.match(focusWellnessCardRegex);
+assert.ok(focusWellnessMatch, '.focus-wellness-card must be defined in tab_wellness.css');
+assert.ok(
+  /background:\s*transparent\s*!important/i.test(focusWellnessMatch[1]),
+  '.focus-wellness-card must have background: transparent !important'
+);
+assert.ok(
+  /border:\s*none\s*!important/i.test(focusWellnessMatch[1]),
+  '.focus-wellness-card must have border: none !important'
+);
+assert.ok(
+  /padding:\s*0\s*!important/i.test(focusWellnessMatch[1]),
+  '.focus-wellness-card must have padding: 0 !important'
+);
+
+// Verify Focus DOM structure: #cardFocusWellness wraps #cardPopupFocusTimer, while #focusSettingsDrawer is a direct sibling under #viewFocusPane
+const cardFocusPos = html.indexOf('id="cardFocusWellness"');
+const cardFocusTimerPos = html.indexOf('id="cardPopupFocusTimer"');
+const focusDrawerPos = html.indexOf('id="focusSettingsDrawer"');
+const cardFocusEndPos = html.indexOf('</section>', cardFocusPos);
+
+assert.ok(cardFocusPos !== -1, 'popup.html must contain #cardFocusWellness');
+assert.ok(cardFocusTimerPos > cardFocusPos, '#cardPopupFocusTimer must be inside #cardFocusWellness');
+assert.ok(cardFocusTimerPos < cardFocusEndPos, '#cardPopupFocusTimer must be within #cardFocusWellness section');
+assert.ok(focusDrawerPos > cardFocusEndPos, '#focusSettingsDrawer must be placed outside #cardFocusWellness as sibling');
+
+console.log('✅ Battery 1 Passed: Root viewport dynamic auto-height & 600px lockdown, sleep hero dial pinning, and focus tab un-nesting certified\n');
 
 // ===========================================================================
 // Battery 2: Bounded Drawer Scroll Geometry
@@ -316,9 +360,13 @@ assert.ok(!drawerFnMatch[0].includes('innerHTML'), 'initCollapsibleDrawer must h
 
 // 2. UTF-8 with BOM verification on all modified files and this test file
 const verifiedFiles = [
+  popupHtmlPath,
   popupCssPath,
+  path.join(baseDir, 'popup/styles/base.css'),
   sleepCssPath,
   wellnessCssPath,
+  path.join(baseDir, 'popup/styles/wellness.css'),
+  path.join(baseDir, 'popup/styles/themes.css'),
   __filename
 ];
 

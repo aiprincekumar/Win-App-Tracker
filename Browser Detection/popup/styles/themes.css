@@ -43,7 +43,6 @@ body.high-contrast-mode .audio-card,
 body.high-contrast-mode .sub-card,
 body.high-contrast-mode .studio-card,
 body.high-contrast-mode .breakdown-section,
-body.high-contrast-mode .focus-wellness-card,
 body.high-contrast-mode .tracking-card,
 body.high-contrast-mode .quick-settings-popover,
 body.high-contrast-mode .media-playback-dock,
@@ -52,6 +51,13 @@ body.high-contrast-mode .chart-section {
   background: #000000 !important;
   border: 2px solid #ffffff !important;
   box-shadow: none !important;
+}
+
+body.high-contrast-mode .focus-wellness-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 body.high-contrast-mode .top-tab-btn {
@@ -956,9 +962,10 @@ body.high-contrast-mode .studio-screenshot-card {
 }
 
 [data-theme="light"] .focus-wellness-card {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 [data-theme="light"] .focus-ratio-container {
