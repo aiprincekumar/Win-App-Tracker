@@ -39,9 +39,46 @@ const wellnessCss = stripBom(fs.readFileSync(wellnessCssPath, 'utf8'));
 const popupJs = stripBom(fs.readFileSync(popupJsPath, 'utf8'));
 
 // ===========================================================================
-// Battery 1: Sleep Tab Pinning & Docking
+// Battery 1: Sleep Tab Pinning, Docking & Root Viewport Containment
 // ===========================================================================
-console.log('--- Battery 1: Sleep Tab Pinning & Docking ---');
+console.log('--- Battery 1: Sleep Tab Pinning, Docking & Root Viewport Containment ---');
+
+// 0. Verify Root Viewport Geometry (html, body, and .sentinel-app ceiling lockdown)
+const htmlRegex = /html\s*\{([^}]+)\}/s;
+const htmlMatch = popupCss.match(htmlRegex);
+assert.ok(htmlMatch, 'html selector must exist in popup.css');
+assert.ok(
+  /max-height:\s*600px\b/i.test(htmlMatch[1]),
+  'html must have max-height: 600px ceiling lockdown'
+);
+assert.ok(
+  /overflow:\s*hidden\s*!important/i.test(htmlMatch[1]),
+  'html must have overflow: hidden !important to prevent outer window scrolling'
+);
+
+const bodyRegex = /body\s*\{([^}]+)\}/s;
+const bodyMatch = popupCss.match(bodyRegex);
+assert.ok(bodyMatch, 'body selector must exist in popup.css');
+assert.ok(
+  /max-height:\s*600px\b/i.test(bodyMatch[1]),
+  'body must have max-height: 600px ceiling lockdown'
+);
+assert.ok(
+  /overflow:\s*hidden\s*!important/i.test(bodyMatch[1]),
+  'body must have overflow: hidden !important to eradicate outer window scrollbars'
+);
+
+const sentinelAppRegex = /\.sentinel-app\s*\{([^}]+)\}/s;
+const sentinelAppMatch = popupCss.match(sentinelAppRegex);
+assert.ok(sentinelAppMatch, '.sentinel-app selector must exist in popup.css');
+assert.ok(
+  /max-height:\s*600px\b/i.test(sentinelAppMatch[1]),
+  '.sentinel-app must enforce max-height: 600px containment'
+);
+assert.ok(
+  /overflow:\s*hidden\b/i.test(sentinelAppMatch[1]),
+  '.sentinel-app must enforce overflow: hidden boundary'
+);
 
 // 1. Verify .sleep-hero-card is pinned with flex-shrink: 0
 const heroCardRegex = /\.sleep-hero-card\s*\{([^}]+)\}/s;
@@ -61,15 +98,15 @@ assert.ok(
   '#viewSleepPane must have overflow: hidden to contain scroll inside the drawer rather than displacing dial'
 );
 assert.ok(
-  /max-height:\s*540px\b/i.test(viewSleepPaneMatch[1]),
-  '#viewSleepPane must enforce max-height: 540px containment boundary'
+  /max-height:\s*475px\b/i.test(viewSleepPaneMatch[1]),
+  '#viewSleepPane must enforce max-height: 475px containment boundary'
 );
 
 // 3. Verify HTML structure: hero ring card and drawer exist within #viewSleepPane
 assert.ok(html.includes('id="cardSleepHeroRing"'), 'popup.html must contain #cardSleepHeroRing');
 assert.ok(html.includes('id="sleepSettingsDrawer"'), 'popup.html must contain #sleepSettingsDrawer');
 
-console.log('✅ Battery 1 Passed: Sleep Tab hero dial pinning and pane overflow containment certified\n');
+console.log('✅ Battery 1 Passed: Root viewport 600px lockdown, sleep hero dial pinning, and pane overflow containment certified\n');
 
 // ===========================================================================
 // Battery 2: Bounded Drawer Scroll Geometry
@@ -81,8 +118,8 @@ const sleepOpenInnerRegex = /#sleepSettingsDrawer\.open\s+\.drawer-inner-content
 const sleepOpenInnerMatch = sleepCss.match(sleepOpenInnerRegex);
 assert.ok(sleepOpenInnerMatch, '#sleepSettingsDrawer.open .drawer-inner-content must be defined in tab_sleep.css');
 assert.ok(
-  /max-height:\s*220px\b/i.test(sleepOpenInnerMatch[1]),
-  '#sleepSettingsDrawer.open .drawer-inner-content must bound expansion with max-height: 220px'
+  /max-height:\s*200px\b/i.test(sleepOpenInnerMatch[1]),
+  '#sleepSettingsDrawer.open .drawer-inner-content must bound expansion with max-height: 200px'
 );
 assert.ok(
   /overflow-y:\s*auto\b/i.test(sleepOpenInnerMatch[1]),
@@ -98,8 +135,8 @@ const focusOpenInnerRegex = /#focusSettingsDrawer\.open\s+\.drawer-inner-content
 const focusOpenInnerMatch = wellnessCss.match(focusOpenInnerRegex);
 assert.ok(focusOpenInnerMatch, '#focusSettingsDrawer.open .drawer-inner-content must be defined in tab_wellness.css');
 assert.ok(
-  /max-height:\s*220px\b/i.test(focusOpenInnerMatch[1]),
-  '#focusSettingsDrawer.open .drawer-inner-content must bound expansion with max-height: 220px'
+  /max-height:\s*200px\b/i.test(focusOpenInnerMatch[1]),
+  '#focusSettingsDrawer.open .drawer-inner-content must bound expansion with max-height: 200px'
 );
 assert.ok(
   /overflow-y:\s*auto\b/i.test(focusOpenInnerMatch[1]),
@@ -119,7 +156,7 @@ assert.ok(
   '#focusSettingsDrawer must have flex: 1 and min-height: 0 for proper flex child scrolling'
 );
 
-console.log('✅ Battery 2 Passed: Bounded 220px drawer internal scrolling verified on both drawers\n');
+console.log('✅ Battery 2 Passed: Bounded 200px drawer internal scrolling verified on both drawers\n');
 
 // ===========================================================================
 // Battery 3: Custom Sleek Cyber-Dark Scrollbars (Hairline Ghost Geometry)

@@ -13,7 +13,9 @@
   gap: 10px;
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
-  max-height: 540px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 475px; /* max-height: 540px legacy containment boundary */
   scrollbar-width: thin;
   scrollbar-color: rgba(129, 140, 248, 0.16) transparent;
 }
@@ -25,6 +27,7 @@
 /* ==========================================================================
    1. Radial Bedtime Dial Hero Card
    ========================================================================== */
+#cardSleepHeroRing,
 .sleep-hero-card {
   flex-shrink: 0;
   background: rgba(18, 24, 38, 0.75);
@@ -464,7 +467,7 @@
 
 #sleepSettingsDrawer.open .drawer-inner-content {
   opacity: 1;
-  max-height: 220px;
+  max-height: 200px; /* max-height: 220px legacy expansion bound; 180px - 200px drawer containment */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px 4px 8px 4px;

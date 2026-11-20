@@ -93,24 +93,52 @@
   padding: 0;
 }
 
+html {
+  width: 380px;
+  max-width: 380px;
+  height: 580px;
+  max-height: 600px;
+  overflow: hidden !important;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: none !important;
+  box-sizing: border-box;
+}
+
+html::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 body {
   width: 380px;
   max-width: 380px;
-  /* Fixed 380px compact geometry (fallback support: width: 420px;) */
+  height: 580px;
+  max-height: 600px;
   min-height: 520px;
-  max-height: 620px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden !important; /* ZERO WINDOW SCROLLBAR */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none !important;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-family);
   font-size: 13px;
   line-height: 1.4;
   user-select: none;
+  box-sizing: border-box;
+}
+
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Custom Sleek Cyber-Dark Scrollbars (Native Scrollbar Suppression) */
-body,
 .tab-pane,
 .drawer-inner-content,
 .drawer-expandable-wrap {
@@ -118,7 +146,6 @@ body,
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
-body::-webkit-scrollbar,
 .tab-pane::-webkit-scrollbar,
 .drawer-inner-content::-webkit-scrollbar,
 .drawer-expandable-wrap::-webkit-scrollbar {
@@ -126,14 +153,12 @@ body::-webkit-scrollbar,
   height: 2px;
 }
 
-body::-webkit-scrollbar-track,
 .tab-pane::-webkit-scrollbar-track,
 .drawer-inner-content::-webkit-scrollbar-track,
 .drawer-expandable-wrap::-webkit-scrollbar-track {
   background: transparent;
 }
 
-body::-webkit-scrollbar-thumb,
 .tab-pane::-webkit-scrollbar-thumb,
 .drawer-inner-content::-webkit-scrollbar-thumb,
 .drawer-expandable-wrap::-webkit-scrollbar-thumb {
@@ -141,7 +166,6 @@ body::-webkit-scrollbar-thumb,
   border-radius: 999px;
 }
 
-body::-webkit-scrollbar-thumb:hover,
 .tab-pane::-webkit-scrollbar-thumb:hover,
 .drawer-inner-content::-webkit-scrollbar-thumb:hover,
 .drawer-expandable-wrap::-webkit-scrollbar-thumb:hover {
@@ -149,14 +173,20 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .sentinel-app {
-  padding: 12px;
+  width: 100%;
+  height: 100%;
+  max-height: 600px; /* Chrome extension window 600px ceiling */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  gap: 8px;
 }
 
 /* Header */
 .header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -672,6 +702,7 @@ button.spinning .refresh-spinner-icon,
   border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.08));
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .tier1-segmented-nav .tier1-nav-btn {
@@ -745,6 +776,7 @@ button.spinning .refresh-spinner-icon,
    Top Primary Multi-Tabs Navigation & View Panes (6-Tab Single-Word Architecture)
    ========================================================================== */
 .top-nav-tabs {
+  flex-shrink: 0;
   display: flex;
   /* Legacy 4-column fallback for backwards compatibility */
   /* grid-template-columns: repeat(4, 1fr); */
@@ -894,6 +926,9 @@ button.spinning .refresh-spinner-icon,
   opacity: 0;
   transform: translateY(3px);
   transition: opacity 0.2s ease, transform 0.2s ease;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tab-pane.active {
@@ -2256,6 +2291,7 @@ button.spinning .refresh-spinner-icon,
   width: 100%;
   box-sizing: border-box;
   flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .footer-btn {
@@ -3318,7 +3354,9 @@ button.spinning .refresh-spinner-icon,
 /* SECTION: REVAMPED FOCUS BLOCK SVG RADIAL DIAL (CYBER-DARK GLASSMORPHISM)   */
 /* ========================================================================== */
 
+#cardPopupFocusTimer,
 .popup-focus-card {
+  flex-shrink: 0;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.75);
@@ -5648,14 +5686,27 @@ body.high-contrast-mode .tier1-segmented-nav .tier1-nav-btn.active {
 
 .popup-settings-drawer.open .drawer-inner-content {
   opacity: 1;
+  max-height: 200px; /* legacy 220px expansion bound; 180px - 200px drawer containment */
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 4px 4px 8px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
 /* Zero-Scroll Popup Height Adjustment */
 #viewSleepPane, #viewFocusPane {
   overflow-y: auto;
-  max-height: 540px;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 475px; /* 480px ceiling containment budget; legacy 540px containment boundary */
   scrollbar-width: thin;
+}
+
+#cardSleepHeroRing,
+.sleep-hero-card {
+  flex-shrink: 0;
 }
 
 /* Light Theme Overrides */
