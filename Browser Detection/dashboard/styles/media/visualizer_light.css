@@ -71,3 +71,238 @@ body.theme-light .viz-hud-badge,
   color: #334155 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
+
+body.theme-light .viz-scale-label,
+[data-theme="light"] .viz-scale-label {
+  color: #475569 !important;
+}
+
+/* ========================================================================= */
+/* 3. PRESET PILL TRIGGER & POPOVER MENU                                     */
+/* ========================================================================= */
+
+/* Trigger Button */
+body.theme-light .viz-pill-trigger,
+body.theme-light #btnVizPillTrigger,
+[data-theme="light"] .viz-pill-trigger,
+[data-theme="light"] #btnVizPillTrigger {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Trigger Button Hover & Focus */
+body.theme-light .viz-pill-trigger:hover,
+body.theme-light #btnVizPillTrigger:hover,
+[data-theme="light"] .viz-pill-trigger:hover,
+[data-theme="light"] #btnVizPillTrigger:hover {
+  background: #f8fafc !important;
+  border-color: #6366f1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.15) !important;
+}
+
+body.theme-light .viz-pill-trigger:focus-visible,
+body.theme-light #btnVizPillTrigger:focus-visible,
+[data-theme="light"] .viz-pill-trigger:focus-visible,
+[data-theme="light"] #btnVizPillTrigger:focus-visible {
+  outline: 2px solid #6366f1 !important;
+  outline-offset: 1px !important;
+}
+
+/* Trigger Button Expanded State */
+body.theme-light .viz-pill-trigger[aria-expanded="true"],
+body.theme-light #btnVizPillTrigger[aria-expanded="true"],
+[data-theme="light"] .viz-pill-trigger[aria-expanded="true"],
+[data-theme="light"] #btnVizPillTrigger[aria-expanded="true"] {
+  background: #f8fafc !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Trigger Chevron Indicator */
+body.theme-light .viz-pill-chevron,
+body.theme-light #btnVizPillTrigger .viz-pill-chevron,
+[data-theme="light"] .viz-pill-chevron,
+[data-theme="light"] #btnVizPillTrigger .viz-pill-chevron {
+  color: #64748b !important;
+}
+
+body.theme-light .viz-pill-trigger[aria-expanded="true"] .viz-pill-chevron,
+body.theme-light #btnVizPillTrigger[aria-expanded="true"] .viz-pill-chevron,
+[data-theme="light"] .viz-pill-trigger[aria-expanded="true"] .viz-pill-chevron,
+[data-theme="light"] #btnVizPillTrigger[aria-expanded="true"] .viz-pill-chevron {
+  color: #4f46e5 !important;
+}
+
+/* Popover Menu Container */
+body.theme-light #vizPillPopoverMenu,
+body.theme-light .viz-pill-popover-menu,
+body.theme-light #vizPillPopoverMenu:not([hidden]),
+body.theme-light .viz-pill-popover-menu:not([hidden]),
+[data-theme="light"] #vizPillPopoverMenu,
+[data-theme="light"] .viz-pill-popover-menu,
+[data-theme="light"] #vizPillPopoverMenu:not([hidden]),
+[data-theme="light"] .viz-pill-popover-menu:not([hidden]) {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+/* Popover Option Items */
+body.theme-light .viz-popover-option,
+[data-theme="light"] .viz-popover-option {
+  color: #1e293b !important;
+  background: transparent !important;
+}
+
+body.theme-light .viz-popover-option:hover,
+body.theme-light .viz-popover-option:focus-visible,
+[data-theme="light"] .viz-popover-option:hover,
+[data-theme="light"] .viz-popover-option:focus-visible {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .viz-popover-option.active,
+[data-theme="light"] .viz-popover-option.active {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: #3730a3 !important;
+  font-weight: 600 !important;
+  border-left: 3px solid #6366f1 !important;
+}
+
+/* Popover Scrollbars */
+body.theme-light #vizPillPopoverMenu::-webkit-scrollbar,
+body.theme-light .viz-pill-popover-menu::-webkit-scrollbar,
+[data-theme="light"] #vizPillPopoverMenu::-webkit-scrollbar,
+[data-theme="light"] .viz-pill-popover-menu::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+body.theme-light #vizPillPopoverMenu::-webkit-scrollbar-track,
+body.theme-light .viz-pill-popover-menu::-webkit-scrollbar-track,
+[data-theme="light"] #vizPillPopoverMenu::-webkit-scrollbar-track,
+[data-theme="light"] .viz-pill-popover-menu::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+body.theme-light #vizPillPopoverMenu::-webkit-scrollbar-thumb,
+body.theme-light .viz-pill-popover-menu::-webkit-scrollbar-thumb,
+[data-theme="light"] #vizPillPopoverMenu::-webkit-scrollbar-thumb,
+[data-theme="light"] .viz-pill-popover-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+body.theme-light #vizPillPopoverMenu::-webkit-scrollbar-thumb:hover,
+body.theme-light .viz-pill-popover-menu::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] #vizPillPopoverMenu::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .viz-pill-popover-menu::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+/* ========================================================================= */
+/* 4. VISUALIZER SETTINGS DRAWER OVERLAY & CONTROLS                          */
+/* ========================================================================= */
+
+/* Drawer Container */
+body.theme-light #vizSettingsDrawer,
+body.theme-light .viz-settings-drawer,
+[data-theme="light"] #vizSettingsDrawer,
+[data-theme="light"] .viz-settings-drawer {
+  background: #ffffff !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Drawer Header & Title */
+body.theme-light .viz-drawer-header,
+[data-theme="light"] .viz-drawer-header {
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+body.theme-light .viz-drawer-title,
+[data-theme="light"] .viz-drawer-title {
+  color: #0f172a !important;
+}
+
+/* Drawer Close Button */
+body.theme-light .btn-viz-drawer-close,
+body.theme-light #btnVizDrawerClose,
+[data-theme="light"] .btn-viz-drawer-close,
+[data-theme="light"] #btnVizDrawerClose {
+  color: #475569 !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+body.theme-light .btn-viz-drawer-close:hover,
+body.theme-light .btn-viz-drawer-close:focus-visible,
+body.theme-light #btnVizDrawerClose:hover,
+body.theme-light #btnVizDrawerClose:focus-visible,
+[data-theme="light"] .btn-viz-drawer-close:hover,
+[data-theme="light"] .btn-viz-drawer-close:focus-visible,
+[data-theme="light"] #btnVizDrawerClose:hover,
+[data-theme="light"] #btnVizDrawerClose:focus-visible {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Drawer Row Labels */
+body.theme-light .viz-drawer-label,
+[data-theme="light"] .viz-drawer-label {
+  color: #1e293b !important;
+}
+
+/* Micro Toggle Slider */
+body.theme-light .viz-toggle-slider,
+[data-theme="light"] .viz-toggle-slider {
+  background: #cbd5e1 !important;
+}
+
+body.theme-light .viz-toggle-slider:before,
+[data-theme="light"] .viz-toggle-slider:before {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.theme-light .viz-toggle-switch input:checked + .viz-toggle-slider,
+[data-theme="light"] .viz-toggle-switch input:checked + .viz-toggle-slider {
+  background: #4f46e5 !important;
+}
+
+/* Segmented Decay Rate Control */
+body.theme-light .viz-btn-segmented,
+[data-theme="light"] .viz-btn-segmented {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.theme-light .viz-seg-btn,
+[data-theme="light"] .viz-seg-btn {
+  color: #475569 !important;
+}
+
+body.theme-light .viz-seg-btn:hover,
+body.theme-light .viz-seg-btn:focus-visible,
+[data-theme="light"] .viz-seg-btn:hover,
+[data-theme="light"] .viz-seg-btn:focus-visible {
+  color: #1e293b !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .viz-seg-btn.active,
+[data-theme="light"] .viz-seg-btn.active {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
