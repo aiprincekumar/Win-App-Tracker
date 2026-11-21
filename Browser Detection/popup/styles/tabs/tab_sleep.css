@@ -572,3 +572,42 @@
   background: rgba(239, 68, 68, 0.16) !important;
   color: #b91c1c !important;
 }
+
+/* ==========================================================================
+   Light Mode Sleep Status Badge Contrast Overhaul (Phase 2)
+   ========================================================================== */
+[data-theme="light"] .sleep-status-badge.idle,
+[data-theme="light"] #sleepDialStatusBadge.idle {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+[data-theme="light"] .sleep-status-badge.running,
+[data-theme="light"] #sleepDialStatusBadge.running {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #3730a3;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="light"] .sleep-status-badge.paused,
+[data-theme="light"] #sleepDialStatusBadge.paused {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #92400e;
+}
+
+[data-theme="light"] .sleep-status-badge.fading,
+[data-theme="light"] #sleepDialStatusBadge.fading {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #92400e;
+}
+
+[data-theme="light"] .sleep-status-badge.triggered,
+[data-theme="light"] #sleepDialStatusBadge.triggered {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #991b1b;
+}

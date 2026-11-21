@@ -463,6 +463,33 @@ body.high-contrast-mode .studio-screenshot-card {
   color: #475569;
 }
 
+[data-theme="light"] .dynamic-status-btn.idle .status-dot {
+  background: #64748b;
+  box-shadow: none;
+}
+
+[data-theme="light"] .dynamic-status-btn.playing .status-dot {
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4);
+}
+
+[data-theme="light"] .dynamic-status-btn.paused .status-dot {
+  background: #d97706;
+}
+
+[data-theme="light"] .dynamic-status-btn.buffering .status-dot {
+  background: #0891b2;
+  box-shadow: 0 0 6px rgba(8, 145, 178, 0.4);
+}
+
+[data-theme="light"] .dynamic-status-btn.muted .status-dot {
+  background: #7c3aed;
+}
+
+[data-theme="light"] .dynamic-status-btn.stopped .status-dot {
+  background: #64748b;
+}
+
 [data-theme="light"] .media-title {
   color: #0f172a;
 }

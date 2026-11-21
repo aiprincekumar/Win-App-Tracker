@@ -91,14 +91,8 @@ body.theme-light .dash-focus-dial-track,
 }
 
 /* Focus Extender Buttons (+5m, +15m) */
-body.theme-light .dash-focus-extender-btn,
-body.theme-light #btnFocusExtend5,
-body.theme-light #btnFocusExtend15,
-body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn,
-[data-theme="light"] .dash-focus-extender-btn,
-[data-theme="light"] #btnFocusExtend5,
-[data-theme="light"] #btnFocusExtend15,
-[data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn {
+body.theme-light .dash-focus-extender-btn, body.theme-light #btnFocusExtend5, body.theme-light #btnFocusExtend15, body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn,
+[data-theme="light"] .dash-focus-extender-btn, [data-theme="light"] #btnFocusExtend5, [data-theme="light"] #btnFocusExtend15, [data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #047857 !important;
@@ -106,28 +100,16 @@ body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn,
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-body.theme-light .dash-focus-extender-btn:hover,
-body.theme-light #btnFocusExtend5:hover,
-body.theme-light #btnFocusExtend15:hover,
-body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn:hover,
-[data-theme="light"] .dash-focus-extender-btn:hover,
-[data-theme="light"] #btnFocusExtend5:hover,
-[data-theme="light"] #btnFocusExtend15:hover,
-[data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn:hover {
+body.theme-light .dash-focus-extender-btn:hover, body.theme-light #btnFocusExtend5:hover, body.theme-light #btnFocusExtend15:hover, body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn:hover,
+[data-theme="light"] .dash-focus-extender-btn:hover, [data-theme="light"] #btnFocusExtend5:hover, [data-theme="light"] #btnFocusExtend15:hover, [data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn:hover {
   background: #f1f5f9 !important;
   border-color: #10b981 !important;
   color: #0f172a !important;
 }
 
 /* Sleep Extender Buttons (+5m, +15m) */
-body.theme-light .dash-sleep-extender-btn,
-body.theme-light #btnDashSleepExtend5,
-body.theme-light #btnDashSleepExtend15,
-body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn,
-[data-theme="light"] .dash-sleep-extender-btn,
-[data-theme="light"] #btnDashSleepExtend5,
-[data-theme="light"] #btnDashSleepExtend15,
-[data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn {
+body.theme-light .dash-sleep-extender-btn, body.theme-light #btnDashSleepExtend5, body.theme-light #btnDashSleepExtend15, body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn,
+[data-theme="light"] .dash-sleep-extender-btn, [data-theme="light"] #btnDashSleepExtend5, [data-theme="light"] #btnDashSleepExtend15, [data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #312e81 !important;
@@ -135,38 +117,24 @@ body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn,
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-body.theme-light .dash-sleep-extender-btn:hover,
-body.theme-light #btnDashSleepExtend5:hover,
-body.theme-light #btnDashSleepExtend15:hover,
-body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover,
-[data-theme="light"] .dash-sleep-extender-btn:hover,
-[data-theme="light"] #btnDashSleepExtend5:hover,
-[data-theme="light"] #btnDashSleepExtend15:hover,
-[data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover {
+body.theme-light .dash-sleep-extender-btn:hover, body.theme-light #btnDashSleepExtend5:hover, body.theme-light #btnDashSleepExtend15:hover, body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover,
+[data-theme="light"] .dash-sleep-extender-btn:hover, [data-theme="light"] #btnDashSleepExtend5:hover, [data-theme="light"] #btnDashSleepExtend15:hover, [data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover {
   background: #f1f5f9 !important;
   border-color: #6366f1 !important;
   color: #0f172a !important;
 }
 
 /* Pomodoro Reset & Secondary Action Buttons */
-body.theme-light .btn-focus-secondary,
-body.theme-light #btnResetPomodoro,
-body.theme-light #btnPausePomodoro,
-[data-theme="light"] .btn-focus-secondary,
-[data-theme="light"] #btnResetPomodoro,
-[data-theme="light"] #btnPausePomodoro {
+body.theme-light .btn-focus-secondary, body.theme-light #btnResetPomodoro, body.theme-light #btnPausePomodoro,
+[data-theme="light"] .btn-focus-secondary, [data-theme="light"] #btnResetPomodoro, [data-theme="light"] #btnPausePomodoro {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #334155 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-body.theme-light .btn-focus-secondary:hover,
-body.theme-light #btnResetPomodoro:hover,
-body.theme-light #btnPausePomodoro:hover,
-[data-theme="light"] .btn-focus-secondary:hover,
-[data-theme="light"] #btnResetPomodoro:hover,
-[data-theme="light"] #btnPausePomodoro:hover {
+body.theme-light .btn-focus-secondary:hover, body.theme-light #btnResetPomodoro:hover, body.theme-light #btnPausePomodoro:hover,
+[data-theme="light"] .btn-focus-secondary:hover, [data-theme="light"] #btnResetPomodoro:hover, [data-theme="light"] #btnPausePomodoro:hover {
   background: #f1f5f9 !important;
   border-color: #94a3b8 !important;
   color: #0f172a !important;
@@ -270,65 +238,49 @@ body.theme-light .chime-label,
   font-weight: 600 !important;
 }
 
-body.theme-light .styled-select.chime-select,
-body.theme-light #selectFocusChimeTone,
-[data-theme="light"] .styled-select.chime-select,
-[data-theme="light"] #selectFocusChimeTone {
+body.theme-light .styled-select.chime-select, body.theme-light #selectFocusChimeTone,
+[data-theme="light"] .styled-select.chime-select, [data-theme="light"] #selectFocusChimeTone {
   background-color: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }
 
-body.theme-light .btn-chime-preview,
-body.theme-light #btnPreviewChime,
-[data-theme="light"] .btn-chime-preview,
-[data-theme="light"] #btnPreviewChime {
+body.theme-light .btn-chime-preview, body.theme-light #btnPreviewChime,
+[data-theme="light"] .btn-chime-preview, [data-theme="light"] #btnPreviewChime {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #334155 !important;
 }
 
-body.theme-light .btn-chime-preview:hover,
-body.theme-light #btnPreviewChime:hover,
-[data-theme="light"] .btn-chime-preview:hover,
-[data-theme="light"] #btnPreviewChime:hover {
+body.theme-light .btn-chime-preview:hover, body.theme-light #btnPreviewChime:hover,
+[data-theme="light"] .btn-chime-preview:hover, [data-theme="light"] #btnPreviewChime:hover {
   background: #f1f5f9 !important;
   border-color: #94a3b8 !important;
   color: #0f172a !important;
 }
 
 /* Focus Toggles Container & Cards */
-body.theme-light .dash-focus-toggles-container .dash-focus-toggle-row,
-body.theme-light .dash-focus-toggle-row,
-body.theme-light .dash-advanced-toggles-grid .control-toggle-item,
-[data-theme="light"] .dash-focus-toggles-container .dash-focus-toggle-row,
-[data-theme="light"] .dash-focus-toggle-row,
-[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item {
+body.theme-light .dash-focus-toggles-container .dash-focus-toggle-row, body.theme-light .dash-focus-toggle-row, body.theme-light .dash-advanced-toggles-grid .control-toggle-item,
+[data-theme="light"] .dash-focus-toggles-container .dash-focus-toggle-row, [data-theme="light"] .dash-focus-toggle-row, [data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
-body.theme-light .dash-focus-toggle-row:hover,
-body.theme-light .dash-advanced-toggles-grid .control-toggle-item:hover,
-[data-theme="light"] .dash-focus-toggle-row:hover,
-[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item:hover {
+body.theme-light .dash-focus-toggle-row:hover, body.theme-light .dash-advanced-toggles-grid .control-toggle-item:hover,
+[data-theme="light"] .dash-focus-toggle-row:hover, [data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item:hover {
   background: #f8fafc !important;
   border-color: #cbd5e1 !important;
 }
 
-body.theme-light .dash-focus-toggle-row .toggle-title,
-body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-title,
-[data-theme="light"] .dash-focus-toggle-row .toggle-title,
-[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-title {
+body.theme-light .dash-focus-toggle-row .toggle-title, body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-title,
+[data-theme="light"] .dash-focus-toggle-row .toggle-title, [data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-title {
   color: #0f172a !important;
   font-weight: 600 !important;
 }
 
-body.theme-light .dash-focus-toggle-row .toggle-desc,
-body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-desc,
-[data-theme="light"] .dash-focus-toggle-row .toggle-desc,
-[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-desc {
+body.theme-light .dash-focus-toggle-row .toggle-desc, body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-desc,
+[data-theme="light"] .dash-focus-toggle-row .toggle-desc, [data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-desc {
   color: #475569 !important;
 }
 
@@ -367,10 +319,8 @@ body.theme-light .focus-custom-minute-stepper .stepper-label,
   color: #475569 !important;
 }
 
-body.theme-light .focus-custom-minute-stepper .stepper-input,
-body.theme-light #inputFocusCustomMinutes,
-[data-theme="light"] .focus-custom-minute-stepper .stepper-input,
-[data-theme="light"] #inputFocusCustomMinutes {
+body.theme-light .focus-custom-minute-stepper .stepper-input, body.theme-light #inputFocusCustomMinutes,
+[data-theme="light"] .focus-custom-minute-stepper .stepper-input, [data-theme="light"] #inputFocusCustomMinutes {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
@@ -381,41 +331,31 @@ body.theme-light .focus-custom-minute-stepper .stepper-unit,
   color: #64748b !important;
 }
 
-body.theme-light .focus-custom-minute-stepper .btn-stepper-apply,
-body.theme-light #btnApplyCustomMinutes,
-[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply,
-[data-theme="light"] #btnApplyCustomMinutes {
+body.theme-light .focus-custom-minute-stepper .btn-stepper-apply, body.theme-light #btnApplyCustomMinutes,
+[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply, [data-theme="light"] #btnApplyCustomMinutes {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }
 
-body.theme-light .focus-custom-minute-stepper .btn-stepper-apply:hover,
-body.theme-light #btnApplyCustomMinutes:hover,
-[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply:hover,
-[data-theme="light"] #btnApplyCustomMinutes:hover {
+body.theme-light .focus-custom-minute-stepper .btn-stepper-apply:hover, body.theme-light #btnApplyCustomMinutes:hover,
+[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply:hover, [data-theme="light"] #btnApplyCustomMinutes:hover {
   background: #f1f5f9 !important;
   border-color: #94a3b8 !important;
 }
 
-body.theme-light .focus-goal-input,
-body.theme-light #inputFocusGoal,
-[data-theme="light"] .focus-goal-input,
-[data-theme="light"] #inputFocusGoal {
+body.theme-light .focus-goal-input, body.theme-light #inputFocusGoal,
+[data-theme="light"] .focus-goal-input, [data-theme="light"] #inputFocusGoal {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }
 
 /* Sleep Sentinel Hub Card Refinements */
-body.theme-light #cardSleepSentinelHub,
-body.theme-light .sleep-hero-card,
-body.theme-light #cardSleepAdvanced,
-body.theme-light .sleep-advanced-card,
-[data-theme="light"] #cardSleepSentinelHub,
-[data-theme="light"] .sleep-hero-card,
-[data-theme="light"] #cardSleepAdvanced,
-[data-theme="light"] .sleep-advanced-card {
+body.theme-light #cardSleepSentinelHub, body.theme-light .sleep-hero-card,
+body.theme-light #cardSleepAdvanced, body.theme-light .sleep-advanced-card,
+[data-theme="light"] #cardSleepSentinelHub, [data-theme="light"] .sleep-hero-card,
+[data-theme="light"] #cardSleepAdvanced, [data-theme="light"] .sleep-advanced-card {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
@@ -426,74 +366,122 @@ body.theme-light .dash-sleep-dial-track,
   stroke: #e2e8f0 !important;
 }
 
-body.theme-light .dash-sleep-big-time,
-body.theme-light .dash-sleep-time,
-body.theme-light #dashSleepCountdownDisplay,
-[data-theme="light"] .dash-sleep-big-time,
-[data-theme="light"] .dash-sleep-time,
-[data-theme="light"] #dashSleepCountdownDisplay {
+body.theme-light .dash-sleep-big-time, body.theme-light .dash-sleep-time, body.theme-light #dashSleepCountdownDisplay,
+[data-theme="light"] .dash-sleep-big-time, [data-theme="light"] .dash-sleep-time, [data-theme="light"] #dashSleepCountdownDisplay {
   color: #0f172a !important;
   text-shadow: none !important;
 }
 
-body.theme-light .dash-sleep-finish-time,
-body.theme-light .dash-sleep-finish,
-body.theme-light #dashSleepFinishTime,
-[data-theme="light"] .dash-sleep-finish-time,
-[data-theme="light"] .dash-sleep-finish,
-[data-theme="light"] #dashSleepFinishTime {
+body.theme-light .dash-sleep-finish-time, body.theme-light .dash-sleep-finish, body.theme-light #dashSleepFinishTime,
+[data-theme="light"] .dash-sleep-finish-time, [data-theme="light"] .dash-sleep-finish, [data-theme="light"] #dashSleepFinishTime {
   color: #475569 !important;
 }
 
-body.theme-light .dash-sleep-badge.idle,
-body.theme-light #dashSleepStatusBadge.idle,
-[data-theme="light"] .dash-sleep-badge.idle,
-[data-theme="light"] #dashSleepStatusBadge.idle {
+body.theme-light .dash-sleep-badge.idle, body.theme-light #dashSleepStatusBadge.idle,
+[data-theme="light"] .dash-sleep-badge.idle, [data-theme="light"] #dashSleepStatusBadge.idle {
   background: #f1f5f9 !important;
   border: 1px solid #cbd5e1 !important;
   color: #475569 !important;
 }
 
-body.theme-light .dash-sleep-badge.active,
-body.theme-light #dashSleepStatusBadge.active,
-[data-theme="light"] .dash-sleep-badge.active,
-[data-theme="light"] #dashSleepStatusBadge.active {
+body.theme-light .dash-sleep-badge.active, body.theme-light .dash-sleep-badge.running,
+body.theme-light #dashSleepStatusBadge.active, body.theme-light #dashSleepStatusBadge.running,
+[data-theme="light"] .dash-sleep-badge.active, [data-theme="light"] .dash-sleep-badge.running,
+[data-theme="light"] #dashSleepStatusBadge.active, [data-theme="light"] #dashSleepStatusBadge.running {
   background: rgba(99, 102, 241, 0.15) !important;
   border: 1px solid #6366f1 !important;
   color: #312e81 !important;
 }
 
-body.theme-light .dash-sleep-section-label,
-body.theme-light .focus-section-label,
-[data-theme="light"] .dash-sleep-section-label,
-[data-theme="light"] .focus-section-label {
+body.theme-light .dash-sleep-badge.paused, body.theme-light #dashSleepStatusBadge.paused,
+[data-theme="light"] .dash-sleep-badge.paused, [data-theme="light"] #dashSleepStatusBadge.paused {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #92400e !important;
+}
+
+body.theme-light .dash-sleep-badge.fading, body.theme-light #dashSleepStatusBadge.fading,
+[data-theme="light"] .dash-sleep-badge.fading, [data-theme="light"] #dashSleepStatusBadge.fading {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #92400e !important;
+}
+
+body.theme-light .dash-sleep-badge.triggered, body.theme-light #dashSleepStatusBadge.triggered,
+[data-theme="light"] .dash-sleep-badge.triggered, [data-theme="light"] #dashSleepStatusBadge.triggered {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  color: #991b1b !important;
+}
+
+body.theme-light .dash-sleep-section-label, body.theme-light .focus-section-label,
+[data-theme="light"] .dash-sleep-section-label, [data-theme="light"] .focus-section-label {
   color: #475569 !important;
   font-weight: 600 !important;
 }
 
 /* Sleep Custom Duration Input & Set Button */
-body.theme-light .dash-sleep-custom-input,
-body.theme-light #inputDashSleepCustomMinutes,
-[data-theme="light"] .dash-sleep-custom-input,
-[data-theme="light"] #inputDashSleepCustomMinutes {
+body.theme-light .dash-sleep-custom-input, body.theme-light #inputDashSleepCustomMinutes,
+[data-theme="light"] .dash-sleep-custom-input, [data-theme="light"] #inputDashSleepCustomMinutes {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }
 
-body.theme-light .btn-dash-sleep-set-custom,
-body.theme-light #btnSetDashSleepCustom,
-[data-theme="light"] .btn-dash-sleep-set-custom,
-[data-theme="light"] #btnSetDashSleepCustom {
+body.theme-light .btn-dash-sleep-set-custom, body.theme-light #btnSetDashSleepCustom,
+[data-theme="light"] .btn-dash-sleep-set-custom, [data-theme="light"] #btnSetDashSleepCustom {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
 }
 
-body.theme-light .btn-dash-sleep-set-custom:hover,
-body.theme-light #btnSetDashSleepCustom:hover,
-[data-theme="light"] .btn-dash-sleep-set-custom:hover,
-[data-theme="light"] #btnSetDashSleepCustom:hover {
+body.theme-light .btn-dash-sleep-set-custom:hover, body.theme-light #btnSetDashSleepCustom:hover,
+[data-theme="light"] .btn-dash-sleep-set-custom:hover, [data-theme="light"] #btnSetDashSleepCustom:hover {
   background: #f1f5f9 !important;
   border-color: #94a3b8 !important;
+}
+
+/* ========================================================================= */
+/* Light Mode Status Pill Badges & Contrast Overhaul (Phase 1)              */
+/* ========================================================================= */
+
+/* Focus Sentinel Hub Badges */
+body.theme-light .badge-focus, body.theme-light #pomodoroModeBadge.badge-focus,
+[data-theme="light"] .badge-focus, [data-theme="light"] #pomodoroModeBadge.badge-focus {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: #065f46 !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .badge-break, body.theme-light #pomodoroModeBadge.badge-break,
+[data-theme="light"] .badge-break, [data-theme="light"] #pomodoroModeBadge.badge-break {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #1e40af !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .badge-focus-micro, [data-theme="light"] .badge-focus-micro {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #065f46 !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .badge-break-micro, [data-theme="light"] .badge-break-micro {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: #1e40af !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .zen-status-badge, [data-theme="light"] .zen-status-badge {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+/* Sidebar HUD Idle Indicator Dots */
+body.theme-light .hud-dot.idle, [data-theme="light"] .hud-dot.idle {
+  background: #64748b !important;
+  box-shadow: 0 0 0 1px #cbd5e1 !important;
 }

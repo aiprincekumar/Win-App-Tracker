@@ -2550,3 +2550,127 @@ body.theme-light .hero-speed-val,
 [data-theme="light"] .hero-speed-val {
   color: #b45309 !important;
 }
+
+/* ========================================================================= */
+/* Light Mode Status Pill Badges & Contrast Overhaul (Phase 1)              */
+/* ========================================================================= */
+
+/* Audio Visualizer Header Status Pill & Indicator Dots */
+body.theme-light .viz-header-status-pill,
+body.theme-light #vizHeaderStatusPill,
+[data-theme="light"] .viz-header-status-pill,
+[data-theme="light"] #vizHeaderStatusPill {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+body.theme-light .viz-header-status-pill .viz-live-text,
+body.theme-light #vizHeaderStatusText,
+[data-theme="light"] .viz-header-status-pill .viz-live-text,
+[data-theme="light"] #vizHeaderStatusText {
+  color: #475569;
+}
+
+body.theme-light .viz-live-dot,
+body.theme-light #vizLiveDot,
+[data-theme="light"] .viz-live-dot,
+[data-theme="light"] #vizLiveDot {
+  background: #64748b;
+  box-shadow: none;
+}
+
+body.theme-light .viz-live-dot.active,
+body.theme-light #vizLiveDot.active,
+[data-theme="light"] .viz-live-dot.active,
+[data-theme="light"] #vizLiveDot.active {
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4);
+}
+
+body.theme-light .viz-header-status-pill.active,
+body.theme-light #vizHeaderStatusPill.active,
+[data-theme="light"] .viz-header-status-pill.active,
+[data-theme="light"] #vizHeaderStatusPill.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #065f46;
+}
+
+body.theme-light .viz-header-status-pill.active .viz-live-text,
+body.theme-light #vizHeaderStatusPill.active #vizHeaderStatusText,
+[data-theme="light"] .viz-header-status-pill.active .viz-live-text,
+[data-theme="light"] #vizHeaderStatusPill.active #vizHeaderStatusText {
+  color: #065f46;
+}
+
+body.theme-light .viz-hud-badge,
+[data-theme="light"] .viz-hud-badge {
+  background: rgba(248, 250, 252, 0.9);
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+/* Hero Player Status Pill & Deck Status Pills */
+body.theme-light .status-pill.idle,
+body.theme-light #playerStatusBadge.idle,
+[data-theme="light"] .status-pill.idle,
+[data-theme="light"] #playerStatusBadge.idle {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+body.theme-light .status-pill.playing,
+body.theme-light #playerStatusBadge.playing,
+[data-theme="light"] .status-pill.playing,
+[data-theme="light"] #playerStatusBadge.playing {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #065f46;
+}
+
+body.theme-light .status-pill.paused,
+body.theme-light #playerStatusBadge.paused,
+[data-theme="light"] .status-pill.paused,
+[data-theme="light"] #playerStatusBadge.paused {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+
+body.theme-light .player-pulse-dot.idle,
+[data-theme="light"] .player-pulse-dot.idle {
+  background: #64748b;
+  box-shadow: none;
+}
+
+body.theme-light .deck-status-pill,
+[data-theme="light"] .deck-status-pill {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+body.theme-light .deck-status-pill.playing,
+[data-theme="light"] .deck-status-pill.playing {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #065f46;
+}
+
+body.theme-light .deck-status-pill.paused,
+[data-theme="light"] .deck-status-pill.paused {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+
+body.theme-light .deck-status-pill.muted,
+[data-theme="light"] .deck-status-pill.muted {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+

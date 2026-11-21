@@ -905,3 +905,39 @@ body.high-contrast-mode .doomscroll-select {
 [data-theme="light"] #focusSettingsDrawer .drawer-inner-content::-webkit-scrollbar-thumb:hover {
   background: rgba(15, 118, 110, 0.30);
 }
+
+/* ==========================================================================
+   Light Mode Focus & Doomscroll Status Badge Contrast Overhaul (Phase 2)
+   ========================================================================== */
+[data-theme="light"] .popup-focus-badge.idle,
+[data-theme="light"] #popupFocusBadge.idle {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+[data-theme="light"] .popup-focus-badge.running,
+[data-theme="light"] #popupFocusBadge.running {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #065f46;
+}
+
+[data-theme="light"] .popup-focus-badge.break,
+[data-theme="light"] #popupFocusBadge.break {
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #0e7490;
+}
+
+[data-theme="light"] .popup-focus-badge.paused,
+[data-theme="light"] #popupFocusBadge.paused {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #92400e;
+}
+
+[data-theme="light"] .doomscroll-status-badge.standby .doomscroll-status-dot,
+[data-theme="light"] #doomscrollStatusBadge.standby .doomscroll-status-dot {
+  background: #64748b;
+}
