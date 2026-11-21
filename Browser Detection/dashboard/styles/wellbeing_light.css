@@ -65,13 +65,435 @@ body.theme-light .blacklist-purge-divider,
   background: #e2e8f0 !important;
 }
 
-/* Focus Clock & Subsystem Harmonization */
+/* Focus Clock & Radial Dial */
 body.theme-light .focus-clock-time,
-[data-theme="light"] .focus-clock-time {
+body.theme-light .focus-big-clock,
+body.theme-light #pomodoroTimeDisplay,
+[data-theme="light"] .focus-clock-time,
+[data-theme="light"] .focus-big-clock,
+[data-theme="light"] #pomodoroTimeDisplay {
   color: #0f172a !important;
+  text-shadow: none !important;
 }
 
 body.theme-light .focus-clock-sub,
-[data-theme="light"] .focus-clock-sub {
+body.theme-light .focus-finish-time,
+body.theme-light #pomodoroFinishTime,
+[data-theme="light"] .focus-clock-sub,
+[data-theme="light"] .focus-finish-time,
+[data-theme="light"] #pomodoroFinishTime {
   color: #475569 !important;
+}
+
+body.theme-light .dash-focus-dial-track,
+[data-theme="light"] .dash-focus-dial-track {
+  stroke: #e2e8f0 !important;
+}
+
+/* Focus Extender Buttons (+5m, +15m) */
+body.theme-light .dash-focus-extender-btn,
+body.theme-light #btnFocusExtend5,
+body.theme-light #btnFocusExtend15,
+body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn,
+[data-theme="light"] .dash-focus-extender-btn,
+[data-theme="light"] #btnFocusExtend5,
+[data-theme="light"] #btnFocusExtend15,
+[data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #047857 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .dash-focus-extender-btn:hover,
+body.theme-light #btnFocusExtend5:hover,
+body.theme-light #btnFocusExtend15:hover,
+body.theme-light .dash-focus-extender-buttons .dash-focus-extender-btn:hover,
+[data-theme="light"] .dash-focus-extender-btn:hover,
+[data-theme="light"] #btnFocusExtend5:hover,
+[data-theme="light"] #btnFocusExtend15:hover,
+[data-theme="light"] .dash-focus-extender-buttons .dash-focus-extender-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #10b981 !important;
+  color: #0f172a !important;
+}
+
+/* Sleep Extender Buttons (+5m, +15m) */
+body.theme-light .dash-sleep-extender-btn,
+body.theme-light #btnDashSleepExtend5,
+body.theme-light #btnDashSleepExtend15,
+body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn,
+[data-theme="light"] .dash-sleep-extender-btn,
+[data-theme="light"] #btnDashSleepExtend5,
+[data-theme="light"] #btnDashSleepExtend15,
+[data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #312e81 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .dash-sleep-extender-btn:hover,
+body.theme-light #btnDashSleepExtend5:hover,
+body.theme-light #btnDashSleepExtend15:hover,
+body.theme-light .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover,
+[data-theme="light"] .dash-sleep-extender-btn:hover,
+[data-theme="light"] #btnDashSleepExtend5:hover,
+[data-theme="light"] #btnDashSleepExtend15:hover,
+[data-theme="light"] .dash-sleep-extender-buttons .dash-sleep-extender-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #6366f1 !important;
+  color: #0f172a !important;
+}
+
+/* Pomodoro Reset & Secondary Action Buttons */
+body.theme-light .btn-focus-secondary,
+body.theme-light #btnResetPomodoro,
+body.theme-light #btnPausePomodoro,
+[data-theme="light"] .btn-focus-secondary,
+[data-theme="light"] #btnResetPomodoro,
+[data-theme="light"] #btnPausePomodoro {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .btn-focus-secondary:hover,
+body.theme-light #btnResetPomodoro:hover,
+body.theme-light #btnPausePomodoro:hover,
+[data-theme="light"] .btn-focus-secondary:hover,
+[data-theme="light"] #btnResetPomodoro:hover,
+[data-theme="light"] #btnPausePomodoro:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* Focus Mode Selector Bar */
+body.theme-light .focus-mode-tabs-row,
+[data-theme="light"] .focus-mode-tabs-row {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.theme-light .focus-mode-tab,
+[data-theme="light"] .focus-mode-tab {
+  color: #475569 !important;
+}
+
+body.theme-light .focus-mode-tab:hover,
+[data-theme="light"] .focus-mode-tab:hover {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+}
+
+body.theme-light .focus-mode-tab.active,
+body.theme-light .focus-mode-tab[data-mode="focus"].active,
+[data-theme="light"] .focus-mode-tab.active,
+[data-theme="light"] .focus-mode-tab[data-mode="focus"].active {
+  background: #ffffff !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2) !important;
+}
+
+body.theme-light .focus-mode-tab[data-mode="shortBreak"].active,
+body.theme-light .focus-mode-tab[data-mode="longBreak"].active,
+[data-theme="light"] .focus-mode-tab[data-mode="shortBreak"].active,
+[data-theme="light"] .focus-mode-tab[data-mode="longBreak"].active {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.2) !important;
+}
+
+/* 4-Stage Pomodoro Cycle & Streak Progress */
+body.theme-light .focus-cycle-progress-row,
+[data-theme="light"] .focus-cycle-progress-row {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.theme-light .focus-cycle-text,
+body.theme-light .target-goal-text,
+body.theme-light #focusCycleText,
+body.theme-light #focusTargetGoalText,
+[data-theme="light"] .focus-cycle-text,
+[data-theme="light"] .target-goal-text,
+[data-theme="light"] #focusCycleText,
+[data-theme="light"] #focusTargetGoalText {
+  color: #475569 !important;
+}
+
+body.theme-light .focus-streak-badge,
+body.theme-light #focusDailyStreakBadge,
+[data-theme="light"] .focus-streak-badge,
+[data-theme="light"] #focusDailyStreakBadge {
+  background: #ffedd5 !important;
+  border: 1px solid #fdba74 !important;
+  color: #c2410c !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .focus-target-progress-bar,
+[data-theme="light"] .focus-target-progress-bar {
+  background: #e2e8f0 !important;
+}
+
+body.theme-light .focus-cycle-dots .cycle-dot,
+[data-theme="light"] .focus-cycle-dots .cycle-dot {
+  background: #cbd5e1 !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+body.theme-light .focus-cycle-dots .cycle-dot.active,
+[data-theme="light"] .focus-cycle-dots .cycle-dot.active {
+  background: #10b981 !important;
+  border-color: #059669 !important;
+}
+
+/* Completion Chime Selector Row */
+body.theme-light .focus-chime-selector-row,
+[data-theme="light"] .focus-chime-selector-row {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.theme-light .chime-label,
+[data-theme="light"] .chime-label {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+body.theme-light .styled-select.chime-select,
+body.theme-light #selectFocusChimeTone,
+[data-theme="light"] .styled-select.chime-select,
+[data-theme="light"] #selectFocusChimeTone {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-chime-preview,
+body.theme-light #btnPreviewChime,
+[data-theme="light"] .btn-chime-preview,
+[data-theme="light"] #btnPreviewChime {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+body.theme-light .btn-chime-preview:hover,
+body.theme-light #btnPreviewChime:hover,
+[data-theme="light"] .btn-chime-preview:hover,
+[data-theme="light"] #btnPreviewChime:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* Focus Toggles Container & Cards */
+body.theme-light .dash-focus-toggles-container .dash-focus-toggle-row,
+body.theme-light .dash-focus-toggle-row,
+body.theme-light .dash-advanced-toggles-grid .control-toggle-item,
+[data-theme="light"] .dash-focus-toggles-container .dash-focus-toggle-row,
+[data-theme="light"] .dash-focus-toggle-row,
+[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .dash-focus-toggle-row:hover,
+body.theme-light .dash-advanced-toggles-grid .control-toggle-item:hover,
+[data-theme="light"] .dash-focus-toggle-row:hover,
+[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.theme-light .dash-focus-toggle-row .toggle-title,
+body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-title,
+[data-theme="light"] .dash-focus-toggle-row .toggle-title,
+[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-title {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+body.theme-light .dash-focus-toggle-row .toggle-desc,
+body.theme-light .dash-advanced-toggles-grid .control-toggle-item .toggle-desc,
+[data-theme="light"] .dash-focus-toggle-row .toggle-desc,
+[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .toggle-desc {
+  color: #475569 !important;
+}
+
+body.theme-light .dash-focus-toggle-row .slider-round,
+body.theme-light .dash-advanced-toggles-grid .control-toggle-item .slider-round,
+[data-theme="light"] .dash-focus-toggle-row .slider-round,
+[data-theme="light"] .dash-advanced-toggles-grid .control-toggle-item .slider-round {
+  background-color: #cbd5e1 !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+/* Integrity Score & Distraction Counter Badges */
+body.theme-light .badge-integrity-score,
+body.theme-light #badgeFocusIntegrityScore,
+[data-theme="light"] .badge-integrity-score,
+[data-theme="light"] #badgeFocusIntegrityScore {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: #047857 !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .badge-distraction-counter,
+body.theme-light #cntFocusDistractions,
+[data-theme="light"] .badge-distraction-counter,
+[data-theme="light"] #cntFocusDistractions {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  color: #b91c1c !important;
+  font-weight: 700 !important;
+}
+
+/* Focus Custom Stepper & Goal Input */
+body.theme-light .focus-custom-minute-stepper .stepper-label,
+[data-theme="light"] .focus-custom-minute-stepper .stepper-label {
+  color: #475569 !important;
+}
+
+body.theme-light .focus-custom-minute-stepper .stepper-input,
+body.theme-light #inputFocusCustomMinutes,
+[data-theme="light"] .focus-custom-minute-stepper .stepper-input,
+[data-theme="light"] #inputFocusCustomMinutes {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .focus-custom-minute-stepper .stepper-unit,
+[data-theme="light"] .focus-custom-minute-stepper .stepper-unit {
+  color: #64748b !important;
+}
+
+body.theme-light .focus-custom-minute-stepper .btn-stepper-apply,
+body.theme-light #btnApplyCustomMinutes,
+[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply,
+[data-theme="light"] #btnApplyCustomMinutes {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .focus-custom-minute-stepper .btn-stepper-apply:hover,
+body.theme-light #btnApplyCustomMinutes:hover,
+[data-theme="light"] .focus-custom-minute-stepper .btn-stepper-apply:hover,
+[data-theme="light"] #btnApplyCustomMinutes:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+body.theme-light .focus-goal-input,
+body.theme-light #inputFocusGoal,
+[data-theme="light"] .focus-goal-input,
+[data-theme="light"] #inputFocusGoal {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Sleep Sentinel Hub Card Refinements */
+body.theme-light #cardSleepSentinelHub,
+body.theme-light .sleep-hero-card,
+body.theme-light #cardSleepAdvanced,
+body.theme-light .sleep-advanced-card,
+[data-theme="light"] #cardSleepSentinelHub,
+[data-theme="light"] .sleep-hero-card,
+[data-theme="light"] #cardSleepAdvanced,
+[data-theme="light"] .sleep-advanced-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .dash-sleep-dial-track,
+[data-theme="light"] .dash-sleep-dial-track {
+  stroke: #e2e8f0 !important;
+}
+
+body.theme-light .dash-sleep-big-time,
+body.theme-light .dash-sleep-time,
+body.theme-light #dashSleepCountdownDisplay,
+[data-theme="light"] .dash-sleep-big-time,
+[data-theme="light"] .dash-sleep-time,
+[data-theme="light"] #dashSleepCountdownDisplay {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+body.theme-light .dash-sleep-finish-time,
+body.theme-light .dash-sleep-finish,
+body.theme-light #dashSleepFinishTime,
+[data-theme="light"] .dash-sleep-finish-time,
+[data-theme="light"] .dash-sleep-finish,
+[data-theme="light"] #dashSleepFinishTime {
+  color: #475569 !important;
+}
+
+body.theme-light .dash-sleep-badge.idle,
+body.theme-light #dashSleepStatusBadge.idle,
+[data-theme="light"] .dash-sleep-badge.idle,
+[data-theme="light"] #dashSleepStatusBadge.idle {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+body.theme-light .dash-sleep-badge.active,
+body.theme-light #dashSleepStatusBadge.active,
+[data-theme="light"] .dash-sleep-badge.active,
+[data-theme="light"] #dashSleepStatusBadge.active {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border: 1px solid #6366f1 !important;
+  color: #312e81 !important;
+}
+
+body.theme-light .dash-sleep-section-label,
+body.theme-light .focus-section-label,
+[data-theme="light"] .dash-sleep-section-label,
+[data-theme="light"] .focus-section-label {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+/* Sleep Custom Duration Input & Set Button */
+body.theme-light .dash-sleep-custom-input,
+body.theme-light #inputDashSleepCustomMinutes,
+[data-theme="light"] .dash-sleep-custom-input,
+[data-theme="light"] #inputDashSleepCustomMinutes {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-dash-sleep-set-custom,
+body.theme-light #btnSetDashSleepCustom,
+[data-theme="light"] .btn-dash-sleep-set-custom,
+[data-theme="light"] #btnSetDashSleepCustom {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-dash-sleep-set-custom:hover,
+body.theme-light #btnSetDashSleepCustom:hover,
+[data-theme="light"] .btn-dash-sleep-set-custom:hover,
+[data-theme="light"] #btnSetDashSleepCustom:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
 }

@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * Sentinel Web Activity & Media Sentinel - Dashboard Themes & High Contrast Styles
  * File: dashboard/styles/themes.css
  * Light Mode Overrides, High Contrast Accessibility (WCAG AAA) & Focus Rings
@@ -593,3 +593,89 @@ body.theme-light .viz-btn-segmented,
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Media Remote Controls & Advanced Action Bar (Light Theme WCAG AAA) */
+body.theme-light .hero-advanced-row,
+body.theme-light #heroAdvancedRow,
+[data-theme="light"] .hero-advanced-row,
+[data-theme="light"] #heroAdvancedRow {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-light .btn-adv-mode,
+[data-theme="light"] .btn-adv-mode {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .btn-adv-mode:hover,
+[data-theme="light"] .btn-adv-mode:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-adv-mode:active,
+[data-theme="light"] .btn-adv-mode:active {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .hero-quality-stepper,
+[data-theme="light"] .hero-quality-stepper {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.theme-light .btn-adv-mode-mini,
+[data-theme="light"] .btn-adv-mode-mini {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+body.theme-light .btn-adv-mode-mini:hover,
+[data-theme="light"] .btn-adv-mode-mini:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .hero-quality-val,
+[data-theme="light"] .hero-quality-val {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+body.theme-light .media-deck-header-actions .btn,
+body.theme-light #btnMuteAllOthers,
+body.theme-light #btnMuteAll,
+[data-theme="light"] .media-deck-header-actions .btn,
+[data-theme="light"] #btnMuteAllOthers,
+[data-theme="light"] #btnMuteAll {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .media-deck-header-actions .btn:hover,
+body.theme-light #btnMuteAllOthers:hover,
+body.theme-light #btnMuteAll:hover,
+[data-theme="light"] .media-deck-header-actions .btn:hover,
+[data-theme="light"] #btnMuteAllOthers:hover,
+[data-theme="light"] #btnMuteAll:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light #badgeActiveStreamsCount,
+[data-theme="light"] #badgeActiveStreamsCount {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
