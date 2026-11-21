@@ -3824,23 +3824,38 @@ function initBackupAndDigestHandlers() {
     });
   }
 
-  // 5. Print PDF button
+  // 5. Print PDF button (idempotent with setupExportDropdown)
   const btnPrintPdf = document.getElementById('btnPrintPdf');
-  if (btnPrintPdf) {
-    btnPrintPdf.addEventListener('click', () => {
+  if (btnPrintPdf && !btnPrintPdf.__exportBound && !btnPrintPdf.__digestBound) {
+    btnPrintPdf.__digestBound = true;
+    btnPrintPdf.addEventListener('click', (e) => {
+      if (e) {
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+      }
       triggerPrintPdf();
     });
   }
 
-  // 6. Download Standalone HTML report button
+  // 6. Download Standalone HTML report button (idempotent with setupExportDropdown)
   const btnDownloadDigest = document.getElementById('btnDownloadHtmlDigest');
   const btnDownloadReport = document.getElementById('btnDownloadHtmlReport');
-  const handleDownload = () => {
+  const handleDownload = (e) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
     downloadStandaloneHtmlDigest();
     showToast((currentLang === 'hi') ? 'स्टैंडअलोन HTML रिपोर्ट डाउनलोड हो गई!' : 'Offline HTML report downloaded!');
   };
-  if (btnDownloadDigest) btnDownloadDigest.addEventListener('click', handleDownload);
-  if (btnDownloadReport) btnDownloadReport.addEventListener('click', handleDownload);
+  if (btnDownloadDigest && !btnDownloadDigest.__exportBound && !btnDownloadDigest.__digestBound) {
+    btnDownloadDigest.__digestBound = true;
+    btnDownloadDigest.addEventListener('click', handleDownload);
+  }
+  if (btnDownloadReport && !btnDownloadReport.__digestBound) {
+    btnDownloadReport.__digestBound = true;
+    btnDownloadReport.addEventListener('click', handleDownload);
+  }
 
   // Populate snapshots selector initially
   populateSnapshotRollbackSelect();
@@ -3993,6 +4008,7 @@ function escapeHtml(str) {
 }
 
 function showToast(message, isDanger = false) {
+  if (typeof document === 'undefined') return;
   const toast = document.getElementById('toastNotification');
   const msgEl = document.getElementById('toastMessage');
   const iconEl = document.getElementById('toastIcon');
@@ -12450,26 +12466,69 @@ if (typeof window !== 'undefined') {
 // =============================================================================
 // Phase 1 Restoration: Consolidated Export Dropdown Hub
 // =============================================================================
-function setupExportDropdown() {
-  const btnExportMenu = document.getElementById('btnExportMenu');
-  const exportDropdownMenu = document.getElementById('exportDropdownMenu');
-  if (!btnExportMenu || !exportDropdownMenu) return;
+function closeExportDropdown(menu, trigger) {
+  if (menu) menu.classList.add('hidden');
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
 
-  btnExportMenu.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isExpanded = btnExportMenu.getAttribute('aria-expanded') === 'true';
-    btnExportMenu.setAttribute('aria-expanded', !isExpanded);
-    exportDropdownMenu.classList.toggle('hidden');
-  });
+function handleExportPdfClick(e, menu, trigger) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+  }
+  closeExportDropdown(menu, trigger);
+  try {
+    const res = (typeof triggerPrintPdf === 'function') ? triggerPrintPdf() : (_BackupHubDigest && _BackupHubDigest.triggerPrintPdf ? _BackupHubDigest.triggerPrintPdf() : null);
+    if (res && res.error) {
+      if (typeof showToast === 'function') {
+        showToast((currentLang === 'hi') ? `प्रिंट त्रुटि: ${res.error}` : `Print error: ${res.error}`, true);
+      }
+    } else if (typeof showToast === 'function') {
+      showToast((currentLang === 'hi') ? 'पीडीएफ/प्रिंट संवाद तैयार किया जा रहा है...' : 'Opening print dialog for PDF export...');
+    }
+    return res;
+  } catch (err) {
+    if (typeof showToast === 'function') {
+      showToast((currentLang === 'hi') ? `त्रुटि: ${err.message}` : `Error: ${err.message}`, true);
+    }
+    return { printed: false, error: err.message };
+  }
+}
 
+function handleExportHtmlDigestClick(e, menu, trigger) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+  }
+  closeExportDropdown(menu, trigger);
+  try {
+    const res = (typeof downloadStandaloneHtmlDigest === 'function') ? downloadStandaloneHtmlDigest() : (_BackupHubDigest && _BackupHubDigest.downloadStandaloneHtmlDigest ? _BackupHubDigest.downloadStandaloneHtmlDigest() : null);
+    if (res && res.error) {
+      if (typeof showToast === 'function') {
+        showToast((currentLang === 'hi') ? `डाउनलोड त्रुटि: ${res.error}` : `Download error: ${res.error}`, true);
+      }
+    } else if (typeof showToast === 'function') {
+      showToast((currentLang === 'hi') ? 'स्टैंडअलोन HTML रिपोर्ट डाउनलोड हो गई!' : 'Offline HTML report downloaded!');
+    }
+    return res;
+  } catch (err) {
+    if (typeof showToast === 'function') {
+      showToast((currentLang === 'hi') ? `त्रुटि: ${err.message}` : `Error: ${err.message}`, true);
+    }
+    return { success: false, error: err.message };
+  }
+}
+
+function bindCsvExportMenuItems(menu, trigger) {
   const btnExportTimeCsv = document.getElementById('btnExportTimeCsv');
   if (btnExportTimeCsv) {
     btnExportTimeCsv.addEventListener('click', (e) => {
       e.stopPropagation();
       const btnExportTrackingCsv = document.getElementById('btnExportTrackingCsv');
       if (btnExportTrackingCsv) btnExportTrackingCsv.click();
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+      closeExportDropdown(menu, trigger);
     });
   }
 
@@ -12479,45 +12538,62 @@ function setupExportDropdown() {
       e.stopPropagation();
       const btnExportMediaCsv = document.getElementById('btnExportMediaCsv');
       if (btnExportMediaCsv) btnExportMediaCsv.click();
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+      closeExportDropdown(menu, trigger);
     });
   }
+}
+
+function setupExportDropdown() {
+  const btnExportMenu = document.getElementById('btnExportMenu');
+  const exportDropdownMenu = document.getElementById('exportDropdownMenu');
+  if (!btnExportMenu || !exportDropdownMenu || btnExportMenu.__dropdownBound) return;
+  btnExportMenu.__dropdownBound = true;
+
+  btnExportMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isExpanded = btnExportMenu.getAttribute('aria-expanded') === 'true';
+    btnExportMenu.setAttribute('aria-expanded', !isExpanded);
+    exportDropdownMenu.classList.toggle('hidden');
+  });
+
+  bindCsvExportMenuItems(exportDropdownMenu, btnExportMenu);
 
   const btnPrintPdf = document.getElementById('btnPrintPdf');
-  if (btnPrintPdf) {
-    btnPrintPdf.addEventListener('click', () => {
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+  if (btnPrintPdf && !btnPrintPdf.__exportBound) {
+    btnPrintPdf.__exportBound = true;
+    btnPrintPdf.addEventListener('click', (e) => {
+      handleExportPdfClick(e, exportDropdownMenu, btnExportMenu);
     });
   }
 
   const btnDownloadDigest = document.getElementById('btnDownloadHtmlDigest');
-  if (btnDownloadDigest) {
-    btnDownloadDigest.addEventListener('click', () => {
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+  if (btnDownloadDigest && !btnDownloadDigest.__exportBound) {
+    btnDownloadDigest.__exportBound = true;
+    btnDownloadDigest.addEventListener('click', (e) => {
+      handleExportHtmlDigestClick(e, exportDropdownMenu, btnExportMenu);
     });
   }
 
   document.addEventListener('click', (e) => {
     if (!exportDropdownMenu.contains(e.target) && !btnExportMenu.contains(e.target)) {
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+      closeExportDropdown(exportDropdownMenu, btnExportMenu);
     }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      exportDropdownMenu.classList.add('hidden');
-      btnExportMenu.setAttribute('aria-expanded', 'false');
+      closeExportDropdown(exportDropdownMenu, btnExportMenu);
     }
   });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-  setupExportDropdown,
+    setupExportDropdown,
+    closeExportDropdown,
+    bindCsvExportMenuItems,
+    handleExportPdfClick,
+    handleExportHtmlDigestClick,
     populateSettingsForm,
     populateSleepSettingsForm,
     saveDashboardSettings,
@@ -12812,6 +12888,11 @@ if (typeof window !== 'undefined') {
   window.trigger2020PostureAlert = trigger2020PostureAlert;
   window.triggerBreatheNudgeOverlay = triggerBreatheNudgeOverlay;
   window.updateFocusIntegrityScore = updateFocusIntegrityScore;
+  window.setupExportDropdown = setupExportDropdown;
+  window.closeExportDropdown = closeExportDropdown;
+  window.bindCsvExportMenuItems = bindCsvExportMenuItems;
+  window.handleExportPdfClick = handleExportPdfClick;
+  window.handleExportHtmlDigestClick = handleExportHtmlDigestClick;
 }
 
 if (typeof globalThis !== 'undefined') {
@@ -12887,6 +12968,11 @@ if (typeof globalThis !== 'undefined') {
   globalThis.setTimeScrollToTopVisible = setTimeScrollToTopVisible;
   globalThis.handleTimeScrollToTopClick = handleTimeScrollToTopClick;
   globalThis.evaluateTimeScrollVisibility = evaluateTimeScrollVisibility;
+  globalThis.setupExportDropdown = setupExportDropdown;
+  globalThis.closeExportDropdown = closeExportDropdown;
+  globalThis.bindCsvExportMenuItems = bindCsvExportMenuItems;
+  globalThis.handleExportPdfClick = handleExportPdfClick;
+  globalThis.handleExportHtmlDigestClick = handleExportHtmlDigestClick;
 }
 
 // ============================================================================
