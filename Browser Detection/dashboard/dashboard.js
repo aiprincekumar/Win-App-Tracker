@@ -3065,6 +3065,9 @@ function pollMultiTabMediaStreams(options = {}) {
   if (viz && typeof viz.pollMultiTabMediaStreams === 'function') {
     return viz.pollMultiTabMediaStreams(opt).then(streams => {
       activeMediaStreams = streams || [];
+      if (typeof updateMediaAnalyticsKpiView === 'function' && Array.isArray(mediaHistoryData)) {
+        updateMediaAnalyticsKpiView(mediaHistoryData, null, activeMediaStreams);
+      }
       return activeMediaStreams;
     });
   }
@@ -6821,6 +6824,15 @@ function renderSecondaryTimeMetrics(kpi) {
  * Universal Rule 28 compliant (<= 30 lines, zero innerHTML).
  */
 function updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr) {
+  if (data && data.activityData && data.activityData.domains && stats && !stats.hourlyBuckets) {
+    if (typeof aggregateDomainsHistoryMap === 'function') {
+      const hist = aggregateDomainsHistoryMap(data.activityData.domains);
+      if (hist && hist[todayStr] && hist[todayStr].hourlyBuckets) {
+        stats.hourlyBuckets = hist[todayStr].hourlyBuckets;
+      }
+    }
+  }
+
   const kpi = (typeof TimeTrackingKpiFeature !== 'undefined' && TimeTrackingKpiFeature.aggregateTimeTrackingKpis)
     ? TimeTrackingKpiFeature.aggregateTimeTrackingKpis({ data, stats, temporalSubtab, todayStr })
     : {
@@ -12399,8 +12411,12 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     if (browserAPI && browserAPI.runtime && browserAPI.runtime.onMessage) {
       browserAPI.runtime.onMessage.addListener((message) => {
         if (message && message.type === 'LIVE_MEDIA_UPDATE' && message.payload) {
-          if (currentTab === 'media' && message.payload.primaryMedia) {
-            renderHeroMediaPlayer(message.payload.primaryMedia);
+          if (currentTab === 'media') {
+            const pm = message.payload.primaryMedia;
+            if (pm) renderHeroMediaPlayer(pm);
+            if (typeof updateMediaAnalyticsKpiView === 'function') {
+              updateMediaAnalyticsKpiView(mediaHistoryData, pm, activeMediaStreams);
+            }
           }
         } else if (message && message.type === 'DATA_HUB_STATUS_CHANGED') {
           refreshDashboard(true);

@@ -118,30 +118,73 @@
   }
 
   /**
-   * Computes peak activity hour from activityData.
+   * Helper: accumulates hourly buckets into 24-slot bins array.
+   */
+  function accumulateHourlyBuckets(bins, buckets) {
+    if (!buckets || typeof buckets !== 'object') return;
+    for (const [h, b] of Object.entries(buckets)) {
+      const idx = parseInt(h, 10);
+      if (idx >= 0 && idx < 24) {
+        const sec = typeof b === 'number' ? b : (b.activeSeconds || b.activeTime || 0);
+        bins[idx] += sec;
+      }
+    }
+  }
+
+  /**
+   * Helper: accumulates per-domain hourly buckets for todayStr or all days.
+   */
+  function accumulateDomainBuckets(bins, domains, todayStr) {
+    if (!domains || typeof domains !== 'object') return;
+    for (const dObj of Object.values(domains)) {
+      if (!dObj || !dObj.days) continue;
+      if (todayStr && dObj.days[todayStr]) {
+        if (dObj.days[todayStr].hourlyBuckets) {
+          accumulateHourlyBuckets(bins, dObj.days[todayStr].hourlyBuckets);
+        }
+      } else if (!todayStr) {
+        for (const day of Object.values(dObj.days)) {
+          if (day && day.hourlyBuckets) accumulateHourlyBuckets(bins, day.hourlyBuckets);
+        }
+      }
+    }
+  }
+
+  /**
+   * Computes peak activity hour from activityData, hourlyBuckets, or stats.
+   * Universal Rule 28: <= 40 lines, nesting depth <= 3.
    * @param {Object} data
    * @param {string} todayStr
+   * @param {Object} stats
    * @returns {string} e.g. '14:00 - 15:00' or '--:--'
    */
-  function computePeakActivityHour(data, todayStr) {
-    if (!data) return '--:--';
+  function computePeakActivityHour(data, todayStr, stats) {
+    if (!data && !stats) return '--:--';
     const hourlyBins = new Array(24).fill(0);
-    if (data.hourlyBreakdown && data.hourlyBreakdown[todayStr]) {
-      const bins = data.hourlyBreakdown[todayStr];
-      Object.keys(bins).forEach(h => {
-        const idx = parseInt(h, 10);
-        if (idx >= 0 && idx < 24) hourlyBins[idx] += (bins[h] || 0);
-      });
-    } else if (Array.isArray(data.hourlyActivity)) {
-      data.hourlyActivity.forEach((sec, idx) => {
-        if (idx >= 0 && idx < 24) hourlyBins[idx] += (sec || 0);
-      });
+    const d = data || {};
+
+    if (d.hourlyBuckets) {
+      const target = (todayStr && d.hourlyBuckets[todayStr]) ? d.hourlyBuckets[todayStr] : d.hourlyBuckets;
+      accumulateHourlyBuckets(hourlyBins, target);
+    } else if (d.activityData && d.activityData.domains) {
+      accumulateDomainBuckets(hourlyBins, d.activityData.domains, todayStr);
+    } else if (d.domains) {
+      accumulateDomainBuckets(hourlyBins, d.domains, todayStr);
+    } else if (stats && stats.hourlyBuckets) {
+      const target = (todayStr && stats.hourlyBuckets[todayStr]) ? stats.hourlyBuckets[todayStr] : stats.hourlyBuckets;
+      accumulateHourlyBuckets(hourlyBins, target);
+    } else if (d.hourlyBreakdown && todayStr && d.hourlyBreakdown[todayStr]) {
+      accumulateHourlyBuckets(hourlyBins, d.hourlyBreakdown[todayStr]);
+    } else if (Array.isArray(d.hourlyActivity)) {
+      d.hourlyActivity.forEach((sec, idx) => { if (idx < 24) hourlyBins[idx] += (sec || 0); });
     }
+
     let maxSec = 0, peakHour = -1;
     hourlyBins.forEach((sec, h) => {
       if (sec > maxSec) { maxSec = sec; peakHour = h; }
     });
     if (peakHour === -1 || maxSec === 0) return '--:--';
+
     const start = String(peakHour).padStart(2, '0') + ':00';
     const end = String((peakHour + 1) % 24).padStart(2, '0') + ':00';
     return `${start} - ${end}`;
@@ -191,7 +234,7 @@
       focusSessionsCount: (data && data.focusSessionsCount) ? data.focusSessionsCount : 0,
       activeDomainsCount: computeActiveDomainsCount(items),
       distraction: computeDistractionStats(items, totalSec),
-      peakHourStr: computePeakActivityHour(data, todayStr),
+      peakHourStr: computePeakActivityHour(data, todayStr, stats),
       longestSessionSec: computeLongestContinuousSession(data, items)
     };
   }

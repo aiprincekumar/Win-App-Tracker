@@ -2628,11 +2628,13 @@ function trackMediaSession(tabId, payload) {
       }
       session.lastUpdated = now;
       if (vol >= 0 && vol <= 100) {
+        session.volume = vol;
         session.volumeSamples.push(vol);
         if (session.volumeSamples.length > 50) session.volumeSamples.shift();
         session.peakVolume = Math.max(session.peakVolume, vol);
         session.lowVolume = Math.min(session.lowVolume, vol);
       }
+      session.isMuted = Boolean((pm && (pm.isMuted || pm.muted)) || vol === 0 || session.isMuted);
       if (pm.duration) session.videoDuration = pm.duration;
       if (title && title !== 'Web Media' && title !== 'No Media') session.title = title;
       if (resolution && resolution !== 'Unknown') session.resolution = resolution;
@@ -2662,6 +2664,8 @@ function trackMediaSession(tabId, payload) {
         peakVolume: vol >= 0 ? vol : 100,
         lowVolume: vol >= 0 ? vol : 100,
         averageVolume: vol >= 0 ? vol : 100,
+        volume: vol >= 0 ? vol : 100,
+        isMuted: Boolean((pm && (pm.isMuted || pm.muted)) || vol === 0),
         playbackRate: pm.playbackRate || 1.0,
         timestamp: now,
         lastHeartbeat: now,
@@ -2854,6 +2858,15 @@ function updateMediaHistoryEntry(session, persist = false) {
     resolution: session.resolution,
     watchDuration: Math.round(session.watchDuration),
     videoDuration: Math.round(session.videoDuration || 0),
+    isMuted: Boolean(
+      session.isMuted ||
+      session.muted ||
+      avgVol === 0 ||
+      session.volume === 0 ||
+      session.averageVolume === 0 ||
+      (Array.isArray(session.volumeSamples) && session.volumeSamples.length > 0 && session.volumeSamples.every(v => v === 0))
+    ),
+    volume: session.volume !== undefined ? session.volume : avgVol,
     averageVolume: avgVol,
     peakVolume: session.peakVolume || 100,
     lowVolume: session.lowVolume || 100,
@@ -3206,13 +3219,14 @@ async function getAllActiveMediaStreams() {
     const isPlaying = Boolean(mediaState.anyPlaying || pm.isPlaying || pm.state === 'playing');
     const isBuffering = Boolean(pm.isBuffering || pm.state === 'buffering');
     const isMuted = Boolean(pm.isMuted);
+    const isLive = Boolean(pm.isLive || pm.duration === Infinity || mediaState.isLive || mediaState.isLiveStream);
     const domain = pm.domain || mediaState.domain || (mediaState.url ? extractDomain(mediaState.url) : '');
     const title = pm.title || mediaState.title || (domain ? domain : `Tab ${tabId}`);
     const url = pm.src || mediaState.url || '';
     if (isInternalDomain(domain) || isInternalUrl(url)) continue;
     const favIconUrl = mediaState.favIconUrl || '';
     const currentTime = Number.isFinite(pm.currentTime) ? Number(pm.currentTime) : 0;
-    const duration = Number.isFinite(pm.duration) ? Number(pm.duration) : 0;
+    const duration = (pm.duration === Infinity) ? Infinity : (Number.isFinite(pm.duration) ? Number(pm.duration) : 0);
     const volume = (typeof pm.volume === 'number' && Number.isFinite(pm.volume)) ? pm.volume : 1.0;
     const isAudible = Boolean(mediaState.isAudible || isPlaying);
 
@@ -3221,9 +3235,10 @@ async function getAllActiveMediaStreams() {
       mediaState.hasMedia === true ||
       isPlaying ||
       isAudible ||
+      isLive ||
       (mediaState.totalVideos && mediaState.totalVideos > 0) ||
       (mediaState.totalAudios && mediaState.totalAudios > 0) ||
-      (pm && (pm.src || (typeof pm.duration === 'number' && pm.duration > 0)))
+      (pm && (pm.src || pm.isLive || (typeof pm.duration === 'number' && pm.duration > 0)))
     );
 
     if (!hasVerifiableMedia) {
@@ -3240,6 +3255,7 @@ async function getAllActiveMediaStreams() {
       hasMedia: true,
       isAudible: isAudible,
       isMuted: isMuted,
+      isLive: isLive,
       playbackState: isPlaying ? 'playing' : (isBuffering ? 'buffering' : 'paused'),
       currentTime: currentTime,
       duration: duration,
@@ -3267,6 +3283,7 @@ async function getAllActiveMediaStreams() {
             if (t.favIconUrl) existing.favIconUrl = t.favIconUrl;
             if (t.url) existing.url = t.url;
             existing.isMuted = isMuted;
+            existing.isLive = Boolean(existing.isLive || false);
           } else {
             streamMap.set(numId, {
               tabId: numId,
@@ -3278,6 +3295,7 @@ async function getAllActiveMediaStreams() {
               hasMedia: true,
               isAudible: true,
               isMuted: isMuted,
+              isLive: false,
               playbackState: isMuted ? 'paused' : 'playing',
               currentTime: 0,
               duration: 0,

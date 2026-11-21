@@ -370,7 +370,9 @@
                 s.isAudible === true ||
                 s.playbackState === 'playing' ||
                 (typeof s.duration === 'number' && s.duration > 0) ||
-                s.hasMedia === true
+                s.hasMedia === true ||
+                s.isLive === true ||
+                s.duration === Infinity
               );
             });
             cachedStreams = sanitizedStreams;

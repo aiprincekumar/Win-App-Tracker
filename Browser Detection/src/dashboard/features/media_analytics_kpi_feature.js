@@ -63,13 +63,39 @@
   }
 
   /**
+   * Helper: checks if a session was muted.
+   */
+  function isSessionMuted(s) {
+    if (!s) return false;
+    if (s.isMuted === true || s.muted === true) return true;
+    if (s.averageVolume === 0 || s.volume === 0) return true;
+    if (Array.isArray(s.volumeSamples) && s.volumeSamples.length > 0) {
+      return s.volumeSamples.every(v => v === 0);
+    }
+    return false;
+  }
+
+  /**
    * Counts playback sessions that were muted.
+   * Universal Rule 28: <= 30 lines, nesting depth <= 2.
    * @param {Array<Object>} history
+   * @param {Array<Object>} activeStreams
    * @returns {number}
    */
-  function computeMutedSessionsCount(history) {
-    if (!Array.isArray(history)) return 0;
-    return history.filter(s => s && (s.isMuted === true || s.volume === 0 || s.muted === true)).length;
+  function computeMutedSessionsCount(history, activeStreams) {
+    let count = 0;
+    if (Array.isArray(history)) {
+      count += history.filter(isSessionMuted).length;
+    }
+    if (Array.isArray(activeStreams)) {
+      const activeMuted = activeStreams.filter(s => {
+        if (!isSessionMuted(s)) return false;
+        if (!Array.isArray(history)) return true;
+        return !history.some(h => (h.tabId && h.tabId === s.tabId) || (h.id && h.id === s.id));
+      });
+      count += activeMuted.length;
+    }
+    return count;
   }
 
   /**
@@ -129,7 +155,7 @@
       avgVolume: volMetrics.avgVolume,
       peakVolume: volMetrics.peakVolume,
       lowVolume: volMetrics.lowVolume,
-      mutedSessionsCount: computeMutedSessionsCount(history),
+      mutedSessionsCount: computeMutedSessionsCount(history, activeStreams),
       longestMediaSec: computeLongestMediaSession(history)
     };
   }
