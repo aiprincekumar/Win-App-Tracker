@@ -157,8 +157,23 @@ console.log('\nBattery 3: ARIA Roles, Accessibility Attributes & Focus Visible C
   assert(css.includes('#audioEqPresetSelect:focus-visible'), 'CSS must define :focus-visible for #audioEqPresetSelect');
   assert(css.includes('.eq-vertical-slider:focus-visible'), 'CSS must define :focus-visible for .eq-vertical-slider');
 
+  // Audio Enhancement switch toggle scoping & global toggle preservation
+  assert(
+    css.includes('.enhancement-card .switch-toggle') || css.includes('.enhancements-grid .switch-toggle'),
+    'CSS must declare scoped .enhancement-card .switch-toggle or .enhancements-grid .switch-toggle'
+  );
+  assert(
+    !/(?:^|\n)\.switch-toggle\s*\{[^}]*width:\s*40px;/s.test(css),
+    'dashboard.css must not contain unscoped 40px .switch-toggle override'
+  );
+  assert(
+    /\.switch-toggle\s*\{[^}]*width:\s*44px;[^}]*height:\s*24px;/s.test(css),
+    'dashboard.css must preserve canonical global .switch-toggle (44x24px)'
+  );
+
   console.log('  ✅ All sliders and switches declare accessible ARIA roles and attributes');
   console.log('  ✅ CSS declares prominent focus rings for all new interactive controls');
+  console.log('  ✅ Audio Enhancement switch toggles scoped; canonical global switch (44x24px) preserved');
 }
 
 // ===========================================================================

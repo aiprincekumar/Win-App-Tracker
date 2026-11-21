@@ -4671,8 +4671,9 @@ body.theme-light .enhancement-card:has(input:checked) {
   line-height: 1.35;
 }
 
-/* Switch Toggle Styling */
-.switch-toggle {
+/* Switch Toggle Styling (Scoped to Audio Enhancement Cards) */
+.enhancement-card .switch-toggle,
+.enhancements-grid .switch-toggle {
   position: relative;
   display: inline-block;
   width: 40px;
@@ -4681,14 +4682,16 @@ body.theme-light .enhancement-card:has(input:checked) {
   cursor: pointer;
 }
 
-.switch-toggle input {
+.enhancement-card .switch-toggle input,
+.enhancements-grid .switch-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
   position: absolute;
 }
 
-.switch-toggle .slider-round {
+.enhancement-card .switch-toggle .slider-round,
+.enhancements-grid .switch-toggle .slider-round {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -4700,11 +4703,13 @@ body.theme-light .enhancement-card:has(input:checked) {
   border-radius: 20px;
 }
 
-body.theme-light .switch-toggle .slider-round {
+body.theme-light .enhancement-card .switch-toggle .slider-round,
+body.theme-light .enhancements-grid .switch-toggle .slider-round {
   background-color: rgba(0, 0, 0, 0.18);
 }
 
-.switch-toggle .slider-round:before {
+.enhancement-card .switch-toggle .slider-round:before,
+.enhancements-grid .switch-toggle .slider-round:before {
   position: absolute;
   content: "";
   height: 14px;
@@ -4718,11 +4723,13 @@ body.theme-light .switch-toggle .slider-round {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.switch-toggle input:checked + .slider-round {
+.enhancement-card .switch-toggle input:checked + .slider-round,
+.enhancements-grid .switch-toggle input:checked + .slider-round {
   background-color: var(--accent-emerald);
 }
 
-.switch-toggle input:checked + .slider-round:before {
+.enhancement-card .switch-toggle input:checked + .slider-round:before,
+.enhancements-grid .switch-toggle input:checked + .slider-round:before {
   transform: translateX(20px);
 }
 

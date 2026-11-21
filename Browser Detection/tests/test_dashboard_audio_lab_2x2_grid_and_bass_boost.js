@@ -5,7 +5,7 @@
  * Verifies:
  * Battery 1: Header Badge Refinement Verification (absence of #audioLabPresetBadge, presence of #audioLabVocalBadge & #audioLabNightBadge)
  * Battery 2: 2x2 Grid Layout & 4 Cards Structure (.enhancements-grid chips, toggles, ARIA switch roles)
- * Battery 3: CSS 2-Column Geometry & Containment (repeat(2, minmax(0, 1fr)), box-sizing, min-width: 0, overflow: hidden, 640px collapse)
+ * Battery 3: CSS 2-Column Geometry, Containment & Scoped Switch Toggle Centering (repeat(2, minmax(0, 1fr)), box-sizing, min-width: 0, overflow: hidden, 640px collapse, scoped .switch-toggle, untouched global switch)
  * Battery 4: Web Audio DSP Pipeline Low-Shelf Math (lowshelf filter at 60Hz +7dB, vocal_clarity net offset +3dB, clamping at +12dB)
  * Battery 5: Controller & Storage Persistence Contract (DEFAULT_AUDIO_LAB_SETTINGS, toggleBassBoost checked sync, persistDashboardAudioLabSettings)
  * Battery 6: Bilingual i18n Dictionary Parity (audiolab_bass_title & audiolab_bass_desc in en & hi dictionaries)
@@ -87,7 +87,7 @@ console.log('\nBattery 2: 2x2 Grid Layout & 4 Cards Structure');
 // ===========================================================================
 // Battery 3: CSS 2-Column Geometry & Containment
 // ===========================================================================
-console.log('\nBattery 3: CSS 2-Column Geometry & Containment');
+console.log('\nBattery 3: CSS 2-Column Geometry, Containment & Scoped Switch Toggle Centering');
 {
   [
     { name: 'audio_lab.css', content: audioLabCss },
@@ -113,8 +113,35 @@ console.log('\nBattery 3: CSS 2-Column Geometry & Containment');
       `${name}: .enhancement-card.enhancement-chip must declare overflow: hidden`
     );
 
-    console.log(`  ✅ ${name}: 2-column grid-template-columns: repeat(2, minmax(0, 1fr)) and card containment verified`);
+    // Verify switch-toggle scoping to .enhancement-card / .enhancements-grid
+    assert(
+      /\.enhancement-card\s+\.switch-toggle,\s*\.enhancements-grid\s+\.switch-toggle\s*\{[^}]*width:\s*40px;[^}]*height:\s*22px;/s.test(content),
+      `${name}: .enhancement-card .switch-toggle must declare 40px width and 22px height`
+    );
+    assert(
+      /\.enhancement-card\s+\.switch-toggle\s+\.slider-round:before,\s*\.enhancements-grid\s+\.switch-toggle\s+\.slider-round:before\s*\{[^}]*top:\s*4px;[^}]*bottom:\s*4px;/s.test(content),
+      `${name}: scoped slider-round:before must declare vertical centering top: 4px; bottom: 4px;`
+    );
+
+    // Unscoped .switch-toggle with 40px width must NOT exist (prevents global switch pollution)
+    assert(
+      !/(?:^|\n)\.switch-toggle\s*\{[^}]*width:\s*40px;/s.test(content),
+      `${name}: must NOT contain unscoped .switch-toggle with 40px width`
+    );
+
+    console.log(`  ✅ ${name}: 2-column grid geometry, card containment & scoped switch-toggle (40x22, top: 4px/bottom: 4px) verified`);
   });
+
+  // Canonical global .switch-toggle in dashboard.css must remain 100% untouched
+  assert(
+    /\.switch-toggle\s*\{[^}]*width:\s*44px;[^}]*height:\s*24px;/s.test(dashCss),
+    'dashboard.css: canonical global .switch-toggle (44x24px) must remain untouched'
+  );
+  assert(
+    /\.slider-round:before\s*\{[^}]*height:\s*18px;[^}]*width:\s*18px;[^}]*left:\s*3px;[^}]*bottom:\s*3px;/s.test(dashCss),
+    'dashboard.css: canonical global .slider-round:before (18x18px, bottom: 3px) must remain untouched'
+  );
+  console.log('  ✅ Canonical global .switch-toggle (44x24px, 18px thumb) preserved untouched in dashboard.css');
 
   // Responsive collapse on mobile (max-width: 640px -> 1fr)
   assert(
