@@ -2567,6 +2567,31 @@ function updateFocusRatio(items, totalSeconds) {
   if (track) track.setAttribute('aria-valuenow', String(prodPercent));
 }
 
+function updateDoomscrollStatusUI(isEnabled) {
+  const badge = document.getElementById('doomscrollStatusBadge');
+  const text = document.getElementById('doomscrollStatusText');
+  const card = document.getElementById('doomscrollBreakerCard');
+  const active = Boolean(isEnabled);
+  if (badge) {
+    badge.classList.toggle('active', active);
+    badge.classList.toggle('standby', !active);
+  }
+  if (text) {
+    text.textContent = active ? t('doomscroll_status_active') : t('doomscroll_status_standby');
+  }
+  if (card) {
+    card.classList.toggle('active-nudge', active);
+  }
+}
+// Focus & Digital Wellness
+
+if (typeof window !== 'undefined') {
+  window.__SentinelFocusTestHooks = {
+    updateFocusRatio,
+    updateDoomscrollStatusUI
+  };
+}
+
 let popupListenersAttached = false;
 
 /**
@@ -3474,23 +3499,6 @@ function setupEventListeners() {
       setActiveMediaCached: (v) => { activeMediaCached = v; }
     };
   }
-
-function updateDoomscrollStatusUI(isEnabled) {
-  const badge = document.getElementById('doomscrollStatusBadge');
-  const text = document.getElementById('doomscrollStatusText');
-  const card = document.getElementById('doomscrollBreakerCard');
-  const active = Boolean(isEnabled);
-  if (badge) {
-    badge.classList.toggle('active', active);
-    badge.classList.toggle('standby', !active);
-  }
-  if (text) {
-    text.textContent = active ? t('doomscroll_status_active') : t('doomscroll_status_standby');
-  }
-  if (card) {
-    card.classList.toggle('active-nudge', active);
-  }
-}
 
   // Focus & Digital Wellness
   const toggleDoomscroll = document.getElementById('toggleDoomscrollBreaker');
@@ -5372,6 +5380,8 @@ if (typeof window !== 'undefined') {
     PopupFeatureManager: _PopupFeatureManager,
     FocusModeToggle: _FocusModeToggle,
     initCollapsibleDrawer: initCollapsibleDrawer,
-    initPopupCollapsibleDrawers: initPopupCollapsibleDrawers
+    initPopupCollapsibleDrawers: initPopupCollapsibleDrawers,
+    updateDoomscrollStatusUI: updateDoomscrollStatusUI
   };
+  window.__SentinelPopupModules.updateDoomscrollStatusUI = updateDoomscrollStatusUI;
 }
