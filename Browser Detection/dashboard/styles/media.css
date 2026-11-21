@@ -2560,56 +2560,58 @@ body.theme-light .viz-header-status-pill,
 body.theme-light #vizHeaderStatusPill,
 [data-theme="light"] .viz-header-status-pill,
 [data-theme="light"] #vizHeaderStatusPill {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 body.theme-light .viz-header-status-pill .viz-live-text,
 body.theme-light #vizHeaderStatusText,
 [data-theme="light"] .viz-header-status-pill .viz-live-text,
 [data-theme="light"] #vizHeaderStatusText {
-  color: #475569;
+  color: #334155 !important;
+  font-weight: 600 !important;
 }
 
 body.theme-light .viz-live-dot,
 body.theme-light #vizLiveDot,
 [data-theme="light"] .viz-live-dot,
 [data-theme="light"] #vizLiveDot {
-  background: #64748b;
-  box-shadow: none;
+  background: #64748b !important;
+  box-shadow: none !important;
 }
 
 body.theme-light .viz-live-dot.active,
 body.theme-light #vizLiveDot.active,
 [data-theme="light"] .viz-live-dot.active,
 [data-theme="light"] #vizLiveDot.active {
-  background: #059669;
-  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4);
+  background: #059669 !important;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4) !important;
 }
 
 body.theme-light .viz-header-status-pill.active,
 body.theme-light #vizHeaderStatusPill.active,
 [data-theme="light"] .viz-header-status-pill.active,
 [data-theme="light"] #vizHeaderStatusPill.active {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #065f46;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #065f46 !important;
 }
 
 body.theme-light .viz-header-status-pill.active .viz-live-text,
 body.theme-light #vizHeaderStatusPill.active #vizHeaderStatusText,
 [data-theme="light"] .viz-header-status-pill.active .viz-live-text,
 [data-theme="light"] #vizHeaderStatusPill.active #vizHeaderStatusText {
-  color: #065f46;
+  color: #065f46 !important;
 }
 
 body.theme-light .viz-hud-badge,
 [data-theme="light"] .viz-hud-badge {
-  background: rgba(248, 250, 252, 0.9);
-  border-color: #cbd5e1;
-  color: #475569;
+  background: rgba(241, 245, 249, 0.9) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Hero Player Status Pill & Deck Status Pills */

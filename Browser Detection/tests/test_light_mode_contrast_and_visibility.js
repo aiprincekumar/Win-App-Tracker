@@ -36,6 +36,7 @@ const focusSleepAdvPath = path.resolve(__dirname, '../dashboard/styles/focus_sle
 const wellbeingLightPath = path.resolve(__dirname, '../dashboard/styles/wellbeing_light.css');
 const layoutPath = path.resolve(__dirname, '../dashboard/styles/layout.css');
 const tabSleepPath = path.resolve(__dirname, '../popup/styles/tabs/tab_sleep.css');
+const vizLightPath = path.resolve(__dirname, '../dashboard/styles/media/visualizer_light.css');
 const dashboardHtmlPath = path.resolve(__dirname, '../dashboard/dashboard.html');
 
 const themesCss = fs.readFileSync(themesPath, 'utf8');
@@ -47,6 +48,7 @@ const focusSleepAdvCss = fs.readFileSync(focusSleepAdvPath, 'utf8');
 const wellbeingLightCss = fs.readFileSync(wellbeingLightPath, 'utf8');
 const layoutCss = fs.readFileSync(layoutPath, 'utf8');
 const tabSleepCss = fs.readFileSync(tabSleepPath, 'utf8');
+const vizLightCss = fs.readFileSync(vizLightPath, 'utf8');
 const dashboardHtml = fs.readFileSync(dashboardHtmlPath, 'utf8');
 
 // Helper: Contrast Calculation
@@ -107,7 +109,11 @@ console.log('• Battery 2: Audio Visualizer Controls & Action Buttons');
   assert(vizDeckCss.includes('.btn-viz-drawer-close'), 'visualizer_deck.css must style .btn-viz-drawer-close for light theme');
   assert(vizDeckCss.includes('.viz-btn-segmented'), 'visualizer_deck.css must style .viz-btn-segmented for light theme');
   assert(themesCss.includes('body.theme-light .btn-viz-action-icon'), 'themes.css must declare body.theme-light .btn-viz-action-icon for global parity');
-  console.log('  ✅ Battery 2 Passed: Visualizer action button light mode overrides verified');
+  assert(dashboardHtml.includes('styles/media/visualizer_light.css'), 'dashboard.html must link visualizer_light.css');
+  assert(vizLightCss.includes('.viz-header-status-pill'), 'visualizer_light.css must style .viz-header-status-pill');
+  assert(vizLightCss.includes('#f1f5f9 !important'), 'visualizer_light.css must declare #f1f5f9 !important');
+  assert(vizLightCss.includes('#334155 !important'), 'visualizer_light.css must declare #334155 !important');
+  console.log('  ✅ Battery 2 Passed: Visualizer action button & light mode status pill verified');
 }
 
 // ===========================================================================

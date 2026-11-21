@@ -7319,6 +7319,19 @@ body.theme-light .viz-drawer-label {
   color: #334155;
 }
 
+/* Audio Visualizer Status Pill in Light Theme */
+body.theme-light .viz-header-status-pill,
+[data-theme="light"] .viz-header-status-pill {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+body.theme-light .viz-header-status-pill .viz-live-text,
+[data-theme="light"] .viz-header-status-pill .viz-live-text {
+  color: #334155 !important;
+}
+
 
 /**
  * Web Activity & Media Sentinel - Advanced Backup, Snapshots, SQLite Hub & Executive Digest Stylesheet

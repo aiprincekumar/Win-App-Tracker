@@ -36,6 +36,8 @@ const lightContrastPath = path.join(baseDir, 'popup/styles/themes/light_contrast
 const tabSleepPath = path.join(baseDir, 'popup/styles/tabs/tab_sleep.css');
 const tabWellnessPath = path.join(baseDir, 'popup/styles/tabs/tab_wellness.css');
 const wbBlacklistPath = path.join(baseDir, 'dashboard/styles/wellbeing_blacklist.css');
+const vizLightPath = path.join(baseDir, 'dashboard/styles/media/visualizer_light.css');
+const dashboardHtmlPath = path.join(baseDir, 'dashboard/dashboard.html');
 
 const wellbeingLightCss = fs.readFileSync(wellbeingLightPath, 'utf8');
 const mediaCss = fs.readFileSync(mediaPath, 'utf8');
@@ -44,6 +46,8 @@ const lightContrastCss = fs.readFileSync(lightContrastPath, 'utf8');
 const tabSleepCss = fs.readFileSync(tabSleepPath, 'utf8');
 const tabWellnessCss = fs.readFileSync(tabWellnessPath, 'utf8');
 const wbBlacklistCss = fs.readFileSync(wbBlacklistPath, 'utf8');
+const vizLightCss = fs.readFileSync(vizLightPath, 'utf8');
+const dashboardHtml = fs.readFileSync(dashboardHtmlPath, 'utf8');
 
 // Contrast helper functions
 function parseHex(hex) {
@@ -81,10 +85,22 @@ function contrastRatio(hex1, hex2) {
 }
 
 // ===========================================================================
-// Battery 1: Audio Visualizer Header Status Pill (dashboard/styles/media.css)
+// Battery 1: Audio Visualizer Header Status Pill (visualizer_light.css & media.css)
 // ===========================================================================
 console.log('• Battery 1: Audio Visualizer Header Status Pill & Indicator Dots');
 {
+  assert(dashboardHtml.includes('styles/media/visualizer_light.css'), 'dashboard.html must link visualizer_light.css');
+  assert(vizLightCss.includes('.viz-header-status-pill'), 'visualizer_light.css must include .viz-header-status-pill');
+  assert(vizLightCss.includes('body.theme-light .viz-header-status-pill'), 'visualizer_light.css must scope .viz-header-status-pill under body.theme-light');
+  assert(vizLightCss.includes('[data-theme="light"] .viz-header-status-pill'), 'visualizer_light.css must support [data-theme="light"] .viz-header-status-pill');
+  assert(vizLightCss.includes('#f1f5f9 !important'), 'visualizer_light.css must use #f1f5f9 !important');
+  assert(vizLightCss.includes('#334155 !important'), 'visualizer_light.css must use #334155 !important');
+  assert(vizLightCss.includes('body.theme-light .viz-live-dot'), 'visualizer_light.css must scope .viz-live-dot under body.theme-light');
+  assert(vizLightCss.includes('body.theme-light .viz-live-dot.active'), 'visualizer_light.css must style active dot in light mode');
+  assert(vizLightCss.includes('body.theme-light .viz-header-status-pill.active'), 'visualizer_light.css must style active status pill in light mode');
+  assert(vizLightCss.includes('#065f46'), 'visualizer_light.css active pill must use high-contrast #065f46 text');
+  assert(vizLightCss.includes('.viz-hud-badge'), 'visualizer_light.css must style .viz-hud-badge for light mode');
+
   assert(mediaCss.includes('.viz-header-status-pill'), 'media.css must include .viz-header-status-pill');
   assert(mediaCss.includes('body.theme-light .viz-header-status-pill'), 'media.css must scope .viz-header-status-pill under body.theme-light');
   assert(mediaCss.includes('[data-theme="light"] .viz-header-status-pill'), 'media.css must support [data-theme="light"] .viz-header-status-pill');
@@ -201,6 +217,7 @@ console.log('• Battery 8: Mathematical Contrast & Dark Mode Zero-Mutation Inva
 {
   const contrastPairs = [
     { name: 'IDLE Badge Text: #475569 on #f1f5f9', fg: '#475569', bg: '#f1f5f9', minRatio: 4.5 },
+    { name: 'Visualizer IDLE Badge: #334155 on #f1f5f9', fg: '#334155', bg: '#f1f5f9', minRatio: 7.0 },
     { name: 'ACTIVE Emerald: #065f46 on #ecfdf5', fg: '#065f46', bg: '#ecfdf5', minRatio: 7.0 },
     { name: 'BREAK Blue: #1e40af on #eff6ff', fg: '#1e40af', bg: '#eff6ff', minRatio: 7.0 },
     { name: 'BREAK Cyan: #0e7490 on #ecfeff', fg: '#0e7490', bg: '#ecfeff', minRatio: 4.5 },
@@ -224,11 +241,14 @@ console.log('• Battery 8: Mathematical Contrast & Dark Mode Zero-Mutation Inva
   // Rule 28 File Modularity Budget check
   const wbLightLines = wellbeingLightCss.split('\n').length;
   assert(wbLightLines < 700, `wellbeing_light.css length (${wbLightLines}) must remain < 700 lines per Rule 28`);
+  const vizLightLines = vizLightCss.split('\n').length;
+  assert(vizLightLines < 700, `visualizer_light.css length (${vizLightLines}) must remain < 700 lines per Rule 28`);
 
   // UTF-8 BOM Verification
   const touchedFiles = [
     'dashboard/styles/wellbeing_light.css',
     'dashboard/styles/media.css',
+    'dashboard/styles/media/visualizer_light.css',
     'popup/styles/themes.css',
     'popup/styles/themes/light_contrast.css',
     'popup/styles/tabs/tab_sleep.css',
