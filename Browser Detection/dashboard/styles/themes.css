@@ -181,19 +181,30 @@ body.theme-light .nav-item.active {
   color: #059669;
 }
 
-body.theme-light .data-table th {
-  background-color: var(--bg-stage);
-  color: var(--text-secondary);
-  border-bottom-color: var(--border-dim);
+/* Light Mode Modern Data Table & Standard Data Table Headers */
+body.theme-light .data-table th,
+body.theme-light .modern-data-table th,
+[data-theme="light"] .data-table th,
+[data-theme="light"] .modern-data-table th {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  font-weight: 700 !important;
 }
 
-body.theme-light .data-table td {
-  color: var(--text-primary);
-  border-bottom-color: var(--border-dim);
+body.theme-light .data-table td,
+body.theme-light .modern-data-table td,
+[data-theme="light"] .data-table td,
+[data-theme="light"] .modern-data-table td {
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
-body.theme-light .data-table tr:hover td {
-  background-color: var(--bg-subtle);
+body.theme-light .data-table tr:hover td,
+body.theme-light .modern-data-table tr:hover td,
+[data-theme="light"] .data-table tr:hover td,
+[data-theme="light"] .modern-data-table tr:hover td {
+  background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
 body.theme-light input,
@@ -542,3 +553,43 @@ body.theme-light .btn-test-chime:hover {
   background: rgba(0, 0, 0, 0.10);
   border-color: var(--color-accent-primary, #10b981);
 }
+
+/* Light Mode Audio Visualizer Action Buttons */
+body.theme-light .btn-viz-action-icon,
+[data-theme="light"] .btn-viz-action-icon {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #334155 !important;
+}
+
+body.theme-light .btn-viz-action-icon:hover,
+[data-theme="light"] .btn-viz-action-icon:hover {
+  background: rgba(0, 0, 0, 0.09) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2) !important;
+}
+
+body.theme-light .btn-viz-action-icon:active,
+body.theme-light .btn-viz-action-icon.active,
+[data-theme="light"] .btn-viz-action-icon:active,
+[data-theme="light"] .btn-viz-action-icon.active {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: #6366f1 !important;
+  color: #4338ca !important;
+}
+
+body.theme-light .btn-viz-drawer-close,
+[data-theme="light"] .btn-viz-drawer-close {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #475569 !important;
+}
+
+body.theme-light .viz-btn-segmented,
+[data-theme="light"] .viz-btn-segmented {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #334155 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+

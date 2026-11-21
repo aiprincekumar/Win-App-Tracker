@@ -665,3 +665,10 @@ body.theme-light .viz-settings-drawer { background: rgba(255, 255, 255, 0.95) !i
 body.theme-light .viz-drawer-label { color: #334155 !important; }
 body.theme-light .viz-subcanvas-deck { border-color: rgba(203, 213, 225, 0.8) !important; }
 body.theme-light .vu-meters-container { background: rgba(241, 245, 249, 0.8) !important; border-color: rgba(203, 213, 225, 0.8) !important; }
+
+/* Visualizer Action Buttons in Light Theme */
+body.theme-light .btn-viz-action-icon, [data-theme="light"] .btn-viz-action-icon { background: rgba(0, 0, 0, 0.05) !important; border: 1px solid rgba(0, 0, 0, 0.12) !important; color: #334155 !important; }
+body.theme-light .btn-viz-action-icon:hover, [data-theme="light"] .btn-viz-action-icon:hover { background: rgba(0, 0, 0, 0.09) !important; border-color: rgba(99, 102, 241, 0.5) !important; color: #0f172a !important; box-shadow: 0 0 10px rgba(99, 102, 241, 0.2) !important; }
+body.theme-light .btn-viz-action-icon:active, body.theme-light .btn-viz-action-icon.active, [data-theme="light"] .btn-viz-action-icon:active, [data-theme="light"] .btn-viz-action-icon.active { background: rgba(99, 102, 241, 0.15) !important; border-color: #6366f1 !important; color: #4338ca !important; }
+body.theme-light .btn-viz-drawer-close, [data-theme="light"] .btn-viz-drawer-close { background: rgba(0, 0, 0, 0.05) !important; border: 1px solid rgba(0, 0, 0, 0.12) !important; color: #475569 !important; }
+body.theme-light .viz-btn-segmented, [data-theme="light"] .viz-btn-segmented { background: rgba(0, 0, 0, 0.04) !important; color: #334155 !important; border-color: rgba(0, 0, 0, 0.1) !important; }

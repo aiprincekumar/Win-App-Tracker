@@ -1745,10 +1745,11 @@ body.theme-light .btn-deck-mute:hover {
   transition: transform 0.18s ease;
 }
 
-body.theme-light .btn-viz-action-icon {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #64748b;
+body.theme-light .btn-viz-action-icon,
+[data-theme="light"] .btn-viz-action-icon {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #334155 !important;
 }
 
 body.theme-light .btn-viz-action-icon:hover {
@@ -2494,4 +2495,58 @@ body.light-theme .media-scroll-to-top:hover {
 /* Scoped tab guard: hide when paneMedia is inactive */
 #paneMedia:not(.active) #btnMediaScrollToTop {
   display: none !important;
+}
+
+
+/* Light Mode Hero Playback Controls & Stepper */
+body.theme-light .btn-ctrl-hero,
+[data-theme="light"] .btn-ctrl-hero {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .btn-ctrl-hero:hover,
+[data-theme="light"] .btn-ctrl-hero:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+body.theme-light .btn-ctrl-hero.primary,
+[data-theme="light"] .btn-ctrl-hero.primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 182, 212, 0.18)) !important;
+  border: 1px solid rgba(16, 185, 129, 0.5) !important;
+  color: #047857 !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .btn-ctrl-hero.primary:hover,
+[data-theme="light"] .btn-ctrl-hero.primary:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(6, 182, 212, 0.28)) !important;
+  color: #065f46 !important;
+}
+
+body.theme-light .hero-speed-stepper,
+[data-theme="light"] .hero-speed-stepper {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.theme-light .btn-ctrl-hero-stepper,
+[data-theme="light"] .btn-ctrl-hero-stepper {
+  color: #475569 !important;
+}
+
+body.theme-light .btn-ctrl-hero-stepper:hover,
+[data-theme="light"] .btn-ctrl-hero-stepper:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .hero-speed-val,
+[data-theme="light"] .hero-speed-val {
+  color: #b45309 !important;
 }

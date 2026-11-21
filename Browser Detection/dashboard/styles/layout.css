@@ -1700,3 +1700,116 @@ button.spinning .refresh-spinner-icon,
   font-size: 11.5px;
   max-width: 110px;
 }
+
+
+/* ========================================================================= */
+/* LIGHT THEME SETTINGS, DANGER ZONE & DATA EXPORT ACCESSIBILITY (WCAG AAA)  */
+/* ========================================================================= */
+
+/* Light Mode Danger Zone & Destructive Action Cards */
+body.theme-light .settings-card.danger-card,
+[data-theme="light"] .settings-card.danger-card {
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.85) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08) !important;
+}
+
+body.theme-light .danger-warning-notice,
+[data-theme="light"] .danger-warning-notice {
+  background: rgba(254, 226, 226, 0.75) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+body.theme-light .warning-text,
+[data-theme="light"] .warning-text {
+  color: #991b1b !important; /* 8.5:1 contrast against #fee2e2 (WCAG AAA >= 7:1) */
+}
+
+body.theme-light .danger-action-item,
+[data-theme="light"] .danger-action-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .danger-action-item.highlight-danger,
+[data-theme="light"] .danger-action-item.highlight-danger {
+  background: rgba(254, 242, 242, 0.7) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+body.theme-light .danger-action-title,
+[data-theme="light"] .danger-action-title {
+  color: #0f172a !important;
+}
+
+body.theme-light .danger-action-desc,
+[data-theme="light"] .danger-action-desc {
+  color: #64748b !important;
+}
+
+body.theme-light .btn-danger-outline,
+[data-theme="light"] .btn-danger-outline {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.45) !important;
+  color: #dc2626 !important;
+}
+
+body.theme-light .btn-danger-outline:hover,
+[data-theme="light"] .btn-danger-outline:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: #dc2626 !important;
+  color: #b91c1c !important;
+}
+
+/* Light Mode Data Export Tiles (CSV & Executive HTML Digest) */
+body.theme-light .export-tile,
+[data-theme="light"] .export-tile {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .export-tile:hover,
+[data-theme="light"] .export-tile:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-light .export-tile-title,
+[data-theme="light"] .export-tile-title {
+  color: #0f172a !important;
+}
+
+body.theme-light .export-tile-desc,
+[data-theme="light"] .export-tile-desc {
+  color: #475569 !important;
+}
+
+body.theme-light .btn-export-tile,
+[data-theme="light"] .btn-export-tile {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-export-tile:hover,
+[data-theme="light"] .btn-export-tile:hover {
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .btn-export-tile.primary,
+[data-theme="light"] .btn-export-tile.primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15)) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  color: #047857 !important;
+}
+
+body.theme-light .btn-export-tile.primary:hover,
+[data-theme="light"] .btn-export-tile.primary:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25)) !important;
+  color: #065f46 !important;
+}

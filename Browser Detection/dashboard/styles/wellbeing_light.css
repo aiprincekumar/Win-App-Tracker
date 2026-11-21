@@ -1,0 +1,77 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Wellbeing & Privacy Blacklist (Light Theme)
+ * File: dashboard/styles/wellbeing_light.css
+ * Modular Companion Stylesheet for Light Theme High-Contrast Accessibility (WCAG AAA)
+ */
+
+/* Focus Sentinel Preset Buttons */
+body.theme-light .dash-focus-preset-btn,
+[data-theme="light"] .dash-focus-preset-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .dash-focus-preset-btn:hover,
+[data-theme="light"] .dash-focus-preset-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #10b981 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .dash-focus-preset-btn.active,
+[data-theme="light"] .dash-focus-preset-btn.active {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: #10b981 !important;
+  color: #047857 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Privacy Tracking Blacklist Container & Chips */
+body.theme-light .blacklist-chips-grid,
+[data-theme="light"] .blacklist-chips-grid {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.theme-light .blacklist-chips-grid:empty::before,
+[data-theme="light"] .blacklist-chips-grid:empty::before {
+  color: #64748b !important;
+  font-style: italic !important;
+}
+
+body.theme-light .blacklist-chip,
+[data-theme="light"] .blacklist-chip {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  color: #dc2626 !important;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.08) !important;
+}
+
+body.theme-light .blacklist-chip:hover,
+[data-theme="light"] .blacklist-chip:hover {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+body.theme-light .btn-remove-chip,
+[data-theme="light"] .btn-remove-chip {
+  color: #b91c1c !important;
+}
+
+body.theme-light .blacklist-purge-divider,
+[data-theme="light"] .blacklist-purge-divider {
+  background: #e2e8f0 !important;
+}
+
+/* Focus Clock & Subsystem Harmonization */
+body.theme-light .focus-clock-time,
+[data-theme="light"] .focus-clock-time {
+  color: #0f172a !important;
+}
+
+body.theme-light .focus-clock-sub,
+[data-theme="light"] .focus-clock-sub {
+  color: #475569 !important;
+}

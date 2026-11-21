@@ -199,3 +199,12 @@ body.theme-light .hero-seek-slider {
 /* 5. Omni Command Palette Favicons & Kbd */
 .cmd-result-item {
   display: flex;
+
+
+body.theme-light .vol-floating-tooltip,
+[data-theme="light"] .vol-floating-tooltip {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
