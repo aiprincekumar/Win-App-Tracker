@@ -4710,7 +4710,8 @@ body.theme-light .switch-toggle .slider-round {
   height: 14px;
   width: 14px;
   left: 3px;
-  bottom: 3px;
+  top: 4px;
+  bottom: 4px;
   background-color: #ffffff;
   transition: 0.2s ease;
   border-radius: 50%;
@@ -4722,7 +4723,7 @@ body.theme-light .switch-toggle .slider-round {
 }
 
 .switch-toggle input:checked + .slider-round:before {
-  transform: translateX(16px);
+  transform: translateX(20px);
 }
 
 .audio-lab-status-note {
