@@ -2817,7 +2817,7 @@ function renderChronoHeatmap(matrix, mode = 'focus') {
   }
 
   if (_TemporalProductivity && typeof _TemporalProductivity.renderChronoHeatmap === 'function') {
-    return _TemporalProductivity.renderChronoHeatmap(effectiveMatrix, activeMode, null, { document, t });
+    return _TemporalProductivity.renderChronoHeatmap(effectiveMatrix, activeMode, null, { document: (typeof document !== 'undefined' ? document : null), t: (typeof t === 'function' ? t : ((k) => k)) });
   }
   if (typeof document === 'undefined') return;
   const container = document.getElementById('heatmapGridContainer');
@@ -3046,6 +3046,10 @@ function updateChronoHeatmap(data) {
     rawHistory = data.activityData.history;
   } else if (data && data.activityData && data.activityData.domains) {
     rawHistory = aggregateDomainsHistoryMap(data.activityData.domains);
+  } else if (data && data.domains) {
+    rawHistory = aggregateDomainsHistoryMap(data.domains);
+  } else if (data && data.history) {
+    rawHistory = data.history;
   } else if (data && typeof data === 'object') {
     rawHistory = data;
   }
@@ -3611,49 +3615,47 @@ function restoreFromSqliteHub(options) {
   return Promise.resolve({ success: false, error: 'BackupHubDigest module unavailable' });
 }
 
+function readKpiDomText(id, fallback = '') {
+  if (typeof document === 'undefined') return fallback;
+  const el = document.getElementById(id);
+  const text = el && el.textContent ? el.textContent.trim() : '';
+  return (text && text !== '--' && text !== '-') ? text : fallback;
+}
+
 function getActiveReportMetrics(options = {}) {
-  let totalTime = '0h 00m';
-  let topDomain = '--';
-  let productivity = (typeof lastCalculatedProductivityScore !== 'undefined' && lastCalculatedProductivityScore !== null)
-    ? `${lastCalculatedProductivityScore} / 100` : '85 / 100';
-  let mediaTime = '0h 00m';
   const reportingPeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
-    ? currentTemporalRange : 'All Recorded Time';
+    ? currentTemporalRange : (options.reportingPeriod || 'All Recorded Time');
+  const todayTime = readKpiDomText('trackMetricTodayTime', '0h 00m');
+  const dailyAvg = readKpiDomText('trackMetricDailyAvg', '0h 00m');
+  let totalTime = readKpiDomText('trackMetricTotalTime', todayTime !== '0h 00m' ? todayTime : '0h 00m');
+  let topDomain = readKpiDomText('trackMetricTopDomain', '--');
+  const topDomainTime = readKpiDomText('trackMetricTopDomainTime', '');
+  const rawScore = readKpiDomText('valProductivityScore', (typeof lastCalculatedProductivityScore !== 'undefined' && lastCalculatedProductivityScore !== null) ? String(lastCalculatedProductivityScore) : '85');
+  const productivity = rawScore.includes('/') ? rawScore : `${rawScore} / 100`;
+  const focusTime = readKpiDomText('trackMetricFocusTime', '0h 00m');
+  const activeDomains = readKpiDomText('trackMetricActiveDomains', '0');
+  const distractionTime = readKpiDomText('trackMetricDistractionTime', '0h 00m');
+  const peakHour = readKpiDomText('trackMetricPeakHour', '--:--');
+  const longestSession = readKpiDomText('trackMetricLongestSession', '0h 00m');
 
-  const elTotal = typeof document !== 'undefined' ? (document.getElementById('trackMetricTotalTime') || document.getElementById('trackMetricTodayTime')) : null;
-  if (elTotal && elTotal.textContent && elTotal.textContent !== '--' && elTotal.textContent !== '0h 00m') {
-    totalTime = elTotal.textContent.trim();
-  } else if (dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
+  if ((totalTime === '0h 00m' || topDomain === '--') && dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
     const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData);
-    if (norm.totalActiveSeconds > 0 && typeof formatHHMMSS === 'function') {
-      totalTime = formatHHMMSS(norm.totalActiveSeconds);
-    }
-  }
-
-  const elTopDom = typeof document !== 'undefined' ? (document.getElementById('trackMetricTopDomain') || document.getElementById('statTopFocusDomain')) : null;
-  if (elTopDom && elTopDom.textContent && elTopDom.textContent !== '-' && elTopDom.textContent !== '--') {
-    topDomain = elTopDom.textContent.trim();
-  } else if (dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
-    const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData);
-    if (norm.topDomain && norm.topDomain !== 'None') topDomain = norm.topDomain;
-  }
-
-  const elProd = typeof document !== 'undefined' ? document.getElementById('valProductivityScore') : null;
-  if (elProd && elProd.textContent && elProd.textContent !== '--') {
-    productivity = `${elProd.textContent.trim()} / 100`;
+    if (totalTime === '0h 00m' && norm.totalActiveSeconds > 0 && typeof formatHHMMSS === 'function') totalTime = formatHHMMSS(norm.totalActiveSeconds);
+    if (topDomain === '--' && norm.topDomain && norm.topDomain !== 'None') topDomain = norm.topDomain;
   }
 
   const mediaList = (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || []);
   let mediaSec = 0;
   for (let i = 0; i < mediaList.length; i++) {
-    const m = mediaList[i];
-    if (m) mediaSec += Number(m.watchDuration || m.watchTime || m.duration || 0);
+    if (mediaList[i]) mediaSec += Number(mediaList[i].watchDuration || mediaList[i].watchTime || mediaList[i].duration || 0);
   }
-  if (mediaSec > 0 && typeof formatHHMMSS === 'function') {
-    mediaTime = formatHHMMSS(mediaSec);
-  }
+  const mediaTime = (mediaSec > 0 && typeof formatHHMMSS === 'function') ? formatHHMMSS(mediaSec) : '0h 00m';
 
-  return { totalTime, topDomain, productivity, mediaTime, reportingPeriod };
+  return {
+    todayTime, dailyAvg, totalTime, productivity, productivityScore: parseInt(rawScore, 10) || 85,
+    focusTime, topDomain, topDomainTime, activeDomains, distractionTime, peakHour, longestSession,
+    mediaTime, reportingPeriod
+  };
 }
 
 function triggerPrintPdf(options) {
@@ -3678,18 +3680,18 @@ function triggerPrintPdf(options) {
   return { printed: false, error: 'Print engine unavailable' };
 }
 
-function downloadStandaloneHtmlDigest(data, options) {
+function downloadStandaloneHtmlDigest(data, options = {}) {
   const payload = data || {
     activityData: (dashboardData && dashboardData.activityData) || {},
     tracking_history: (dashboardData && dashboardData.activityData) || {},
     media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || [])
   };
-  const activePeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
-    ? `Range: ${currentTemporalRange}` : 'All Recorded Time';
-  const prodIndex = (typeof lastCalculatedProductivityScore !== 'undefined' && lastCalculatedProductivityScore !== null)
-    ? lastCalculatedProductivityScore : 85;
+  const activeMetrics = (typeof getActiveReportMetrics === 'function') ? getActiveReportMetrics(options) : {};
+  const activePeriod = options.reportingPeriod || (typeof currentTemporalRange !== 'undefined' && currentTemporalRange ? `Range: ${currentTemporalRange}` : 'All Recorded Time');
+  const prodIndex = options.productivityIndex !== undefined ? options.productivityIndex : (activeMetrics.productivityScore || 85);
 
   const opts = Object.assign({
+    metrics: activeMetrics,
     reportingPeriod: activePeriod,
     productivityIndex: prodIndex
   }, options);
@@ -7047,20 +7049,44 @@ function renderTimeTrackingTab(data) {
 
   // 1. Metric Cards (Symmetrical 5x2 Bento Grid)
   const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
-  updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr);
+  try {
+    updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] updateTimeTrackingKpiView error:', e);
+  }
 
   // 2. SVG Donut Chart
-  renderDonutChart(stats.items, stats.activeTemporalSum, temporalSubtab);
+  try {
+    renderDonutChart(stats.items, stats.activeTemporalSum, temporalSubtab);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] renderDonutChart error:', e);
+  }
 
   // 3. Top 5 Distribution Bars
-  renderTopDistributionBars(stats.items, stats.activeTemporalSum);
+  try {
+    renderTopDistributionBars(stats.items, stats.activeTemporalSum);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] renderTopDistributionBars error:', e);
+  }
 
   // 4. Domain Breakdown Table
-  renderDomainTable(stats.items);
+  try {
+    renderDomainTable(stats.items);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] renderDomainTable error:', e);
+  }
 
   // 5. Phase 1: Productivity Score & Heatmap
-  updateProductivityMetrics(stats.items);
-  updateChronoHeatmap(data);
+  try {
+    updateProductivityMetrics(stats.items);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] updateProductivityMetrics error:', e);
+  }
+  try {
+    updateChronoHeatmap(data);
+  } catch (e) {
+    console.warn('[renderTimeTrackingTab] updateChronoHeatmap error:', e);
+  }
 }
 
 function renderDonutChart(items, totalSeconds, subtab) {
@@ -8708,6 +8734,11 @@ function refreshDashboard(forceRefresh = false) {
       dataHubConnected = Boolean(response.dataHubConnected);
       detectedBrowserType = response.detectedBrowser || 'chrome';
 
+      // Immediately render Chrono Heatmap with incoming live data to eliminate blank default boxes
+      try {
+        updateChronoHeatmap(response);
+      } catch (_) {}
+
       // HUD status
       updateHUDStatus(Boolean(response.wsConnected));
 
@@ -8723,6 +8754,7 @@ function refreshDashboard(forceRefresh = false) {
       if (dataHubConnected) {
         try {
           const hubRes = await new Promise((res) => {
+            const timer = setTimeout(() => res(null), 1500);
             safeRuntimeSendMessage({
               type: 'QUERY_DATA_HUB',
               query: 'ANALYTICS',
@@ -8730,6 +8762,7 @@ function refreshDashboard(forceRefresh = false) {
               tracking_mode: selectedTrackingMode,
               date: response.todayStr || new Date().toISOString().split('T')[0]
             }, (hr) => {
+              clearTimeout(timer);
               if (!hr || !hr.success) {
                 res(null);
               } else {
@@ -8789,6 +8822,9 @@ function refreshDashboard(forceRefresh = false) {
       }
 
       // Render active tabs
+      try {
+        updateChronoHeatmap(dashboardData || response);
+      } catch (_) {}
       renderTimeTrackingTab(response);
       renderMediaAnalyticsTab(dashboardData || response);
       if (currentTab === 'media') {
@@ -12403,6 +12439,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
       browserAPI.storage.local.get([
         'language',
+        'media_sentinel_activity_data',
         'media_sentinel_settings',
         'sentinel_sleep_settings',
         'selected_browser_filter',
@@ -12493,6 +12530,11 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
         }
         if (res && res.media_sentinel_viz_effect) {
           setVisualizerMode(res.media_sentinel_viz_effect);
+        }
+        if (res && res.media_sentinel_activity_data) {
+          try {
+            updateChronoHeatmap({ activityData: res.media_sentinel_activity_data });
+          } catch (_) {}
         }
         applyDashboardLanguage(lang);
         refreshDashboard();

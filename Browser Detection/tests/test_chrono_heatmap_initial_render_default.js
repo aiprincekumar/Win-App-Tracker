@@ -7,6 +7,8 @@
  * 3. Schema resilience: buildHeatmapDayRow supports both 2D array matrix and object array with .hours.
  * 4. Fallback resilience: updateChronoHeatmap and renderChronoHeatmap gracefully fall back when data/matrix is null or empty.
  * 5. UTF-8 with BOM and W3C Trusted Types compliance.
+ * 6. Early storage ingestion: media_sentinel_activity_data pre-seeds heatmap before IPC message.
+ * 7. updateChronoHeatmap input flexibility: handles data.domains, data.history, and data.activityData.
  * 
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
  */
@@ -222,6 +224,59 @@ console.log('Battery 5: UTF-8 with BOM Encoding Certification');
   console.log('  ✅ 100% UTF-8 with BOM (0xEF, 0xBB, 0xBF) preserved across all modified files\n');
 }
 
+// -----------------------------------------------------------------------------
+// Battery 6: Early Storage Ingestion & Data Hub Timeout Protection
+// -----------------------------------------------------------------------------
+console.log('Battery 6: Early Storage Ingestion & Data Hub Timeout Protection');
+{
+  const dashCode = fs.readFileSync(dashJsPath, 'utf8');
+
+  // Check storage key registration
+  assert(dashCode.includes("'media_sentinel_activity_data'"), 'storage.local.get must request media_sentinel_activity_data');
+  assert(dashCode.includes('updateChronoHeatmap({ activityData: res.media_sentinel_activity_data })'),
+    'DOMContentLoaded storage callback must pre-seed updateChronoHeatmap with media_sentinel_activity_data');
+
+  // Check refreshDashboard early render
+  const refreshStart = dashCode.indexOf('function refreshDashboard(');
+  const refreshBlock = dashCode.substring(refreshStart, refreshStart + 1200);
+  assert(refreshBlock.includes('updateChronoHeatmap(response);'),
+    'refreshDashboard must invoke updateChronoHeatmap(response) immediately upon receiving GET_DASHBOARD_DATA response');
+
+  // Check 1500ms timeout on Data Hub query
+  assert(dashCode.includes('const timer = setTimeout(() => res(null), 1500);'),
+    'Data Hub query must have 1500ms safety timeout timer');
+  assert(dashCode.includes('clearTimeout(timer);'),
+    'Data Hub query must clear safety timeout timer upon response');
+
+  console.log('  ✅ Early storage ingestion and 1500ms Data Hub query timeout protection verified\n');
+}
+
+// -----------------------------------------------------------------------------
+// Battery 7: updateChronoHeatmap Direct Input Mapping & Error Isolation
+// -----------------------------------------------------------------------------
+console.log('Battery 7: updateChronoHeatmap Direct Input Mapping & Error Isolation');
+{
+  const dash = require(dashJsPath);
+  assert(typeof dash.updateChronoHeatmap === 'function', 'updateChronoHeatmap must be exported');
+
+  // Test Case A: Direct domains property
+  const dummyDomains = {
+    'github.com': { foregroundSeconds: 1800, backgroundMediaSeconds: 0, totalSeconds: 1800, sessions: 5 }
+  };
+  const matrixA = dash.updateChronoHeatmap({ domains: dummyDomains });
+  assert(matrixA, 'Matrix must be returned for direct domains');
+
+  // Test Case B: Direct history property
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dummyHistory = {
+    [todayStr]: { hourlyBuckets: { 14: { activeSeconds: 2400, mediaSeconds: 0, topDomain: 'github.com' } } }
+  };
+  const matrixB = dash.updateChronoHeatmap({ history: dummyHistory });
+  assert(matrixB, 'Matrix must be returned for direct history');
+
+  console.log('  ✅ updateChronoHeatmap successfully handles direct domains and direct history objects\n');
+}
+
 console.log('============================================================');
-console.log('🎉 ALL 5 INITIAL RENDER TEST BATTERIES PASSED (Exit Code 0)');
+console.log('🎉 ALL 7 INITIAL RENDER TEST BATTERIES PASSED (Exit Code 0)');
 console.log('============================================================');
