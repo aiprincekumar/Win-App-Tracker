@@ -2583,6 +2583,7 @@ let currentTab = 'tracking'; // 'tracking' | 'media' | 'settings'
 let temporalSubtab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
 let mediaHistoryData = [];
+let lastCalculatedProductivityScore = 85;
 let selectedBrowser = 'all'; // 'all' | 'chrome' | 'edge' | 'brave' | 'opera'
 let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
 let selectedDomainCategory = 'all'; // 'all' | 'web' | 'internal'
@@ -2933,6 +2934,7 @@ function updateProductivityMetrics(items) {
   });
 
   const summary = calculateProductivityScore(timeByCategory, totalActiveTime);
+  lastCalculatedProductivityScore = summary.score;
   renderProductivityGauge(summary.score, summary.tier);
   return summary;
 }
@@ -3595,17 +3597,61 @@ function restoreFromSqliteHub(options) {
   return Promise.resolve({ success: false, error: 'BackupHubDigest module unavailable' });
 }
 
+function getActiveReportMetrics(options = {}) {
+  let totalTime = '0h 00m';
+  let topDomain = '--';
+  let productivity = (typeof lastCalculatedProductivityScore !== 'undefined' && lastCalculatedProductivityScore !== null)
+    ? `${lastCalculatedProductivityScore} / 100` : '85 / 100';
+  let mediaTime = '0h 00m';
+  const reportingPeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
+    ? currentTemporalRange : 'All Recorded Time';
+
+  const elTotal = typeof document !== 'undefined' ? (document.getElementById('trackMetricTotalTime') || document.getElementById('trackMetricTodayTime')) : null;
+  if (elTotal && elTotal.textContent && elTotal.textContent !== '--' && elTotal.textContent !== '0h 00m') {
+    totalTime = elTotal.textContent.trim();
+  } else if (dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
+    const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData);
+    if (norm.totalActiveSeconds > 0 && typeof formatHHMMSS === 'function') {
+      totalTime = formatHHMMSS(norm.totalActiveSeconds);
+    }
+  }
+
+  const elTopDom = typeof document !== 'undefined' ? (document.getElementById('trackMetricTopDomain') || document.getElementById('statTopFocusDomain')) : null;
+  if (elTopDom && elTopDom.textContent && elTopDom.textContent !== '-' && elTopDom.textContent !== '--') {
+    topDomain = elTopDom.textContent.trim();
+  } else if (dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
+    const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData);
+    if (norm.topDomain && norm.topDomain !== 'None') topDomain = norm.topDomain;
+  }
+
+  const elProd = typeof document !== 'undefined' ? document.getElementById('valProductivityScore') : null;
+  if (elProd && elProd.textContent && elProd.textContent !== '--') {
+    productivity = `${elProd.textContent.trim()} / 100`;
+  }
+
+  const mediaList = (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || []);
+  let mediaSec = 0;
+  for (let i = 0; i < mediaList.length; i++) {
+    const m = mediaList[i];
+    if (m) mediaSec += Number(m.watchDuration || m.watchTime || m.duration || 0);
+  }
+  if (mediaSec > 0 && typeof formatHHMMSS === 'function') {
+    mediaTime = formatHHMMSS(mediaSec);
+  }
+
+  return { totalTime, topDomain, productivity, mediaTime, reportingPeriod };
+}
+
 function triggerPrintPdf(options) {
-  const totalTime = (typeof formatHHMMSS === 'function' && dashboardData) ? formatHHMMSS(dashboardData.totalSeconds || 0) : '0h 00m';
-  const topDom = (dashboardData && Array.isArray(dashboardData.items) && dashboardData.items[0]) ? dashboardData.items[0].domain : '--';
-  const prod = (typeof lastCalculatedProductivityScore !== 'undefined') ? `${lastCalculatedProductivityScore} / 100` : '85 / 100';
+  const activeMetrics = getActiveReportMetrics(options);
   const opts = Object.assign({
     doc: typeof document !== 'undefined' ? document : null,
     win: typeof window !== 'undefined' ? window : null,
-    totalTime,
-    topDomain: topDom,
-    productivity: prod,
-    mediaTime: (typeof formatHHMMSS === 'function' && dashboardData) ? formatHHMMSS(dashboardData.totalMediaSeconds || 0) : '0h 00m'
+    totalTime: activeMetrics.totalTime,
+    topDomain: activeMetrics.topDomain,
+    productivity: activeMetrics.productivity,
+    mediaTime: activeMetrics.mediaTime,
+    reportingPeriod: activeMetrics.reportingPeriod
   }, options);
 
   if (_BackupHubDigest && typeof _BackupHubDigest.triggerPrintPdf === 'function') {
@@ -3620,12 +3666,18 @@ function triggerPrintPdf(options) {
 
 function downloadStandaloneHtmlDigest(data, options) {
   const payload = data || {
+    activityData: (dashboardData && dashboardData.activityData) || {},
     tracking_history: (dashboardData && dashboardData.activityData) || {},
-    media_history: mediaHistoryData || []
+    media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || [])
   };
+  const activePeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
+    ? `Range: ${currentTemporalRange}` : 'All Recorded Time';
+  const prodIndex = (typeof lastCalculatedProductivityScore !== 'undefined' && lastCalculatedProductivityScore !== null)
+    ? lastCalculatedProductivityScore : 85;
+
   const opts = Object.assign({
-    reportingPeriod: (typeof currentTemporalRange !== 'undefined' && currentTemporalRange) ? `Range: ${currentTemporalRange}` : 'All Recorded Time',
-    productivityIndex: (typeof lastCalculatedProductivityScore !== 'undefined') ? lastCalculatedProductivityScore : 85
+    reportingPeriod: activePeriod,
+    productivityIndex: prodIndex
   }, options);
 
   if (_BackupHubDigest && typeof _BackupHubDigest.downloadStandaloneHtmlDigest === 'function') {
@@ -12769,6 +12821,7 @@ if (typeof module !== 'undefined' && module.exports) {
     restoreFromSqliteHub,
     triggerPrintPdf,
     downloadStandaloneHtmlDigest,
+    getActiveReportMetrics,
     handleBackupFileSelection,
     populateSnapshotRollbackSelect,
     initBackupAndDigestHandlers,
@@ -12856,6 +12909,7 @@ if (typeof window !== 'undefined') {
   window.restoreFromSqliteHub = restoreFromSqliteHub;
   window.triggerPrintPdf = triggerPrintPdf;
   window.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
+  window.getActiveReportMetrics = getActiveReportMetrics;
   window.handleBackupFileSelection = handleBackupFileSelection;
   window.populateSnapshotRollbackSelect = populateSnapshotRollbackSelect;
   window.initBackupAndDigestHandlers = initBackupAndDigestHandlers;
@@ -12945,6 +12999,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.restoreFromSqliteHub = restoreFromSqliteHub;
   globalThis.triggerPrintPdf = triggerPrintPdf;
   globalThis.downloadStandaloneHtmlDigest = downloadStandaloneHtmlDigest;
+  globalThis.getActiveReportMetrics = getActiveReportMetrics;
   globalThis.BackupHubDigestFeature = _BackupHubDigest;
   globalThis.initVisualizerErgonomicsUI = initVisualizerErgonomicsUI;
   globalThis.triggerPauseSleepTimer = triggerPauseSleepTimer;

@@ -333,8 +333,45 @@ label.btn {
 }
 
 @media print {
+  /* Page Geometry */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm 15mm 12mm;
+  }
+
+  /* Reset main background to pure white and unlock multi-page scroll / height flow */
+  html, body, .dashboard-layout, .main-stage, .main-content, .tab-content-container {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    box-shadow: none !important;
+  }
+
+  /* Force tracking analytics panel visible in print even if another tab was active */
+  #paneTracking {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Ensure other tabs remain strictly hidden during report print */
+  #paneSettings,
+  #paneMedia,
+  #paneAutomations,
+  #paneStudio {
+    display: none !important;
+  }
+
   /* Hide non-printable navigation, sidebar, action buttons, modals and search bars */
   .sidebar,
+  .top-app-bar,
   .dashboard-header-actions,
   .btn,
   .btn-action-outline,
@@ -347,113 +384,131 @@ label.btn {
   .settings-card,
   #heroAudioLabStatus,
   #canvasAudioVisualizer,
-  #paneSettings,
-  #paneMedia,
   #customDateRangePicker,
   #btnSidebarReconnectHub,
-  #dataHubBadge {
+  #dataHubBadge,
+  .table-search-filter,
+  .table-sort-wrapper,
+  .table-pagination-footer,
+  .no-print {
     display: none !important;
-  }
-
-  /* Reset main background to pure white for crisp paper printing */
-  html, body, .dashboard-layout, .main-content, .tab-content-container {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
   }
 
   /* Executive Report Header */
   .print-executive-header {
     display: block !important;
-    border-bottom: 2px solid #0f172a;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 24px !important;
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .print-brand-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 16px !important;
   }
 
   .print-title {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0 0 4px 0;
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 0 4px 0 !important;
   }
 
   .print-date {
-    font-size: 0.85rem;
-    color: #475569;
+    font-size: 0.85rem !important;
+    color: #475569 !important;
+    font-weight: 500 !important;
   }
 
   .print-logo-box {
-    border: 1px solid #0f172a;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    border: 1px solid #0f172a !important;
+    padding: 4px 10px !important;
+    border-radius: 4px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
   }
 
   .print-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-top: 12px;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+    margin-top: 14px !important;
   }
 
   .print-summary-card {
-    border: 1px solid #cbd5e1;
-    padding: 10px;
-    border-radius: 6px;
-    background: #f8fafc;
+    border: 1px solid #cbd5e1 !important;
+    padding: 10px 12px !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
   }
 
   .print-stat-label {
-    display: block;
-    font-size: 0.72rem;
-    color: #64748b;
-    text-transform: uppercase;
-    font-weight: 600;
+    display: block !important;
+    font-size: 0.72rem !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
   }
 
   .print-stat-value {
-    display: block;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-top: 2px;
+    display: block !important;
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin-top: 2px !important;
+    font-variant-numeric: tabular-nums !important;
   }
 
   /* Keep cards and table rows together without awkward page breaks */
+  .print-executive-header,
   .metrics-grid,
   .metric-card,
   .analytics-hero-card,
+  .donut-chart-container,
+  .data-table-card,
   .table-card,
   .domain-table-container,
+  .table-responsive-container,
   tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
+  thead {
+    display: table-header-group !important;
+  }
+
   /* Enhance borders and contrast for grayscale / color printing */
-  .bento-card, .metric-card, table {
+  .bento-card, .metric-card, table, table.modern-data-table {
     border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #0f172a !important;
+    border-collapse: collapse !important;
   }
 
-  th, td {
+  table th, table.modern-data-table th {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    padding: 8px 10px !important;
+  }
+
+  table td, table.modern-data-table td {
     color: #0f172a !important;
-    border-color: #cbd5e1 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 8px 10px !important;
+    font-size: 0.85rem !important;
   }
 }
 

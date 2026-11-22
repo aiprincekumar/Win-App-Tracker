@@ -493,95 +493,295 @@
   }
 
   /**
-   * Generates clean, self-contained HTML document for the Executive Digest.
+   * Safe HTML escaping utility to prevent XSS in generated reports.
    */
-  function generateExecutiveDigestHtml(data, options = {}) {
-    const rawData = data || {};
-    const trackingHistory = rawData.tracking_history || rawData.activityData || rawData.trackingHistory || {};
-    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
-    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
-    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  }
 
-    // Aggregate summary
+  /**
+   * Creates initial domain entry accumulator.
+   */
+  function createDomainTotal(category) {
+    return { activeTime: 0, sessions: 0, category: category || 'work' };
+  }
+
+  /**
+   * Normalizes pre-computed items array into domain totals.
+   */
+  function normalizeFromItems(itemsArray) {
     let totalActiveSeconds = 0;
     const domainTotals = {};
+    for (let i = 0; i < itemsArray.length; i++) {
+      const item = itemsArray[i];
+      if (!item || !item.domain) continue;
+      const sec = Number(item.computedSeconds || item.totalSeconds || item.seconds || 0);
+      totalActiveSeconds += sec;
+      const dom = String(item.domain);
+      domainTotals[dom] = domainTotals[dom] || createDomainTotal(item.category);
+      domainTotals[dom].activeTime += sec;
+      domainTotals[dom].sessions += Number(item.sessions || item.sessionCount || 1);
+    }
+    return { totalActiveSeconds, domainTotals };
+  }
 
-    Object.keys(trackingHistory).forEach(dateKey => {
-      const day = trackingHistory[dateKey];
-      if (!day) return;
-      totalActiveSeconds += (day.totalActiveTime || 0);
-      if (day.domains) {
-        Object.keys(day.domains).forEach(dom => {
-          const d = day.domains[dom];
-          domainTotals[dom] = domainTotals[dom] || { activeTime: 0, sessions: 0, category: d.category || 'work' };
-          domainTotals[dom].activeTime += (d.activeTime || 0);
-          domainTotals[dom].sessions += (d.sessions || 0);
-        });
-      }
-    });
+  /**
+   * Extracts active seconds and sessions for a single modern domain entry.
+   */
+  function extractDomainSeconds(entry, rangeSet) {
+    let sec = Number(entry.seconds || entry.totalSeconds || 0);
+    let sessions = Number(entry.sessionCount || 0);
+    if (!entry.days) {
+      return { sec, sessions: Math.max(1, sessions) };
+    }
+    const dateKeys = Object.keys(entry.days);
+    for (let i = 0; i < dateKeys.length; i++) {
+      const k = dateKeys[i];
+      if (rangeSet && !rangeSet.has(k)) continue;
+      const d = entry.days[k];
+      sec += Number(d.seconds || 0);
+      if (!entry.sessionCount) sessions += Number(d.sessions || 1);
+    }
+    return { sec, sessions: Math.max(1, sessions) };
+  }
 
-    let totalMediaSeconds = 0;
-    if (Array.isArray(mediaHistory)) {
-      mediaHistory.forEach(m => {
-        totalMediaSeconds += (m.watchTime || m.duration || 0);
+  /**
+   * Normalizes modern activityData.domains dictionary.
+   */
+  function normalizeFromDomains(domainsObj, selectedDateRange) {
+    let totalActiveSeconds = 0;
+    const domainTotals = {};
+    const rangeSet = selectedDateRange ? (selectedDateRange instanceof Set ? selectedDateRange : new Set(Array.isArray(selectedDateRange) ? selectedDateRange : [selectedDateRange])) : null;
+    const doms = Object.keys(domainsObj);
+
+    for (let i = 0; i < doms.length; i++) {
+      const dom = doms[i];
+      const entry = domainsObj[dom];
+      if (!entry) continue;
+      const { sec, sessions } = extractDomainSeconds(entry, rangeSet);
+      if (sec <= 0) continue;
+      totalActiveSeconds += sec;
+      domainTotals[dom] = { activeTime: sec, sessions, category: entry.category || 'work' };
+    }
+    return { totalActiveSeconds, domainTotals };
+  }
+
+  /**
+   * Accumulates domain metrics for a legacy day object.
+   */
+  function accumulateLegacyDomains(domains, domainTotals) {
+    const doms = Object.keys(domains);
+    for (let i = 0; i < doms.length; i++) {
+      const dom = doms[i];
+      const d = domains[dom];
+      domainTotals[dom] = domainTotals[dom] || createDomainTotal(d.category);
+      domainTotals[dom].activeTime += Number(d.activeTime || d.seconds || 0);
+      domainTotals[dom].sessions += Number(d.sessions || 1);
+    }
+  }
+
+  /**
+   * Normalizes legacy day-keyed history map.
+   */
+  function normalizeFromLegacyDays(trackingObj, selectedDateRange) {
+    let totalActiveSeconds = 0;
+    const domainTotals = {};
+    const rangeSet = selectedDateRange ? (selectedDateRange instanceof Set ? selectedDateRange : new Set(Array.isArray(selectedDateRange) ? selectedDateRange : [selectedDateRange])) : null;
+    const dates = Object.keys(trackingObj);
+
+    for (let i = 0; i < dates.length; i++) {
+      const dateKey = dates[i];
+      const day = trackingObj[dateKey];
+      if (!day || typeof day !== 'object' || !day.domains) continue;
+      if (rangeSet && !rangeSet.has(dateKey)) continue;
+
+      totalActiveSeconds += Number(day.totalActiveTime || 0);
+      accumulateLegacyDomains(day.domains, domainTotals);
+    }
+    return { totalActiveSeconds, domainTotals };
+  }
+
+  /**
+   * Accumulates total media playback duration across sessions.
+   */
+  function calculateTotalMediaDuration(mediaList) {
+    let total = 0;
+    if (Array.isArray(mediaList)) {
+      mediaList.forEach(m => {
+        if (!m) return;
+        total += Number(m.watchDuration || m.watchTime || m.duration || 0);
       });
     }
+    return total;
+  }
 
-    // Top domains
-    const sortedDomains = Object.keys(domainTotals).map(dom => ({
+  /**
+   * Universal data normalizer handling modern activityData, legacy day maps, and items arrays.
+   */
+  function normalizeTelemetryDataset(rawData, options = {}) {
+    const dataset = rawData || {};
+    const tracking = dataset.tracking_history || dataset.activityData || dataset.trackingHistory || dataset;
+    const media = dataset.media_history || dataset.mediaHistory || [];
+    const selectedDateRange = options.dateRange || null;
+
+    let norm;
+    if (Array.isArray(tracking.items) || Array.isArray(tracking)) {
+      norm = normalizeFromItems(Array.isArray(tracking.items) ? tracking.items : tracking);
+    } else if (tracking.domains && typeof tracking.domains === 'object') {
+      norm = normalizeFromDomains(tracking.domains, selectedDateRange);
+    } else {
+      norm = normalizeFromLegacyDays(tracking, selectedDateRange);
+    }
+
+    const totalMediaSeconds = calculateTotalMediaDuration(media);
+    const sortedDomains = Object.keys(norm.domainTotals).map(dom => ({
       domain: dom,
-      ...domainTotals[dom]
+      ...norm.domainTotals[dom]
     })).sort((a, b) => b.activeTime - a.activeTime);
 
-    const topDomain = sortedDomains.length > 0 ? sortedDomains[0].domain : 'None';
-    const productivityIndex = options.productivityIndex !== undefined ? options.productivityIndex : 85;
+    return {
+      totalActiveSeconds: norm.totalActiveSeconds,
+      totalMediaSeconds,
+      sortedDomains,
+      topDomain: sortedDomains.length > 0 ? sortedDomains[0].domain : 'None',
+      domainCount: sortedDomains.length
+    };
+  }
 
-    // SVG donut segments for top 5 domains
-    const top5 = sortedDomains.slice(0, 5);
+  /**
+   * Renders SVG donut chart segment elements for top 5 domains.
+   */
+  function renderDonutSvg(top5, colors) {
     const topTotal = top5.reduce((sum, d) => sum + d.activeTime, 0) || 1;
     let accumulatedAngle = 0;
-    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
-    const svgSegments = top5.map((d, i) => {
+    return top5.map((d, i) => {
       const pct = d.activeTime / topTotal;
       const strokeDash = (pct * 251.2).toFixed(2);
       const strokeOffset = (-accumulatedAngle * 251.2).toFixed(2);
       accumulatedAngle += pct;
       return `<circle cx="50" cy="50" r="40" fill="none" stroke="${colors[i % colors.length]}" stroke-width="12" stroke-dasharray="${strokeDash} 251.2" stroke-dashoffset="${strokeOffset}" transform="rotate(-90 50 50)"/>`;
     }).join('\n        ');
+  }
 
-    // Domain table rows
-    const domainRows = sortedDomains.slice(0, 15).map((d, i) => {
+  /**
+   * Renders legend items for top 5 domains with percentage breakdowns.
+   */
+  function renderLegendItems(top5, colors, totalActiveSeconds) {
+    return top5.map((d, i) => {
       const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
+      return `<div class="legend-item">
+        <div><span class="legend-dot" style="background:${colors[i % colors.length]};"></span><strong>${escapeHtml(d.domain)}</strong></div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <span style="font-family:monospace;font-weight:700;">${formatHoursMinutes(d.activeTime)}</span>
+          <span style="color:#64748b;font-size:0.8rem;">(${pct}%)</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /**
+   * Renders horizontal progress bars for top 5 domain distribution.
+   */
+  function renderDistributionBars(top5, totalActiveSeconds, colors) {
+    return top5.map((d, i) => {
+      const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
+      return `<div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;">
+          <span style="font-weight:600;">${escapeHtml(d.domain)}</span>
+          <span style="color:#64748b;font-variant-numeric:tabular-nums;">${formatHoursMinutes(d.activeTime)} (${pct}%)</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width:${pct}%;background:${colors[i % colors.length]};"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /**
+   * Renders detailed domain table rows with category badges.
+   */
+  function renderDomainRows(sortedDomains, totalActiveSeconds) {
+    return sortedDomains.slice(0, 30).map((d, i) => {
+      const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
+      const cat = escapeHtml(d.category || 'work');
       return `<tr>
         <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
-        <td style="font-weight:600;color:#0f172a;">${d.domain}</td>
-        <td><span class="badge ${d.category}">${d.category}</span></td>
+        <td style="font-weight:600;color:#0f172a;">${escapeHtml(d.domain)}</td>
+        <td><span class="badge ${cat}">${cat}</span></td>
         <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(d.activeTime)}</td>
         <td style="color:#64748b;">${pct}%</td>
         <td style="color:#64748b;">${d.sessions}</td>
       </tr>`;
     }).join('\n      ');
+  }
 
-    const serializedPayload = JSON.stringify(rawData);
+  /**
+   * Renders media playback history rows.
+   */
+  function renderMediaRows(mediaHistory) {
+    if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
+    return mediaHistory.slice(0, 25).map((m, i) => {
+      const title = escapeHtml(m.title || 'Untitled Playback');
+      const platform = escapeHtml(m.platform || m.domain || 'Web');
+      const dur = Number(m.watchDuration || m.watchTime || m.duration || 0);
+      const audioState = m.isMuted ? 'Muted' : 'Audible';
+      return `<tr>
+        <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
+        <td style="font-weight:600;color:#0f172a;max-width:280px;word-break:break-word;">${title}</td>
+        <td><span class="badge utility">${platform}</span></td>
+        <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(dur)}</td>
+        <td style="color:#64748b;">${audioState}</td>
+      </tr>`;
+    }).join('\n      ');
+  }
 
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sentinel Executive Digest - ${reportingPeriod}</title>
-  <style>
-    :root {
+  /**
+   * Renders optional media playback table section.
+   */
+  function renderMediaSection(mediaHistory) {
+    if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
+    const rows = renderMediaRows(mediaHistory);
+    return `<h2 class="section-title">Media Playback & Streaming Telemetry</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px;">#</th>
+          <th>Media Title</th>
+          <th>Platform / Source</th>
+          <th>Watch Duration</th>
+          <th>Audio State</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>`;
+  }
+
+  /**
+   * Executive digest embedded stylesheet string.
+   */
+  const EXECUTIVE_DIGEST_CSS = `:root {
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
       --text-muted: #64748b;
       --border: #e2e8f0;
+      --border-strong: #cbd5e1;
       --primary: #10b981;
       --primary-dark: #059669;
     }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-variant-numeric: tabular-nums;
       background: var(--bg);
       color: var(--text);
       margin: 0;
@@ -593,78 +793,102 @@
       margin: 0 auto;
       background: var(--card-bg);
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-strong);
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
       padding: 36px;
     }
     .header {
-      border-bottom: 2px solid var(--border);
+      border-bottom: 2px solid var(--border-strong);
       padding-bottom: 20px;
       margin-bottom: 24px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 16px;
     }
     .brand-title {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 800;
       color: var(--text);
       margin: 0 0 6px 0;
     }
     .period-label {
       color: var(--text-muted);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
     .badge-brand {
       background: rgba(16,185,129,0.12);
       color: var(--primary-dark);
       padding: 6px 12px;
       border-radius: 20px;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      white-space: nowrap;
     }
+    .btn-print-report {
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+    .btn-print-report:hover { background: #1e293b; }
     .metrics-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
     }
     .metric-card {
-      background: #f1f5f9;
+      background: #f8fafc;
       border-radius: 8px;
-      padding: 16px;
-      border: 1px solid var(--border);
+      padding: 14px;
+      border: 1px solid var(--border-strong);
     }
     .metric-label {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
       text-transform: uppercase;
       font-weight: 700;
       letter-spacing: 0.5px;
     }
     .metric-val {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
       font-weight: 800;
       color: var(--text);
-      margin-top: 6px;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
     }
     .section-title {
       font-size: 1.15rem;
       font-weight: 700;
-      margin: 24px 0 16px 0;
+      margin: 28px 0 14px 0;
       color: var(--text);
     }
     .chart-section {
       display: flex;
       align-items: center;
       gap: 32px;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
       padding: 20px;
       background: #fafafa;
       border-radius: 8px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-strong);
     }
     .donut-wrapper {
       position: relative;
@@ -691,19 +915,33 @@
       display: inline-block;
       margin-right: 8px;
     }
+    .progress-bar-container {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      width: 100%;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.88rem;
+      border: 1px solid var(--border-strong);
+      margin-bottom: 24px;
     }
     th {
       text-align: left;
       padding: 10px 12px;
-      background: #f8fafc;
-      color: var(--text-muted);
+      background: #f1f5f9;
+      color: #475569;
       font-size: 0.75rem;
+      font-weight: 700;
       text-transform: uppercase;
-      border-bottom: 2px solid var(--border);
+      border-bottom: 2px solid var(--border-strong);
     }
     td {
       padding: 10px 12px;
@@ -712,62 +950,91 @@
     .badge {
       display: inline-block;
       padding: 2px 8px;
-      border-radius: 4px;
+      border-radius: 12px;
       font-size: 0.72rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
     .badge.work { background: #e0f2fe; color: #0369a1; }
     .badge.learning { background: #dcfce7; color: #15803d; }
     .badge.entertainment { background: #fef3c7; color: #b45309; }
     .badge.social { background: #fce7f3; color: #be185d; }
     .badge.utility { background: #f1f5f9; color: #475569; }
+    .empty-state-box {
+      text-align: center;
+      padding: 32px 16px;
+      background: #f8fafc;
+      border: 1px dashed var(--border-strong);
+      border-radius: 8px;
+      color: var(--text-muted);
+      margin: 16px 0;
+    }
     .footer {
       margin-top: 32px;
       padding-top: 16px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--border-strong);
       font-size: 0.78rem;
       color: var(--text-muted);
       display: flex;
       justify-content: space-between;
     }
-    @media print {
-      body { padding: 0; background: #ffffff; }
-      .digest-container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
-      tr { page-break-inside: avoid; }
+    @media (max-width: 768px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-section { flex-direction: column; align-items: flex-start; }
     }
-  </style>
-</head>
-<body>
-  <div class="digest-container">
-    <div class="header">
-      <div>
-        <h1 class="brand-title">Web Activity & Focus Executive Digest</h1>
-        <div class="period-label">Reporting Period: <strong>${reportingPeriod}</strong> | Generated: ${generatedDate}</div>
-      </div>
-      <div class="badge-brand">Media Sentinel</div>
-    </div>
+    @media print {
+      body { padding: 0; background: #ffffff !important; color: #0f172a !important; }
+      .digest-container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
+      .no-print { display: none !important; }
+      tr, .metric-card, .chart-section { page-break-inside: avoid !important; break-inside: avoid !important; }
+    }`;
 
-    <div class="metrics-grid">
+  /**
+   * Renders 4-card Bento Summary Grid HTML.
+   */
+  function renderExecutiveMetricsGrid(totalActiveSeconds, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaCount) {
+    const healthGrade = productivityIndex >= 80 ? 'Optimal' : (productivityIndex >= 60 ? 'Moderate' : 'Needs Focus');
+    const domainPlural = domainCount === 1 ? '' : 's';
+    const mediaPlural = mediaCount === 1 ? '' : 's';
+
+    return `<div class="metrics-grid">
       <div class="metric-card">
         <div class="metric-label">Total Active Time</div>
         <div class="metric-val">${formatHoursMinutes(totalActiveSeconds)}</div>
+        <div class="metric-sub">${domainCount} tracked domain${domainPlural}</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Top Focus Domain</div>
-        <div class="metric-val" style="font-size:1.15rem;word-break:break-all;">${topDomain}</div>
+        <div class="metric-val" style="font-size:1.15rem;word-break:break-all;">${escapeHtml(topDomain)}</div>
+        <div class="metric-sub">${topDomainShare}% of total browsing</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Productivity Index</div>
         <div class="metric-val">${productivityIndex} / 100</div>
+        <div class="metric-sub">Focus Health Grade: ${healthGrade}</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Media Consumed</div>
         <div class="metric-val">${formatHoursMinutes(totalMediaSeconds)}</div>
+        <div class="metric-sub">${mediaCount} recorded session${mediaPlural}</div>
       </div>
-    </div>
+    </div>`;
+  }
 
-    <h2 class="section-title">Top Activity Proportions</h2>
+  /**
+   * Renders activity proportions and domain breakdown or empty state.
+   */
+  function renderProportionsAndTable(sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows) {
+    if (!sortedDomains || sortedDomains.length === 0) {
+      return `<div class="empty-state-box">
+        <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
+        <strong>No Activity Tracked for this Period</strong>
+        <p style="margin:6px 0 0 0;font-size:0.85rem;">Active domain sessions will populate here automatically as you browse.</p>
+      </div>`;
+    }
+
+    return `<h2 class="section-title">Top Activity Proportions</h2>
     <div class="chart-section">
       <div class="donut-wrapper">
         <svg viewBox="0 0 100 100" width="140" height="140">
@@ -776,19 +1043,20 @@
         </svg>
       </div>
       <div class="legend-list">
-        ${top5.map((d, i) => `
-        <div class="legend-item">
-          <div><span class="legend-dot" style="background:${colors[i % colors.length]};"></span><strong>${d.domain}</strong></div>
-          <span style="font-family:monospace;font-weight:600;">${formatHoursMinutes(d.activeTime)}</span>
-        </div>`).join('')}
+        ${legendHtml}
       </div>
+    </div>
+
+    <div style="margin-bottom:28px;">
+      <h3 style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0 0 12px 0;">Distribution Overview</h3>
+      ${distributionBarsHtml}
     </div>
 
     <h2 class="section-title">Detailed Domain Telemetry</h2>
     <table>
       <thead>
         <tr>
-          <th>Rank</th>
+          <th style="width:50px;">Rank</th>
           <th>Domain</th>
           <th>Category</th>
           <th>Duration</th>
@@ -799,15 +1067,70 @@
       <tbody>
         ${domainRows}
       </tbody>
-    </table>
+    </table>`;
+  }
 
+  /**
+   * Generates clean, self-contained HTML document for the Executive Digest.
+   */
+  function generateExecutiveDigestHtml(data, options = {}) {
+    const rawData = data || {};
+    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
+    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
+    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
+    const productivityIndex = options.productivityIndex !== undefined ? options.productivityIndex : 85;
+
+    const norm = normalizeTelemetryDataset(rawData, options);
+    const { totalActiveSeconds, totalMediaSeconds, sortedDomains, topDomain, domainCount } = norm;
+    const topDomainShare = totalActiveSeconds > 0 && sortedDomains.length > 0
+      ? Math.round((sortedDomains[0].activeTime / totalActiveSeconds) * 100) : 0;
+
+    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
+    const top5 = sortedDomains.slice(0, 5);
+    const svgSegments = renderDonutSvg(top5, colors);
+    const legendHtml = renderLegendItems(top5, colors, totalActiveSeconds);
+    const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, colors);
+    const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
+
+    const metricsGridHtml = renderExecutiveMetricsGrid(
+      totalActiveSeconds, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaHistory.length
+    );
+    const mainContentHtml = renderProportionsAndTable(
+      sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
+    );
+    const mediaSectionHtml = renderMediaSection(mediaHistory);
+    const serializedPayload = JSON.stringify(rawData);
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel Executive Digest - ${escapeHtml(reportingPeriod)}</title>
+  <style>
+${EXECUTIVE_DIGEST_CSS}
+  </style>
+</head>
+<body>
+  <div class="digest-container">
+    <div class="header">
+      <div>
+        <h1 class="brand-title">Web Activity & Focus Executive Digest</h1>
+        <div class="period-label">Reporting Period: <strong>${escapeHtml(reportingPeriod)}</strong> | Generated: ${escapeHtml(generatedDate)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="badge-brand">Media Sentinel</span>
+        <button type="button" class="no-print btn-print-report" onclick="window.print()">🖨️ Print / Save PDF</button>
+      </div>
+    </div>
+    ${metricsGridHtml}
+    ${mainContentHtml}
+    ${mediaSectionHtml}
     <div class="footer">
       <span>Web Activity & Media Sentinel - Standalone Offline Report</span>
-      <span>Checksum: ${computeCRC32(rawData)}</span>
+      <span>Checksum: ${computeCRC32(rawData)} &bull; 100% Offline Single-File</span>
     </div>
   </div>
-
-  <!-- Lossless embedded data payload for offline portability and re-import -->
   <script id="sentinel-digest-payload" type="application/json">
 ${serializedPayload}
   </script>
@@ -830,8 +1153,19 @@ ${serializedPayload}
       headerEl.className = 'print-executive-header';
       doc.body.insertBefore(headerEl, doc.body.firstChild);
     }
+    if (typeof headerEl.setAttribute === 'function') {
+      headerEl.setAttribute('aria-hidden', 'false');
+    }
 
-    // Populate header stats safely without innerHTML
+    if (options.title) {
+      const titleEl = doc.getElementById('printReportTitle');
+      if (titleEl) titleEl.textContent = options.title;
+    }
+    if (options.reportingPeriod) {
+      const periodEl = doc.getElementById('printReportPeriod');
+      if (periodEl) periodEl.textContent = `Reporting Period: ${options.reportingPeriod}`;
+    }
+
     const totalTimeEl = doc.getElementById('printStatTotalTime');
     const topDomainEl = doc.getElementById('printStatTopDomain');
     const prodEl = doc.getElementById('printStatProductivity');
@@ -979,6 +1313,8 @@ ${serializedPayload}
     openConflictResolutionModal,
     closeConflictResolutionModal,
     formatHoursMinutes,
+    escapeHtml,
+    normalizeTelemetryDataset,
     onInit: function (context) {
       if (context && context.logger && typeof context.logger.info === 'function') {
         context.logger.info('[BackupHubDigestFeature] Initialized');
