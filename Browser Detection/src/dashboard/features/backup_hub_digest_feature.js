@@ -1165,9 +1165,19 @@
         page-break-inside: avoid !important;
         margin-bottom: 14px !important;
       }
+      .part-tracking-section {
+        display: block !important;
+        width: 100% !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
       .part-media-section {
+        display: block !important;
+        width: 100% !important;
         page-break-before: always !important;
         break-before: page !important;
+        margin-top: 0 !important;
+        padding-top: 8px !important;
       }
       .chart-section {
         padding: 10px 14px !important;
@@ -1777,48 +1787,209 @@ ${serializedPayload}
   }
 
   /**
-   * Prepares print executive header and invokes native window.print().
+   * Populates a legacy report stat element if value and node exist.
+   */
+  function populateLegacyStatElement(doc, elementId, value) {
+    if (!value || !doc || typeof doc.getElementById !== 'function') return;
+    const el = doc.getElementById(elementId);
+    if (el) el.textContent = value;
+  }
+
+  /**
+   * Ensures legacy print executive header container exists on host document.
+   */
+  function ensureLegacyPrintHeaderElement(doc) {
+    let headerEl = doc.getElementById('printExecutiveHeader');
+    if (!headerEl && typeof doc.createElement === 'function' && doc.body) {
+      headerEl = doc.createElement('div');
+      headerEl.id = 'printExecutiveHeader';
+      headerEl.className = 'print-executive-header';
+      if (typeof doc.body.insertBefore === 'function') {
+        doc.body.insertBefore(headerEl, doc.body.firstChild);
+      }
+    }
+    if (headerEl && typeof headerEl.setAttribute === 'function') {
+      headerEl.setAttribute('aria-hidden', 'false');
+    }
+    return headerEl;
+  }
+
+  /**
+   * Synchronizes legacy print executive header DOM nodes if present.
+   */
+  function syncLegacyPrintHeader(doc, options) {
+    if (!doc || typeof doc.getElementById !== 'function') return;
+    ensureLegacyPrintHeaderElement(doc);
+    if (options.title && doc.getElementById('printReportTitle')) {
+      doc.getElementById('printReportTitle').textContent = options.title;
+    }
+    if (options.reportingPeriod && doc.getElementById('printReportPeriod')) {
+      doc.getElementById('printReportPeriod').textContent = `Reporting Period: ${options.reportingPeriod}`;
+    }
+    populateLegacyStatElement(doc, 'printStatTotalTime', options.totalTime);
+    populateLegacyStatElement(doc, 'printStatTopDomain', options.topDomain);
+    populateLegacyStatElement(doc, 'printStatProductivity', options.productivity);
+    populateLegacyStatElement(doc, 'printStatMediaTime', options.mediaTime);
+  }
+
+  /**
+   * Constructs an operation result for iframe printing.
+   */
+  function makePrintResult(success, error, method) {
+    const res = Object.create(null);
+    res.success = Boolean(success);
+    if (error) res.error = String(error);
+    if (method) res.method = String(method);
+    return res;
+  }
+
+  /**
+   * Constructs an operation result for fallback printing.
+   */
+  function makeFallbackResult(printed, method, error) {
+    const res = Object.create(null);
+    res.printed = Boolean(printed);
+    if (method) res.method = String(method);
+    if (error) res.error = String(error);
+    return res;
+  }
+
+  /**
+   * Constructs an operation result for successful iframe print triggers.
+   */
+  function makeIframePrintResult(printed, method, htmlLength) {
+    const res = Object.create(null);
+    res.printed = Boolean(printed);
+    res.method = String(method);
+    res.htmlLength = Number(htmlLength);
+    return res;
+  }
+
+  /**
+   * Ensures the fallback print container exists.
+   */
+  function ensurePrintFallbackContainer(doc) {
+    if (!doc || typeof doc.getElementById !== 'function') return null;
+    let container = doc.getElementById('printFallbackContainer');
+    if (container || typeof doc.createElement !== 'function') return container;
+    container = doc.createElement('div');
+    container.id = 'printFallbackContainer';
+    container.className = 'print-fallback-container';
+    const targetBody = doc.body || doc.documentElement;
+    if (targetBody && typeof targetBody.appendChild === 'function') {
+      targetBody.appendChild(container);
+    }
+    return container;
+  }
+
+  /**
+   * Applies stealth offscreen styling to print iframe.
+   */
+  function applyPrintIframeStyles(iframe) {
+    if (!iframe || !iframe.style) return;
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-9999px';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '1024px';
+    iframe.style.height = '768px';
+    iframe.style.border = '0';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-9999';
+  }
+
+  /**
+   * Retrieves or creates an isolated hidden iframe for standalone report printing.
+   */
+  function getOrCreatePrintIframe(doc) {
+    if (!doc || typeof doc.getElementById !== 'function') return null;
+    let iframe = doc.getElementById('sentinelPrintIframe');
+    if (iframe) return iframe;
+
+    if (typeof doc.createElement !== 'function') return null;
+    iframe = doc.createElement('iframe');
+    if (!iframe) return null;
+    iframe.id = 'sentinelPrintIframe';
+    iframe.name = 'sentinelPrintIframe';
+    if (typeof iframe.setAttribute === 'function') {
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.setAttribute('tabindex', '-1');
+    }
+    applyPrintIframeStyles(iframe);
+
+    const targetBody = doc.body || (doc.documentElement && doc.documentElement.appendChild ? doc.documentElement : null);
+    if (targetBody && typeof targetBody.appendChild === 'function') {
+      targetBody.appendChild(iframe);
+    }
+    return iframe;
+  }
+
+  /**
+   * Writes standalone HTML content into an isolated iframe and invokes print.
+   */
+  function printHtmlViaIframe(doc, win, htmlContent) {
+    const iframe = getOrCreatePrintIframe(doc);
+    if (!iframe) return makePrintResult(false, 'Cannot get or create print iframe');
+
+    try {
+      const frameDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+      if (!frameDoc || typeof frameDoc.open !== 'function') {
+        return makePrintResult(false, 'Cannot access iframe document');
+      }
+      frameDoc.open();
+      frameDoc.write(htmlContent);
+      frameDoc.close();
+
+      const frameWin = iframe.contentWindow;
+      if (!frameWin || typeof frameWin.print !== 'function') {
+        return makePrintResult(false, 'iframe contentWindow.print unavailable');
+      }
+      if (typeof frameWin.focus === 'function') frameWin.focus();
+      frameWin.print();
+      return makePrintResult(true, null, 'iframe');
+    } catch (err) {
+      return makePrintResult(false, err.message);
+    }
+  }
+
+  /**
+   * Fallback print mechanism when isolated iframe printing is unavailable.
+   */
+  function printViaFallback(doc, win, htmlContent, options = {}) {
+    try {
+      ensurePrintFallbackContainer(doc);
+      if (win && typeof win.print === 'function') {
+        win.print();
+        return makeFallbackResult(true, 'fallback_container');
+      }
+      return makeFallbackResult(false, null, 'Native print unavailable');
+    } catch (err) {
+      return makeFallbackResult(false, null, err.message);
+    }
+  }
+
+  /**
+   * Prepares print executive header and invokes print via isolated iframe or fallback.
    */
   function triggerPrintPdf(options = {}) {
     const doc = options.doc || (typeof document !== 'undefined' ? document : null);
     const win = options.win || (typeof window !== 'undefined' ? window : null);
-    if (!doc || !win) return { printed: false, error: 'Document or Window unavailable' };
+    if (!doc || !win) return makeFallbackResult(false, null, 'Document or Window unavailable');
 
-    let headerEl = doc.getElementById('printExecutiveHeader');
-    if (!headerEl) {
-      headerEl = doc.createElement('div');
-      headerEl.id = 'printExecutiveHeader';
-      headerEl.className = 'print-executive-header';
-      doc.body.insertBefore(headerEl, doc.body.firstChild);
-    }
-    if (typeof headerEl.setAttribute === 'function') {
-      headerEl.setAttribute('aria-hidden', 'false');
-    }
+    try {
+      syncLegacyPrintHeader(doc, options);
+      const data = options.data || {};
+      const htmlContent = generateExecutiveDigestHtml(data, options);
 
-    if (options.title) {
-      const titleEl = doc.getElementById('printReportTitle');
-      if (titleEl) titleEl.textContent = options.title;
-    }
-    if (options.reportingPeriod) {
-      const periodEl = doc.getElementById('printReportPeriod');
-      if (periodEl) periodEl.textContent = `Reporting Period: ${options.reportingPeriod}`;
-    }
+      const iframeResult = printHtmlViaIframe(doc, win, htmlContent);
+      if (iframeResult.success) {
+        return makeIframePrintResult(true, 'iframe', htmlContent.length);
+      }
 
-    const totalTimeEl = doc.getElementById('printStatTotalTime');
-    const topDomainEl = doc.getElementById('printStatTopDomain');
-    const prodEl = doc.getElementById('printStatProductivity');
-    const mediaTimeEl = doc.getElementById('printStatMediaTime');
-
-    if (options.totalTime && totalTimeEl) totalTimeEl.textContent = options.totalTime;
-    if (options.topDomain && topDomainEl) topDomainEl.textContent = options.topDomain;
-    if (options.productivity && prodEl) prodEl.textContent = options.productivity;
-    if (options.mediaTime && mediaTimeEl) mediaTimeEl.textContent = options.mediaTime;
-
-    if (typeof win.print === 'function') {
-      win.print();
-      return { printed: true };
+      return printViaFallback(doc, win, htmlContent, options);
+    } catch (err) {
+      return makeFallbackResult(false, null, err.message);
     }
-    return { printed: false, error: 'window.print is not a function' };
   }
 
   /**
@@ -1947,6 +2118,8 @@ ${serializedPayload}
     restoreFromSqliteHub,
     generateExecutiveDigestHtml,
     triggerPrintPdf,
+    getOrCreatePrintIframe,
+    printHtmlViaIframe,
     downloadStandaloneHtmlDigest,
     extractDigestMediaKpiMetrics,
     renderExecutiveMediaMetricsGrid,

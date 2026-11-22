@@ -3676,16 +3676,39 @@ function getActiveReportMetrics(options = {}) {
   };
 }
 
-function triggerPrintPdf(options) {
-  const activeMetrics = getActiveReportMetrics(options);
+function triggerPrintPdf(options = {}) {
+  const payload = (options && options.data) || {
+    activityData: (dashboardData && dashboardData.activityData) || {},
+    tracking_history: (dashboardData && dashboardData.activityData) || {},
+    media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData))
+      ? mediaHistoryData
+      : ((dashboardData && dashboardData.mediaHistory) || [])
+  };
+  const activeMetrics = (typeof getActiveReportMetrics === 'function')
+    ? getActiveReportMetrics(options)
+    : {};
+  const activePeriod = options.reportingPeriod ||
+    (typeof currentTemporalRange !== 'undefined' && currentTemporalRange
+      ? `Range: ${currentTemporalRange}`
+      : 'All Recorded Time');
+  const prodIndex = options.productivityIndex !== undefined
+    ? options.productivityIndex
+    : (activeMetrics.productivityScore || 85);
+
   const opts = Object.assign({
+    data: payload,
+    metrics: activeMetrics,
+    mediaMetrics: activeMetrics.mediaMetrics || options.mediaMetrics || {},
+    chronoHeatmap: activeMetrics.chronoHeatmap || options.chronoHeatmap ||
+      (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__) || null,
+    reportingPeriod: activePeriod,
+    productivityIndex: prodIndex,
     doc: typeof document !== 'undefined' ? document : null,
     win: typeof window !== 'undefined' ? window : null,
     totalTime: activeMetrics.totalTime,
     topDomain: activeMetrics.topDomain,
     productivity: activeMetrics.productivity,
-    mediaTime: activeMetrics.mediaTime,
-    reportingPeriod: activeMetrics.reportingPeriod
+    mediaTime: activeMetrics.mediaTime
   }, options);
 
   if (_BackupHubDigest && typeof _BackupHubDigest.triggerPrintPdf === 'function') {
@@ -3693,7 +3716,7 @@ function triggerPrintPdf(options) {
   }
   if (typeof window !== 'undefined' && typeof window.print === 'function') {
     window.print();
-    return { printed: true };
+    return { printed: true, method: 'direct_fallback' };
   }
   return { printed: false, error: 'Print engine unavailable' };
 }

@@ -285,8 +285,11 @@ label.btn {
  * ============================================================================= */
 
 /* Hidden on screen by default */
-.print-executive-header {
+.print-executive-header, #printFallbackContainer {
   display: none;
+}
+#sentinelPrintIframe {
+  position: fixed; top: -9999px; left: -9999px; width: 0; height: 0; border: 0; opacity: 0; pointer-events: none;
 }
 
 @media print {
@@ -326,6 +329,8 @@ label.btn {
     overflow: visible !important;
   }
   #paneMedia { page-break-before: always !important; break-before: page !important; }
+  .part-tracking-section { display: block !important; width: 100% !important; break-after: avoid !important; page-break-after: avoid !important; }
+  .part-media-section { display: block !important; width: 100% !important; page-break-before: always !important; break-before: page !important; }
 
   /* Ensure other tabs remain strictly hidden during report print */
   #paneSettings, #paneAutomations, #paneStudio { display: none !important; }
@@ -338,7 +343,8 @@ label.btn {
   .table-search-filter, .table-sort-wrapper, .table-pagination-footer, .no-print,
   #toastContainer, .floating-actions, .audio-scrubber-dock, .player-scrubber-slider,
   .btn-star-domain, .btn-add-note, .media-deck-header, .eq-card-header,
-  #multiTabMediaDeckContainer, #heroMediaPlayerCard, .heatmap-controls-row,
+  #multiTabMediaDeckContainer, #heroMediaPlayerCard, #heroAudioEqCard, #heroAudioLabCard,
+  #sentinelPrintIframe, .heatmap-controls-row,
   .heatmap-mode-toggles, #heatmapWowBadge, #heatmapCellTooltip, .media-deck-header-actions,
   .hero-controls-group, .hero-progress-section, .hero-volume-section, .hero-advanced-row,
   .audio-lab-widget, .media-history-search-filter, #btnScrollTopMediaHistory, #btnMediaScrollToTop {

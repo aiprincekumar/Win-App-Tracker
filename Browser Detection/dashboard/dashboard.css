@@ -7488,8 +7488,20 @@ body.theme-light .viz-header-status-pill .viz-live-text,
  * ============================================================================= */
 
 /* Hidden on screen by default */
-.print-executive-header {
+.print-executive-header,
+#printFallbackContainer {
   display: none;
+}
+
+#sentinelPrintIframe {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media print {
@@ -7535,6 +7547,20 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     break-before: page !important;
   }
 
+  .part-tracking-section {
+    display: block !important;
+    width: 100% !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .part-media-section {
+    display: block !important;
+    width: 100% !important;
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
   /* Ensure other tabs remain strictly hidden during report print */
   #paneSettings,
   #paneAutomations,
@@ -7574,6 +7600,9 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .eq-card-header,
   #multiTabMediaDeckContainer,
   #heroMediaPlayerCard,
+  #heroAudioEqCard,
+  #heroAudioLabCard,
+  #sentinelPrintIframe,
   .heatmap-controls-row,
   .heatmap-mode-toggles,
   #heatmapWowBadge,
