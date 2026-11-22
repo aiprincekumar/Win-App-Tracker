@@ -705,12 +705,56 @@
   }
 
   /**
+   * Computes average session duration for a domain.
+   */
+  function calculateAverageSessionDuration(activeTime, sessions) {
+    const count = Math.max(1, Number(sessions) || 1);
+    const avgSec = Math.round(Number(activeTime || 0) / count);
+    return formatHoursMinutes(avgSec);
+  }
+
+  /**
+   * Formats a last active timestamp into human-readable recency.
+   */
+  function formatLastActiveRecency(timestamp) {
+    if (!timestamp) return 'Recent';
+    const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : Number(timestamp);
+    if (!Number.isFinite(ts) || ts <= 0) return 'Recent';
+    const diffSec = Math.floor((Date.now() - ts) / 1000);
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return `${Math.floor(diffSec / 86400)}d ago`;
+  }
+
+  /**
+   * Classifies domain category into productivity category.
+   */
+  function classifyProductivityLabel(category) {
+    const cat = (category || '').toLowerCase();
+    if (cat === 'work' || cat === 'learning') return 'Productive';
+    if (cat === 'entertainment' || cat === 'social') return 'Leisure';
+    return 'Neutral';
+  }
+
+  /**
+   * Returns styled HTML badge for productivity classification.
+   */
+  function getProductivityBadge(category) {
+    const label = classifyProductivityLabel(category);
+    const cls = label.toLowerCase();
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  /**
    * Renders detailed domain table rows with category badges.
    */
   function renderDomainRows(sortedDomains, totalActiveSeconds) {
     return sortedDomains.slice(0, 30).map((d, i) => {
       const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
       const cat = escapeHtml(d.category || 'work');
+      const avgDuration = calculateAverageSessionDuration(d.activeTime, d.sessions);
+      const prodBadge = getProductivityBadge(d.category);
       return `<tr>
         <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
         <td style="font-weight:600;color:#0f172a;">${escapeHtml(d.domain)}</td>
@@ -718,6 +762,8 @@
         <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(d.activeTime)}</td>
         <td style="color:#64748b;">${pct}%</td>
         <td style="color:#64748b;">${d.sessions}</td>
+        <td style="font-family:monospace;color:#475569;">${avgDuration}</td>
+        <td>${prodBadge}</td>
       </tr>`;
     }).join('\n      ');
   }
@@ -725,19 +771,24 @@
   /**
    * Renders media playback history rows.
    */
-  function renderMediaRows(mediaHistory) {
+  function renderMediaRows(mediaHistory, totalMediaSeconds) {
     if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
+    const totalSec = Number(totalMediaSeconds) || calculateTotalMediaDuration(mediaHistory);
     return mediaHistory.slice(0, 25).map((m, i) => {
       const title = escapeHtml(m.title || 'Untitled Playback');
       const platform = escapeHtml(m.platform || m.domain || 'Web');
       const dur = Number(m.watchDuration || m.watchTime || m.duration || 0);
-      const audioState = m.isMuted ? 'Muted' : 'Audible';
+      const sharePct = totalSec > 0 ? ((dur / totalSec) * 100).toFixed(1) : '0.0';
+      const audioBadge = m.isMuted ? '<span class="badge muted">Muted</span>' : '<span class="badge audible">Audible</span>';
+      const statusBadge = `<span class="badge ${m.isActive ? 'work' : 'utility'}">${m.isActive ? 'Active Stream' : 'Recorded'}</span>`;
       return `<tr>
         <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
-        <td style="font-weight:600;color:#0f172a;max-width:280px;word-break:break-word;">${title}</td>
+        <td style="font-weight:600;color:#0f172a;max-width:260px;word-break:break-word;">${title}</td>
         <td><span class="badge utility">${platform}</span></td>
         <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(dur)}</td>
-        <td style="color:#64748b;">${audioState}</td>
+        <td style="color:#64748b;font-family:monospace;">${sharePct}%</td>
+        <td>${audioBadge}</td>
+        <td>${statusBadge}</td>
       </tr>`;
     }).join('\n      ');
   }
@@ -745,18 +796,20 @@
   /**
    * Renders optional media playback table section.
    */
-  function renderMediaSection(mediaHistory) {
+  function renderMediaSection(mediaHistory, totalMediaSeconds) {
     if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
-    const rows = renderMediaRows(mediaHistory);
+    const rows = renderMediaRows(mediaHistory, totalMediaSeconds);
     return `<h2 class="section-title">Media Playback & Streaming Telemetry</h2>
     <table>
       <thead>
         <tr>
-          <th style="width:50px;">#</th>
+          <th style="width:45px;">#</th>
           <th>Media Title</th>
           <th>Platform / Source</th>
           <th>Watch Duration</th>
+          <th>Playback Share</th>
           <th>Audio State</th>
+          <th>Playback Status</th>
         </tr>
       </thead>
       <tbody>
@@ -968,6 +1021,11 @@
     .badge.entertainment { background: #fef3c7; color: #b45309; }
     .badge.social { background: #fce7f3; color: #be185d; }
     .badge.utility { background: #f1f5f9; color: #475569; }
+    .badge.productive { background: #dcfce7; color: #15803d; }
+    .badge.leisure { background: #fef3c7; color: #b45309; }
+    .badge.neutral { background: #f1f5f9; color: #475569; }
+    .badge.audible { background: #dcfce7; color: #15803d; }
+    .badge.muted { background: #fee2e2; color: #991b1b; }
     .empty-state-box {
       text-align: center;
       padding: 32px 16px;
@@ -998,7 +1056,12 @@
       body { padding: 0; background: #ffffff !important; color: #0f172a !important; }
       .digest-container { box-shadow: none; border: none; padding: 0; width: 100% !important; max-width: 100% !important; }
       .no-print { display: none !important; }
+      table { page-break-inside: auto !important; break-inside: auto !important; width: 100% !important; }
       tr, .metric-card, .chart-section { page-break-inside: avoid !important; break-inside: avoid !important; }
+      thead { display: table-header-group !important; }
+      tbody { display: table-row-group !important; }
+      tfoot { display: table-footer-group !important; }
+      h1, h2, h3, .section-title { break-after: avoid !important; page-break-after: avoid !important; }
     }`;
 
   /**
@@ -1067,12 +1130,14 @@
     <table>
       <thead>
         <tr>
-          <th style="width:50px;">Rank</th>
-          <th>Domain</th>
+          <th style="width:45px;">Rank</th>
+          <th>Domain & Host</th>
           <th>Category</th>
-          <th>Duration</th>
-          <th>Share</th>
-          <th>Sessions</th>
+          <th>Active Duration</th>
+          <th>Proportion Share</th>
+          <th>Total Sessions</th>
+          <th>Avg Session Duration</th>
+          <th>Productivity Impact</th>
         </tr>
       </thead>
       <tbody>
@@ -1109,7 +1174,7 @@
     const mainContentHtml = renderProportionsAndTable(
       sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
     );
-    const mediaSectionHtml = renderMediaSection(mediaHistory);
+    const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
     const serializedPayload = JSON.stringify(rawData);
 
     return `<!DOCTYPE html>
@@ -1326,6 +1391,10 @@ ${serializedPayload}
     formatHoursMinutes,
     escapeHtml,
     normalizeTelemetryDataset,
+    calculateAverageSessionDuration,
+    formatLastActiveRecency,
+    classifyProductivityLabel,
+    getProductivityBadge,
     onInit: function (context) {
       if (context && context.logger && typeof context.logger.info === 'function') {
         context.logger.info('[BackupHubDigestFeature] Initialized');

@@ -102,7 +102,12 @@ const dashboardCss = fs.readFileSync(dashboardCssPath, 'utf8');
   assert(css.includes('#paneTracking'), `${fileLabel} must include #paneTracking display override in print`);
   assert(css.includes('display: block !important'), `${fileLabel} must force #paneTracking display: block !important`);
   assert(css.includes('.main-stage'), `${fileLabel} must unlock .main-stage in print`);
-  assert(css.includes('page-break-inside: avoid'), `${fileLabel} must set page-break-inside: avoid`);
+  assert(css.includes('page-break-inside: auto') || css.includes('break-inside: auto'), `${fileLabel} must set table container break-inside: auto`);
+  assert(css.includes('page-break-inside: avoid') || css.includes('break-inside: avoid'), `${fileLabel} must set tr break-inside: avoid`);
+  assert(css.includes('table-header-group'), `${fileLabel} must set thead display: table-header-group`);
+  assert(css.includes('table-row-group'), `${fileLabel} must set tbody display: table-row-group`);
+  assert(css.includes('table-footer-group'), `${fileLabel} must set tfoot display: table-footer-group`);
+  assert(css.includes('break-after: avoid') || css.includes('page-break-after: avoid'), `${fileLabel} must set heading break-after: avoid`);
   assert(css.includes('.print-executive-header'), `${fileLabel} must style .print-executive-header`);
   assert(css.includes('.no-print'), `${fileLabel} must hide .no-print elements in print`);
 });
@@ -131,6 +136,24 @@ assert(generatedHtml.includes('Learn Rust'), 'Must display media title');
 assert(generatedHtml.includes('id="sentinel-digest-payload"'), 'Must embed lossless serialized JSON payload');
 assert(generatedHtml.includes('size: A4 landscape'), 'generatedHtml must include size: A4 landscape in @page');
 assert(generatedHtml.includes('max-width: 1140px'), 'generatedHtml must include max-width: 1140px');
+
+// Assert 8-column domain telemetry table headers
+assert(generatedHtml.includes('Rank'), 'Must include Rank column');
+assert(generatedHtml.includes('Domain & Host') || generatedHtml.includes('Domain'), 'Must include Domain column');
+assert(generatedHtml.includes('Category'), 'Must include Category column');
+assert(generatedHtml.includes('Active Duration') || generatedHtml.includes('Duration'), 'Must include Duration column');
+assert(generatedHtml.includes('Proportion Share') || generatedHtml.includes('Share'), 'Must include Share column');
+assert(generatedHtml.includes('Total Sessions') || generatedHtml.includes('Sessions'), 'Must include Sessions column');
+assert(generatedHtml.includes('Avg Session Duration') || generatedHtml.includes('Avg Session'), 'Must include Avg Session column');
+assert(generatedHtml.includes('Productivity Impact') || generatedHtml.includes('Productivity'), 'Must include Productivity Impact column');
+
+// Assert 7-column media telemetry table headers
+assert(generatedHtml.includes('Media Title'), 'Must include Media Title column');
+assert(generatedHtml.includes('Platform / Source') || generatedHtml.includes('Platform'), 'Must include Platform column');
+assert(generatedHtml.includes('Watch Duration'), 'Must include Watch Duration column');
+assert(generatedHtml.includes('Playback Share'), 'Must include Playback Share column');
+assert(generatedHtml.includes('Audio State'), 'Must include Audio State column');
+assert(generatedHtml.includes('Playback Status'), 'Must include Playback Status column');
 
 // Test empty state
 const emptyHtml = feature.generateExecutiveDigestHtml({}, { reportingPeriod: 'Empty Range' });

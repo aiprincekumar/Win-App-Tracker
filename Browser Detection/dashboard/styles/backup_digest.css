@@ -502,24 +502,37 @@ label.btn {
     overflow-x: visible !important;
   }
 
-  /* Keep cards and table rows together without awkward page breaks */
+  /* Allow multi-page table containers to flow naturally across pages */
+  .data-table-card,
+  .table-card,
+  .domain-table-container,
+  .table-responsive-container {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Keep discrete cards, charts, headers, and individual rows together without mid-element breaks */
   .print-executive-header,
   .metrics-grid,
   .metric-card,
   .analytics-hero-card,
   .donut-chart-container,
-  .data-table-card,
-  .table-card,
-  .domain-table-container,
-  .table-responsive-container,
+  .chart-section,
+  .print-summary-card,
   tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  thead {
-    display: table-header-group !important;
+  /* Anti-orphan rules for headings */
+  h1, h2, h3, .section-title, .table-card-header, .export-section-title, .print-executive-header {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
+
+  thead { display: table-header-group !important; }
+  tbody { display: table-row-group !important; }
+  tfoot { display: table-footer-group !important; }
 
   /* Enhance borders and contrast for grayscale / color printing */
   .bento-card, .metric-card, table, table.modern-data-table {

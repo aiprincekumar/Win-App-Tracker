@@ -5,7 +5,7 @@
 > **Task ID:** `TASK-EXPORT-REPORTS-DATA-LAYOUT-FIX-001`  
 > **Governing Architecture:** [`PHASE_WISE_PROMPT_GENERATION_ARCHITECTURE.md`](file:///C:/Users/Atul%20Verma/.gemini/config/rules/PHASE_WISE_PROMPT_GENERATION_ARCHITECTURE.md)  
 > **Command Hierarchy Role:** Level 3C Phase-wise Prompt Generation Specialist (`prompt_generation_specialist`)  
-> **Target Subsystems:** `dashboard/dashboard.js`, `src/dashboard/features/backup_hub_digest_feature.js`, `dashboard/styles/backup_digest.css`, `dashboard/dashboard.css`, `dashboard/dashboard.html`, `tests/`  
+> **Target Subsystems:** `dashboard/dashboard.css`, `dashboard/styles/backup_digest.css`, `src/dashboard/features/backup_hub_digest_feature.js`, `dashboard/dashboard.js`, `tests/test_export_reports_data_and_layout_fix.js`  
 > **Lead Departments:** Dept 01 (Product Requirements), Dept 04 (UI/UX Design System), Dept 05 (Frontend Engineering), Dept 08 (QA & Testing)  
 > **Target Autonomy Strategy:** Strategy A (Fully Autonomous Phase-wise Execution, Target Autonomy Score: 1.0)  
 
@@ -13,37 +13,23 @@
 
 ## 📋 1. Executive Problem-Solution Dossier
 
-### 1.1 Context & User Feedback
-The user reported a critical defect in both report export capabilities of the Web Activity & Media Sentinel dashboard:
-> *"अभी भी ये सिर्फ डेमो और ब्लैंक डेटा शो कर रहा है। पहले तो कुछ भी शो नहीं कर रहा था, पूरा ब्लैंक था। मगर अब KPI वगैरह सब शो कर रहा है लेकिन उसमें डेटा कुछ भी नहीं है। दोनों ही केस में सेम एरर आ रहा है, मतलब एक तरह से ब्लैंक डेटा ही आ रहा है। फॉर्मेट है लेकिन डेटा कुछ नहीं है और फॉर्मेट भी सही नहीं है।"*
-> *(Translation: Still it is only showing demo and blank data. Earlier it wasn't showing anything at all, it was completely blank. But now it is showing KPI etc. but there is no data in it. In both cases [Save PDF and Offline HTML Report], the same issue is occurring — essentially blank data is being exported. The format is there, but there is no data, and the format/layout is also not proper.)*
-
-### 1.2 Root Cause Analysis & Forensic Breakdown
-
-#### Defect A: Data Hydration Failure in "Save PDF" (`triggerPrintPdf`)
-1. **Unmapped Properties on `dashboardData`:** In `dashboard/dashboard.js`, `triggerPrintPdf()` attempts to read `dashboardData.totalSeconds`, `dashboardData.items`, and `dashboardData.totalMediaSeconds`. However, `dashboardData` received from the background worker via `GET_DASHBOARD_DATA` stores raw `activityData` (`{ domains: { ... } }`) and `mediaHistory` (`[ { watchDuration: ... } ]`). `totalSeconds`, `items`, and `totalMediaSeconds` are `undefined` on `dashboardData`, causing `triggerPrintPdf()` to fall back to `0h 00m`, `--`, and `0h 00m`.
-2. **Missing Active Filter & Temporal Range Sync:** The reporting period `#printReportPeriod` is hardcoded to "Reporting Period: All Time" and never synchronized with the active dashboard filter (`temporalSubtab` / `currentTemporalRange`).
-3. **Tab Display Lockout in Print Mode:** If the user triggers PDF export while in the Settings tab (where the backup & export action cards reside) or if `#paneTracking` is inactive, `@media print` rules set `#paneSettings` to `display: none !important;` without forcing `#paneTracking` to `display: block !important;`. As a result, the print preview displays only the 4-card header with empty zeros and completely blank pages below it.
-
-#### Defect B: Data Extraction Failure in "Offline HTML Report" (`downloadStandaloneHtmlDigest` / `generateExecutiveDigestHtml`)
-1. **Schema Mismatch in `backup_hub_digest_feature.js`:** `generateExecutiveDigestHtml()` expects `trackingHistory` to be structured as a legacy day-keyed map: `{ [dateStr]: { totalActiveTime: number, domains: { ... } } }`. However, the live telemetry payload emitted by `background.js` and `chrome.storage.local` is modern `activityData`:
-   ```javascript
-   {
-     domains: {
-       "domain.com": {
-         seconds: 1234,
-         sessionCount: 5,
-         category: "work",
-         days: { "2026-11-21": { seconds: 1234, sessions: 5 } }
-       }
-     },
-     historyDaysCount: 1,
-     firstTrackedDate: "2026-11-21"
-   }
-   ```
-   When `Object.keys(trackingHistory)` iterates over keys like `"domains"` and `"historyDaysCount"`, `day.totalActiveTime` and `day.domains` evaluate to `undefined`. Consequently, `domainTotals` remains `{}` (empty), `totalActiveSeconds` stays `0`, `sortedDomains` becomes `[]`, the SVG donut segments evaluate to `""`, and the domain table body renders 0 rows.
-2. **Media Watch Time Property Key Mismatch:** In `generateExecutiveDigestHtml()`, media duration was accumulated using `(m.watchTime || m.duration || 0)`. The actual property populated by `background.js` and recorded in `mediaHistory` is `m.watchDuration`. As a result, `totalMediaSeconds` evaluated to `0` even when rich media sessions existed.
-3. **Substandard Layout & Missing Offline Polish:** The generated HTML report lacks modern visual presentation, responsive bento typography, clear category badging, high-contrast print styles, and graceful empty-state handling for new installations.
+### 1.1 Context & Objectives
+Following the successful implementation of Universal Telemetry Normalization and active metrics hydration, this iteration delivers a comprehensive overhaul of the PDF print engine and landscape reporting presentation:
+1. **PDF Print Layout Page-Break Overhaul:**
+   - In both `dashboard/dashboard.css` and `dashboard/styles/backup_digest.css`, resolve print pagination defects where large tables or containers are clamped or split mid-row.
+   - Enforce `break-inside: auto !important;` on table containers (`.domain-table-container`, `.table-card`, `.data-table-card`, `.table-responsive-container`) so browsers can paginate smoothly across multiple A4 landscape pages.
+   - Enforce `break-inside: avoid !important; page-break-inside: avoid !important;` strictly on table rows (`tr`), metric cards (`.metric-card`, `.print-summary-card`), and chart containers (`.chart-section`, `.donut-chart-container`).
+   - Enforce anti-orphan rules on section headings (`h1, h2, h3, .section-title, .print-executive-header { break-after: avoid !important; page-break-after: avoid !important; }`).
+   - Guarantee `thead { display: table-header-group !important; }` so table headers cleanly repeat at the top of every printed page.
+2. **Comprehensive Landscape Telemetry Table Columns (Domain and Media):**
+   - Take full advantage of A4 landscape width (1140px / 297mm) by expanding both Domain and Media telemetry tables with rich executive columns.
+   - **Domain Telemetry Table:** Expand from 6 to 8 columns: `Rank`, `Domain & Host`, `Category`, `Active Duration`, `Proportion Share`, `Total Sessions`, `Avg Session Duration`, and `Productivity Impact`.
+   - **Media Playback & Streaming Telemetry Table:** Expand from 5 to 7 columns: `#`, `Media Title`, `Platform / Source`, `Watch Duration`, `Playback Share`, `Audio State` (Audible/Muted badge), and `Playback Status / Type`.
+   - Synchronize CSS styling in `dashboard/dashboard.css`, `backup_digest.css`, and the inline template CSS in `backup_hub_digest_feature.js`.
+3. **Universal Rule 28 Compliance & Test Suite Synchronization:**
+   - Guarantee all modified/added helper functions in `src/dashboard/features/backup_hub_digest_feature.js` strictly adhere to Universal Rule 28 ($\le 50$ lines, cyclomatic depth $\le 3$).
+   - Update `tests/test_export_reports_data_and_layout_fix.js` across Batteries 2, 3, and 5 to assert page-break properties, expanded landscape columns, and Rule 28 compliance.
+   - Maintain 100% UTF-8 with BOM encoding across all files.
 
 ---
 
@@ -51,13 +37,12 @@ The user reported a critical defect in both report export capabilities of the We
 
 | S.No | File | Root Cause | Proposed Fix | Post-Fix Impact | Phase # | Test Gate |
 | :---: | :--- | :--- | :--- | :--- | :---: | :--- |
-| **1** | `dashboard/dashboard.js` | `triggerPrintPdf` reads non-existent `dashboardData.totalSeconds` & `dashboardData.items`, producing blank `0h 00m` & `--` | Read computed metrics from `stats` / active DOM cards (`trackMetricTotalTime`, `statTopFocusDomain`, `lastCalculatedProductivityScore`, and `mediaHistoryData`) | Full real-time data population in PDF Print executive header | Phase 1 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **2** | `src/dashboard/features/backup_hub_digest_feature.js` | `generateExecutiveDigestHtml` assumes legacy day-keyed schema, causing empty `{}` on modern `activityData.domains` | Implement multi-schema normalizer supporting `activityData.domains`, day-keyed snapshots, and pre-computed `items` | Standalone HTML report correctly displays total time, top domain, donut chart, and domain table | Phase 1 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **3** | `src/dashboard/features/backup_hub_digest_feature.js` | `totalMediaSeconds` checks `m.watchTime \|\| m.duration` instead of canonical `m.watchDuration` | Sum `(m.watchDuration \|\| m.watchTime \|\| m.duration \|\| 0)` | Media Consumed KPI accurately reflects watched minutes/hours | Phase 1 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **4** | `dashboard/styles/backup_digest.css` & `dashboard.css` | Print CSS hides inactive tabs; if print triggered from Settings, tracking tab remains hidden | Add `@media print { #paneTracking { display: block !important; } }` and sanitize paper styling | PDF print preview prints full executive digest regardless of active tab | Phase 2 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **5** | `dashboard/styles/backup_digest.css` & `dashboard.css` | Glassmorphism, gradients, and dark theme colors cause low contrast or unformatted output on paper | Provide clean white-paper `@media print` rules, crisp borders (`#cbd5e1`), high-contrast slate text, and page break isolation | Clean, readable, executive multi-page PDF output | Phase 2 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **6** | `src/dashboard/features/backup_hub_digest_feature.js` | Standalone HTML template lacks executive styling, responsive cards, category badges, and quick-print action | Overhaul standalone HTML template with modern bento KPI cards, SVG donut chart, distribution bars, and quick print button | Ultra-premium, self-contained, 100% offline HTML report | Phase 3 | `node tests/test_export_reports_data_and_layout_fix.js` |
-| **7** | `tests/test_export_reports_data_and_layout_fix.js` | Lack of automated tests verifying multi-schema data hydration and report generation | Author 7-battery comprehensive automated test suite verifying data hydration, print DOM, and HTML report integrity | Guaranteed zero regressions, Grade A+ verification signoff | Phase 4 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **1** | `dashboard/styles/backup_digest.css` & `dashboard/dashboard.css` | Table containers (`.domain-table-container`, `.table-card`) had `break-inside: avoid !important;`, preventing multi-page table pagination and causing clipped or pushed content in PDF print | Set container `break-inside: auto !important;`, preserve `break-inside: avoid !important;` on `tr`, add `break-after: avoid !important;` on section headings, and ensure `thead { display: table-header-group !important; }` | Clean, multi-page print pagination without clipped rows or orphaned section titles | Phase 1 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **2** | `src/dashboard/features/backup_hub_digest_feature.js` | Domain table in HTML digest template only displays 6 narrow columns, underutilizing available A4 landscape width | Expand Domain Telemetry table to 8 columns: `Rank`, `Domain & Host`, `Category`, `Active Duration`, `Proportion Share`, `Total Sessions`, `Avg Session Duration`, `Productivity Impact` | Rich, comprehensive domain intelligence optimized for landscape export | Phase 2 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **3** | `src/dashboard/features/backup_hub_digest_feature.js` | Media playback table lacks playback share percentage and playback status/type columns | Expand Media table to 7 columns: `#`, `Media Title`, `Platform / Source`, `Watch Duration`, `Playback Share`, `Audio State`, `Playback Status / Type` | Detailed media streaming telemetry matching landscape format | Phase 2 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **4** | `dashboard/dashboard.css` | Print styles lack specialized column width classes and responsive alignment for 8-column domain and 7-column media tables | Add high-contrast print table CSS tokens, alignment classes, and border rules | Crystal-clear typography and tabular numeral alignment in PDF print | Phase 2 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **5** | `src/dashboard/features/backup_hub_digest_feature.js` | Refactored rendering helpers risk violating Universal Rule 28 line count ($\le 50$) or nesting depth ($\le 3$) | Modularize row rendering into focused helper functions: `renderDomainRows`, `renderMediaRows`, `computeSessionAverages` | 100% Rule 28 modularity compliance | Phase 3 | `node tests/test_export_reports_data_and_layout_fix.js` |
+| **6** | `tests/test_export_reports_data_and_layout_fix.js` | Existing test assertions only verify legacy 6-column / 5-column headers and omit container `break-inside: auto` checks | Update Battery 2 (page-break assertions), Battery 3 (8-col domain & 7-col media assertions), and Battery 5 (Rule 28 & BOM) | 100% automated regression protection and Grade A+ QA signoff | Phase 3 | `node tests/test_export_reports_data_and_layout_fix.js`<br>`node run_all_tests.js` |
 
 ---
 
@@ -65,10 +50,9 @@ The user reported a critical defect in both report export capabilities of the We
 
 | Phase # | Phase Name | Primary Target File(s) | Lead Subagent Role | Local Verification Command | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| **Phase 01** | Universal Data Binding & Hydration Engine | `dashboard/dashboard.js`<br>`src/dashboard/features/backup_hub_digest_feature.js` | Level 4 Frontend Engineer | `node tests/test_export_reports_data_and_layout_fix.js` | ⏳ PENDING |
-| **Phase 02** | PDF Print View Layout & Styling Overhaul | `dashboard/styles/backup_digest.css`<br>`dashboard/dashboard.css`<br>`dashboard/dashboard.html` | Level 4 Frontend Engineer | `node tests/test_export_reports_data_and_layout_fix.js` | ⏳ PENDING |
-| **Phase 03** | Standalone Offline HTML Report Template Overhaul | `src/dashboard/features/backup_hub_digest_feature.js` | Level 4 Frontend Engineer | `node tests/test_export_reports_data_and_layout_fix.js` | ⏳ PENDING |
-| **Phase 04** | QA Verification Test Suite & Constitutional Compliance | `tests/test_export_reports_data_and_layout_fix.js`<br>`run_all_tests.js` | Level 4 QA Verification Tester | `node tests/test_export_reports_data_and_layout_fix.js`<br>`node run_all_tests.js` | ⏳ PENDING |
+| **Phase 01** | PDF Print Layout Page-Break & Table Flow Overhaul | `dashboard/styles/backup_digest.css`<br>`dashboard/dashboard.css` | Level 4 Frontend Engineer | `node tests/test_export_reports_data_and_layout_fix.js` | ⏳ PENDING |
+| **Phase 02** | Comprehensive Landscape Telemetry Table Columns (Domain & Media) | `src/dashboard/features/backup_hub_digest_feature.js`<br>`dashboard/dashboard.css` | Level 4 Frontend Engineer | `node tests/test_export_reports_data_and_layout_fix.js` | ⏳ PENDING |
+| **Phase 03** | Universal Rule 28 Compliance & QA Test Suite Synchronization | `tests/test_export_reports_data_and_layout_fix.js`<br>`src/dashboard/features/backup_hub_digest_feature.js`<br>`run_all_tests.js` | Level 4 QA Verification Tester | `node tests/test_export_reports_data_and_layout_fix.js`<br>`node run_all_tests.js` | ⏳ PENDING |
 
 ---
 
