@@ -7499,10 +7499,11 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     margin: 10mm 12mm 10mm 12mm;
   }
 
-  /* Reset main background to pure white and unlock multi-page scroll / height flow */
+  /* Reset layout containers and unlock multi-page scroll / height flow */
   html, body, .dashboard-layout, .main-stage, .main-content, .tab-content-container {
     background: #ffffff !important;
     color: #0f172a !important;
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -7536,7 +7537,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     display: none !important;
   }
 
-  /* Hide non-printable navigation, sidebar, action buttons, modals and search bars */
+  /* Hide non-printable navigation, sidebar, action buttons, modals, audio scrubbers and search bars */
   .sidebar,
   .top-app-bar,
   .dashboard-header-actions,
@@ -7557,8 +7558,20 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .table-search-filter,
   .table-sort-wrapper,
   .table-pagination-footer,
-  .no-print {
+  .no-print,
+  #toastContainer,
+  .floating-actions,
+  .audio-scrubber-dock,
+  .player-scrubber-slider,
+  .btn-star-domain,
+  .btn-add-note,
+  .media-deck-header,
+  .eq-card-header {
     display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Executive Report Header */
@@ -7569,10 +7582,10 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     box-sizing: border-box !important;
     overflow: visible !important;
     border-bottom: 2px solid #0f172a !important;
-    padding-bottom: 16px !important;
-    margin-bottom: 24px !important;
-    break-after: avoid;
-    page-break-after: avoid;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .print-brand-row {
@@ -7582,7 +7595,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 12px !important;
   }
 
   .print-title {
@@ -7611,17 +7624,17 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .print-summary-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
-    gap: 12px !important;
+    gap: 8px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
-    margin-top: 14px !important;
+    margin-top: 10px !important;
   }
 
   .print-summary-card {
     border: 1px solid #cbd5e1 !important;
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
     border-radius: 6px !important;
     background: #f8fafc !important;
     box-sizing: border-box !important;
@@ -7638,11 +7651,21 @@ body.theme-light .viz-header-status-pill .viz-live-text,
 
   .print-stat-value {
     display: block !important;
-    font-size: 1.25rem !important;
+    font-size: 1.15rem !important;
     font-weight: 800 !important;
     color: #0f172a !important;
     margin-top: 2px !important;
     font-variant-numeric: tabular-nums !important;
+  }
+
+  /* Unwind Bento Grid for Print */
+  .bento-grid-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
   }
 
   /* Full landscape width and container styling to prevent right-side clipping */
@@ -7651,6 +7674,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .metric-card,
   .analytics-hero-card,
   .donut-chart-container,
+  .chart-section,
   .data-table-card,
   .table-card,
   .domain-table-container,
@@ -7662,32 +7686,64 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     overflow-x: visible !important;
   }
 
-  /* Allow multi-page table containers to flow naturally across pages */
+  /* Allow composite multi-page containers and sections to flow naturally across pages */
+  .bento-grid-container,
+  .metrics-grid,
+  .analytics-hero-card,
+  .donut-chart-container,
+  .chart-section,
   .data-table-card,
   .table-card,
   .domain-table-container,
   .table-responsive-container {
     page-break-inside: auto !important;
     break-inside: auto !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
-  /* Keep discrete cards, charts, headers, and individual rows together without mid-element breaks */
+  /* Atomic leaf protection: strictly on small standalone items */
   .print-executive-header,
-  .metrics-grid,
   .metric-card,
-  .analytics-hero-card,
-  .donut-chart-container,
-  .chart-section,
   .print-summary-card,
   tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
+  /* High-density horizontal KPI flow */
+  .metrics-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    width: 100% !important;
+  }
+
+  .metrics-grid .metric-card {
+    flex: 1 1 calc(20% - 8px) !important;
+    min-width: 120px !important;
+    max-width: calc(20% - 6px) !important;
+    padding: 8px 10px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .metrics-grid .metric-big-num {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+  }
+
+  .metrics-grid .metric-label {
+    font-size: 0.70rem !important;
+  }
+
   /* Anti-orphan rules for headings */
   h1, h2, h3, .section-title, .table-card-header, .export-section-title, .print-executive-header {
     break-after: avoid !important;
     page-break-after: avoid !important;
+    margin-top: 14px !important;
+    margin-bottom: 8px !important;
   }
 
   thead {
@@ -7713,6 +7769,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
+    margin-bottom: 14px !important;
   }
 
   table th, table.modern-data-table th {
@@ -7720,17 +7777,17 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     color: #475569 !important;
     border-bottom: 2px solid #cbd5e1 !important;
     font-weight: 700 !important;
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
     text-transform: uppercase !important;
-    padding: 8px 10px !important;
+    padding: 6px 8px !important;
     box-sizing: border-box !important;
   }
 
   table td, table.modern-data-table td {
     color: #0f172a !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    padding: 8px 10px !important;
-    font-size: 0.85rem !important;
+    padding: 5px 8px !important;
+    font-size: 0.8rem !important;
     box-sizing: border-box !important;
     word-break: break-word !important;
   }

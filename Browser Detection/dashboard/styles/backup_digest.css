@@ -47,9 +47,7 @@
   flex-grow: 1;
 }
 
-.backup-input-row,
-.snapshot-controls-row,
-.hub-sync-buttons-row {
+.backup-input-row, .snapshot-controls-row, .hub-sync-buttons-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -69,9 +67,7 @@
  * ============================================================================= */
 
 /* Base Button Utility inside Backup Hub */
-.backup-action-box .btn,
-.backup-actions-grid .btn,
-.btn {
+.backup-action-box .btn, .backup-actions-grid .btn, .btn {
   font-family: inherit;
   font-weight: 500;
   text-decoration: none;
@@ -86,17 +82,13 @@
 }
 
 /* Accessible Focus Ring */
-.backup-action-box .btn:focus-visible,
-.backup-actions-grid .btn:focus-visible,
-.btn:focus-visible {
+.backup-action-box .btn:focus-visible, .backup-actions-grid .btn:focus-visible, .btn:focus-visible {
   outline: 2px solid rgba(56, 189, 248, 0.7);
   outline-offset: 2px;
 }
 
 /* Button Size Variants */
-.backup-action-box .btn-sm,
-.backup-actions-grid .btn-sm,
-.btn-sm {
+.backup-action-box .btn-sm, .backup-actions-grid .btn-sm, .btn-sm {
   padding: 6px 14px;
   font-size: 0.82rem;
   border-radius: 7px;
@@ -108,9 +100,7 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.backup-action-box .btn-xs,
-.backup-actions-grid .btn-xs,
-.btn-xs {
+.backup-action-box .btn-xs, .backup-actions-grid .btn-xs, .btn-xs {
   padding: 4px 10px;
   font-size: 0.74rem;
   border-radius: 5px;
@@ -132,9 +122,7 @@ label.btn {
 }
 
 /* Primary Buttons: Liquid-glass emerald accent gradient */
-.backup-action-box .btn-primary,
-.backup-actions-grid .btn-primary,
-.btn-primary {
+.backup-action-box .btn-primary, .backup-actions-grid .btn-primary, .btn-primary {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12));
   border: 1px solid rgba(16, 185, 129, 0.35);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -143,9 +131,7 @@ label.btn {
   cursor: pointer;
 }
 
-.backup-action-box .btn-primary:hover,
-.backup-actions-grid .btn-primary:hover,
-.btn-primary:hover {
+.backup-action-box .btn-primary:hover, .backup-actions-grid .btn-primary:hover, .btn-primary:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.32), rgba(5, 150, 105, 0.22));
   border-color: rgba(52, 211, 153, 0.5);
   color: #ffffff;
@@ -153,17 +139,13 @@ label.btn {
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.backup-action-box .btn-primary:active,
-.backup-actions-grid .btn-primary:active,
-.btn-primary:active {
+.backup-action-box .btn-primary:active, .backup-actions-grid .btn-primary:active, .btn-primary:active {
   transform: scale(0.97);
   box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
 }
 
 /* Secondary Buttons: Refined liquid-glass surface */
-.backup-action-box .btn-secondary,
-.backup-actions-grid .btn-secondary,
-.btn-secondary {
+.backup-action-box .btn-secondary, .backup-actions-grid .btn-secondary, .btn-secondary {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
@@ -172,9 +154,7 @@ label.btn {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.backup-action-box .btn-secondary:hover,
-.backup-actions-grid .btn-secondary:hover,
-.btn-secondary:hover {
+.backup-action-box .btn-secondary:hover, .backup-actions-grid .btn-secondary:hover, .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.09);
   border-color: rgba(56, 189, 248, 0.35);
   color: #f8fafc;
@@ -182,17 +162,13 @@ label.btn {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.backup-action-box .btn-secondary:active,
-.backup-actions-grid .btn-secondary:active,
-.btn-secondary:active {
+.backup-action-box .btn-secondary:active, .backup-actions-grid .btn-secondary:active, .btn-secondary:active {
   transform: scale(0.97);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Ghost / Quick Rollback Buttons: Translucent frosted pills */
-.backup-action-box .btn-ghost,
-.backup-actions-grid .btn-ghost,
-.btn-ghost {
+.backup-action-box .btn-ghost, .backup-actions-grid .btn-ghost, .btn-ghost {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #94a3b8;
@@ -200,9 +176,7 @@ label.btn {
   cursor: pointer;
 }
 
-.backup-action-box .btn-ghost:hover,
-.backup-actions-grid .btn-ghost:hover,
-.btn-ghost:hover {
+.backup-action-box .btn-ghost:hover, .backup-actions-grid .btn-ghost:hover, .btn-ghost:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(148, 163, 184, 0.25);
   color: #f1f5f9;
@@ -210,15 +184,12 @@ label.btn {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.backup-action-box .btn-ghost:active,
-.backup-actions-grid .btn-ghost:active,
-.btn-ghost:active {
+.backup-action-box .btn-ghost:active, .backup-actions-grid .btn-ghost:active, .btn-ghost:active {
   transform: scale(0.97);
 }
 
 /* Rolling Snapshot Select Control */
-.backup-action-box .select-snapshot,
-.select-snapshot {
+.backup-action-box .select-snapshot, .select-snapshot {
   flex: 1;
   min-width: 150px;
   font-size: 0.82rem;
@@ -235,14 +206,12 @@ label.btn {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.backup-action-box .select-snapshot:hover,
-.select-snapshot:hover {
+.backup-action-box .select-snapshot:hover, .select-snapshot:hover {
   border-color: rgba(56, 189, 248, 0.4);
   background: rgba(15, 23, 42, 0.85);
 }
 
-.backup-action-box .select-snapshot:focus-visible,
-.select-snapshot:focus-visible {
+.backup-action-box .select-snapshot:focus-visible, .select-snapshot:focus-visible {
   outline: 2px solid rgba(56, 189, 248, 0.7);
   outline-offset: 2px;
   border-color: rgba(56, 189, 248, 0.8);
@@ -284,15 +253,9 @@ label.btn {
   border-radius: 4px;
 }
 
-.conflict-choices-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.conflict-choice-item {
-  width: 100%;
-}
+.conflict-choices-list { display: flex; flex-direction: column; gap: 10px; }
+.conflict-choice-item { width: 100%; }
+.choice-subtext { font-size: 0.75rem; font-weight: 400; opacity: 0.8; }
 
 .conflict-choice-item button {
   width: 100%;
@@ -317,12 +280,6 @@ label.btn {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
-.choice-subtext {
-  font-size: 0.75rem;
-  font-weight: 400;
-  opacity: 0.8;
-}
-
 /* =============================================================================
  * Feature 6: Executive PDF & HTML Digest Engine (@media print)
  * ============================================================================= */
@@ -339,10 +296,11 @@ label.btn {
     margin: 10mm 12mm 10mm 12mm;
   }
 
-  /* Reset main background to pure white and unlock multi-page scroll / height flow */
+  /* Reset layout containers and unlock multi-page scroll / height flow */
   html, body, .dashboard-layout, .main-stage, .main-content, .tab-content-container {
     background: #ffffff !important;
     color: #0f172a !important;
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -369,36 +327,23 @@ label.btn {
   }
 
   /* Ensure other tabs remain strictly hidden during report print */
-  #paneSettings,
-  #paneMedia,
-  #paneAutomations,
-  #paneStudio {
+  #paneSettings, #paneMedia, #paneAutomations, #paneStudio {
     display: none !important;
   }
 
-  /* Hide non-printable navigation, sidebar, action buttons, modals and search bars */
-  .sidebar,
-  .top-app-bar,
-  .dashboard-header-actions,
-  .btn,
-  .btn-action-outline,
-  .temporal-subtabs,
-  .search-container,
-  .browser-filter-container,
-  .modal-backdrop,
-  .omni-modal-overlay,
-  .sticky-mini-player-dock,
-  .settings-card,
-  #heroAudioLabStatus,
-  #canvasAudioVisualizer,
-  #customDateRangePicker,
-  #btnSidebarReconnectHub,
-  #dataHubBadge,
-  .table-search-filter,
-  .table-sort-wrapper,
-  .table-pagination-footer,
-  .no-print {
+  /* Hide non-printable navigation, sidebar, action buttons, modals, audio scrubbers and search bars */
+  .sidebar, .top-app-bar, .dashboard-header-actions, .btn, .btn-action-outline,
+  .temporal-subtabs, .search-container, .browser-filter-container, .modal-backdrop,
+  .omni-modal-overlay, .sticky-mini-player-dock, .settings-card, #heroAudioLabStatus,
+  #canvasAudioVisualizer, #customDateRangePicker, #btnSidebarReconnectHub, #dataHubBadge,
+  .table-search-filter, .table-sort-wrapper, .table-pagination-footer, .no-print,
+  #toastContainer, .floating-actions, .audio-scrubber-dock, .player-scrubber-slider,
+  .btn-star-domain, .btn-add-note, .media-deck-header, .eq-card-header {
     display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Executive Report Header */
@@ -409,10 +354,10 @@ label.btn {
     box-sizing: border-box !important;
     overflow: visible !important;
     border-bottom: 2px solid #0f172a !important;
-    padding-bottom: 16px !important;
-    margin-bottom: 24px !important;
-    break-after: avoid;
-    page-break-after: avoid;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .print-brand-row {
@@ -422,7 +367,7 @@ label.btn {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 12px !important;
   }
 
   .print-title {
@@ -451,22 +396,21 @@ label.btn {
   .print-summary-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
-    gap: 12px !important;
+    gap: 8px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
-    margin-top: 14px !important;
+    margin-top: 10px !important;
   }
 
   .print-summary-card {
     border: 1px solid #cbd5e1 !important;
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
     border-radius: 6px !important;
     background: #f8fafc !important;
     box-sizing: border-box !important;
   }
-
   .print-stat-label {
     display: block !important;
     font-size: 0.72rem !important;
@@ -475,26 +419,29 @@ label.btn {
     font-weight: 700 !important;
     letter-spacing: 0.5px !important;
   }
-
   .print-stat-value {
     display: block !important;
-    font-size: 1.25rem !important;
+    font-size: 1.15rem !important;
     font-weight: 800 !important;
     color: #0f172a !important;
     margin-top: 2px !important;
     font-variant-numeric: tabular-nums !important;
   }
 
+  /* Unwind Bento Grid for Print */
+  .bento-grid-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+
   /* Full landscape width and container styling to prevent right-side clipping */
-  .bento-grid-container,
-  .metrics-grid,
-  .metric-card,
-  .analytics-hero-card,
-  .donut-chart-container,
-  .data-table-card,
-  .table-card,
-  .domain-table-container,
-  .table-responsive-container {
+  .bento-grid-container, .metrics-grid, .metric-card, .analytics-hero-card,
+  .donut-chart-container, .chart-section, .data-table-card, .table-card,
+  .domain-table-container, .table-responsive-container {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -502,32 +449,55 @@ label.btn {
     overflow-x: visible !important;
   }
 
-  /* Allow multi-page table containers to flow naturally across pages */
-  .data-table-card,
-  .table-card,
-  .domain-table-container,
+  /* Allow composite multi-page containers and sections to flow naturally across pages */
+  .bento-grid-container, .metrics-grid, .analytics-hero-card, .donut-chart-container,
+  .chart-section, .data-table-card, .table-card, .domain-table-container,
   .table-responsive-container {
     page-break-inside: auto !important;
     break-inside: auto !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
-  /* Keep discrete cards, charts, headers, and individual rows together without mid-element breaks */
-  .print-executive-header,
-  .metrics-grid,
-  .metric-card,
-  .analytics-hero-card,
-  .donut-chart-container,
-  .chart-section,
-  .print-summary-card,
-  tr {
+  /* Atomic leaf protection: strictly on small standalone items */
+  .print-executive-header, .metric-card, .print-summary-card, tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  /* High-density horizontal KPI flow */
+  .metrics-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    width: 100% !important;
+  }
+
+  .metrics-grid .metric-card {
+    flex: 1 1 calc(20% - 8px) !important;
+    min-width: 120px !important;
+    max-width: calc(20% - 6px) !important;
+    padding: 8px 10px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .metrics-grid .metric-big-num {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+  }
+
+  .metrics-grid .metric-label {
+    font-size: 0.70rem !important;
   }
 
   /* Anti-orphan rules for headings */
   h1, h2, h3, .section-title, .table-card-header, .export-section-title, .print-executive-header {
     break-after: avoid !important;
     page-break-after: avoid !important;
+    margin-top: 14px !important;
+    margin-bottom: 8px !important;
   }
 
   thead { display: table-header-group !important; }
@@ -545,6 +515,7 @@ label.btn {
     max-width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
+    margin-bottom: 14px !important;
   }
 
   table th, table.modern-data-table th {
@@ -552,17 +523,17 @@ label.btn {
     color: #475569 !important;
     border-bottom: 2px solid #cbd5e1 !important;
     font-weight: 700 !important;
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
     text-transform: uppercase !important;
-    padding: 8px 10px !important;
+    padding: 6px 8px !important;
     box-sizing: border-box !important;
   }
 
   table td, table.modern-data-table td {
     color: #0f172a !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    padding: 8px 10px !important;
-    font-size: 0.85rem !important;
+    padding: 5px 8px !important;
+    font-size: 0.8rem !important;
     box-sizing: border-box !important;
     word-break: break-word !important;
   }
@@ -595,10 +566,8 @@ body.light-theme .backup-action-desc {
 }
 
 /* Primary Button Light Mode */
-body.theme-light .backup-action-box .btn-primary,
-body.theme-light .backup-actions-grid .btn-primary,
-body.light-theme .backup-action-box .btn-primary,
-body.light-theme .backup-actions-grid .btn-primary {
+body.theme-light .backup-action-box .btn-primary, body.theme-light .backup-actions-grid .btn-primary,
+body.light-theme .backup-action-box .btn-primary, body.light-theme .backup-actions-grid .btn-primary {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(5, 150, 105, 0.26));
   border: 1px solid rgba(16, 185, 129, 0.45);
   color: #065f46;
@@ -606,10 +575,8 @@ body.light-theme .backup-actions-grid .btn-primary {
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-body.theme-light .backup-action-box .btn-primary:hover,
-body.theme-light .backup-actions-grid .btn-primary:hover,
-body.light-theme .backup-action-box .btn-primary:hover,
-body.light-theme .backup-actions-grid .btn-primary:hover {
+body.theme-light .backup-action-box .btn-primary:hover, body.theme-light .backup-actions-grid .btn-primary:hover,
+body.light-theme .backup-action-box .btn-primary:hover, body.light-theme .backup-actions-grid .btn-primary:hover {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: #059669;
   color: #ffffff;
@@ -617,10 +584,8 @@ body.light-theme .backup-actions-grid .btn-primary:hover {
 }
 
 /* Secondary Button Light Mode */
-body.theme-light .backup-action-box .btn-secondary,
-body.theme-light .backup-actions-grid .btn-secondary,
-body.light-theme .backup-action-box .btn-secondary,
-body.light-theme .backup-actions-grid .btn-secondary {
+body.theme-light .backup-action-box .btn-secondary, body.theme-light .backup-actions-grid .btn-secondary,
+body.light-theme .backup-action-box .btn-secondary, body.light-theme .backup-actions-grid .btn-secondary {
   background: rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.12);
   color: #1e293b;
@@ -628,10 +593,8 @@ body.light-theme .backup-actions-grid .btn-secondary {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-body.theme-light .backup-action-box .btn-secondary:hover,
-body.theme-light .backup-actions-grid .btn-secondary:hover,
-body.light-theme .backup-action-box .btn-secondary:hover,
-body.light-theme .backup-actions-grid .btn-secondary:hover {
+body.theme-light .backup-action-box .btn-secondary:hover, body.theme-light .backup-actions-grid .btn-secondary:hover,
+body.light-theme .backup-action-box .btn-secondary:hover, body.light-theme .backup-actions-grid .btn-secondary:hover {
   background: rgba(0, 0, 0, 0.08);
   border-color: rgba(2, 132, 199, 0.4);
   color: #0f172a;
@@ -639,20 +602,16 @@ body.light-theme .backup-actions-grid .btn-secondary:hover {
 }
 
 /* Ghost Button Light Mode */
-body.theme-light .backup-action-box .btn-ghost,
-body.theme-light .backup-actions-grid .btn-ghost,
-body.light-theme .backup-action-box .btn-ghost,
-body.light-theme .backup-actions-grid .btn-ghost {
+body.theme-light .backup-action-box .btn-ghost, body.theme-light .backup-actions-grid .btn-ghost,
+body.light-theme .backup-action-box .btn-ghost, body.light-theme .backup-actions-grid .btn-ghost {
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: #475569;
   box-shadow: none;
 }
 
-body.theme-light .backup-action-box .btn-ghost:hover,
-body.theme-light .backup-actions-grid .btn-ghost:hover,
-body.light-theme .backup-action-box .btn-ghost:hover,
-body.light-theme .backup-actions-grid .btn-ghost:hover {
+body.theme-light .backup-action-box .btn-ghost:hover, body.theme-light .backup-actions-grid .btn-ghost:hover,
+body.light-theme .backup-action-box .btn-ghost:hover, body.light-theme .backup-actions-grid .btn-ghost:hover {
   background: rgba(0, 0, 0, 0.06);
   border-color: rgba(71, 85, 105, 0.25);
   color: #0f172a;
@@ -660,27 +619,21 @@ body.light-theme .backup-actions-grid .btn-ghost:hover {
 }
 
 /* Dropdown Select Light Mode */
-body.theme-light .select-snapshot,
-body.theme-light #selectSnapshotRollback,
-body.light-theme .select-snapshot,
-body.light-theme #selectSnapshotRollback {
+body.theme-light .select-snapshot, body.theme-light #selectSnapshotRollback,
+body.light-theme .select-snapshot, body.light-theme #selectSnapshotRollback {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.15);
   color: #0f172a;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-body.theme-light .select-snapshot:hover,
-body.theme-light #selectSnapshotRollback:hover,
-body.light-theme .select-snapshot:hover,
-body.light-theme #selectSnapshotRollback:hover {
+body.theme-light .select-snapshot:hover, body.theme-light #selectSnapshotRollback:hover,
+body.light-theme .select-snapshot:hover, body.light-theme #selectSnapshotRollback:hover {
   border-color: rgba(2, 132, 199, 0.5);
 }
 
-body.theme-light .select-snapshot:focus-visible,
-body.theme-light #selectSnapshotRollback:focus-visible,
-body.light-theme .select-snapshot:focus-visible,
-body.light-theme #selectSnapshotRollback:focus-visible {
+body.theme-light .select-snapshot:focus-visible, body.theme-light #selectSnapshotRollback:focus-visible,
+body.light-theme .select-snapshot:focus-visible, body.light-theme #selectSnapshotRollback:focus-visible {
   outline: 2px solid rgba(2, 132, 199, 0.6);
   outline-offset: 2px;
   border-color: #0284c7;

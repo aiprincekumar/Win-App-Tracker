@@ -1053,15 +1053,97 @@
         size: A4 landscape;
         margin: 10mm 12mm 10mm 12mm;
       }
-      body { padding: 0; background: #ffffff !important; color: #0f172a !important; }
-      .digest-container { box-shadow: none; border: none; padding: 0; width: 100% !important; max-width: 100% !important; }
-      .no-print { display: none !important; }
-      table { page-break-inside: auto !important; break-inside: auto !important; width: 100% !important; }
-      tr, .metric-card, .chart-section { page-break-inside: avoid !important; break-inside: avoid !important; }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+      .digest-container {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .header {
+        padding-bottom: 12px !important;
+        margin-bottom: 14px !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
+      .metrics-grid {
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      .metric-card {
+        padding: 8px 10px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .metric-val {
+        font-size: 1.15rem !important;
+      }
+      .chart-section {
+        padding: 10px 14px !important;
+        margin-bottom: 14px !important;
+        gap: 16px !important;
+        background: #fafafa !important;
+        border: 1px solid var(--border-strong) !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      .donut-wrapper {
+        width: 110px !important;
+        height: 110px !important;
+      }
+      .donut-wrapper svg {
+        width: 110px !important;
+        height: 110px !important;
+      }
+      .section-title {
+        margin: 14px 0 8px 0 !important;
+        font-size: 1rem !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
+      table {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 14px !important;
+      }
+      th {
+        padding: 6px 8px !important;
+        font-size: 0.72rem !important;
+        background: #f1f5f9 !important;
+        border-bottom: 2px solid var(--border-strong) !important;
+      }
+      td {
+        padding: 5px 8px !important;
+        font-size: 0.8rem !important;
+        border-bottom: 1px solid var(--border) !important;
+      }
+      tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
       thead { display: table-header-group !important; }
       tbody { display: table-row-group !important; }
       tfoot { display: table-footer-group !important; }
-      h1, h2, h3, .section-title { break-after: avoid !important; page-break-after: avoid !important; }
+      h1, h2, h3 { break-after: avoid !important; page-break-after: avoid !important; }
+      .footer {
+        margin-top: 14px !important;
+        padding-top: 8px !important;
+        break-inside: avoid !important;
+      }
     }`;
 
   /**
