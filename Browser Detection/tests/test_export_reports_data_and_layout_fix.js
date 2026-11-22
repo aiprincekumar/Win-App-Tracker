@@ -98,6 +98,7 @@ const dashboardCss = fs.readFileSync(dashboardCssPath, 'utf8');
 [backupCss, dashboardCss].forEach((css, idx) => {
   const fileLabel = idx === 0 ? 'backup_digest.css' : 'dashboard.css';
   assert(css.includes('@page'), `${fileLabel} must define @page geometry`);
+  assert(css.includes('size: A4 landscape'), `${fileLabel} must include size: A4 landscape in @page`);
   assert(css.includes('#paneTracking'), `${fileLabel} must include #paneTracking display override in print`);
   assert(css.includes('display: block !important'), `${fileLabel} must force #paneTracking display: block !important`);
   assert(css.includes('.main-stage'), `${fileLabel} must unlock .main-stage in print`);
@@ -128,6 +129,8 @@ assert(generatedHtml.includes('<svg viewBox="0 0 100 100"'), 'Must render vector
 assert(generatedHtml.includes('Media Playback & Streaming Telemetry'), 'Must render media playback section');
 assert(generatedHtml.includes('Learn Rust'), 'Must display media title');
 assert(generatedHtml.includes('id="sentinel-digest-payload"'), 'Must embed lossless serialized JSON payload');
+assert(generatedHtml.includes('size: A4 landscape'), 'generatedHtml must include size: A4 landscape in @page');
+assert(generatedHtml.includes('max-width: 1140px'), 'generatedHtml must include max-width: 1140px');
 
 // Test empty state
 const emptyHtml = feature.generateExecutiveDigestHtml({}, { reportingPeriod: 'Empty Range' });

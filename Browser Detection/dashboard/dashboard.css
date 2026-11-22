@@ -7495,8 +7495,8 @@ body.theme-light .viz-header-status-pill .viz-live-text,
 @media print {
   /* Page Geometry */
   @page {
-    size: A4 portrait;
-    margin: 15mm 12mm 15mm 12mm;
+    size: A4 landscape;
+    margin: 10mm 12mm 10mm 12mm;
   }
 
   /* Reset main background to pure white and unlock multi-page scroll / height flow */
@@ -7512,6 +7512,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     overflow: visible !important;
     overflow-y: visible !important;
     box-shadow: none !important;
+    box-sizing: border-box !important;
   }
 
   /* Force tracking analytics panel visible in print even if another tab was active */
@@ -7519,6 +7520,12 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     display: block !important;
     opacity: 1 !important;
     visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
   }
 
   /* Ensure other tabs remain strictly hidden during report print */
@@ -7557,6 +7564,10 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   /* Executive Report Header */
   .print-executive-header {
     display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
     border-bottom: 2px solid #0f172a !important;
     padding-bottom: 16px !important;
     margin-bottom: 24px !important;
@@ -7568,6 +7579,9 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     margin-bottom: 16px !important;
   }
 
@@ -7598,6 +7612,10 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
     margin-top: 14px !important;
   }
 
@@ -7606,6 +7624,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     padding: 10px 12px !important;
     border-radius: 6px !important;
     background: #f8fafc !important;
+    box-sizing: border-box !important;
   }
 
   .print-stat-label {
@@ -7624,6 +7643,23 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     color: #0f172a !important;
     margin-top: 2px !important;
     font-variant-numeric: tabular-nums !important;
+  }
+
+  /* Full landscape width and container styling to prevent right-side clipping */
+  .bento-grid-container,
+  .metrics-grid,
+  .metric-card,
+  .analytics-hero-card,
+  .donut-chart-container,
+  .data-table-card,
+  .table-card,
+  .domain-table-container,
+  .table-responsive-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
   }
 
   /* Keep cards and table rows together without awkward page breaks */
@@ -7652,6 +7688,10 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     background: #ffffff !important;
     color: #0f172a !important;
     border-collapse: collapse !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
   }
 
   table th, table.modern-data-table th {
@@ -7662,6 +7702,7 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     font-size: 0.75rem !important;
     text-transform: uppercase !important;
     padding: 8px 10px !important;
+    box-sizing: border-box !important;
   }
 
   table td, table.modern-data-table td {
@@ -7669,6 +7710,8 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     border-bottom: 1px solid #e2e8f0 !important;
     padding: 8px 10px !important;
     font-size: 0.85rem !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
   }
 }
 

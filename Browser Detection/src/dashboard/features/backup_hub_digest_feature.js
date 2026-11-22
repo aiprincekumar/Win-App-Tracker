@@ -789,7 +789,9 @@
       line-height: 1.5;
     }
     .digest-container {
-      max-width: 960px;
+      max-width: 1140px;
+      width: 100%;
+      box-sizing: border-box;
       margin: 0 auto;
       background: var(--card-bg);
       border-radius: 12px;
@@ -848,6 +850,8 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 14px;
       margin-bottom: 28px;
+      width: 100%;
+      box-sizing: border-box;
     }
     .metric-card {
       background: #f8fafc;
@@ -889,6 +893,8 @@
       background: #fafafa;
       border-radius: 8px;
       border: 1px solid var(--border-strong);
+      width: 100%;
+      box-sizing: border-box;
     }
     .donut-wrapper {
       position: relative;
@@ -932,6 +938,7 @@
       font-size: 0.88rem;
       border: 1px solid var(--border-strong);
       margin-bottom: 24px;
+      box-sizing: border-box;
     }
     th {
       text-align: left;
@@ -984,8 +991,12 @@
       .chart-section { flex-direction: column; align-items: flex-start; }
     }
     @media print {
+      @page {
+        size: A4 landscape;
+        margin: 10mm 12mm 10mm 12mm;
+      }
       body { padding: 0; background: #ffffff !important; color: #0f172a !important; }
-      .digest-container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
+      .digest-container { box-shadow: none; border: none; padding: 0; width: 100% !important; max-width: 100% !important; }
       .no-print { display: none !important; }
       tr, .metric-card, .chart-section { page-break-inside: avoid !important; break-inside: avoid !important; }
     }`;
