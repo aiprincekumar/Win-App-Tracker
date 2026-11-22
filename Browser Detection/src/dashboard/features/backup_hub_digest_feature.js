@@ -1044,8 +1044,76 @@
       display: flex;
       justify-content: space-between;
     }
+    .media-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .chrono-heatmap-section {
+      margin-bottom: 24px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .chrono-heatmap-grid {
+      display: grid;
+      grid-template-columns: 48px repeat(24, 1fr);
+      gap: 2px;
+      margin-bottom: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .heatmap-day-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-right: 4px;
+    }
+    .heatmap-day-label.corner { height: 16px; }
+    .heatmap-hour-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 16px;
+    }
+    .heatmap-cell {
+      height: 14px;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .heatmap-cell.tier-0 { background: #f8fafc; border-color: #e2e8f0; }
+    .heatmap-cell.tier-1 { background: #d1fae5; border-color: #a7f3d0; }
+    .heatmap-cell.tier-2 { background: #6ee7b7; border-color: #34d399; }
+    .heatmap-cell.tier-3 { background: #10b981; border-color: #059669; }
+    .heatmap-cell.tier-4 { background: #047857; border-color: #064e3b; }
+    .heatmap-legend-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .legend-cell {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+      vertical-align: middle;
+      border-radius: 2px;
+      margin-right: 4px;
+    }
+    .legend-cell.tier-0 { background: #f8fafc; border: 1px solid #e2e8f0; }
+    .legend-cell.tier-1 { background: #d1fae5; }
+    .legend-cell.tier-2 { background: #6ee7b7; }
+    .legend-cell.tier-3 { background: #10b981; }
+    .legend-cell.tier-4 { background: #047857; }
     @media (max-width: 768px) {
-      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .metrics-grid, .media-metrics-grid { grid-template-columns: repeat(2, 1fr); }
       .chart-section { flex-direction: column; align-items: flex-start; }
     }
     @media print {
@@ -1076,7 +1144,7 @@
         break-after: avoid !important;
         page-break-after: avoid !important;
       }
-      .metrics-grid {
+      .metrics-grid, .media-metrics-grid {
         display: grid !important;
         grid-template-columns: repeat(5, 1fr) !important;
         gap: 8px !important;
@@ -1091,6 +1159,15 @@
       }
       .metric-val {
         font-size: 1.15rem !important;
+      }
+      .chrono-heatmap-section {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 14px !important;
+      }
+      .part-media-section {
+        page-break-before: always !important;
+        break-before: page !important;
       }
       .chart-section {
         padding: 10px 14px !important;
@@ -1302,6 +1379,308 @@
   }
 
   /**
+   * Renders Row 1 (5 KPI cards) of the Executive Media Metrics Grid.
+   */
+  function renderMediaMetricsGridRow1(kpi) {
+    const k = kpi || {};
+    return `<div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Total Watch Time</span>
+          <span>🎬</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.totalWatchTime || '0h 00m')}</div>
+        <div class="metric-sub">${escapeHtml(k.totalWatchSub || 'Cumulative video & audio')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Avg Watch per Video</span>
+          <span>⏱️</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.avgWatchPerVideo || '0m 00s')}</div>
+        <div class="metric-sub">${escapeHtml(k.avgWatchSub || 'Average playback duration')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Media Sessions</span>
+          <span>🎞️</span>
+        </div>
+        <div class="metric-val">${escapeHtml(String(k.totalSessions !== undefined ? k.totalSessions : '0'))}</div>
+        <div class="metric-sub">${escapeHtml(k.totalSessionsSub || 'Playback sessions tracked')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Top Platform</span>
+          <span>📺</span>
+        </div>
+        <div class="metric-val" style="font-size:1.15rem;word-break:break-all;">${escapeHtml(k.topPlatform || '--')}</div>
+        <div class="metric-sub">${escapeHtml(k.topPlatformSub || 'Most active streaming site')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Live Streams</span>
+          <span>📡</span>
+        </div>
+        <div class="metric-val">${escapeHtml(String(k.activeStreams !== undefined ? k.activeStreams : '0'))}</div>
+        <div class="metric-sub">${escapeHtml(k.activeStreamsSub || 'Active playback streams')}</div>
+      </div>`;
+  }
+
+  /**
+   * Renders Row 2 (5 KPI cards) of the Executive Media Metrics Grid.
+   */
+  function renderMediaMetricsGridRow2(kpi) {
+    const k = kpi || {};
+    return `<div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Average Volume</span>
+          <span>🔊</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.avgVolume || '0%')}</div>
+        <div class="metric-sub">${escapeHtml(k.avgVolumeSub || 'Mean audio intensity')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Peak Volume</span>
+          <span>⚡</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.peakVolume || '0%')}</div>
+        <div class="metric-sub">${escapeHtml(k.peakVolumeSub || 'Highest volume level')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Lowest Volume</span>
+          <span>🔉</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.lowestVolume || '0%')}</div>
+        <div class="metric-sub">${escapeHtml(k.lowestVolumeSub || 'Lowest audible level')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Muted Sessions</span>
+          <span>🔇</span>
+        </div>
+        <div class="metric-val">${escapeHtml(String(k.mutedSessions !== undefined ? k.mutedSessions : '0'))}</div>
+        <div class="metric-sub">${escapeHtml(k.mutedSessionsSub || 'Silent playback events')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Longest Media</span>
+          <span>⏳</span>
+        </div>
+        <div class="metric-val">${escapeHtml(k.longestSession || '0h 00m')}</div>
+        <div class="metric-sub">${escapeHtml(k.longestSessionSub || 'Maximum single duration')}</div>
+      </div>`;
+  }
+
+  /**
+   * Renders 10-card Media Metrics Grid HTML (2 rows of 5 cards).
+   */
+  function renderExecutiveMediaMetricsGrid(mediaKpis) {
+    return `<div class="metrics-grid media-metrics-grid" id="mediaMetricsGrid">
+      ${renderMediaMetricsGridRow1(mediaKpis)}
+      ${renderMediaMetricsGridRow2(mediaKpis)}
+    </div>`;
+  }
+
+  /**
+   * Normalizes and extracts 10 Media KPI telemetry metrics.
+   */
+  function extractDigestMediaKpiMetrics(rawData, options = {}) {
+    const opts = options || {};
+    const mediaKpi = opts.mediaMetrics || (opts.metrics && opts.metrics.mediaMetrics) || {};
+    const mediaList = (rawData && (rawData.media_history || rawData.mediaHistory)) || [];
+    let totSec = 0;
+    let volSum = 0;
+    let peakVol = 0;
+    let lowVol = 100;
+    let mutedCount = 0;
+    let maxDur = 0;
+    const platCounts = {};
+    for (let i = 0; i < mediaList.length; i++) {
+      const m = mediaList[i] || {};
+      const dur = Number(m.watchDuration || m.watchTime || m.duration || 0);
+      totSec += dur;
+      if (dur > maxDur) maxDur = dur;
+      const vol = Math.round(Number(m.volume !== undefined ? m.volume : (m.isMuted ? 0 : 70)));
+      volSum += vol;
+      if (vol > peakVol) peakVol = vol;
+      if (vol > 0 && vol < lowVol) lowVol = vol;
+      if (m.isMuted || vol === 0) mutedCount++;
+      const p = m.platform || m.domain || 'Web';
+      platCounts[p] = (platCounts[p] || 0) + 1;
+    }
+    const count = mediaList.length;
+    let topPlat = '--';
+    let topPCount = 0;
+    for (const p in platCounts) {
+      if (platCounts[p] > topPCount) { topPCount = platCounts[p]; topPlat = p; }
+    }
+    const avgSec = count > 0 ? Math.round(totSec / count) : 0;
+    return {
+      totalWatchTime: mediaKpi.totalWatchTime || (totSec > 0 ? formatHoursMinutes(totSec) : '0h 00m'),
+      avgWatchPerVideo: mediaKpi.avgWatchPerVideo || (avgSec > 0 ? formatHoursMinutes(avgSec) : '0m 00s'),
+      totalSessions: mediaKpi.totalSessions !== undefined ? String(mediaKpi.totalSessions) : String(count),
+      topPlatform: mediaKpi.topPlatform && mediaKpi.topPlatform !== '-' ? mediaKpi.topPlatform : topPlat,
+      activeStreams: mediaKpi.activeStreams !== undefined ? String(mediaKpi.activeStreams) : '0',
+      avgVolume: mediaKpi.avgVolume || (count > 0 ? `${Math.round(volSum / count)}%` : '0%'),
+      peakVolume: mediaKpi.peakVolume || (peakVol > 0 ? `${peakVol}%` : '0%'),
+      lowestVolume: mediaKpi.lowestVolume || (lowVol < 100 ? `${lowVol}%` : '0%'),
+      mutedSessions: mediaKpi.mutedSessions !== undefined ? String(mediaKpi.mutedSessions) : String(mutedCount),
+      longestSession: mediaKpi.longestSession || (maxDur > 0 ? formatHoursMinutes(maxDur) : '0h 00m')
+    };
+  }
+
+  /**
+   * Renders 24 hour cells for a given day in the Chrono Heatmap.
+   */
+  function renderHeatmapDayCells(d, dayItem) {
+    const hours = (dayItem && dayItem.hours) || (Array.isArray(dayItem) ? dayItem : []);
+    const cells = [];
+    for (let h = 0; h < 24; h++) {
+      const bucket = hours[h] || (dayItem && dayItem[h]) || {};
+      const sec = bucket.activeSeconds !== undefined ? bucket.activeSeconds : (bucket.seconds || 0);
+      const tier = bucket.intensityTier !== undefined ? bucket.intensityTier : (sec > 0 ? (sec <= 900 ? 1 : sec <= 1800 ? 2 : sec <= 2700 ? 3 : 4) : 0);
+      const hourStr = `${String(h).padStart(2, '0')}:00`;
+      const durStr = sec > 0 ? `${Math.round(sec / 60)}m` : '0m';
+      cells.push(`<div class="heatmap-cell tier-${tier}" title="${hourStr}: ${durStr}"></div>`);
+    }
+    return cells.join('');
+  }
+
+  /**
+   * Renders 7x24 Chrono-Activity Heatmap section with legend.
+   */
+  function renderChronoHeatmapSection(heatmapOrRawData, options = {}) {
+    const opts = options || {};
+    let matrix = null;
+    if (opts.chronoHeatmap) {
+      matrix = opts.chronoHeatmap;
+    } else if (heatmapOrRawData) {
+      if (Array.isArray(heatmapOrRawData) || heatmapOrRawData.matrix || heatmapOrRawData.days) {
+        matrix = heatmapOrRawData;
+      } else if (heatmapOrRawData.chronoHeatmap) {
+        matrix = heatmapOrRawData.chronoHeatmap;
+      } else if (heatmapOrRawData.activityData && heatmapOrRawData.activityData.chronoHeatmap) {
+        matrix = heatmapOrRawData.activityData.chronoHeatmap;
+      }
+    }
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const matrixList = (matrix && (matrix.matrix || matrix.days || matrix)) || [];
+    let headerHours = '<div class="heatmap-day-label corner"></div>';
+    for (let h = 0; h < 24; h++) {
+      headerHours += `<div class="heatmap-hour-label">${String(h).padStart(2, '0')}</div>`;
+    }
+    const rowHtmls = days.map((dayName, d) => {
+      const dayItem = matrixList[d] || null;
+      return `<div class="heatmap-day-label">${dayName}</div>${renderHeatmapDayCells(d, dayItem)}`;
+    }).join('');
+
+    return `<h2 class="section-title">Circadian Focus &amp; Chrono-Activity Heatmap (24h x 7d)</h2>
+    <div class="chrono-heatmap-section" id="cardChronoHeatmap">
+      <div class="chrono-heatmap-grid">
+        ${headerHours}
+        ${rowHtmls}
+      </div>
+      <div class="heatmap-legend-bar">
+        <span class="legend-title">Legend:</span>
+        <span class="legend-item"><span class="legend-cell tier-0"></span> 0m</span>
+        <span class="legend-item"><span class="legend-cell tier-1"></span> 1-15m</span>
+        <span class="legend-item"><span class="legend-cell tier-2"></span> 15-30m</span>
+        <span class="legend-item"><span class="legend-cell tier-3"></span> 30-45m</span>
+        <span class="legend-item"><span class="legend-cell tier-4"></span> 45-60m</span>
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Builds clean outer HTML document shell for standalone export.
+   */
+  function buildDigestShellHtml(reportingPeriod, bodyContent, serializedPayload) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel Executive Digest - ${escapeHtml(reportingPeriod)}</title>
+  <style>
+${EXECUTIVE_DIGEST_CSS}
+  </style>
+</head>
+<body>
+  <div class="digest-container">
+    ${bodyContent}
+  </div>
+  <script id="sentinel-digest-payload" type="application/json">
+${serializedPayload}
+  </script>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generates clean, self-contained HTML document for the Executive Digest.
+   */
+  function generateExecutiveDigestHtml(data, options = {}) {
+    const rawData = data || {};
+    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
+    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
+    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
+
+    const norm = normalizeTelemetryDataset(rawData, options);
+    const { totalActiveSeconds, totalMediaSeconds, sortedDomains } = norm;
+
+    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
+    const top5 = sortedDomains.slice(0, 5);
+    const svgSegments = renderDonutSvg(top5, colors);
+    const legendHtml = renderLegendItems(top5, colors, totalActiveSeconds);
+    const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, colors);
+    const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
+
+    const kpiMetrics = extractDigestKpiMetrics(rawData, norm, options);
+    const metricsGridHtml = renderExecutiveMetricsGrid(kpiMetrics);
+    const chronoHeatmapHtml = renderChronoHeatmapSection(rawData, options);
+    const mainContentHtml = renderProportionsAndTable(
+      sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
+    );
+
+    const mediaKpis = extractDigestMediaKpiMetrics(rawData, options);
+    const mediaGridHtml = renderExecutiveMediaMetricsGrid(mediaKpis);
+    const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
+    const serializedPayload = JSON.stringify(rawData);
+
+    const headerHtml = `<div class="header">
+      <div>
+        <h1 class="brand-title">Web Activity & Focus Executive Digest</h1>
+        <div class="period-label">Reporting Period: <strong>${escapeHtml(reportingPeriod)}</strong> | Generated: ${escapeHtml(generatedDate)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="badge-brand">Media Sentinel</span>
+        <button type="button" class="no-print btn-print-report" onclick="window.print()">🖨️ Print / Save PDF</button>
+      </div>
+    </div>`;
+
+    const bodyContent = `${headerHtml}
+    <!-- PART 1: Time Tracking & Circadian Focus -->
+    <div class="part-tracking-section">
+      ${metricsGridHtml}
+      ${chronoHeatmapHtml}
+      ${mainContentHtml}
+    </div>
+    <!-- PART 2: Media Analytics & Streaming Telemetry -->
+    <div class="part-media-section">
+      <h2 class="section-title">Media Analytics & Streaming Telemetry</h2>
+      ${mediaGridHtml}
+      ${mediaSectionHtml}
+    </div>
+    <div class="footer">
+      <span>Web Activity & Media Sentinel - Standalone Offline Report</span>
+      <span>Checksum: ${computeCRC32(rawData)} &bull; 100% Offline Single-File</span>
+    </div>`;
+
+    return buildDigestShellHtml(reportingPeriod, bodyContent, serializedPayload);
+  }
+
+  /**
    * Extracts and hydrates full 10-KPI telemetry metrics.
    */
   function extractDigestKpiMetrics(rawData, norm, options) {
@@ -1395,73 +1774,6 @@
         ${domainRows}
       </tbody>
     </table>`;
-  }
-
-  /**
-   * Generates clean, self-contained HTML document for the Executive Digest.
-   */
-  function generateExecutiveDigestHtml(data, options = {}) {
-    const rawData = data || {};
-    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
-    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
-    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
-    const productivityIndex = options.productivityIndex !== undefined ? options.productivityIndex : 85;
-
-    const norm = normalizeTelemetryDataset(rawData, options);
-    const { totalActiveSeconds, totalMediaSeconds, sortedDomains, topDomain, domainCount } = norm;
-    const topDomainShare = totalActiveSeconds > 0 && sortedDomains.length > 0
-      ? Math.round((sortedDomains[0].activeTime / totalActiveSeconds) * 100) : 0;
-
-    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
-    const top5 = sortedDomains.slice(0, 5);
-    const svgSegments = renderDonutSvg(top5, colors);
-    const legendHtml = renderLegendItems(top5, colors, totalActiveSeconds);
-    const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, colors);
-    const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
-
-    const kpiMetrics = extractDigestKpiMetrics(rawData, norm, options);
-    const metricsGridHtml = renderExecutiveMetricsGrid(kpiMetrics);
-    const mainContentHtml = renderProportionsAndTable(
-      sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
-    );
-    const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
-    const serializedPayload = JSON.stringify(rawData);
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sentinel Executive Digest - ${escapeHtml(reportingPeriod)}</title>
-  <style>
-${EXECUTIVE_DIGEST_CSS}
-  </style>
-</head>
-<body>
-  <div class="digest-container">
-    <div class="header">
-      <div>
-        <h1 class="brand-title">Web Activity & Focus Executive Digest</h1>
-        <div class="period-label">Reporting Period: <strong>${escapeHtml(reportingPeriod)}</strong> | Generated: ${escapeHtml(generatedDate)}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span class="badge-brand">Media Sentinel</span>
-        <button type="button" class="no-print btn-print-report" onclick="window.print()">🖨️ Print / Save PDF</button>
-      </div>
-    </div>
-    ${metricsGridHtml}
-    ${mainContentHtml}
-    ${mediaSectionHtml}
-    <div class="footer">
-      <span>Web Activity & Media Sentinel - Standalone Offline Report</span>
-      <span>Checksum: ${computeCRC32(rawData)} &bull; 100% Offline Single-File</span>
-    </div>
-  </div>
-  <script id="sentinel-digest-payload" type="application/json">
-${serializedPayload}
-  </script>
-</body>
-</html>`;
   }
 
   /**
@@ -1636,6 +1948,13 @@ ${serializedPayload}
     generateExecutiveDigestHtml,
     triggerPrintPdf,
     downloadStandaloneHtmlDigest,
+    extractDigestMediaKpiMetrics,
+    renderExecutiveMediaMetricsGrid,
+    renderMediaMetricsGridRow1,
+    renderMediaMetricsGridRow2,
+    renderChronoHeatmapSection,
+    extractDigestKpiMetrics,
+    renderExecutiveMetricsGrid,
     openConflictResolutionModal,
     closeConflictResolutionModal,
     formatHoursMinutes,

@@ -3069,6 +3069,7 @@ function updateChronoHeatmap(data) {
   if (!currentHeatmapMatrix || (Array.isArray(currentHeatmapMatrix) && currentHeatmapMatrix.length === 0)) {
     currentHeatmapMatrix = generateDefaultChronoMatrix();
   }
+  if (typeof window !== 'undefined') window.__CHRONO_HEATMAP_DATA__ = currentHeatmapMatrix;
   renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
   return currentHeatmapMatrix;
 }
@@ -3622,6 +3623,25 @@ function readKpiDomText(id, fallback = '') {
   return (text && text !== '--' && text !== '-') ? text : fallback;
 }
 
+function extractMediaMetricsFromDom() {
+  const totalWatchTime = readKpiDomText('mediaMetricTotalWatch', '0h 00m');
+  const avgWatchPerVideo = readKpiDomText('mediaMetricAvgWatch', '0m 00s');
+  const totalSessions = readKpiDomText('mediaMetricSessionsCount', '0');
+  const topPlatform = readKpiDomText('mediaMetricTopPlatform', '--');
+  const activeStreams = readKpiDomText('mediaMetricActiveStreams', '0');
+  const avgVolume = readKpiDomText('mediaMetricAvgVolume', '0%');
+  const peakVolume = readKpiDomText('mediaMetricPeakVolume', '0%');
+  const lowestVolume = readKpiDomText('mediaMetricLowVolume', '0%');
+  const mutedSessions = readKpiDomText('mediaMetricMutedSessions', '0');
+  const longestSession = readKpiDomText('mediaMetricLongestSession', '0h 00m');
+
+  return {
+    totalWatchTime, avgWatchPerVideo, totalSessions, topPlatform,
+    activeStreams, avgVolume, peakVolume, lowestVolume,
+    mutedSessions, longestSession
+  };
+}
+
 function getActiveReportMetrics(options = {}) {
   const reportingPeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
     ? currentTemporalRange : (options.reportingPeriod || 'All Recorded Time');
@@ -3644,17 +3664,15 @@ function getActiveReportMetrics(options = {}) {
     if (topDomain === '--' && norm.topDomain && norm.topDomain !== 'None') topDomain = norm.topDomain;
   }
 
-  const mediaList = (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || []);
-  let mediaSec = 0;
-  for (let i = 0; i < mediaList.length; i++) {
-    if (mediaList[i]) mediaSec += Number(mediaList[i].watchDuration || mediaList[i].watchTime || mediaList[i].duration || 0);
-  }
-  const mediaTime = (mediaSec > 0 && typeof formatHHMMSS === 'function') ? formatHHMMSS(mediaSec) : '0h 00m';
+  const mediaMetrics = extractMediaMetricsFromDom();
+  const chronoHeatmap = (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__)
+    || (typeof currentHeatmapMatrix !== 'undefined' && currentHeatmapMatrix) || null;
+  const mediaTime = mediaMetrics.totalWatchTime !== '0h 00m' ? mediaMetrics.totalWatchTime : '0h 00m';
 
   return {
     todayTime, dailyAvg, totalTime, productivity, productivityScore: parseInt(rawScore, 10) || 85,
     focusTime, topDomain, topDomainTime, activeDomains, distractionTime, peakHour, longestSession,
-    mediaTime, reportingPeriod
+    mediaTime, reportingPeriod, mediaMetrics, chronoHeatmap
   };
 }
 
@@ -3692,6 +3710,8 @@ function downloadStandaloneHtmlDigest(data, options = {}) {
 
   const opts = Object.assign({
     metrics: activeMetrics,
+    mediaMetrics: activeMetrics.mediaMetrics || options.mediaMetrics || {},
+    chronoHeatmap: activeMetrics.chronoHeatmap || options.chronoHeatmap || (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__) || null,
     reportingPeriod: activePeriod,
     productivityIndex: prodIndex
   }, options);
@@ -12636,6 +12656,8 @@ function handleExportHtmlDigestClick(e, menu, trigger) {
     });
     const exportOptions = {
       metrics: activeMetrics,
+      mediaMetrics: activeMetrics.mediaMetrics || {},
+      chronoHeatmap: activeMetrics.chronoHeatmap || (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__) || null,
       reportingPeriod: activeMetrics.reportingPeriod || 'All Recorded Time',
       productivityIndex: activeMetrics.productivityScore || 85
     };

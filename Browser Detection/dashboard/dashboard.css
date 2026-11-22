@@ -7516,8 +7516,9 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     box-sizing: border-box !important;
   }
 
-  /* Force tracking analytics panel visible in print even if another tab was active */
-  #paneTracking {
+  /* Force tracking and media analytics panels visible in print */
+  #paneTracking,
+  #paneMedia {
     display: block !important;
     opacity: 1 !important;
     visibility: visible !important;
@@ -7529,9 +7530,13 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     overflow: visible !important;
   }
 
+  #paneMedia {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
   /* Ensure other tabs remain strictly hidden during report print */
   #paneSettings,
-  #paneMedia,
   #paneAutomations,
   #paneStudio {
     display: none !important;
@@ -7566,7 +7571,22 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .btn-star-domain,
   .btn-add-note,
   .media-deck-header,
-  .eq-card-header {
+  .eq-card-header,
+  #multiTabMediaDeckContainer,
+  #heroMediaPlayerCard,
+  .heatmap-controls-row,
+  .heatmap-mode-toggles,
+  #heatmapWowBadge,
+  #heatmapCellTooltip,
+  .media-deck-header-actions,
+  .hero-controls-group,
+  .hero-progress-section,
+  .hero-volume-section,
+  .hero-advanced-row,
+  .audio-lab-widget,
+  .media-history-search-filter,
+  #btnScrollTopMediaHistory,
+  #btnMediaScrollToTop {
     display: none !important;
     height: 0 !important;
     margin: 0 !important;
@@ -7705,7 +7725,9 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   }
 
   /* High-density 10-KPI 5-column grid in A4 landscape */
-  .metrics-grid {
+  .metrics-grid,
+  #mediaMetricsGrid,
+  .kpi-grid-5x2 {
     display: grid !important;
     grid-template-columns: repeat(5, 1fr) !important;
     gap: 8px !important;
@@ -7715,7 +7737,8 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     break-inside: auto !important;
   }
 
-  .metrics-grid .metric-card {
+  .metrics-grid .metric-card,
+  #mediaMetricsGrid .metric-card {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -7726,14 +7749,49 @@ body.theme-light .viz-header-status-pill .viz-live-text,
     break-inside: avoid !important;
   }
 
-  .metrics-grid .metric-big-num {
+  .metrics-grid .metric-big-num,
+  #mediaMetricsGrid .metric-big-num {
     font-size: 1.15rem !important;
     font-weight: 800 !important;
   }
 
-  .metrics-grid .metric-label {
+  .metrics-grid .metric-label,
+  #mediaMetricsGrid .metric-label {
     font-size: 0.70rem !important;
   }
+
+  /* Chrono Heatmap format for print */
+  #cardChronoHeatmap {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 14px !important;
+  }
+
+  .chrono-heatmap-container,
+  .chrono-heatmap-wrapper {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .chrono-heatmap-grid {
+    display: grid !important;
+    grid-template-columns: minmax(36px, 48px) repeat(24, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+    width: 100% !important;
+  }
+
+  .chrono-heatmap-grid .heatmap-cell {
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .chrono-heatmap-grid .heatmap-cell.tier-0 { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+  .chrono-heatmap-grid .heatmap-cell.tier-1 { background: #d1fae5 !important; border-color: #a7f3d0 !important; }
+  .chrono-heatmap-grid .heatmap-cell.tier-2 { background: #6ee7b7 !important; border-color: #34d399 !important; }
+  .chrono-heatmap-grid .heatmap-cell.tier-3 { background: #10b981 !important; border-color: #059669 !important; }
+  .chrono-heatmap-grid .heatmap-cell.tier-4 { background: #047857 !important; border-color: #064e3b !important; }
 
   /* Anti-orphan rules for headings */
   h1, h2, h3, .section-title, .table-card-header, .export-section-title, .print-executive-header {
