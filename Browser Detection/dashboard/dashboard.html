@@ -1,4 +1,4 @@
-﻿﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -538,7 +538,7 @@
             </div>
 
             <!-- Feature 1: 7x24 Chrono-Distribution Heatmap Card -->
-            <div id="cardChronoHeatmap" class="analytics-hero-card bento-card liquid-glass-card bento-span-12 heatmap-card-compact">
+            <div id="cardChronoHeatmap" class="analytics-hero-card bento-card liquid-glass-card bento-span-12 heatmap-card-compact" data-active-mode="focus">
               <div class="card-top-bar">
                 <div class="card-title-group">
                   <h3 id="headingChronoHeatmap" class="card-heading">🗓️ Chrono-Activity Heatmap (24h x 7d)</h3>
@@ -547,8 +547,8 @@
 
                 <div class="heatmap-controls-row">
                   <div class="heatmap-mode-toggles" role="group" aria-label="Heatmap Mode">
-                    <button id="btnHeatmapModeFocus" class="btn-toggle-mode active" data-mode="focus">🌐 Focus &amp; Browsing Time</button>
-                    <button id="btnHeatmapModeMedia" class="btn-toggle-mode" data-mode="media">🎬 Media Watch Time</button>
+                    <button id="btnHeatmapModeFocus" class="btn-toggle-mode active" data-mode="focus" aria-pressed="true">🌐 Focus &amp; Browsing Time</button>
+                    <button id="btnHeatmapModeMedia" class="btn-toggle-mode" data-mode="media" aria-pressed="false">🎬 Media Watch Time</button>
                   </div>
                   <div id="heatmapWowBadge" class="heatmap-wow-badge">
                     <span class="wow-label" id="lblHeatmapWow">Week-over-Week Change:</span>

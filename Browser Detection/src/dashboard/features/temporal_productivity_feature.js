@@ -667,7 +667,8 @@
     grid.appendChild(dLabel);
 
     for (let h = 0; h < 24; h++) {
-      const bucket = dayRow[h] || { hour: h, dayOfWeek: d, activeSeconds: 0, mediaSeconds: 0, topDomain: '' };
+      const rawBucket = (dayRow && dayRow.hours) ? dayRow.hours[h] : (dayRow ? dayRow[h] : null);
+      const bucket = rawBucket || { hour: h, dayOfWeek: d, activeSeconds: 0, mediaSeconds: 0, topDomain: '' };
       const sec = activeMode === 'media' ? (bucket.mediaSeconds || 0) : (bucket.activeSeconds || 0);
       const intensity = getIntensityTier(sec);
 
@@ -723,6 +724,12 @@
     if (!container) return;
 
     const activeMode = mode === 'media' ? 'media' : 'focus';
+    const cardHeatmap = doc.getElementById('cardChronoHeatmap');
+    if (cardHeatmap) {
+      cardHeatmap.setAttribute('data-active-mode', activeMode);
+    }
+
+    const safeMatrix = (matrix && (Array.isArray(matrix) || matrix.days || matrix.matrix)) ? matrix : initEmptyChronoMatrix();
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -735,13 +742,13 @@
     grid.setAttribute('data-active-mode', activeMode);
 
     buildHeatmapHeaderRow(doc, grid);
-    const matrixRows = (matrix && matrix.days) || matrix || [];
+    const matrixRows = (safeMatrix && safeMatrix.days) || safeMatrix || [];
     for (let d = 0; d < 7; d++) {
       buildHeatmapDayRow(doc, grid, d, matrixRows[d] || [], activeMode, dayLabels, dayFullNames);
     }
     container.appendChild(grid);
 
-    updateHeatmapWowBadge(doc, matrix, activeMode);
+    updateHeatmapWowBadge(doc, safeMatrix, activeMode);
   }
 
   /**

@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * Web Activity & Media Sentinel - Full-Page Dashboard Script
  * Enterprise Multi-Tab Analytics, Reactive Storage Sync, Switch to Media Tab, and Centralized Language System (EN / HI)
  * Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
@@ -2809,26 +2809,32 @@ function buildChronoGridElement(doc, matrix, mode) {
 }
 
 function renderChronoHeatmap(matrix, mode = 'focus') {
+  const activeMode = mode === 'media' ? 'media' : 'focus';
+  const effectiveMatrix = matrix || generateDefaultChronoMatrix();
+  const cardHeatmap = (typeof document !== 'undefined') ? document.getElementById('cardChronoHeatmap') : null;
+  if (cardHeatmap) {
+    cardHeatmap.setAttribute('data-active-mode', activeMode);
+  }
+
   if (_TemporalProductivity && typeof _TemporalProductivity.renderChronoHeatmap === 'function') {
-    return _TemporalProductivity.renderChronoHeatmap(matrix, mode, null, { document, t });
+    return _TemporalProductivity.renderChronoHeatmap(effectiveMatrix, activeMode, null, { document, t });
   }
   if (typeof document === 'undefined') return;
   const container = document.getElementById('heatmapGridContainer');
   if (!container) return;
 
-  const activeMode = mode === 'media' ? 'media' : 'focus';
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
-  const grid = buildChronoGridElement(document, matrix, activeMode);
+  const grid = buildChronoGridElement(document, effectiveMatrix, activeMode);
   container.appendChild(grid);
 
   const valWow = document.getElementById('valHeatmapWow');
   const lblWow = document.getElementById('lblHeatmapWow');
-  if (valWow && matrix) {
+  if (valWow && effectiveMatrix) {
     const delta = activeMode === 'media'
-      ? (typeof matrix.wowMediaDeltaPercent === 'number' ? matrix.wowMediaDeltaPercent : matrix.wowDeltaPercent)
-      : (typeof matrix.wowActiveDeltaPercent === 'number' ? matrix.wowActiveDeltaPercent : matrix.wowDeltaPercent);
+      ? (typeof effectiveMatrix.wowMediaDeltaPercent === 'number' ? effectiveMatrix.wowMediaDeltaPercent : effectiveMatrix.wowDeltaPercent)
+      : (typeof effectiveMatrix.wowActiveDeltaPercent === 'number' ? effectiveMatrix.wowActiveDeltaPercent : effectiveMatrix.wowDeltaPercent);
     if (typeof delta === 'number') {
       valWow.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% ${delta >= 0 ? '📈' : '📉'}`;
       valWow.className = `wow-val ${delta >= 0 ? 'positive' : 'negative'}`;
@@ -3030,6 +3036,11 @@ function mergeDataHubHourlyHistory(rawHistory, hubHistory) {
 }
 
 function updateChronoHeatmap(data) {
+  const cardHeatmap = (typeof document !== 'undefined') ? document.getElementById('cardChronoHeatmap') : null;
+  if (cardHeatmap) {
+    cardHeatmap.setAttribute('data-active-mode', currentHeatmapMode);
+  }
+
   let rawHistory = {};
   if (data && data.activityData && data.activityData.history) {
     rawHistory = data.activityData.history;
@@ -3051,6 +3062,9 @@ function updateChronoHeatmap(data) {
   }
 
   currentHeatmapMatrix = aggregateChronoHeatmap(rawHistory, range);
+  if (!currentHeatmapMatrix || (Array.isArray(currentHeatmapMatrix) && currentHeatmapMatrix.length === 0)) {
+    currentHeatmapMatrix = generateDefaultChronoMatrix();
+  }
   renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
   return currentHeatmapMatrix;
 }
@@ -9994,7 +10008,12 @@ function setupEventListeners() {
   const btnHeatFocus = document.getElementById('btnHeatmapModeFocus');
   const btnHeatMedia = document.getElementById('btnHeatmapModeMedia');
   const cardHeatmap = document.getElementById('cardChronoHeatmap');
+  if (cardHeatmap) {
+    cardHeatmap.setAttribute('data-active-mode', currentHeatmapMode);
+  }
   if (btnHeatFocus && btnHeatMedia) {
+    btnHeatFocus.setAttribute('aria-pressed', currentHeatmapMode === 'focus' ? 'true' : 'false');
+    btnHeatMedia.setAttribute('aria-pressed', currentHeatmapMode === 'media' ? 'true' : 'false');
     btnHeatFocus.addEventListener('click', () => {
       btnHeatFocus.classList.add('active');
       btnHeatFocus.setAttribute('aria-pressed', 'true');
@@ -10006,6 +10025,8 @@ function setupEventListeners() {
         updateChronoHeatmap(dashboardData);
       } else if (currentHeatmapMatrix) {
         renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
+      } else {
+        renderChronoHeatmap(generateDefaultChronoMatrix(), currentHeatmapMode);
       }
     });
     btnHeatMedia.addEventListener('click', () => {
@@ -10019,9 +10040,12 @@ function setupEventListeners() {
         updateChronoHeatmap(dashboardData);
       } else if (currentHeatmapMatrix) {
         renderChronoHeatmap(currentHeatmapMatrix, currentHeatmapMode);
+      } else {
+        renderChronoHeatmap(generateDefaultChronoMatrix(), currentHeatmapMode);
       }
     });
   }
+  renderChronoHeatmap(currentHeatmapMatrix || generateDefaultChronoMatrix(), currentHeatmapMode);
 
   // 6. Domain Search & Sort
   const domSearchInput = document.getElementById('tableDomainSearch');
@@ -12351,6 +12375,13 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     initTimeScrollToTop();
     initAudioVisualizer(document.getElementById('canvasAudioVisualizer'));
     initSleepSentinelHub();
+
+    // Default Chrono Heatmap initial render to eliminate cold-start blank state
+    const initialHeatmapCard = document.getElementById('cardChronoHeatmap');
+    if (initialHeatmapCard) {
+      initialHeatmapCard.setAttribute('data-active-mode', currentHeatmapMode);
+    }
+    renderChronoHeatmap(currentHeatmapMatrix || generateDefaultChronoMatrix(), currentHeatmapMode);
 
     // Default Media Platform Filter initialization
     const initialMediaPlat = document.getElementById('tableMediaPlatformFilter');
