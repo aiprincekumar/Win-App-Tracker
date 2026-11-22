@@ -79,37 +79,40 @@ console.log('Battery 2: Premature Page-Break Avoidance Audit');
   const printCss = extractPrintSection(content);
   
   // Find all selectors that have break-inside: avoid or page-break-inside: avoid
-  const avoidRuleRegex = /([^{]+)\{[^}]*(?:page-)?break-inside\s*:\s*avoid[^}]*\}/g;
+  const avoidRuleRegex = /([^};]+)\{[^}]*(?:page-)?break-inside\s*:\s*avoid[^}]*\}/g;
   let match;
   const avoidSelectors = [];
   while ((match = avoidRuleRegex.exec(printCss)) !== null) {
-    avoidSelectors.push(match[1]);
+    const rawSel = match[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    rawSel.split(',').forEach(s => {
+      const trimmed = s.trim();
+      if (trimmed) avoidSelectors.push(trimmed);
+    });
   }
-  const combinedAvoidSelectors = avoidSelectors.join(' , ');
 
   // Compound containers must NOT be set to break-inside: avoid
   assert(
-    !combinedAvoidSelectors.includes('.metrics-grid'),
+    !avoidSelectors.includes('.metrics-grid'),
     `${name}: .metrics-grid must NOT have break-inside: avoid in @media print`
   );
   if (name !== 'backup_hub_digest_feature.js') {
     assert(
-      !combinedAvoidSelectors.includes('.analytics-hero-card'),
+      !avoidSelectors.includes('.analytics-hero-card'),
       `${name}: .analytics-hero-card must NOT have break-inside: avoid in @media print`
     );
   }
   assert(
-    !combinedAvoidSelectors.includes('.chart-section'),
+    !avoidSelectors.includes('.chart-section'),
     `${name}: .chart-section must NOT have break-inside: avoid in @media print`
   );
 
   // Atomic elements MUST have break-inside: avoid
   assert(
-    combinedAvoidSelectors.includes('.metric-card'),
+    avoidSelectors.some(s => s.includes('.metric-card')),
     `${name}: .metric-card MUST retain break-inside: avoid in @media print`
   );
   assert(
-    combinedAvoidSelectors.includes('tr'),
+    avoidSelectors.includes('tr'),
     `${name}: table row tr MUST retain break-inside: avoid in @media print`
   );
 

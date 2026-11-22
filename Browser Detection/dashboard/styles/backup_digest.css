@@ -394,14 +394,7 @@ label.btn {
   }
 
   .print-summary-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    overflow: visible !important;
-    margin-top: 10px !important;
+    display: none !important;
   }
 
   .print-summary-card {
@@ -465,22 +458,26 @@ label.btn {
     break-inside: avoid !important;
   }
 
-  /* High-density horizontal KPI flow */
+  /* High-density 10-KPI 5-column grid in A4 landscape */
   .metrics-grid {
-    display: flex !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
     gap: 8px !important;
     margin-bottom: 12px !important;
     width: 100% !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   .metrics-grid .metric-card {
-    flex: 1 1 calc(20% - 8px) !important;
-    min-width: 120px !important;
-    max-width: calc(20% - 6px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     padding: 8px 10px !important;
     margin: 0 !important;
     box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .metrics-grid .metric-big-num {
@@ -543,31 +540,21 @@ label.btn {
  * Light Theme Overrides (WCAG AAA & High-Contrast Parity)
  * ============================================================================= */
 
-body.theme-light .backup-action-box,
-body.light-theme .backup-action-box {
+body.theme-light .backup-action-box, body.light-theme .backup-action-box {
   background: #f8fafc;
   border-color: #e2e8f0;
 }
 
-body.theme-light .backup-action-box:hover,
-body.light-theme .backup-action-box:hover {
+body.theme-light .backup-action-box:hover, body.light-theme .backup-action-box:hover {
   background: #f1f5f9;
   border-color: #10b981;
 }
 
-body.theme-light .backup-action-title,
-body.light-theme .backup-action-title {
-  color: #0f172a;
-}
-
-body.theme-light .backup-action-desc,
-body.light-theme .backup-action-desc {
-  color: #64748b;
-}
+body.theme-light .backup-action-title, body.light-theme .backup-action-title { color: #0f172a; }
+body.theme-light .backup-action-desc, body.light-theme .backup-action-desc { color: #64748b; }
 
 /* Primary Button Light Mode */
-body.theme-light .backup-action-box .btn-primary, body.theme-light .backup-actions-grid .btn-primary,
-body.light-theme .backup-action-box .btn-primary, body.light-theme .backup-actions-grid .btn-primary {
+body.theme-light .backup-action-box .btn-primary, body.theme-light .backup-actions-grid .btn-primary, body.light-theme .backup-action-box .btn-primary, body.light-theme .backup-actions-grid .btn-primary {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(5, 150, 105, 0.26));
   border: 1px solid rgba(16, 185, 129, 0.45);
   color: #065f46;
@@ -575,8 +562,7 @@ body.light-theme .backup-action-box .btn-primary, body.light-theme .backup-actio
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-body.theme-light .backup-action-box .btn-primary:hover, body.theme-light .backup-actions-grid .btn-primary:hover,
-body.light-theme .backup-action-box .btn-primary:hover, body.light-theme .backup-actions-grid .btn-primary:hover {
+body.theme-light .backup-action-box .btn-primary:hover, body.theme-light .backup-actions-grid .btn-primary:hover, body.light-theme .backup-action-box .btn-primary:hover, body.light-theme .backup-actions-grid .btn-primary:hover {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: #059669;
   color: #ffffff;
@@ -584,8 +570,7 @@ body.light-theme .backup-action-box .btn-primary:hover, body.light-theme .backup
 }
 
 /* Secondary Button Light Mode */
-body.theme-light .backup-action-box .btn-secondary, body.theme-light .backup-actions-grid .btn-secondary,
-body.light-theme .backup-action-box .btn-secondary, body.light-theme .backup-actions-grid .btn-secondary {
+body.theme-light .backup-action-box .btn-secondary, body.theme-light .backup-actions-grid .btn-secondary, body.light-theme .backup-action-box .btn-secondary, body.light-theme .backup-actions-grid .btn-secondary {
   background: rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.12);
   color: #1e293b;
@@ -593,8 +578,7 @@ body.light-theme .backup-action-box .btn-secondary, body.light-theme .backup-act
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-body.theme-light .backup-action-box .btn-secondary:hover, body.theme-light .backup-actions-grid .btn-secondary:hover,
-body.light-theme .backup-action-box .btn-secondary:hover, body.light-theme .backup-actions-grid .btn-secondary:hover {
+body.theme-light .backup-action-box .btn-secondary:hover, body.theme-light .backup-actions-grid .btn-secondary:hover, body.light-theme .backup-action-box .btn-secondary:hover, body.light-theme .backup-actions-grid .btn-secondary:hover {
   background: rgba(0, 0, 0, 0.08);
   border-color: rgba(2, 132, 199, 0.4);
   color: #0f172a;
@@ -602,16 +586,14 @@ body.light-theme .backup-action-box .btn-secondary:hover, body.light-theme .back
 }
 
 /* Ghost Button Light Mode */
-body.theme-light .backup-action-box .btn-ghost, body.theme-light .backup-actions-grid .btn-ghost,
-body.light-theme .backup-action-box .btn-ghost, body.light-theme .backup-actions-grid .btn-ghost {
+body.theme-light .backup-action-box .btn-ghost, body.theme-light .backup-actions-grid .btn-ghost, body.light-theme .backup-action-box .btn-ghost, body.light-theme .backup-actions-grid .btn-ghost {
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: #475569;
   box-shadow: none;
 }
 
-body.theme-light .backup-action-box .btn-ghost:hover, body.theme-light .backup-actions-grid .btn-ghost:hover,
-body.light-theme .backup-action-box .btn-ghost:hover, body.light-theme .backup-actions-grid .btn-ghost:hover {
+body.theme-light .backup-action-box .btn-ghost:hover, body.theme-light .backup-actions-grid .btn-ghost:hover, body.light-theme .backup-action-box .btn-ghost:hover, body.light-theme .backup-actions-grid .btn-ghost:hover {
   background: rgba(0, 0, 0, 0.06);
   border-color: rgba(71, 85, 105, 0.25);
   color: #0f172a;
@@ -619,28 +601,21 @@ body.light-theme .backup-action-box .btn-ghost:hover, body.light-theme .backup-a
 }
 
 /* Dropdown Select Light Mode */
-body.theme-light .select-snapshot, body.theme-light #selectSnapshotRollback,
-body.light-theme .select-snapshot, body.light-theme #selectSnapshotRollback {
+body.theme-light .select-snapshot, body.theme-light #selectSnapshotRollback, body.light-theme .select-snapshot, body.light-theme #selectSnapshotRollback {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.15);
   color: #0f172a;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-body.theme-light .select-snapshot:hover, body.theme-light #selectSnapshotRollback:hover,
-body.light-theme .select-snapshot:hover, body.light-theme #selectSnapshotRollback:hover {
+body.theme-light .select-snapshot:hover, body.theme-light #selectSnapshotRollback:hover, body.light-theme .select-snapshot:hover, body.light-theme #selectSnapshotRollback:hover {
   border-color: rgba(2, 132, 199, 0.5);
 }
-
-body.theme-light .select-snapshot:focus-visible, body.theme-light #selectSnapshotRollback:focus-visible,
-body.light-theme .select-snapshot:focus-visible, body.light-theme #selectSnapshotRollback:focus-visible {
-  outline: 2px solid rgba(2, 132, 199, 0.6);
-  outline-offset: 2px;
-  border-color: #0284c7;
+body.theme-light .select-snapshot:focus-visible, body.theme-light #selectSnapshotRollback:focus-visible, body.light-theme .select-snapshot:focus-visible, body.light-theme #selectSnapshotRollback:focus-visible {
+  outline: 2px solid rgba(2, 132, 199, 0.6); outline-offset: 2px; border-color: #0284c7;
 }
 
-body.theme-light .conflict-modal-card,
-body.light-theme .conflict-modal-card {
+body.theme-light .conflict-modal-card, body.light-theme .conflict-modal-card {
   background: #ffffff;
   border-color: #e2e8f0;
 }

@@ -900,9 +900,9 @@
     .btn-print-report:hover { background: #1e293b; }
     .metrics-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 28px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
       width: 100%;
       box-sizing: border-box;
     }
@@ -1077,6 +1077,8 @@
         page-break-after: avoid !important;
       }
       .metrics-grid {
+        display: grid !important;
+        grid-template-columns: repeat(5, 1fr) !important;
         gap: 8px !important;
         margin-bottom: 12px !important;
         page-break-inside: auto !important;
@@ -1147,35 +1149,202 @@
     }`;
 
   /**
-   * Renders 4-card Bento Summary Grid HTML.
+   * Computes peak activity hour window from hourly bucket telemetry.
    */
-  function renderExecutiveMetricsGrid(totalActiveSeconds, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaCount) {
-    const healthGrade = productivityIndex >= 80 ? 'Optimal' : (productivityIndex >= 60 ? 'Moderate' : 'Needs Focus');
-    const domainPlural = domainCount === 1 ? '' : 's';
-    const mediaPlural = mediaCount === 1 ? '' : 's';
+  function computePeakHourFromData(rawData) {
+    if (!rawData) return null;
+    const buckets = (rawData.activityData && rawData.activityData.hourlyBuckets) || rawData.hourlyBuckets;
+    if (!Array.isArray(buckets) || buckets.length === 0) return null;
+    let maxIdx = 0;
+    let maxVal = -1;
+    for (let i = 0; i < buckets.length; i++) {
+      const v = Number(buckets[i] || 0);
+      if (v > maxVal) { maxVal = v; maxIdx = i; }
+    }
+    if (maxVal <= 0) return null;
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(maxIdx)}:00 - ${pad((maxIdx + 1) % 24)}:00`;
+  }
 
+  /**
+   * Builds default 10-KPI dataset from legacy arguments.
+   */
+  function buildDefaultKpi(totalSec, domCount, topDom, topShare, prodIdx, mediaSec, medCount) {
+    const prodScore = prodIdx !== undefined ? prodIdx : 85;
+    const tierBadge = prodScore >= 80 ? 'Deep Focus' : (prodScore >= 60 ? 'Productive' : 'Needs Focus');
+    const tierClass = prodScore >= 80 ? 'productive' : (prodScore >= 60 ? 'work' : 'leisure');
+    const totalFormatted = formatHoursMinutes(Number(totalSec) || 0);
+    return {
+      todayTime: totalFormatted,
+      todaySub: 'Active browser sessions',
+      dailyAvg: totalFormatted,
+      dailyAvgSub: 'Average over past 1 day',
+      totalTime: totalFormatted,
+      totalTimeSub: 'Since tracking began',
+      productivityScore: prodScore,
+      tierBadge,
+      tierClass,
+      focusTime: totalFormatted,
+      focusSub: 'High-productivity focus',
+      topDomain: topDom || '--',
+      topDomainShare: topShare || 0,
+      activeDomains: domCount || 0,
+      distractionTime: '0h 00m',
+      peakHour: '--:--',
+      longestSession: '0h 00m'
+    };
+  }
+
+  /**
+   * Renders Row 1 (5 KPI cards) of the Executive Metrics Grid.
+   */
+  function renderMetricsGridRow1(kpi) {
+    return `<div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Today's Browsing Time</span>
+          <span>⏱️</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.todayTime)}</div>
+        <div class="metric-sub">${escapeHtml(kpi.todaySub || 'Active browser sessions')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Daily Average</span>
+          <span>📊</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.dailyAvg)}</div>
+        <div class="metric-sub">${escapeHtml(kpi.dailyAvgSub || 'Average across tracked days')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Total Tracked Time</span>
+          <span>⏳</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.totalTime)}</div>
+        <div class="metric-sub">${escapeHtml(kpi.totalTimeSub || 'Since tracking began')}</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Productivity Index</span>
+          <span>🎯</span>
+        </div>
+        <div class="metric-val">${escapeHtml(String(kpi.productivityScore))} / 100</div>
+        <div class="metric-sub"><span class="badge ${kpi.tierClass}">${escapeHtml(kpi.tierBadge)}</span></div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Deep Focus Time</span>
+          <span>🧘</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.focusTime)}</div>
+        <div class="metric-sub">${escapeHtml(kpi.focusSub || 'High-productivity focus')}</div>
+      </div>`;
+  }
+
+  /**
+   * Renders Row 2 (5 KPI cards) of the Executive Metrics Grid.
+   */
+  function renderMetricsGridRow2(kpi) {
+    return `<div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Top Website</span>
+          <span>🏆</span>
+        </div>
+        <div class="metric-val" style="font-size:1.15rem;word-break:break-all;">${escapeHtml(kpi.topDomain)}</div>
+        <div class="metric-sub">${escapeHtml(String(kpi.topDomainShare))}% of total browsing</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Active Domains</span>
+          <span>🌐</span>
+        </div>
+        <div class="metric-val">${escapeHtml(String(kpi.activeDomains))}</div>
+        <div class="metric-sub">Distinct sites visited</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Leisure & Distraction</span>
+          <span>⚠️</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.distractionTime)}</div>
+        <div class="metric-sub">Entertainment & social</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Peak Activity Hour</span>
+          <span>⏰</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.peakHour)}</div>
+        <div class="metric-sub">Highest traffic window</div>
+      </div>
+      <div class="metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="metric-label">Longest Session</span>
+          <span>🚀</span>
+        </div>
+        <div class="metric-val">${escapeHtml(kpi.longestSession)}</div>
+        <div class="metric-sub">Uninterrupted focus run</div>
+      </div>`;
+  }
+
+  /**
+   * Renders 10-card Bento Summary Grid HTML (2 rows of 5 cards).
+   */
+  function renderExecutiveMetricsGrid(kpiOrTotal, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaCount) {
+    let kpi = kpiOrTotal;
+    if (typeof kpiOrTotal !== 'object' || kpiOrTotal === null) {
+      kpi = buildDefaultKpi(kpiOrTotal, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaCount);
+    }
     return `<div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-label">Total Active Time</div>
-        <div class="metric-val">${formatHoursMinutes(totalActiveSeconds)}</div>
-        <div class="metric-sub">${domainCount} tracked domain${domainPlural}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Top Focus Domain</div>
-        <div class="metric-val" style="font-size:1.15rem;word-break:break-all;">${escapeHtml(topDomain)}</div>
-        <div class="metric-sub">${topDomainShare}% of total browsing</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Productivity Index</div>
-        <div class="metric-val">${productivityIndex} / 100</div>
-        <div class="metric-sub">Focus Health Grade: ${healthGrade}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Media Consumed</div>
-        <div class="metric-val">${formatHoursMinutes(totalMediaSeconds)}</div>
-        <div class="metric-sub">${mediaCount} recorded session${mediaPlural}</div>
-      </div>
+      ${renderMetricsGridRow1(kpi)}
+      ${renderMetricsGridRow2(kpi)}
     </div>`;
+  }
+
+  /**
+   * Extracts and hydrates full 10-KPI telemetry metrics.
+   */
+  function extractDigestKpiMetrics(rawData, norm, options) {
+    const opts = options || {};
+    const optMetrics = opts.metrics || {};
+    const { totalActiveSeconds, sortedDomains, topDomain, domainCount } = norm;
+    const topDomainShare = totalActiveSeconds > 0 && sortedDomains.length > 0
+      ? Math.round((sortedDomains[0].activeTime / totalActiveSeconds) * 100) : 0;
+    const prodScore = opts.productivityIndex !== undefined
+      ? opts.productivityIndex
+      : (optMetrics.productivityScore ? parseInt(optMetrics.productivityScore, 10) : 85);
+    const tierBadge = prodScore >= 80 ? 'Deep Focus' : (prodScore >= 60 ? 'Productive' : 'Needs Focus');
+    const tierClass = prodScore >= 80 ? 'productive' : (prodScore >= 60 ? 'work' : 'leisure');
+
+    let focusSec = 0;
+    let distractionSec = 0;
+    for (let i = 0; i < sortedDomains.length; i++) {
+      const d = sortedDomains[i];
+      const cat = (d.category || '').toLowerCase();
+      if (cat === 'work' || cat === 'learning') focusSec += d.activeTime;
+      else if (cat === 'entertainment' || cat === 'social') distractionSec += d.activeTime;
+    }
+
+    const totalFormatted = formatHoursMinutes(totalActiveSeconds);
+    return {
+      todayTime: optMetrics.todayTime || totalFormatted,
+      todaySub: 'Active browser sessions',
+      dailyAvg: optMetrics.dailyAvg || totalFormatted,
+      dailyAvgSub: optMetrics.dailyAvg ? 'Average across history' : 'Average over past 1 day',
+      totalTime: optMetrics.totalTime || totalFormatted,
+      totalTimeSub: 'Since tracking began',
+      productivityScore: prodScore,
+      tierBadge: optMetrics.tierBadge || tierBadge,
+      tierClass,
+      focusTime: optMetrics.focusTime || (focusSec > 0 ? formatHoursMinutes(focusSec) : totalFormatted),
+      focusSub: 'High-productivity focus',
+      topDomain: optMetrics.topDomain && optMetrics.topDomain !== '--' ? optMetrics.topDomain : topDomain,
+      topDomainShare,
+      activeDomains: optMetrics.activeDomains ? Number(optMetrics.activeDomains) : domainCount,
+      distractionTime: optMetrics.distractionTime || (distractionSec > 0 ? formatHoursMinutes(distractionSec) : '0h 00m'),
+      peakHour: optMetrics.peakHour && optMetrics.peakHour !== '--:--' ? optMetrics.peakHour : (computePeakHourFromData(rawData) || '--:--'),
+      longestSession: optMetrics.longestSession || (sortedDomains[0] ? formatHoursMinutes(Math.round(sortedDomains[0].activeTime / Math.max(1, sortedDomains[0].sessions))) : '0h 00m')
+    };
   }
 
   /**
@@ -1250,9 +1419,8 @@
     const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, colors);
     const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
 
-    const metricsGridHtml = renderExecutiveMetricsGrid(
-      totalActiveSeconds, domainCount, topDomain, topDomainShare, productivityIndex, totalMediaSeconds, mediaHistory.length
-    );
+    const kpiMetrics = extractDigestKpiMetrics(rawData, norm, options);
+    const metricsGridHtml = renderExecutiveMetricsGrid(kpiMetrics);
     const mainContentHtml = renderProportionsAndTable(
       sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
     );

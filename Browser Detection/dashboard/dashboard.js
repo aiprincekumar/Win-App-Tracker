@@ -12629,7 +12629,20 @@ function handleExportHtmlDigestClick(e, menu, trigger) {
   }
   closeExportDropdown(menu, trigger);
   try {
-    const res = (typeof downloadStandaloneHtmlDigest === 'function') ? downloadStandaloneHtmlDigest() : (_BackupHubDigest && _BackupHubDigest.downloadStandaloneHtmlDigest ? _BackupHubDigest.downloadStandaloneHtmlDigest() : null);
+    const activeMetrics = (typeof getActiveReportMetrics === 'function') ? getActiveReportMetrics() : {};
+    const exportPayload = Object.assign({}, dashboardData || {}, {
+      activityData: (dashboardData && dashboardData.activityData) || {},
+      media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || [])
+    });
+    const exportOptions = {
+      metrics: activeMetrics,
+      reportingPeriod: activeMetrics.reportingPeriod || 'All Recorded Time',
+      productivityIndex: activeMetrics.productivityScore || 85
+    };
+    const fnDownload = (typeof downloadStandaloneHtmlDigest === 'function')
+      ? downloadStandaloneHtmlDigest
+      : (_BackupHubDigest && _BackupHubDigest.downloadStandaloneHtmlDigest ? _BackupHubDigest.downloadStandaloneHtmlDigest : null);
+    const res = fnDownload ? fnDownload(exportPayload, exportOptions) : null;
     if (res && res.error) {
       if (typeof showToast === 'function') {
         showToast((currentLang === 'hi') ? `डाउनलोड त्रुटि: ${res.error}` : `Download error: ${res.error}`, true);
