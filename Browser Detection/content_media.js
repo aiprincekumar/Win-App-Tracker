@@ -67,6 +67,12 @@
   let fadeIntervalId = null;
   let adObserver = null;
 
+  // Keepalive Port & Foreground Tracking Telemetry
+  let keepalivePort = null;
+  let keepaliveTimer = null;
+  let reconnectTimeout = null;
+  let reconnectBackoffMs = 1000;
+
   // Tracked listeners for clean unregistration on context invalidation
   let storageListenerAd = null;
   let storageListenerSpeed = null;
@@ -160,6 +166,87 @@
     return /(?:Extension )?context invalidated/i.test(msg);
   }
 
+  function isExcludedTrackingHost(host) {
+    if (!host) return true;
+    const h = String(host).toLowerCase().trim();
+    return (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '0.0.0.0' ||
+      h === '::1' ||
+      h.startsWith('127.0.0.1') ||
+      h.startsWith('localhost') ||
+      h.startsWith('192.168.') ||
+      h.startsWith('10.') ||
+      h.endsWith('.local')
+    );
+  }
+
+  function sendTrackingHeartbeat() {
+    if (!keepalivePort || !isExtensionContextValid()) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        keepalivePort.postMessage({
+          type: 'KEEPALIVE_HEARTBEAT',
+          domain: window.location.hostname,
+          url: window.location.href,
+          visibilityState: document.visibilityState,
+          hasFocus: document.hasFocus ? document.hasFocus() : true,
+          timestamp: Date.now()
+        });
+      }
+    } catch (_) {}
+  }
+
+  function disconnectTrackingKeepalivePort() {
+    if (reconnectTimeout) {
+      try { clearTimeout(reconnectTimeout); } catch (_) {}
+      reconnectTimeout = null;
+    }
+    if (keepaliveTimer) {
+      try { clearInterval(keepaliveTimer); } catch (_) {}
+      keepaliveTimer = null;
+    }
+    if (keepalivePort) {
+      try { keepalivePort.disconnect(); } catch (_) {}
+      keepalivePort = null;
+    }
+  }
+
+  function connectTrackingKeepalivePort() {
+    if (typeof window === 'undefined' || window !== window.top) return;
+    if (!isExtensionContextValid()) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (typeof window.location !== 'undefined' && isExcludedTrackingHost(window.location.hostname)) return;
+    if (keepalivePort) return;
+
+    try {
+      if (!browserAPI || !browserAPI.runtime || typeof browserAPI.runtime.connect !== 'function') return;
+      keepalivePort = browserAPI.runtime.connect({ name: 'sentinel_tracking_keepalive' });
+      reconnectBackoffMs = 1000;
+
+      if (keepalivePort && keepalivePort.onDisconnect) {
+        keepalivePort.onDisconnect.addListener(() => {
+          keepalivePort = null;
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
+          if (isExtensionContextValid() && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+            reconnectTimeout = setTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
+            reconnectBackoffMs = Math.min(8000, reconnectBackoffMs * 2);
+          }
+        });
+      }
+
+      sendTrackingHeartbeat();
+      if (!keepaliveTimer) {
+        keepaliveTimer = setInterval(sendTrackingHeartbeat, 15000);
+      }
+    } catch (_) {}
+  }
+
   /**
    * Graceful lifecycle teardown when extension context becomes invalidated/orphaned.
    * Sets sticky flags, clears running timers, disconnects DOM observers, and prevents memory leaks.
@@ -168,6 +255,9 @@
     if (isContextInvalidated) return;
     isContextInvalidated = true;
     isOrphaned = true;
+
+    // Disconnect keepalive port and clear heartbeat timers
+    disconnectTrackingKeepalivePort();
 
     // Clear periodic telemetry heartbeat timer
     if (periodicHeartbeatTimer) {
@@ -2978,6 +3068,20 @@
       try {
         initSleepAutoplayBlock();
       } catch (_) {}
+      try {
+        if (typeof document !== 'undefined') {
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+              connectTrackingKeepalivePort();
+            } else {
+              disconnectTrackingKeepalivePort();
+            }
+          });
+          if (document.visibilityState === 'visible') {
+            connectTrackingKeepalivePort();
+          }
+        }
+      } catch (_) {}
     }
 
     window.__SentinelDoomScrollGuard = {
@@ -3002,7 +3106,12 @@
       safeStorageSet,
       safeSendMessage,
       safeSetTimeout,
-      safeClearTimeout
+      safeClearTimeout,
+      connectTrackingKeepalivePort,
+      disconnectTrackingKeepalivePort,
+      sendTrackingHeartbeat,
+      getKeepalivePort: () => keepalivePort,
+      isExcludedTrackingHost
     };
   }
 

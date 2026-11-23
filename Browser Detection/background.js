@@ -25,6 +25,8 @@ const createSafeBrowserAPIFallback = () => {
     runtime: {
       id: 'node_env',
       lastError: null,
+      onConnect: dummyListener,
+      connect: () => ({ onMessage: dummyListener, onDisconnect: dummyListener, postMessage: () => {}, disconnect: () => {} }),
       onMessage: dummyListener,
       onSuspend: dummyListener,
       onInstalled: dummyListener,
@@ -35,6 +37,7 @@ const createSafeBrowserAPIFallback = () => {
     scripting: { executeScript: async () => [] },
     storage: {
       local: { get: async () => ({}), set: async () => ({}) },
+      session: { get: async () => ({}), set: async () => ({}), remove: async () => ({}) },
       onChanged: dummyListener
     },
     tabs: {
@@ -86,6 +89,7 @@ const _IdleHandlers = typeof IdleHandlers !== 'undefined' ? IdleHandlers : (type
 const _MessageRouter = typeof MessageRouter !== 'undefined' ? MessageRouter : (typeof require === 'function' ? require('./src/background/handlers/message_router.js') : null);
 const _FeatureRegistry = typeof SentinelFeatureRegistry !== 'undefined' ? SentinelFeatureRegistry : (typeof require === 'function' ? require('./src/core/feature_registry.js') : null);
 const _BackgroundFeatureManager = typeof BackgroundFeatureManager !== 'undefined' ? BackgroundFeatureManager : (typeof require === 'function' ? require('./src/background/features/background_feature_manager.js') : null);
+const _TimestampReconciliation = typeof TimestampReconciliation !== 'undefined' ? TimestampReconciliation : (typeof require === 'function' ? require('./src/background/telemetry/timestamp_reconciliation.js') : null);
 
 if (typeof globalThis !== 'undefined') {
   globalThis.SentinelBackgroundModules = {
@@ -108,7 +112,8 @@ if (typeof globalThis !== 'undefined') {
     IdleHandlers: _IdleHandlers,
     MessageRouter: _MessageRouter,
     FeatureRegistry: _FeatureRegistry,
-    BackgroundFeatureManager: _BackgroundFeatureManager
+    BackgroundFeatureManager: _BackgroundFeatureManager,
+    TimestampReconciliation: _TimestampReconciliation
   };
 }
 
@@ -1353,6 +1358,9 @@ async function loadStorageData() {
     console.error('[MediaSentinel] Error loading storage:', e);
   } finally {
     isStorageLoaded = true;
+    try {
+      await reconcileTrackingSessionOnStartup();
+    } catch (_) {}
   }
 }
 
@@ -2951,6 +2959,58 @@ function commitActiveInterval() {
     // Debounced auto-save ensures freshly tracked seconds are never lost on reload
     scheduleStorageSave(false);
   }
+
+  if (_TimestampReconciliation && browserAPI && activeDomain) {
+    _TimestampReconciliation.updateActiveSession(browserAPI, {
+      domain: activeDomain,
+      tabId: activeTabId,
+      windowId: activeWindowId,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now,
+      lastCommittedTime: now,
+      isBrowserFocused,
+      isUserActive,
+      isTrackingPaused
+    });
+  }
+}
+
+/**
+ * Reconciles active tracking session elapsed duration upon Service Worker wakeup / startup.
+ */
+async function reconcileTrackingSessionOnStartup() {
+  if (!_TimestampReconciliation) return null;
+  const context = {
+    browserAPI,
+    activityData,
+    activeDomain,
+    isBrowserFocused,
+    isUserActive,
+    isTrackingPaused,
+    matchesTrackingBlacklist,
+    getTodayDateString,
+    getFaviconUrl,
+    updateHourlyBucket,
+    streamActivityDelta,
+    scheduleStorageSave
+  };
+  return await _TimestampReconciliation.reconcileSessionDelta(context);
+}
+
+/**
+ * Handles incoming keepalive port connections from foreground tabs.
+ */
+function handleTrackingKeepaliveConnect(port) {
+  if (!_TimestampReconciliation) return false;
+  const context = {
+    browserAPI,
+    getActiveTabId: () => activeTabId,
+    matchesTrackingBlacklist,
+    isBrowserFocused,
+    isUserActive,
+    isTrackingPaused
+  };
+  return _TimestampReconciliation.handleKeepaliveConnect(port, context);
 }
 
 /**
@@ -3036,6 +3096,9 @@ function switchActiveDomain(newDomain, isNewSession = false) {
     if (activeDomain !== null) {
       activeDomain = null;
       intervalStartTime = Date.now();
+      if (_TimestampReconciliation && browserAPI) {
+        _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
+      }
       sendActivityUpdateToHUD();
       scheduleStorageSave(true);
     }
@@ -3046,6 +3109,9 @@ function switchActiveDomain(newDomain, isNewSession = false) {
     if (activeDomain !== null) {
       activeDomain = null;
       intervalStartTime = Date.now();
+      if (_TimestampReconciliation && browserAPI) {
+        _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
+      }
       sendActivityUpdateToHUD();
       scheduleStorageSave(true);
     }
@@ -3081,6 +3147,20 @@ function switchActiveDomain(newDomain, isNewSession = false) {
     }
 
     sendActivityUpdateToHUD();
+
+    if (_TimestampReconciliation && browserAPI && activeDomain) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, {
+        domain: activeDomain,
+        tabId: activeTabId,
+        windowId: activeWindowId,
+        startTime: intervalStartTime,
+        lastHeartbeat: intervalStartTime,
+        lastHeartbeatTime: intervalStartTime,
+        isBrowserFocused,
+        isUserActive,
+        isTrackingPaused
+      });
+    }
 
     // Immediate save ensures domain switches and tab transitions are committed immediately
     scheduleStorageSave(true);
@@ -4273,9 +4353,15 @@ browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === browserAPI.windows.WINDOW_ID_NONE) {
     commitActiveInterval();
     isBrowserFocused = false;
+    if (_TimestampReconciliation && browserAPI) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, { isBrowserFocused: false });
+    }
     scheduleStorageSave(true);
   } else {
     isBrowserFocused = true;
+    if (_TimestampReconciliation && browserAPI) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, { isBrowserFocused: true });
+    }
     activeWindowId = windowId;
     intervalStartTime = Date.now();
     try {
@@ -4375,6 +4461,9 @@ browserAPI.idle.onStateChanged.addListener(async (newState) => {
     commitActiveInterval();
     isUserActive = false;
     userIdleStartTime = Date.now();
+    if (_TimestampReconciliation && browserAPI) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, { isUserActive: false });
+    }
     scheduleStorageSave(true);
     // Note: Do NOT prematurely pause media on initial 60s idle state change.
     // Inactivity auto-sleep is evaluated after user-configured inactivityThresholdMinutes.
@@ -4383,6 +4472,9 @@ browserAPI.idle.onStateChanged.addListener(async (newState) => {
     isUserActive = true;
     userIdleStartTime = 0;
     intervalStartTime = Date.now();
+    if (_TimestampReconciliation && browserAPI) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, { isUserActive: true });
+    }
   }
   sendActivityUpdateToHUD();
 });
@@ -4404,8 +4496,29 @@ if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
       }
     }
     commitActiveInterval();
+    if (_TimestampReconciliation && browserAPI && activeDomain) {
+      _TimestampReconciliation.updateActiveSession(browserAPI, {
+        domain: activeDomain,
+        tabId: activeTabId,
+        windowId: activeWindowId,
+        lastHeartbeat: now,
+        lastHeartbeatTime: now,
+        isBrowserFocused,
+        isUserActive,
+        isTrackingPaused
+      });
+    }
     saveStorageData();
     saveMediaHistory();
+  });
+}
+
+// Keepalive Port Connection Channel (Manifest V3 Dual-Pillar Engine)
+if (browserAPI.runtime && browserAPI.runtime.onConnect) {
+  browserAPI.runtime.onConnect.addListener((port) => {
+    if (port && port.name === 'sentinel_tracking_keepalive') {
+      handleTrackingKeepaliveConnect(port);
+    }
   });
 }
 
@@ -6005,6 +6118,9 @@ if (typeof globalThis !== 'undefined') {
   globalThis.checkAndAutoMuteBackgroundTab = checkAndAutoMuteBackgroundTab;
   globalThis.autoMutedFocusTabIds = autoMutedFocusTabIds;
   globalThis.executeTabHibernationOnSleepExpire = executeTabHibernationOnSleepExpire;
+  globalThis.reconcileTrackingSessionOnStartup = reconcileTrackingSessionOnStartup;
+  globalThis.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
+  globalThis.TimestampReconciliation = _TimestampReconciliation;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
     globalThis.SentinelBackgroundModules.DOOMSCROLL_ENTERTAINMENT_HOSTS = DOOMSCROLL_ENTERTAINMENT_HOSTS;
@@ -6073,11 +6189,17 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.FOCUS_BREAK_ALARM_NAME = FOCUS_BREAK_ALARM_NAME;
     globalThis.SentinelBackgroundModules.DEFAULT_FOCUS_SETTINGS = DEFAULT_FOCUS_SETTINGS;
     globalThis.SentinelBackgroundModules.INITIAL_FOCUS_TIMER_STATE = INITIAL_FOCUS_TIMER_STATE;
+    globalThis.SentinelBackgroundModules.reconcileTrackingSessionOnStartup = reconcileTrackingSessionOnStartup;
+    globalThis.SentinelBackgroundModules.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
+    globalThis.SentinelBackgroundModules.TimestampReconciliation = _TimestampReconciliation;
   }
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    reconcileTrackingSessionOnStartup,
+    handleTrackingKeepaliveConnect,
+    TimestampReconciliation: _TimestampReconciliation,
     pauseSleepTimer,
     resumeSleepTimer,
     extendSleepTimer,
