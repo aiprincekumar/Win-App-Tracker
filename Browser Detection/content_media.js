@@ -60,6 +60,12 @@
   const monitoredElements = new WeakSet();
   let lastReportedState = null;
   let lastActivityTimestamp = Date.now();
+  let lastLocalInteraction = 0;
+  let lastIpcBroadcastTime = 0;
+  let lastThrottledTick = 0;
+  let userActivityHandler = null;
+  let activeUserActivityListeners = [];
+  let userActivityListeners = activeUserActivityListeners;
   let lastProgressBroadcastTime = 0;
   let observer = null;
   let titleObserver = null;
@@ -187,13 +193,16 @@
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
     try {
       if (typeof window !== 'undefined' && window.location) {
+        const now = Date.now();
         keepalivePort.postMessage({
           type: 'KEEPALIVE_HEARTBEAT',
           domain: window.location.hostname,
           url: window.location.href,
           visibilityState: document.visibilityState,
           hasFocus: document.hasFocus ? document.hasFocus() : true,
-          timestamp: Date.now()
+          timestamp: now,
+          lastActivityTimestamp,
+          timeSinceLastActivity: Math.max(0, now - lastActivityTimestamp)
         });
       }
     } catch (_) {}
@@ -248,6 +257,25 @@
   }
 
   /**
+   * Idempotently detaches all registered user activity event listeners.
+   */
+  function cleanupUserActivityListeners() {
+    if (!Array.isArray(activeUserActivityListeners)) return;
+    for (const item of activeUserActivityListeners) {
+      try {
+        if (item && item.target && typeof item.target.removeEventListener === 'function') {
+          item.target.removeEventListener(item.event, item.handler || userActivityHandler, item.options || { capture: true });
+        }
+      } catch (_) {}
+    }
+    activeUserActivityListeners = [];
+    userActivityListeners = activeUserActivityListeners;
+    userActivityHandler = null;
+  }
+
+  const detachUserActivityListeners = cleanupUserActivityListeners;
+
+  /**
    * Graceful lifecycle teardown when extension context becomes invalidated/orphaned.
    * Sets sticky flags, clears running timers, disconnects DOM observers, and prevents memory leaks.
    */
@@ -258,6 +286,9 @@
 
     // Disconnect keepalive port and clear heartbeat timers
     disconnectTrackingKeepalivePort();
+
+    // Detach all user activity event listeners to prevent memory leaks
+    cleanupUserActivityListeners();
 
     // Clear periodic telemetry heartbeat timer
     if (periodicHeartbeatTimer) {
@@ -1360,30 +1391,50 @@
   }
 
   /**
-   * Tracks user interaction events (mouse, key, scroll) on the page
+   * Tracks user interaction events (mouse, pointer, touch, key, scroll) on the page.
+   * Adheres to Context7 / VueUse useIdle dual-tier throttled pattern.
    */
   function setupUserActivityListeners() {
-    const onUserInteraction = () => {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+    if (activeUserActivityListeners.length > 0) return;
+
+    userActivityHandler = () => {
       if (isContextInvalidated || !isExtensionContextValid()) {
         teardownMediaSentinel();
         return;
       }
       const now = Date.now();
-      if (now - lastActivityTimestamp >= 10000) {
-        lastActivityTimestamp = now;
+      // Tier 1 (Local Micro-Throttle: 500ms)
+      if (now - lastLocalInteraction < 500) {
+        return;
+      }
+      lastActivityTimestamp = now;
+      lastLocalInteraction = now;
+      lastThrottledTick = now;
+
+      // Tier 2 (IPC Throttle: 10,000ms)
+      if (now - lastIpcBroadcastTime >= 10000) {
+        lastIpcBroadcastTime = now;
         safeSendMessage({
           type: 'PAGE_USER_INTERACTION',
           payload: {
-            domain: window.location.hostname,
+            domain: (window.location && window.location.hostname) || '',
             timestamp: now
           }
         });
       }
     };
 
-    ['pointerdown', 'keydown', 'wheel'].forEach(evt => {
-      window.addEventListener(evt, onUserInteraction, { passive: true, capture: true });
-    });
+    const events = ['pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'];
+    const options = { passive: true, capture: true };
+
+    for (const evt of events) {
+      try {
+        window.addEventListener(evt, userActivityHandler, options);
+        activeUserActivityListeners.push({ target: window, event: evt, handler: userActivityHandler, options });
+      } catch (_) {}
+    }
+    userActivityListeners = activeUserActivityListeners;
   }
 
   const QUALITY_ORDER = [
@@ -3111,7 +3162,15 @@
       disconnectTrackingKeepalivePort,
       sendTrackingHeartbeat,
       getKeepalivePort: () => keepalivePort,
-      isExcludedTrackingHost
+      isExcludedTrackingHost,
+      setupUserActivityListeners,
+      cleanupUserActivityListeners,
+      detachUserActivityListeners,
+      getUserActivityListeners: () => activeUserActivityListeners,
+      getLastActivityTimestamp: () => lastActivityTimestamp,
+      getLastLocalInteraction: () => lastLocalInteraction,
+      getLastIpcBroadcastTime: () => lastIpcBroadcastTime,
+      getUserActivityHandler: () => userActivityHandler
     };
   }
 
