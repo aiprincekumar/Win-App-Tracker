@@ -2976,11 +2976,10 @@ function commitActiveInterval() {
 }
 
 /**
- * Reconciles active tracking session elapsed duration upon Service Worker wakeup / startup.
+ * Helper to build execution context for timestamp reconciliation
  */
-async function reconcileTrackingSessionOnStartup() {
-  if (!_TimestampReconciliation) return null;
-  const context = {
+function getReconciliationContext() {
+  return {
     browserAPI,
     activityData,
     activeDomain,
@@ -2992,9 +2991,25 @@ async function reconcileTrackingSessionOnStartup() {
     getFaviconUrl,
     updateHourlyBucket,
     streamActivityDelta,
-    scheduleStorageSave
+    scheduleStorageSave,
+    getActiveTabId: () => activeTabId,
+    setIntervalStartTime: (t) => { intervalStartTime = t; }
   };
-  return await _TimestampReconciliation.reconcileSessionDelta(context);
+}
+
+/**
+ * Flushes active session delta before domain switches, blur events, or dashboard data serialization.
+ */
+async function flushActiveSessionDelta(now = Date.now()) {
+  if (!_TimestampReconciliation) return null;
+  return await _TimestampReconciliation.reconcileSessionDelta(getReconciliationContext(), now);
+}
+
+/**
+ * Reconciles active tracking session elapsed duration upon Service Worker wakeup / startup.
+ */
+async function reconcileTrackingSessionOnStartup() {
+  return await flushActiveSessionDelta();
 }
 
 /**
@@ -3002,15 +3017,7 @@ async function reconcileTrackingSessionOnStartup() {
  */
 function handleTrackingKeepaliveConnect(port) {
   if (!_TimestampReconciliation) return false;
-  const context = {
-    browserAPI,
-    getActiveTabId: () => activeTabId,
-    matchesTrackingBlacklist,
-    isBrowserFocused,
-    isUserActive,
-    isTrackingPaused
-  };
-  return _TimestampReconciliation.handleKeepaliveConnect(port, context);
+  return _TimestampReconciliation.handleKeepaliveConnect(port, getReconciliationContext());
 }
 
 /**
@@ -3090,6 +3097,7 @@ function commitBackgroundMediaDelta(domain, seconds) {
  * If newDomain is null or an untracked page, clears activeDomain so seconds NEVER leak to previous tab!
  */
 function switchActiveDomain(newDomain, isNewSession = false) {
+  flushActiveSessionDelta();
   commitActiveInterval();
 
   if (newDomain && matchesTrackingBlacklist(newDomain)) {
@@ -4350,6 +4358,7 @@ browserAPI.tabs.onRemoved.addListener(async (tabId) => {
 // Window Focus Changed
 browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
   await ensureStorageLoaded();
+  await flushActiveSessionDelta();
   if (windowId === browserAPI.windows.WINDOW_ID_NONE) {
     commitActiveInterval();
     isBrowserFocused = false;
@@ -4785,6 +4794,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_DASHBOARD_DATA') {
     (async () => {
       await ensureStorageLoaded();
+      await flushActiveSessionDelta();
       commitActiveInterval();
       cleanStaleTabMedia();
 
@@ -6120,6 +6130,8 @@ if (typeof globalThis !== 'undefined') {
   globalThis.executeTabHibernationOnSleepExpire = executeTabHibernationOnSleepExpire;
   globalThis.reconcileTrackingSessionOnStartup = reconcileTrackingSessionOnStartup;
   globalThis.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
+  globalThis.flushActiveSessionDelta = flushActiveSessionDelta;
+  globalThis.getReconciliationContext = getReconciliationContext;
   globalThis.TimestampReconciliation = _TimestampReconciliation;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
@@ -6191,6 +6203,8 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.INITIAL_FOCUS_TIMER_STATE = INITIAL_FOCUS_TIMER_STATE;
     globalThis.SentinelBackgroundModules.reconcileTrackingSessionOnStartup = reconcileTrackingSessionOnStartup;
     globalThis.SentinelBackgroundModules.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
+    globalThis.SentinelBackgroundModules.flushActiveSessionDelta = flushActiveSessionDelta;
+    globalThis.SentinelBackgroundModules.getReconciliationContext = getReconciliationContext;
     globalThis.SentinelBackgroundModules.TimestampReconciliation = _TimestampReconciliation;
   }
 }
@@ -6199,6 +6213,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     reconcileTrackingSessionOnStartup,
     handleTrackingKeepaliveConnect,
+    flushActiveSessionDelta,
+    getReconciliationContext,
     TimestampReconciliation: _TimestampReconciliation,
     pauseSleepTimer,
     resumeSleepTimer,

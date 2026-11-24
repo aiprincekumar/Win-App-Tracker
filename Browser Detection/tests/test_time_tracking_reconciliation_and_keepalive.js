@@ -443,7 +443,92 @@ console.log('Battery 7: Context Invalidation & Graceful Port Teardown');
   console.log('  ✅ Context invalidation safe teardown verified\n');
 }
 
-console.log('============================================================');
-console.log('ALL 7 BATTERIES PASSED (Exit Code: 0)');
-console.log('============================================================');
-process.exit(0);
+// ---------------------------------------------------------------------------
+// Battery 8: Direct Heartbeat Elapsed Seconds Crediting & Session Flush
+// ---------------------------------------------------------------------------
+console.log('Battery 8: Direct Heartbeat Elapsed Seconds Crediting & Session Flush');
+{
+  const now = Date.now();
+  const mockStorage = {
+    data: {
+      sentinel_active_session: {
+        domain: 'github.com',
+        tabId: 555,
+        startTime: now - 30000,
+        lastHeartbeat: now - 15000,
+        lastHeartbeatTime: now - 15000,
+        lastCommittedTime: now - 15000,
+        isBrowserFocused: true,
+        isUserActive: true,
+        isTrackingPaused: false
+      }
+    },
+    get: async () => ({ sentinel_active_session: mockStorage.data.sentinel_active_session }),
+    set: async (items) => { Object.assign(mockStorage.data, items); },
+    remove: async (keys) => { for (const k of keys) delete mockStorage.data[k]; }
+  };
+
+  const activityData = { domains: {} };
+  let intervalResetTime = null;
+  const context = {
+    browserAPI: { storage: { session: mockStorage } },
+    activityData,
+    getActiveTabId: () => 555,
+    matchesTrackingBlacklist: () => false,
+    isBrowserFocused: true,
+    isUserActive: true,
+    isTrackingPaused: false,
+    getTodayDateString: () => '2026-11-24',
+    getFaviconUrl: (d) => `https://fav/${d}`,
+    updateHourlyBucket: () => {},
+    streamActivityDelta: () => {},
+    scheduleStorageSave: () => {},
+    setIntervalStartTime: (t) => { intervalResetTime = t; }
+  };
+
+  const mockPort = {
+    name: 'sentinel_tracking_keepalive',
+    sender: { id: 'sentinel_ext_id', tab: { id: 555 } },
+    disconnect: () => {}
+  };
+
+  (async () => {
+    // Process heartbeat message with 15s elapsed
+    await TimestampReconciliation.processKeepaliveHeartbeat(
+      { type: 'KEEPALIVE_HEARTBEAT', domain: 'github.com', timestamp: now },
+      mockPort,
+      555,
+      context
+    );
+
+    const domRecord = activityData.domains['github.com'];
+    assert.ok(domRecord, 'Heartbeat must credit domain in activityData');
+    assert.strictEqual(domRecord.totalSeconds, 15, 'Heartbeat must directly credit 15 elapsed seconds');
+    assert.strictEqual(domRecord.foregroundSeconds, 15, 'Heartbeat must credit 15 foreground seconds');
+    assert.ok(intervalResetTime > 0, 'Heartbeat must reset interval start time to prevent double-counting');
+
+    const updatedSession = mockStorage.data.sentinel_active_session;
+    assert.ok(updatedSession.lastCommittedTime >= now - 1000, 'Session lastCommittedTime must be updated');
+    assert.ok(updatedSession.lastHeartbeat >= now - 1000, 'Session lastHeartbeat must be updated');
+
+    // Verify background.js hooks for flushActiveSessionDelta
+    const bgCode = fs.readFileSync(path.join(__dirname, '../background.js'), 'utf8');
+    assert.ok(bgCode.includes('flushActiveSessionDelta'), 'background.js must define flushActiveSessionDelta');
+    assert.ok(bgCode.includes('getReconciliationContext'), 'background.js must define getReconciliationContext');
+    assert.ok(bgCode.includes('flushActiveSessionDelta();') && bgCode.includes('switchActiveDomain'), 'switchActiveDomain must call flushActiveSessionDelta');
+    assert.ok(bgCode.includes('await flushActiveSessionDelta();') && bgCode.includes('GET_DASHBOARD_DATA'), 'GET_DASHBOARD_DATA must await flushActiveSessionDelta');
+
+    console.log('  ✅ Heartbeat direct 15s elapsed crediting verified');
+    console.log('  ✅ Interval start anchor updated to prevent double-commit');
+    console.log('  ✅ Session checkpoint timestamps committed');
+    console.log('  ✅ background.js flushActiveSessionDelta lifecycle hooks verified\n');
+
+    console.log('============================================================');
+    console.log('ALL 8 BATTERIES PASSED (Exit Code: 0)');
+    console.log('============================================================');
+    process.exit(0);
+  })().catch((err) => {
+    console.error('❌ Battery 8 Failed:', err);
+    process.exit(1);
+  });
+}

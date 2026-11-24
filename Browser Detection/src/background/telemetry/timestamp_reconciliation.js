@@ -59,7 +59,7 @@
 
   function calculateReconciledDelta(session, now = Date.now()) {
     if (!session) return { deltaSeconds: 0, isSleepGap: false, rawElapsedSec: 0 };
-    const lastTime = session.lastHeartbeat || session.lastHeartbeatTime || session.startTime || now;
+    const lastTime = session.lastCommittedTime || session.lastHeartbeat || session.lastHeartbeatTime || session.startTime || now;
     const elapsedMs = Math.max(0, now - lastTime);
     const rawElapsedSec = Math.floor(elapsedMs / 1000);
 
@@ -154,6 +154,9 @@
 
     if (deltaSeconds > 0 && canCredit) {
       creditDomainTime(context, session.domain, deltaSeconds, now);
+      if (typeof context.setIntervalStartTime === 'function') {
+        context.setIntervalStartTime(now);
+      }
     }
 
     if (isSleepGap) {
@@ -168,6 +171,44 @@
     return { domain: session.domain, creditedSeconds: canCredit ? deltaSeconds : 0, isSleepGap, rawElapsedSec };
   }
 
+  async function processKeepaliveHeartbeat(msg, port, tabId, context) {
+    if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT') return;
+    const domain = msg.domain;
+    if (!domain) return;
+    if (typeof context?.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(domain)) {
+      try { port?.disconnect(); } catch (_) {}
+      return;
+    }
+    const currentActiveTabId = typeof context?.getActiveTabId === 'function' ? context.getActiveTabId() : null;
+    const isForegroundTab = currentActiveTabId === null || currentActiveTabId === tabId;
+    if (!isForegroundTab || !context?.browserAPI) return;
+
+    const now = (typeof msg?.timestamp === 'number' && msg.timestamp > 0) ? msg.timestamp : Date.now();
+    const session = await getActiveSessionCheckpoint(context.browserAPI);
+    const lastTime = session?.lastCommittedTime || session?.lastHeartbeat || session?.startTime || now;
+    const rawElapsedSec = Math.max(0, Math.floor((now - lastTime) / 1000));
+    const cappedDelta = Math.min(rawElapsedSec, MAX_RECONCILE_DRIFT_SEC);
+    const canCredit = (context.isBrowserFocused !== false) && (context.isUserActive !== false) && !context.isTrackingPaused;
+
+    if (cappedDelta > 0 && canCredit) {
+      creditDomainTime(context, domain, cappedDelta, now);
+      if (typeof context.setIntervalStartTime === 'function') {
+        context.setIntervalStartTime(now);
+      }
+    }
+
+    await updateActiveSession(context.browserAPI, {
+      domain,
+      tabId: typeof tabId === 'number' ? tabId : undefined,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now,
+      lastCommittedTime: now,
+      isBrowserFocused: context.isBrowserFocused !== false,
+      isUserActive: context.isUserActive !== false,
+      isTrackingPaused: !!context.isTrackingPaused
+    });
+  }
+
   function handleKeepaliveConnect(port, context) {
     if (!port || port.name !== PORT_NAME_KEEPALIVE) return false;
     const expectedId = context?.browserAPI?.runtime?.id;
@@ -180,28 +221,7 @@
     activeKeepalivePorts.set(tabId, { port, tabId, connectedAt: Date.now() });
 
     port.onMessage.addListener(async (msg) => {
-      if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT') return;
-      const domain = msg.domain;
-      if (!domain) return;
-      if (typeof context?.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(domain)) {
-        try { port.disconnect(); } catch (_) {}
-        return;
-      }
-      const now = Date.now();
-      const currentActiveTabId = typeof context?.getActiveTabId === 'function' ? context.getActiveTabId() : null;
-      const isForegroundTab = currentActiveTabId === null || currentActiveTabId === tabId;
-
-      if (context?.browserAPI && isForegroundTab) {
-        await updateActiveSession(context.browserAPI, {
-          domain,
-          tabId: typeof tabId === 'number' ? tabId : undefined,
-          lastHeartbeat: now,
-          lastHeartbeatTime: now,
-          isBrowserFocused: context.isBrowserFocused !== false,
-          isUserActive: context.isUserActive !== false,
-          isTrackingPaused: !!context.isTrackingPaused
-        });
-      }
+      await processKeepaliveHeartbeat(msg, port, tabId, context);
     });
 
     port.onDisconnect.addListener(() => {
@@ -226,6 +246,7 @@
     updateActiveSession,
     creditDomainTime,
     reconcileSessionDelta,
+    processKeepaliveHeartbeat,
     handleKeepaliveConnect
   });
 
