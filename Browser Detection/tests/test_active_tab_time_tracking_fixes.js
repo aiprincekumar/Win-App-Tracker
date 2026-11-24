@@ -427,8 +427,8 @@ async function runBattery7ContentKeepalive() {
   env.setPostError(new Error('Extension context invalidated'));
   env.ctx.sendTrackingHeartbeat(false);
   assert.strictEqual(env.ctx.isContextInvalidated(), true);
-  assert.deepStrictEqual(env.removedListeners.map((r) => r.evt).sort(), ['keydown', 'mousemove', 'pointerdown', 'pointermove', 'touchstart', 'wheel']);
-  console.log('  ✅ Final-flush ordering, focus/activity reconnect, error recovery & 6-listener teardown verified\n');
+  assert.deepStrictEqual(env.removedListeners.map((r) => r.evt).sort(), ['compositionstart', 'focusin', 'input', 'keydown', 'keyup', 'message', 'mousedown', 'mousemove', 'pointerdown', 'pointermove', 'scroll', 'touchstart', 'wheel']);
+  console.log('  ✅ Final-flush ordering, focus/activity reconnect, error recovery & 12+1 listener teardown verified\n');
 }
 
 async function runBattery8StaticAndMediaAudit() {

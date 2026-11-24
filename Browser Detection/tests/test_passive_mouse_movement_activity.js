@@ -38,7 +38,9 @@ const contentMediaCode = contentMediaRaw.toString('utf8');
 function createContentMediaSandbox(customNow = 1732400000000) {
   let currentTime = customNow;
   const registeredListeners = new Map();
+  const docRegisteredListeners = new Map();
   const removedListeners = [];
+  const docRemovedListeners = [];
   const sentIpcMessages = [];
   const postedHeartbeats = [];
 
@@ -71,8 +73,15 @@ function createContentMediaSandbox(customNow = 1732400000000) {
     hasFocus: () => true,
     documentElement: { getAttribute: () => null, setAttribute: () => {}, nodeType: 1 },
     body: { nodeType: 1 },
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (evt, handler, options) => {
+      if (!docRegisteredListeners.has(evt)) {
+        docRegisteredListeners.set(evt, []);
+      }
+      docRegisteredListeners.get(evt).push({ handler, options });
+    },
+    removeEventListener: (evt, handler, options) => {
+      docRemovedListeners.push({ evt, handler, options });
+    },
     querySelector: () => null,
     querySelectorAll: () => [],
     getElementById: () => null,
@@ -151,7 +160,9 @@ function createContentMediaSandbox(customNow = 1732400000000) {
     sandbox,
     context: sandbox.window.__SentinelMediaContext,
     registeredListeners,
+    docRegisteredListeners,
     removedListeners,
+    docRemovedListeners,
     sentIpcMessages,
     postedHeartbeats,
     mockKeepalivePort,
@@ -181,16 +192,23 @@ console.log('Battery 1: Event Listener Registration & Passive Flag Verification'
   const listeners = ctx.getUserActivityListeners();
   assert.ok(Array.isArray(listeners), 'getUserActivityListeners must return an array');
 
-  const expectedEvents = ['pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'];
+  const expectedEvents = [
+    'pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart',
+    'input', 'compositionstart', 'keyup', 'mousedown', 'scroll', 'focusin'
+  ];
   for (const evtName of expectedEvents) {
-    const found = listeners.find(l => l.event === evtName);
-    assert.ok(found, `Listener for event '${evtName}' must be registered`);
-    assert.strictEqual(found.options.passive, true, `Event '${evtName}' must be registered with passive: true`);
-    assert.strictEqual(found.options.capture, true, `Event '${evtName}' must be registered with capture: true`);
-    assert.strictEqual(found.target, env.sandbox.window, `Event '${evtName}' target must be window`);
+    const winFound = listeners.find(l => l.event === evtName && l.target === env.sandbox.window);
+    assert.ok(winFound, `Window listener for event '${evtName}' must be registered`);
+    assert.strictEqual(winFound.options.passive, true, `Window '${evtName}' must be passive: true`);
+    assert.strictEqual(winFound.options.capture, true, `Window '${evtName}' must be capture: true`);
+
+    const docFound = listeners.find(l => l.event === evtName && l.target === env.sandbox.document);
+    assert.ok(docFound, `Document listener for event '${evtName}' must be registered`);
+    assert.strictEqual(docFound.options.passive, true, `Document '${evtName}' must be passive: true`);
+    assert.strictEqual(docFound.options.capture, true, `Document '${evtName}' must be capture: true`);
   }
 
-  console.log('  ✅ All 6 interaction events registered: pointermove, mousemove, pointerdown, keydown, wheel, touchstart');
+  console.log('  ✅ All 12 interaction events registered on BOTH window and document');
   console.log('  ✅ Passive capture flags ({ passive: true, capture: true }) verified for 100% of listeners\n');
 }
 
@@ -277,7 +295,7 @@ console.log('Battery 4: Context Invalidation Teardown & Event Listener Cleanup')
   const env = createContentMediaSandbox();
   const ctx = env.context;
   const initialListeners = ctx.getUserActivityListeners();
-  assert.strictEqual(initialListeners.length, 6, 'Must have 6 registered listeners initially');
+  assert.strictEqual(initialListeners.length, 24, 'Must have 24 registered listeners initially (12 window + 12 document)');
 
   // Invoke teardownMediaSentinel
   ctx.teardownMediaSentinel();
@@ -285,20 +303,28 @@ console.log('Battery 4: Context Invalidation Teardown & Event Listener Cleanup')
   assert.strictEqual(ctx.isContextInvalidated(), true, 'Context must be marked invalidated');
   assert.strictEqual(ctx.isOrphaned(), true, 'Context must be marked orphaned');
 
-  // All 6 listeners must have been detached via window.removeEventListener
-  assert.strictEqual(env.removedListeners.length, 6, 'removeEventListener must be called for each registered listener');
-  const detachedEvents = env.removedListeners.map(r => r.evt).sort();
-  const expectedEvents = ['pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].sort();
-  assert.deepStrictEqual(detachedEvents, expectedEvents, 'All registered event types must be removed on teardown');
+  // All 12 window + 12 document activity listeners + message bridge must be detached via removeEventListener
+  const expectedEvents = [
+    'pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart',
+    'input', 'compositionstart', 'keyup', 'mousedown', 'scroll', 'focusin'
+  ].sort();
+  const detachedWinActivity = env.removedListeners.filter(r => r.evt !== 'message').map(r => r.evt).sort();
+  assert.deepStrictEqual(detachedWinActivity, expectedEvents, 'All 12 window activity event types must be removed on teardown');
+  assert.strictEqual(env.removedListeners.some(r => r.evt === 'message'), true, 'Top-frame message bridge listener must also be removed');
+
+  const detachedDocActivity = env.docRemovedListeners.map(r => r.evt).sort();
+  assert.deepStrictEqual(detachedDocActivity, expectedEvents, 'All 12 document activity event types must be removed on teardown');
 
   // Listener registry must be emptied
   assert.strictEqual(ctx.getUserActivityListeners().length, 0, 'User activity listeners array must be cleared');
 
   // Idempotency: calling cleanupUserActivityListeners a second time should not throw or duplicate removals
+  const removedCountAfterTeardown = env.removedListeners.length;
   ctx.cleanupUserActivityListeners();
-  assert.strictEqual(env.removedListeners.length, 6, 'Subsequent cleanup call is idempotent');
+  assert.strictEqual(env.removedListeners.length, removedCountAfterTeardown, 'Subsequent cleanup call is idempotent');
+  assert.strictEqual(env.docRemovedListeners.length, 12, 'Subsequent document cleanup call is idempotent');
 
-  console.log('  ✅ teardownMediaSentinel unbinds all window activity event listeners');
+  console.log('  ✅ teardownMediaSentinel unbinds all window, document & message bridge listeners');
   console.log('  ✅ Listener registry cleared to prevent dangling closures and memory leaks');
   console.log('  ✅ cleanupUserActivityListeners verified idempotent\n');
 }

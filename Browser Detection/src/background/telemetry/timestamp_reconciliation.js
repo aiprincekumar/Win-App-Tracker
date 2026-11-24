@@ -11,8 +11,8 @@
   const STORAGE_KEY_ACTIVE_SESSION = 'sentinel_active_session';
   const PORT_NAME_KEEPALIVE = 'sentinel_tracking_keepalive';
   const KEEPALIVE_HEARTBEAT_INTERVAL_MS = 15000;
-  const MAX_RECONCILE_DRIFT_SEC = 45;
-  const SLEEP_THRESHOLD_SEC = 60;
+  const MAX_RECONCILE_DRIFT_SEC = 300;
+  const SLEEP_THRESHOLD_SEC = 300;
 
   const activeKeepalivePorts = new Map();
   const storageQueues = new WeakMap();
@@ -148,59 +148,152 @@
     });
   }
 
-  function creditDomainTime(context, domain, seconds, now = Date.now()) {
-    if (!context || !context.activityData || !context.activityData.domains || seconds <= 0) return;
-    const today = (typeof context.getTodayDateString === 'function') ? context.getTodayDateString() : new Date().toISOString().slice(0, 10);
-    if (!context.activityData.domains[domain]) {
-      const fav = (typeof context.getFaviconUrl === 'function') ? context.getFaviconUrl(domain) : '';
-      context.activityData.domains[domain] = {
-        favicon: fav,
-        totalSeconds: 0,
-        foregroundSeconds: 0,
-        backgroundMediaSeconds: 0,
-        sessionCount: 1,
-        lastActive: now,
-        days: {}
-      };
+  function formatLocalDateKey(ms) {
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function allocateSliceSeconds(rawSlices, totalSeconds) {
+    const totalMs = rawSlices.reduce((acc, s) => acc + s.ms, 0);
+    if (totalMs <= 0) {
+      return rawSlices.map((s, idx) => ({ ...s, seconds: idx === 0 ? totalSeconds : 0 })).filter((s) => s.seconds > 0);
     }
-    const domainEntry = context.activityData.domains[domain];
-    domainEntry.totalSeconds = (domainEntry.totalSeconds || 0) + seconds;
-    domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + seconds;
+    let allocated = 0;
+    const withFrac = rawSlices.map((s, idx) => {
+      const exact = (totalSeconds * s.ms) / totalMs;
+      const whole = Math.floor(exact);
+      allocated += whole;
+      return { slice: s, whole, frac: exact - whole, idx };
+    });
+    const rem = totalSeconds - allocated;
+    const byFrac = [...withFrac].sort((a, b) => (b.frac - a.frac) || (b.idx - a.idx));
+    for (let i = 0; i < rem && i < byFrac.length; i++) byFrac[i].whole += 1;
+    return withFrac.map((item) => ({ ...item.slice, seconds: item.whole })).filter((s) => s.seconds > 0);
+  }
+
+  function splitIntervalAcrossHourAndDateBuckets(startMs, endMs, totalSecondsOrDateFn, maybeDateFn) {
+    const hasExplicitSec = typeof totalSecondsOrDateFn === 'number';
+    const rawDateFn = hasExplicitSec ? maybeDateFn : totalSecondsOrDateFn;
+    const dateFn = (typeof rawDateFn === 'function') ? rawDateFn : formatLocalDateKey;
+    const validEnd = Number(endMs) || 0;
+    const validStart = Number(startMs) || validEnd;
+    const totalSeconds = hasExplicitSec
+      ? Math.max(0, Math.floor(totalSecondsOrDateFn))
+      : Math.max(0, Math.floor((validEnd - validStart) / 1000));
+    if (totalSeconds <= 0) return [];
+    if (!(validEnd > validStart)) {
+      const anchor = validEnd || validStart || Date.now();
+      const key = dateFn(anchor);
+      return [{ dateKey: key, date: key, hour: new Date(anchor).getHours(), seconds: totalSeconds, startMs: anchor, endMs: anchor, anchorMs: anchor }];
+    }
+    const raw = [];
+    let curMs = validStart;
+    for (let step = 0; curMs < validEnd && step < 48; step++) {
+      const d = new Date(curMs);
+      let nextHour = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1, 0, 0, 0).getTime();
+      if (!(nextHour > curMs)) nextHour = curMs + 3600000;
+      const sliceEnd = (step === 47) ? validEnd : Math.min(validEnd, nextHour);
+      const key = dateFn(curMs);
+      raw.push({ dateKey: key, date: key, hour: d.getHours(), ms: sliceEnd - curMs, startMs: curMs, endMs: sliceEnd, anchorMs: curMs });
+      curMs = sliceEnd;
+    }
+    return allocateSliceSeconds(raw, totalSeconds);
+  }
+
+  function resolveCreditTarget(targetOrContext, extra) {
+    const extraObj = (extra && typeof extra === 'object') ? extra : {};
+    if (targetOrContext && targetOrContext.activityData && targetOrContext.activityData.domains) {
+      return { activityData: targetOrContext.activityData, ctx: { ...targetOrContext, ...extraObj } };
+    }
+    if (targetOrContext && targetOrContext.domains) {
+      return { activityData: targetOrContext, ctx: extraObj };
+    }
+    return { activityData: null, ctx: extraObj };
+  }
+
+  function resolveDateFormatter(ctx, startMs, endMs) {
+    if (typeof ctx.getLocalDateStr === 'function') return ctx.getLocalDateStr;
+    if (typeof ctx.getTodayDateString === 'function') {
+      if (ctx.getTodayDateString.length >= 1) return ctx.getTodayDateString;
+      if (formatLocalDateKey(startMs) === formatLocalDateKey(endMs)) {
+        return () => ctx.getTodayDateString();
+      }
+    }
+    return formatLocalDateKey;
+  }
+
+  function applyDefaultHourlySlice(dayEntry, seconds, hour) {
+    if (!dayEntry.hourlyBuckets) dayEntry.hourlyBuckets = {};
+    if (!dayEntry.hourlyBuckets[hour]) {
+      dayEntry.hourlyBuckets[hour] = { activeSeconds: 0, activeTime: 0, backgroundMediaSeconds: 0, mediaTime: 0, sessions: 1 };
+    }
+    const bucket = dayEntry.hourlyBuckets[hour];
+    bucket.activeSeconds = (bucket.activeSeconds || 0) + seconds;
+    bucket.activeTime = bucket.activeSeconds;
+  }
+
+  function creditDomainTime(targetOrContext, domain, deltaSeconds, now = Date.now(), ...rest) {
+    const { activityData, ctx } = resolveCreditTarget(targetOrContext, rest[0]);
+    const wholeSec = Math.floor(Number(deltaSeconds) || 0);
+    if (!activityData || !activityData.domains || !domain || wholeSec <= 0) return;
+
+    const endMs = (typeof ctx.endMs === 'number') ? ctx.endMs : now;
+    const startMs = (typeof ctx.startMs === 'number' && ctx.startMs < endMs) ? ctx.startMs : (endMs - wholeSec * 1000);
+    const slices = splitIntervalAcrossHourAndDateBuckets(startMs, endMs, wholeSec, resolveDateFormatter(ctx, startMs, endMs));
+
+    if (!activityData.domains[domain]) {
+      const fav = (typeof ctx.getFaviconUrl === 'function') ? ctx.getFaviconUrl(domain) : '';
+      activityData.domains[domain] = { favicon: fav, totalSeconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessionCount: 1, lastActive: now, days: {} };
+    }
+    const domainEntry = activityData.domains[domain];
+    domainEntry.totalSeconds = (domainEntry.totalSeconds || 0) + wholeSec;
+    domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + wholeSec;
     domainEntry.lastActive = now;
 
-    if (!domainEntry.days[today]) {
-      domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+    for (const slice of slices) {
+      if (!domainEntry.days[slice.dateKey]) {
+        domainEntry.days[slice.dateKey] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+      }
+      const dayEntry = domainEntry.days[slice.dateKey];
+      dayEntry.seconds = (dayEntry.seconds || 0) + slice.seconds;
+      dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + slice.seconds;
+      if (typeof ctx.updateHourlyBucket === 'function') {
+        ctx.updateHourlyBucket(dayEntry, slice.seconds, true, slice.anchorMs);
+      } else {
+        applyDefaultHourlySlice(dayEntry, slice.seconds, slice.hour);
+      }
     }
-    const dayEntry = domainEntry.days[today];
-    dayEntry.seconds = (dayEntry.seconds || 0) + seconds;
-    dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + seconds;
+    if (typeof ctx.streamActivityDelta === 'function') ctx.streamActivityDelta(domain, wholeSec, false, 'foreground', true);
+    if (typeof ctx.scheduleStorageSave === 'function') ctx.scheduleStorageSave(false);
+  }
 
-    if (typeof context.updateHourlyBucket === 'function') {
-      context.updateHourlyBucket(dayEntry, seconds, true, now);
+  function resolveActiveSessionPlan(session, lastTime, now) {
+    const { deltaSeconds, isSleepGap, rawElapsedSec } = calculateReconciledDelta(session, now);
+    if (isSleepGap) {
+      return {
+        creditedSeconds: deltaSeconds, isSleepGap: true, rawElapsedSec,
+        committedAt: now, creditStartMs: now - deltaSeconds * 1000, creditEndMs: now
+      };
     }
-    if (typeof context.streamActivityDelta === 'function') {
-      context.streamActivityDelta(domain, seconds, false, 'foreground', true);
+    if (deltaSeconds > 0) {
+      const committedAt = (rawElapsedSec === deltaSeconds) ? (lastTime + deltaSeconds * 1000) : now;
+      return {
+        creditedSeconds: deltaSeconds, isSleepGap: false, rawElapsedSec,
+        committedAt, creditStartMs: committedAt - deltaSeconds * 1000, creditEndMs: committedAt
+      };
     }
-    if (typeof context.scheduleStorageSave === 'function') {
-      context.scheduleStorageSave(false);
-    }
+    return { creditedSeconds: 0, isSleepGap: false, rawElapsedSec, committedAt: lastTime, creditStartMs: lastTime, creditEndMs: lastTime };
   }
 
   function resolveReconciliationPlan(session, context, now = Date.now()) {
     const lastTime = session.lastCommittedTime || session.lastHeartbeat || session.lastHeartbeatTime || session.startTime || now;
     const isFocused = (session.isBrowserFocused !== false) && (context?.isBrowserFocused !== false);
     const isActive = (session.isUserActive !== false) && (context?.isUserActive !== false);
-
     if (isFocused && isActive) {
-      const { deltaSeconds, isSleepGap, rawElapsedSec } = calculateReconciledDelta(session, now);
-      if (isSleepGap) {
-        return { creditedSeconds: deltaSeconds, isSleepGap: true, rawElapsedSec, committedAt: now };
-      }
-      if (deltaSeconds > 0) {
-        const committedAt = (rawElapsedSec === deltaSeconds) ? (lastTime + deltaSeconds * 1000) : now;
-        return { creditedSeconds: deltaSeconds, isSleepGap: false, rawElapsedSec, committedAt };
-      }
-      return { creditedSeconds: 0, isSleepGap: false, rawElapsedSec, committedAt: lastTime };
+      return resolveActiveSessionPlan(session, lastTime, now);
     }
 
     const focusCutoff = (typeof session.focusLostAt === 'number' && session.focusLostAt > lastTime) ? session.focusLostAt : Infinity;
@@ -212,13 +305,12 @@
     if (hasPreCutoff) {
       const preCalc = calculateReconciledDelta({ ...session, lastCommittedTime: lastTime }, cutoff);
       return {
-        creditedSeconds: preCalc.deltaSeconds,
-        isSleepGap: preCalc.isSleepGap || overall.isSleepGap,
-        rawElapsedSec: overall.rawElapsedSec,
-        committedAt: now
+        creditedSeconds: preCalc.deltaSeconds, isSleepGap: preCalc.isSleepGap || overall.isSleepGap,
+        rawElapsedSec: overall.rawElapsedSec, committedAt: now,
+        creditStartMs: lastTime, creditEndMs: lastTime + preCalc.deltaSeconds * 1000
       };
     }
-    return { creditedSeconds: 0, isSleepGap: overall.isSleepGap, rawElapsedSec: overall.rawElapsedSec, committedAt: now };
+    return { creditedSeconds: 0, isSleepGap: overall.isSleepGap, rawElapsedSec: overall.rawElapsedSec, committedAt: now, creditStartMs: now, creditEndMs: now };
   }
 
   function reconcileSessionDelta(context, now = Date.now()) {
@@ -237,7 +329,7 @@
 
       const plan = resolveReconciliationPlan(session, context, now);
       if (plan.creditedSeconds > 0) {
-        creditDomainTime(context, session.domain, plan.creditedSeconds, now);
+        creditDomainTime(context, session.domain, plan.creditedSeconds, now, { startMs: plan.creditStartMs, endMs: plan.creditEndMs });
         const canResetAnchor = typeof context.setIntervalStartTime === 'function' && (!context.activeDomain || context.activeDomain === session.domain);
         if (canResetAnchor) context.setIntervalStartTime(plan.committedAt);
       }
@@ -271,7 +363,7 @@
 
     if (cappedDelta > 0 && canCredit) {
       const committedAt = (rawElapsedSec === cappedDelta) ? (lastTime + cappedDelta * 1000) : now;
-      creditDomainTime(context, domain, cappedDelta, now);
+      creditDomainTime(context, domain, cappedDelta, now, { startMs: committedAt - cappedDelta * 1000, endMs: committedAt });
       if (typeof context.setIntervalStartTime === 'function') {
         context.setIntervalStartTime(committedAt);
       }
@@ -349,6 +441,8 @@
     saveActiveSessionCheckpoint,
     clearActiveSessionCheckpoint,
     calculateReconciledDelta,
+    formatLocalDateKey,
+    splitIntervalAcrossHourAndDateBuckets,
     resolveReconciliationPlan,
     applyMergedSessionUpdates,
     updateActiveSession,

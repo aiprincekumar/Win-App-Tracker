@@ -32,8 +32,8 @@ console.log('Battery 1: Session Schema & Storage Serialization');
   assert.strictEqual(TimestampReconciliation.STORAGE_KEY_ACTIVE_SESSION, 'sentinel_active_session');
   assert.strictEqual(TimestampReconciliation.PORT_NAME_KEEPALIVE, 'sentinel_tracking_keepalive');
   assert.strictEqual(TimestampReconciliation.KEEPALIVE_HEARTBEAT_INTERVAL_MS, 15000);
-  assert.strictEqual(TimestampReconciliation.MAX_RECONCILE_DRIFT_SEC, 45);
-  assert.strictEqual(TimestampReconciliation.SLEEP_THRESHOLD_SEC, 60);
+  assert.strictEqual(TimestampReconciliation.MAX_RECONCILE_DRIFT_SEC, 300);
+  assert.strictEqual(TimestampReconciliation.SLEEP_THRESHOLD_SEC, 300);
 
   // Test Storage Area selector - session storage preferred
   const mockSessionStorage = {
@@ -118,17 +118,29 @@ console.log('Battery 2: Service Worker Wakeup Reconciliation Logic');
   assert.strictEqual(res30s.deltaSeconds, 30, 'Should credit exactly 30s elapsed');
   assert.strictEqual(res30s.isSleepGap, false, '30s should not be classified as sleep gap');
 
-  // Case 2.2: 50 seconds elapsed suspension (should cap at 45s MAX_RECONCILE_DRIFT_SEC)
-  const session50s = {
+  // Case 2.2: 240 seconds elapsed active suspension (not crushed by old 60s sleep threshold / 45s cap)
+  const session240s = {
     domain: 'github.com',
-    startTime: now - 100000,
-    lastHeartbeat: now - 50000,
+    startTime: now - 300000,
+    lastHeartbeat: now - 240000,
     isBrowserFocused: true,
     isUserActive: true
   };
-  const res50s = TimestampReconciliation.calculateReconciledDelta(session50s, now);
-  assert.strictEqual(res50s.deltaSeconds, 45, 'Should cap at 45 seconds drift limit');
-  assert.strictEqual(res50s.isSleepGap, false, '50s should not be classified as sleep gap');
+  const res240s = TimestampReconciliation.calculateReconciledDelta(session240s, now);
+  assert.strictEqual(res240s.deltaSeconds, 240, 'Should credit full 240s elapsed within 300s active threshold');
+  assert.strictEqual(res240s.isSleepGap, false, '240s should not be classified as sleep gap');
+
+  // Case 2.2b: 350 seconds elapsed classified as sleep gap (>= 300s SLEEP_THRESHOLD_SEC)
+  const session350s = {
+    domain: 'github.com',
+    startTime: now - 400000,
+    lastHeartbeat: now - 350000,
+    isBrowserFocused: true,
+    isUserActive: true
+  };
+  const res350s = TimestampReconciliation.calculateReconciledDelta(session350s, now);
+  assert.strictEqual(res350s.isSleepGap, true, '350s elapsed must trigger >= 300s sleep threshold');
+  assert.strictEqual(res350s.deltaSeconds, 15, 'Dormant wakeup over 300s clamps to 15s sleep fallback');
 
   // Case 2.3: End-to-end reconciliation crediting to activityData
   const mockStorage = {
@@ -183,7 +195,7 @@ console.log('Battery 2: Service Worker Wakeup Reconciliation Logic');
   })();
 
   console.log('  ✅ 30s elapsed credited accurately');
-  console.log('  ✅ 50s elapsed capped at 45s drift ceiling');
+  console.log('  ✅ 240s active suspension credited in full (<= 300s ceiling); 350s triggers sleep gate');
   console.log('  ✅ ActivityData domain record & Data Hub stream delta verified\n');
 }
 
@@ -204,7 +216,7 @@ console.log('Battery 3: OS Sleep / Hibernation Gap Detection');
   };
 
   const sleepCalc = TimestampReconciliation.calculateReconciledDelta(sleepingSession, now);
-  assert.strictEqual(sleepCalc.isSleepGap, true, 'Elapsed > 60s must trigger sleep gap detection');
+  assert.strictEqual(sleepCalc.isSleepGap, true, 'Elapsed >= 300s must trigger sleep gap detection');
   assert.strictEqual(sleepCalc.deltaSeconds, 15, 'Sleep gap must credit bounded 15s fallback (one heartbeat interval)');
 
   // End-to-end sleep reconciliation clears checkpoint
@@ -241,7 +253,7 @@ console.log('Battery 3: OS Sleep / Hibernation Gap Detection');
     assert.strictEqual(domRecord.totalSeconds, 15, 'Only 15s credited, 4 hours sleep discarded');
   })();
 
-  console.log('  ✅ 4-hour machine hibernation gap detected (> 60s threshold)');
+  console.log('  ✅ 4-hour machine hibernation gap detected (>= 300s threshold)');
   console.log('  ✅ Sleep void discarded; only bounded 15s interval credited');
   console.log('  ✅ Session checkpoint boundary cleanly removed\n');
 }

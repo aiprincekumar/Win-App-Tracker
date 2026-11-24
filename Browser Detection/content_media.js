@@ -84,6 +84,7 @@
   let storageListenerSpeed = null;
   let storageListenerAudio = null;
   let runtimeMessageListener = null;
+  let topFrameMessageListener = null;
 
   // Extension context invalidation lifecycle management
   let isContextInvalidated = false;
@@ -315,6 +316,17 @@
 
   const detachUserActivityListeners = cleanupUserActivityListeners;
 
+  function cleanupTopFrameMessageListener() {
+    if (!topFrameMessageListener || typeof window === 'undefined' || typeof window.removeEventListener !== 'function') {
+      topFrameMessageListener = null;
+      return;
+    }
+    try {
+      window.removeEventListener('message', topFrameMessageListener, { passive: true });
+    } catch (_) {}
+    topFrameMessageListener = null;
+  }
+
   /**
    * Graceful lifecycle teardown when extension context becomes invalidated/orphaned.
    * Sets sticky flags, clears running timers, disconnects DOM observers, and prevents memory leaks.
@@ -329,6 +341,7 @@
 
     // Detach all user activity event listeners to prevent memory leaks
     cleanupUserActivityListeners();
+    cleanupTopFrameMessageListener();
 
     // Clear periodic telemetry heartbeat timer
     if (periodicHeartbeatTimer) {
@@ -1430,8 +1443,54 @@
     }
   }
 
+  function notifySubframeActivity(now) {
+    if (typeof window === 'undefined' || isTopFrame) return;
+    try {
+      if (window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage({ type: 'SENTINEL_SUBFRAME_ACTIVITY', timestamp: now }, '*');
+      }
+      if (window.top && window.top !== window && window.top !== window.parent && typeof window.top.postMessage === 'function') {
+        window.top.postMessage({ type: 'SENTINEL_SUBFRAME_ACTIVITY', timestamp: now }, '*');
+      }
+    } catch (_) {}
+  }
+
+  function recordUserInteractionActivity(now) {
+    lastActivityTimestamp = now;
+    lastLocalInteraction = now;
+    lastThrottledTick = now;
+
+    if (!isTopFrame) {
+      notifySubframeActivity(now);
+    } else if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      connectTrackingKeepalivePort();
+    }
+
+    // Tier 2 (IPC Throttle: 10,000ms)
+    if (now - lastIpcBroadcastTime >= 10000) {
+      lastIpcBroadcastTime = now;
+      safeSendMessage({
+        type: 'PAGE_USER_INTERACTION',
+        payload: {
+          domain: (window.location && window.location.hostname) || '',
+          timestamp: now
+        }
+      });
+    }
+  }
+
+  function bindActivityTargetListeners(target, events, handler, options) {
+    if (!target || typeof target.addEventListener !== 'function') return;
+    for (const evt of events) {
+      try {
+        target.addEventListener(evt, handler, options);
+        activeUserActivityListeners.push({ target, event: evt, handler, options });
+      } catch (_) {}
+    }
+  }
+
   /**
-   * Tracks user interaction events (mouse, pointer, touch, key, scroll) on the page.
+   * Tracks user interaction events (mouse, pointer, touch, key, input, scroll, focus) on window and document.
    * Adheres to Context7 / VueUse useIdle dual-tier throttled pattern.
    */
   function setupUserActivityListeners() {
@@ -1444,39 +1503,18 @@
         return;
       }
       const now = Date.now();
-      // Tier 1 (Local Micro-Throttle: 500ms)
-      if (now - lastLocalInteraction < 500) {
-        return;
-      }
-      lastActivityTimestamp = now;
-      lastLocalInteraction = now;
-      lastThrottledTick = now;
-
-      if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        connectTrackingKeepalivePort();
-      }
-
-      // Tier 2 (IPC Throttle: 10,000ms)
-      if (now - lastIpcBroadcastTime >= 10000) {
-        lastIpcBroadcastTime = now;
-        safeSendMessage({
-          type: 'PAGE_USER_INTERACTION',
-          payload: {
-            domain: (window.location && window.location.hostname) || '',
-            timestamp: now
-          }
-        });
-      }
+      if (now - lastLocalInteraction < 500) return;
+      recordUserInteractionActivity(now);
     };
 
-    const events = ['pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'];
+    const events = [
+      'pointermove', 'mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart',
+      'input', 'compositionstart', 'keyup', 'mousedown', 'scroll', 'focusin'
+    ];
     const options = { passive: true, capture: true };
-
-    for (const evt of events) {
-      try {
-        window.addEventListener(evt, userActivityHandler, options);
-        activeUserActivityListeners.push({ target: window, event: evt, handler: userActivityHandler, options });
-      } catch (_) {}
+    bindActivityTargetListeners(window, events, userActivityHandler, options);
+    if (typeof document !== 'undefined') {
+      bindActivityTargetListeners(document, events, userActivityHandler, options);
     }
     userActivityListeners = activeUserActivityListeners;
   }
@@ -2588,17 +2626,28 @@
     dispatchMediaTelemetry(false);
   }, { passive: true });
 
-  // Top-frame cross-frame message listener for iframe fullscreen delegation
-  window.addEventListener('message', (event) => {
-    if (isContextInvalidated) return;
-    if (!isTopFrame || !event.data || event.data.type !== '__SENTINEL_IFRAME_FULLSCREEN__') return;
+  function handleSubframeActivitySignal(ts) {
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      teardownMediaSentinel();
+      return;
+    }
+    const now = Date.now();
+    const safeTs = (typeof ts === 'number' && ts > 0 && ts <= now + 5000) ? ts : now;
+    lastActivityTimestamp = Math.max(lastActivityTimestamp, safeTs);
+    lastLocalInteraction = Math.max(lastLocalInteraction, now);
+    if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      connectTrackingKeepalivePort();
+      return;
+    }
+    sendTrackingHeartbeat(false);
+  }
 
+  function handleIframeFullscreenMessage(event) {
     if (document.fullscreenElement) {
       if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       return;
     }
 
-    // Locate source iframe that requested fullscreen
     const iframes = Array.from(document.querySelectorAll('iframe'));
     let targetIframe = iframes.find(iframe => {
       try { return iframe.contentWindow === event.source; } catch (_) { return false; }
@@ -2618,7 +2667,21 @@
         targetIframe.webkitRequestFullscreen();
       }
     }
-  }, { passive: true });
+  }
+
+  // Top-frame cross-frame message listener for subframe activity & iframe fullscreen delegation
+  topFrameMessageListener = (event) => {
+    if (isContextInvalidated || !isTopFrame || !event || !event.data) return;
+    const msgType = event.data.type;
+    if (msgType === 'SENTINEL_SUBFRAME_ACTIVITY' || msgType === '__SENTINEL_SUBFRAME_USER_ACTIVITY__') {
+      handleSubframeActivitySignal(event.data.timestamp);
+      return;
+    }
+    if (msgType === '__SENTINEL_IFRAME_FULLSCREEN__') {
+      handleIframeFullscreenMessage(event);
+    }
+  };
+  window.addEventListener('message', topFrameMessageListener, { passive: true });
 
   // fadeIntervalId is declared in top-level lifecycle scope for clean teardown access
 

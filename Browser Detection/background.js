@@ -974,8 +974,8 @@ function streamMediaSessionUpdate(session, action = 'update') {
 /**
  * Returns formatted YYYY-MM-DD string for current local date
  */
-function getTodayDateString() {
-  const d = new Date();
+function getTodayDateString(ms) {
+  const d = (ms !== undefined && ms !== null) ? new Date(ms) : new Date();
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -2905,8 +2905,14 @@ function updateMediaHistoryEntry(session, persist = false) {
 /**
  * Records whole foreground seconds to activityData and hourly telemetry buckets.
  */
-function recordForegroundSeconds(domain, validSec, now) {
-  const today = getTodayDateString();
+function recordForegroundSeconds(domain, validSec, now, rangeStartMs) {
+  if (!domain || !(validSec > 0)) return;
+  const endMs = now || Date.now();
+  const startMs = (typeof rangeStartMs === 'number' && rangeStartMs < endMs) ? rangeStartMs : (endMs - validSec * 1000);
+  const slices = (_TimestampReconciliation && typeof _TimestampReconciliation.splitIntervalAcrossHourAndDateBuckets === 'function')
+    ? _TimestampReconciliation.splitIntervalAcrossHourAndDateBuckets(startMs, endMs, validSec, getTodayDateString)
+    : [{ dateKey: getTodayDateString(endMs), hour: new Date(endMs).getHours(), seconds: validSec, anchorMs: endMs }];
+
   if (!activityData.domains[domain]) {
     activityData.domains[domain] = {
       favicon: getFaviconUrl(domain),
@@ -2914,22 +2920,26 @@ function recordForegroundSeconds(domain, validSec, now) {
       foregroundSeconds: 0,
       backgroundMediaSeconds: 0,
       sessionCount: 1,
-      lastActive: now,
+      lastActive: endMs,
       days: {}
     };
   }
   const domainEntry = activityData.domains[domain];
   domainEntry.totalSeconds += validSec;
   domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + validSec;
-  domainEntry.lastActive = now;
+  domainEntry.lastActive = endMs;
 
-  if (!domainEntry.days[today]) {
-    domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+  for (const slice of slices) {
+    if (!(slice.seconds > 0)) continue;
+    const dateKey = slice.dateKey || getTodayDateString(slice.anchorMs || endMs);
+    if (!domainEntry.days[dateKey]) {
+      domainEntry.days[dateKey] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+    }
+    const dayEntry = domainEntry.days[dateKey];
+    dayEntry.seconds += slice.seconds;
+    dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + slice.seconds;
+    updateHourlyBucket(dayEntry, slice.seconds, true, slice.anchorMs ?? endMs);
   }
-  const dayEntry = domainEntry.days[today];
-  dayEntry.seconds += validSec;
-  dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
-  updateHourlyBucket(dayEntry, validSec, true, now);
   streamActivityDelta(domain, validSec, false, 'foreground');
   scheduleStorageSave(false);
 }
@@ -2948,13 +2958,15 @@ function commitActiveInterval() {
   }
 
   const now = Date.now();
-  const elapsedMs = Math.max(0, now - intervalStartTime);
+  const prevStart = intervalStartTime || now;
+  const elapsedMs = Math.max(0, now - prevStart);
   const elapsedSec = Math.floor(elapsedMs / 1000);
   if (elapsedSec <= 0) return;
 
   const validSec = Math.min(elapsedSec, 3600);
-  recordForegroundSeconds(activeDomain, validSec, now);
-  intervalStartTime = (validSec === elapsedSec) ? (intervalStartTime + validSec * 1000) : now;
+  const commitEndMs = (validSec === elapsedSec) ? (prevStart + validSec * 1000) : now;
+  recordForegroundSeconds(activeDomain, validSec, commitEndMs, prevStart);
+  intervalStartTime = commitEndMs;
 
   if (_TimestampReconciliation && browserAPI && activeDomain) {
     _TimestampReconciliation.updateActiveSession(browserAPI, {
@@ -3171,6 +3183,35 @@ async function handleIdleStateTransition(newState) {
 }
 
 /**
+ * Refreshes active session interaction timestamps while user is already marked active.
+ */
+async function refreshActiveInteractionCheckpoint(now) {
+  if (!_TimestampReconciliation || !browserAPI) return;
+  if (activeDomain) {
+    commitActiveInterval();
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      domain: activeDomain,
+      tabId: activeTabId,
+      windowId: activeWindowId,
+      isUserActive: true,
+      idleStartedAt: null,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now
+    });
+    return;
+  }
+  const existing = await _TimestampReconciliation.getActiveSessionCheckpoint(browserAPI);
+  if (existing && existing.domain) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      isUserActive: true,
+      idleStartedAt: null,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now
+    });
+  }
+}
+
+/**
  * Handles PAGE_USER_INTERACTION with idle-gap discard when waking from idle state.
  */
 async function handlePageUserInteraction(sendResponse) {
@@ -3195,6 +3236,7 @@ async function handlePageUserInteraction(sendResponse) {
   } else {
     isUserActive = true;
     userIdleStartTime = 0;
+    await refreshActiveInteractionCheckpoint(Date.now());
   }
   sendResponse({ received: true });
 }
