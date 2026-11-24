@@ -3001,7 +3001,7 @@ function getReconciliationContext() {
  * Flushes active session delta before domain switches, blur events, or dashboard data serialization.
  */
 async function flushActiveSessionDelta(now = Date.now()) {
-  if (!_TimestampReconciliation) return null;
+  if (!_TimestampReconciliation || !activeDomain) return null;
   return await _TimestampReconciliation.reconcileSessionDelta(getReconciliationContext(), now);
 }
 
@@ -3009,7 +3009,8 @@ async function flushActiveSessionDelta(now = Date.now()) {
  * Reconciles active tracking session elapsed duration upon Service Worker wakeup / startup.
  */
 async function reconcileTrackingSessionOnStartup() {
-  return await flushActiveSessionDelta();
+  if (!_TimestampReconciliation) return null;
+  return await _TimestampReconciliation.reconcileSessionDelta(getReconciliationContext());
 }
 
 /**
