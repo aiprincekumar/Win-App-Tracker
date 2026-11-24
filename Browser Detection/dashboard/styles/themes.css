@@ -127,6 +127,26 @@ body.theme-light .browser-filter-select option {
   color: #0f172a;
 }
 
+body.theme-light .browser-filter-select:focus,
+body.theme-light .browser-filter-select:focus-visible,
+body.theme-light .browser-filter-select:active,
+body.light-theme .browser-filter-select:focus,
+body.light-theme .browser-filter-select:focus-visible,
+body.light-theme .browser-filter-select:active,
+body.theme-light #browserFilterSelect:focus,
+body.theme-light #browserFilterSelect:focus-visible,
+body.light-theme #browserFilterSelect:focus,
+body.light-theme #browserFilterSelect:focus-visible,
+body.theme-light #trackingModeSelect:focus,
+body.theme-light #trackingModeSelect:focus-visible,
+body.light-theme #trackingModeSelect:focus,
+body.light-theme #trackingModeSelect:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 /* Light Mode Scoped Overrides */
 body.theme-light .glass-card,
 body.theme-light .metric-card,
@@ -366,6 +386,20 @@ body.theme-light kbd {
   outline: 2px solid var(--accent-emerald, #10b981) !important;
   outline-offset: 3px !important;
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Suppress unwanted focus ring & outline on filter select dropdowns */
+.browser-filter-select:focus,
+.browser-filter-select:focus-visible,
+.browser-filter-select:active,
+#browserFilterSelect:focus,
+#browserFilterSelect:focus-visible,
+#trackingModeSelect:focus,
+#trackingModeSelect:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 /* Substrate Theme Selectors */

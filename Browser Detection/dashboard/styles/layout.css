@@ -567,6 +567,20 @@ button.spinning .refresh-spinner-icon,
   padding: 6px 10px;
 }
 
+/* Suppress unwanted focus ring & outline on filter select dropdowns */
+.browser-filter-select:focus,
+.browser-filter-select:focus-visible,
+.browser-filter-select:active,
+#browserFilterSelect:focus,
+#browserFilterSelect:focus-visible,
+#trackingModeSelect:focus,
+#trackingModeSelect:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 /* Standalone SQLite Data Hub Badge */
 .datahub-status-badge {
   display: flex;
@@ -1699,6 +1713,16 @@ button.spinning .refresh-spinner-icon,
   padding: 1px 4px;
   font-size: 11.5px;
   max-width: 110px;
+}
+
+/* Suppress unwanted focus ring & outline on compact pill filter dropdowns */
+.browser-filter-container.compact-pill .browser-filter-select:focus,
+.browser-filter-container.compact-pill .browser-filter-select:focus-visible,
+.browser-filter-container.compact-pill .browser-filter-select:active {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 
