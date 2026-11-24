@@ -151,10 +151,13 @@ assert(part1Idx < part2Idx, 'Part 1 (Time Tracking) must precede Part 2 (Media A
 // Sequential order verification in Part 1
 const kpiIdx = generatedHtml.indexOf('class="metrics-grid"');
 const chartIdx = generatedHtml.indexOf('class="chart-section"');
-const tableIdx = generatedHtml.indexOf('id="domainAnalyticsTable"');
+const distIdx = generatedHtml.indexOf('class="distribution-overview-card"');
 const heatmapIdx = generatedHtml.indexOf('chrono-heatmap-section');
-assert(kpiIdx < chartIdx && chartIdx < tableIdx && tableIdx < heatmapIdx && heatmapIdx < part2Idx,
-  'Part 1 exact order must be: 10-KPIs -> Chart Section -> Domain Table -> Chrono Heatmap -> Part 2');
+const tableIdx = generatedHtml.indexOf('id="domainAnalyticsTable"');
+assert(kpiIdx !== -1 && chartIdx !== -1 && distIdx !== -1 && heatmapIdx !== -1 && tableIdx !== -1,
+  'All Part 1 sections must exist in generated HTML');
+assert(kpiIdx < chartIdx && chartIdx < distIdx && distIdx < heatmapIdx && heatmapIdx < tableIdx && tableIdx < part2Idx,
+  'Part 1 exact order must be: 10-KPIs -> Chart Section -> Distribution Overview -> Chrono Heatmap -> Domain Table -> Part 2');
 
 // Verify Part 1 contents: metrics-grid, chrono-heatmap-section, table
 assert(generatedHtml.includes('class="metrics-grid"'), 'Part 1 must contain .metrics-grid');

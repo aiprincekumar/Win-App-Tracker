@@ -1920,37 +1920,80 @@ ${serializedPayload}
   }
 
   /**
-   * Generates clean, self-contained HTML document for the Executive Digest.
+   * Renders empty state box when no domain activity is recorded for the period.
    */
-  function generateExecutiveDigestHtml(data, options = {}) {
-    const rawData = data || {};
-    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
-    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
-    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
+  function renderActivityEmptyState() {
+    return `<div class="empty-state-box">
+      <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
+      <strong>No Activity Tracked for this Period</strong>
+      <p style="margin:6px 0 0 0;font-size:0.85rem;">Active domain sessions will populate here automatically as you browse.</p>
+    </div>`;
+  }
 
-    const norm = normalizeTelemetryDataset(rawData, options);
-    const { totalActiveSeconds, totalMediaSeconds, sortedDomains } = norm;
-
-    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
+  /**
+   * Renders Top Activity Proportions donut chart and distribution overview bars.
+   */
+  function renderDistributionChartSection(sortedDomains, totalActiveSeconds, colors) {
+    if (!sortedDomains || sortedDomains.length === 0) {
+      return renderActivityEmptyState();
+    }
+    const palette = colors || ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
     const top5 = sortedDomains.slice(0, 5);
-    const svgSegments = renderDonutSvg(top5, colors);
-    const legendHtml = renderLegendItems(top5, colors, totalActiveSeconds);
-    const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, colors);
+    const svgSegments = renderDonutSvg(top5, palette);
+    const legendHtml = renderLegendItems(top5, palette, totalActiveSeconds);
+    const distributionBarsHtml = renderDistributionBars(top5, totalActiveSeconds, palette);
+
+    return `<h2 class="section-title">Top Activity Proportions</h2>
+    <div class="chart-section">
+      <div class="donut-wrapper">
+        <svg viewBox="0 0 100 100" width="130" height="130">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="12"/>
+          ${svgSegments}
+        </svg>
+      </div>
+      <div class="legend-list">
+        ${legendHtml}
+      </div>
+    </div>
+
+    <div class="distribution-overview-card" style="margin-bottom:28px;page-break-inside:avoid;break-inside:avoid;">
+      <h3 style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0 0 12px 0;">Distribution Overview</h3>
+      ${distributionBarsHtml}
+    </div>`;
+  }
+
+  /**
+   * Renders Detailed Domain Telemetry table section (omitted on empty data).
+   */
+  function renderDomainTableSection(sortedDomains, totalActiveSeconds) {
+    if (!sortedDomains || sortedDomains.length === 0) {
+      return '';
+    }
     const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
 
-    const kpiMetrics = extractDigestKpiMetrics(rawData, norm, options);
-    const metricsGridHtml = renderExecutiveMetricsGrid(kpiMetrics);
-    const chronoHeatmapHtml = renderChronoHeatmapSection(rawData, options);
-    const mainContentHtml = renderProportionsAndTable(
-      sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows
-    );
+    return `<h2 class="section-title">Detailed Domain Telemetry</h2>
+    <table class="modern-data-table" id="domainAnalyticsTable">
+      <thead>
+        <tr>
+          <th class="col-domain" style="width:26%;">Website / Domain</th>
+          <th class="col-category" style="width:14%;">Category</th>
+          <th class="col-time" style="width:16%;">Time Spent</th>
+          <th class="col-ratio" style="width:18%;">Ratio</th>
+          <th class="col-sessions" style="width:12%;">Sessions</th>
+          <th class="col-last" style="width:14%;">Last Active</th>
+        </tr>
+      </thead>
+      <tbody id="domainTableBody">
+        ${domainRows}
+      </tbody>
+    </table>`;
+  }
 
-    const mediaKpis = extractDigestMediaKpiMetrics(rawData, options);
-    const mediaGridHtml = renderExecutiveMediaMetricsGrid(mediaKpis);
-    const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
-    const serializedPayload = JSON.stringify(rawData);
-
-    const headerHtml = `<div class="header">
+  /**
+   * Builds the top header bar HTML for the Executive Digest.
+   */
+  function buildDigestHeaderHtml(reportingPeriod, generatedDate) {
+    return `<div class="header">
       <div>
         <h1 class="brand-title">Web Activity & Focus Executive Digest</h1>
         <div class="period-label">Reporting Period: <strong>${escapeHtml(reportingPeriod)}</strong> | Generated: ${escapeHtml(generatedDate)}</div>
@@ -1960,26 +2003,57 @@ ${serializedPayload}
         <button type="button" class="no-print btn-print-report" onclick="window.print()">🖨️ Print / Save PDF</button>
       </div>
     </div>`;
+  }
 
-    const bodyContent = `${headerHtml}
+  /**
+   * Assembles Part 1 (Time Tracking), Part 2 (Media Analytics), and footer HTML.
+   */
+  function buildDigestBodyHtml(sections) {
+    const s = sections || {};
+    return `${s.headerHtml || ''}
     <!-- PART 1: Time Tracking & Circadian Focus -->
     <div class="part-tracking-section">
-      ${metricsGridHtml}
-      ${mainContentHtml}
-      ${chronoHeatmapHtml}
+      ${s.metricsGridHtml || ''}
+      ${s.timeDistributionCardHtml || ''}
+      ${s.chronoHeatmapHtml || ''}
+      ${s.domainTableHtml || ''}
     </div>
     <!-- PART 2: Media Analytics & Streaming Telemetry -->
     <div class="part-media-section">
       <h2 class="section-title">Media Analytics & Streaming Telemetry</h2>
-      ${mediaGridHtml}
-      ${mediaSectionHtml}
+      ${s.mediaGridHtml || ''}
+      ${s.mediaSectionHtml || ''}
     </div>
     <div class="footer">
       <span>Web Activity & Media Sentinel - Standalone Offline Report</span>
-      <span>Checksum: ${computeCRC32(rawData)} &bull; 100% Offline Single-File</span>
+      <span>Checksum: ${s.checksum || '00000000'} &bull; 100% Offline Single-File</span>
     </div>`;
+  }
 
-    return buildDigestShellHtml(reportingPeriod, bodyContent, serializedPayload);
+  /**
+   * Generates clean, self-contained HTML document for the Executive Digest.
+   */
+  function generateExecutiveDigestHtml(data, options = {}) {
+    const rawData = data || {};
+    const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
+    const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
+    const generatedDate = options.generatedDate || new Date().toLocaleDateString();
+    const norm = normalizeTelemetryDataset(rawData, options);
+    const { totalActiveSeconds, totalMediaSeconds, sortedDomains } = norm;
+    const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
+
+    const metricsGridHtml = renderExecutiveMetricsGrid(extractDigestKpiMetrics(rawData, norm, options));
+    const timeDistributionCardHtml = renderDistributionChartSection(sortedDomains, totalActiveSeconds, colors);
+    const chronoHeatmapHtml = renderChronoHeatmapSection(rawData, options);
+    const domainTableHtml = renderDomainTableSection(sortedDomains, totalActiveSeconds);
+    const mediaGridHtml = renderExecutiveMediaMetricsGrid(extractDigestMediaKpiMetrics(rawData, options));
+    const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
+    const headerHtml = buildDigestHeaderHtml(reportingPeriod, generatedDate);
+    const bodyContent = buildDigestBodyHtml({
+      headerHtml, metricsGridHtml, timeDistributionCardHtml, chronoHeatmapHtml,
+      domainTableHtml, mediaGridHtml, mediaSectionHtml, checksum: computeCRC32(rawData)
+    });
+    return buildDigestShellHtml(reportingPeriod, bodyContent, JSON.stringify(rawData));
   }
 
   /**
@@ -2026,54 +2100,6 @@ ${serializedPayload}
       peakHour: optMetrics.peakHour && optMetrics.peakHour !== '--:--' ? optMetrics.peakHour : (computePeakHourFromData(rawData) || '--:--'),
       longestSession: optMetrics.longestSession || (sortedDomains[0] ? formatHoursMinutes(Math.round(sortedDomains[0].activeTime / Math.max(1, sortedDomains[0].sessions))) : '0h 00m')
     };
-  }
-
-  /**
-   * Renders activity proportions and domain breakdown or empty state.
-   */
-  function renderProportionsAndTable(sortedDomains, totalActiveSeconds, svgSegments, legendHtml, distributionBarsHtml, domainRows) {
-    if (!sortedDomains || sortedDomains.length === 0) {
-      return `<div class="empty-state-box">
-        <div style="font-size:1.8rem;margin-bottom:8px;">📊</div>
-        <strong>No Activity Tracked for this Period</strong>
-        <p style="margin:6px 0 0 0;font-size:0.85rem;">Active domain sessions will populate here automatically as you browse.</p>
-      </div>`;
-    }
-
-    return `<h2 class="section-title">Top Activity Proportions</h2>
-    <div class="chart-section">
-      <div class="donut-wrapper">
-        <svg viewBox="0 0 100 100" width="130" height="130">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="12"/>
-          ${svgSegments}
-        </svg>
-      </div>
-      <div class="legend-list">
-        ${legendHtml}
-      </div>
-    </div>
-
-    <div class="distribution-overview-card" style="margin-bottom:28px;page-break-inside:avoid;break-inside:avoid;">
-      <h3 style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0 0 12px 0;">Distribution Overview</h3>
-      ${distributionBarsHtml}
-    </div>
-
-    <h2 class="section-title">Detailed Domain Telemetry</h2>
-    <table class="modern-data-table" id="domainAnalyticsTable">
-      <thead>
-        <tr>
-          <th class="col-domain" style="width:26%;">Website / Domain</th>
-          <th class="col-category" style="width:14%;">Category</th>
-          <th class="col-time" style="width:16%;">Time Spent</th>
-          <th class="col-ratio" style="width:18%;">Ratio</th>
-          <th class="col-sessions" style="width:12%;">Sessions</th>
-          <th class="col-last" style="width:14%;">Last Active</th>
-        </tr>
-      </thead>
-      <tbody id="domainTableBody">
-        ${domainRows}
-      </tbody>
-    </table>`;
   }
 
   /**
@@ -2416,6 +2442,11 @@ ${serializedPayload}
     renderMediaMetricsGridRow1,
     renderMediaMetricsGridRow2,
     renderChronoHeatmapSection,
+    renderActivityEmptyState,
+    renderDistributionChartSection,
+    renderDomainTableSection,
+    buildDigestHeaderHtml,
+    buildDigestBodyHtml,
     extractDigestKpiMetrics,
     renderExecutiveMetricsGrid,
     openConflictResolutionModal,
