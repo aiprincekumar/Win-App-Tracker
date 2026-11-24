@@ -102,8 +102,8 @@ console.log('Battery 2: Premature Page-Break Avoidance Audit');
     );
   }
   assert(
-    !avoidSelectors.includes('.chart-section'),
-    `${name}: .chart-section must NOT have break-inside: avoid in @media print`
+    avoidSelectors.some(s => s.includes('.chart-section')),
+    `${name}: .chart-section MUST retain break-inside: avoid in @media print per AUTH-MGR-20261124-CHART-ORDER-001`
   );
 
   // Atomic elements MUST have break-inside: avoid
@@ -175,8 +175,8 @@ const digestCss = featureDigestMatch[1];
 const digestPrintCss = extractPrintSection(digestCss);
 
 assert(
-  digestPrintCss.includes('.chart-section') && (digestPrintCss.includes('break-inside: auto !important') || digestPrintCss.includes('page-break-inside: auto !important')),
-  'EXECUTIVE_DIGEST_CSS: .chart-section must have break-inside: auto !important'
+  digestPrintCss.includes('.chart-section') && (digestPrintCss.includes('break-inside: avoid !important') || digestPrintCss.includes('page-break-inside: avoid !important')),
+  'EXECUTIVE_DIGEST_CSS: .chart-section must have break-inside: avoid !important'
 );
 assert(
   digestPrintCss.includes('.donut-wrapper') && digestPrintCss.includes('110px'),

@@ -280,9 +280,7 @@ label.btn {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), 0 0 12px rgba(16, 185, 129, 0.2);
 }
 
-/* =============================================================================
- * Feature 6: Executive PDF & HTML Digest Engine (@media print)
- * ============================================================================= */
+/* Feature 6: Executive PDF & HTML Digest Engine (@media print) */
 
 /* Hidden on screen by default */
 .print-executive-header, #printFallbackContainer {
@@ -441,9 +439,8 @@ label.btn {
   }
 
   /* Full landscape width and container styling to prevent right-side clipping */
-  .bento-grid-container, .metrics-grid, .metric-card, .analytics-hero-card,
-  .donut-chart-container, .chart-section, .data-table-card, .table-card,
-  .domain-table-container, .table-responsive-container {
+  .bento-grid-container, .metrics-grid, .metric-card, .analytics-hero-card, .donut-chart-container,
+  .chart-section, .data-table-card, .table-card, .domain-table-container, .table-responsive-container {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -452,9 +449,8 @@ label.btn {
   }
 
   /* Allow composite multi-page containers and sections to flow naturally across pages */
-  .bento-grid-container, .metrics-grid, .analytics-hero-card, .donut-chart-container,
-  .chart-section, .data-table-card, .table-card, .domain-table-container,
-  .table-responsive-container {
+  .bento-grid-container, .metrics-grid, .analytics-hero-card, .data-table-card,
+  .table-card, .domain-table-container, .table-responsive-container {
     page-break-inside: auto !important;
     break-inside: auto !important;
     height: auto !important;
@@ -462,9 +458,16 @@ label.btn {
   }
 
   /* Atomic leaf protection: strictly on small standalone items */
-  .print-executive-header, .metric-card, .print-summary-card, tr {
+  .print-executive-header, .metric-card, .print-summary-card, tr,
+  .chart-section, .donut-chart-container, #timeDistributionCard {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .visual-charts-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
   }
 
   /* High-density 10-KPI 5-column grid in A4 landscape */
@@ -561,9 +564,7 @@ label.btn {
   .badge-tag, .time-dual-pills span, .badge-category { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
-/* =============================================================================
- * Light Theme Overrides (WCAG AAA & High-Contrast Parity)
- * ============================================================================= */
+/* Light Theme Overrides (WCAG AAA & High-Contrast Parity) */
 
 body.theme-light .backup-action-box, body.light-theme .backup-action-box {
   background: #f8fafc;
@@ -586,7 +587,6 @@ body.theme-light .backup-action-box .btn-primary, body.theme-light .backup-actio
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
-
 body.theme-light .backup-action-box .btn-primary:hover, body.theme-light .backup-actions-grid .btn-primary:hover, body.light-theme .backup-action-box .btn-primary:hover, body.light-theme .backup-actions-grid .btn-primary:hover {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: #059669;
@@ -602,7 +602,6 @@ body.theme-light .backup-action-box .btn-secondary, body.theme-light .backup-act
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-
 body.theme-light .backup-action-box .btn-secondary:hover, body.theme-light .backup-actions-grid .btn-secondary:hover, body.light-theme .backup-action-box .btn-secondary:hover, body.light-theme .backup-actions-grid .btn-secondary:hover {
   background: rgba(0, 0, 0, 0.08);
   border-color: rgba(2, 132, 199, 0.4);
@@ -617,7 +616,6 @@ body.theme-light .backup-action-box .btn-ghost, body.theme-light .backup-actions
   color: #475569;
   box-shadow: none;
 }
-
 body.theme-light .backup-action-box .btn-ghost:hover, body.theme-light .backup-actions-grid .btn-ghost:hover, body.light-theme .backup-action-box .btn-ghost:hover, body.light-theme .backup-actions-grid .btn-ghost:hover {
   background: rgba(0, 0, 0, 0.06);
   border-color: rgba(71, 85, 105, 0.25);

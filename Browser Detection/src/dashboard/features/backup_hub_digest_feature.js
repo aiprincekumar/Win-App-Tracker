@@ -751,13 +751,14 @@
   function renderDistributionBars(top5, totalActiveSeconds, colors) {
     return top5.map((d, i) => {
       const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
+      const barColor = colors[i % colors.length];
       return `<div style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;">
           <span style="font-weight:600;">${escapeHtml(d.domain)}</span>
           <span style="color:#64748b;font-variant-numeric:tabular-nums;">${formatHoursMinutes(d.activeTime)} (${pct}%)</span>
         </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar-fill" style="width:${pct}%;background:${colors[i % colors.length]};"></div>
+        <div class="progress-bar-container" style="-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;">
+          <div class="progress-bar-fill" style="width:${pct}%;background:${barColor} !important;background-color:${barColor} !important;-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;"></div>
         </div>
       </div>`;
     }).join('');
@@ -1133,8 +1134,9 @@
     }
     .chart-section {
       display: flex;
+      flex-direction: row;
       align-items: center;
-      gap: 32px;
+      gap: 28px;
       margin-bottom: 28px;
       padding: 20px;
       background: #fafafa;
@@ -1142,18 +1144,25 @@
       border: 1px solid var(--border-strong);
       width: 100%;
       box-sizing: border-box;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .donut-wrapper {
       position: relative;
-      width: 140px;
-      height: 140px;
+      width: 130px;
+      height: 130px;
       flex-shrink: 0;
     }
+    .donut-wrapper svg {
+      width: 130px;
+      height: 130px;
+    }
     .legend-list {
+      flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      flex: 1;
     }
     .legend-item {
       display: flex;
@@ -1295,7 +1304,7 @@
       width: 100%;
       box-sizing: border-box;
     }
-    .chrono-heatmap-section {
+    #cardChronoHeatmap {
       margin-bottom: 24px;
       width: 100%;
       box-sizing: border-box;
@@ -1403,7 +1412,7 @@
       .metric-val {
         font-size: 1.15rem !important;
       }
-      .chrono-heatmap-section {
+      #cardChronoHeatmap {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
         margin-bottom: 14px !important;
@@ -1423,21 +1432,42 @@
         padding-top: 8px !important;
       }
       .chart-section {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
         padding: 10px 14px !important;
         margin-bottom: 14px !important;
-        gap: 16px !important;
+        gap: 20px !important;
         background: #fafafa !important;
         border: 1px solid var(--border-strong) !important;
-        page-break-inside: auto !important;
-        break-inside: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .donut-wrapper {
         width: 110px !important;
         height: 110px !important;
+        flex-shrink: 0 !important;
       }
       .donut-wrapper svg {
         width: 110px !important;
         height: 110px !important;
+      }
+      .legend-list {
+        flex: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+      }
+      .distribution-overview-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .progress-bar-container, .progress-bar-fill {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .section-title {
         margin: 14px 0 8px 0 !important;
@@ -1935,8 +1965,8 @@ ${serializedPayload}
     <!-- PART 1: Time Tracking & Circadian Focus -->
     <div class="part-tracking-section">
       ${metricsGridHtml}
-      ${chronoHeatmapHtml}
       ${mainContentHtml}
+      ${chronoHeatmapHtml}
     </div>
     <!-- PART 2: Media Analytics & Streaming Telemetry -->
     <div class="part-media-section">
@@ -2013,7 +2043,7 @@ ${serializedPayload}
     return `<h2 class="section-title">Top Activity Proportions</h2>
     <div class="chart-section">
       <div class="donut-wrapper">
-        <svg viewBox="0 0 100 100" width="140" height="140">
+        <svg viewBox="0 0 100 100" width="130" height="130">
           <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="12"/>
           ${svgSegments}
         </svg>
@@ -2023,7 +2053,7 @@ ${serializedPayload}
       </div>
     </div>
 
-    <div style="margin-bottom:28px;">
+    <div class="distribution-overview-card" style="margin-bottom:28px;page-break-inside:avoid;break-inside:avoid;">
       <h3 style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0 0 12px 0;">Distribution Overview</h3>
       ${distributionBarsHtml}
     </div>

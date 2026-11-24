@@ -7780,8 +7780,6 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .bento-grid-container,
   .metrics-grid,
   .analytics-hero-card,
-  .donut-chart-container,
-  .chart-section,
   .data-table-card,
   .table-card,
   .domain-table-container,
@@ -7796,9 +7794,18 @@ body.theme-light .viz-header-status-pill .viz-live-text,
   .print-executive-header,
   .metric-card,
   .print-summary-card,
-  tr {
+  tr,
+  .chart-section,
+  .donut-chart-container,
+  #timeDistributionCard {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .visual-charts-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
   }
 
   /* High-density 10-KPI 5-column grid in A4 landscape */
