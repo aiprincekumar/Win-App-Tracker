@@ -509,8 +509,19 @@
   /**
    * Creates initial domain entry accumulator.
    */
-  function createDomainTotal(category) {
-    return { activeTime: 0, sessions: 0, category: category || 'work' };
+  function createDomainTotal(item = {}) {
+    const cat = typeof item === 'string' ? item : ((item && item.category) || 'work');
+    return {
+      activeTime: 0,
+      sessions: 0,
+      category: cat,
+      foregroundSeconds: 0,
+      backgroundMediaSeconds: 0,
+      favicon: null,
+      lastActive: null,
+      isInternal: false,
+      ratioPercent: null
+    };
   }
 
   /**
@@ -522,12 +533,23 @@
     for (let i = 0; i < itemsArray.length; i++) {
       const item = itemsArray[i];
       if (!item || !item.domain) continue;
-      const sec = Number(item.computedSeconds || item.totalSeconds || item.seconds || 0);
+      const sec = Number(item.computedSeconds !== undefined ? item.computedSeconds : (item.totalSeconds !== undefined ? item.totalSeconds : (item.seconds || 0)));
       totalActiveSeconds += sec;
       const dom = String(item.domain);
-      domainTotals[dom] = domainTotals[dom] || createDomainTotal(item.category);
+      if (!domainTotals[dom]) {
+        domainTotals[dom] = createDomainTotal(item);
+      }
       domainTotals[dom].activeTime += sec;
       domainTotals[dom].sessions += Number(item.sessions || item.sessionCount || 1);
+      domainTotals[dom].foregroundSeconds += Number(item.foregroundSeconds || item.foreground_seconds || 0);
+      domainTotals[dom].backgroundMediaSeconds += Number(item.backgroundMediaSeconds || item.background_media_seconds || 0);
+      if (item.favicon && !domainTotals[dom].favicon) domainTotals[dom].favicon = item.favicon;
+      if (item.lastActive) {
+        const itemTs = (typeof item.lastActive === 'string') ? new Date(item.lastActive).getTime() : Number(item.lastActive);
+        domainTotals[dom].lastActive = Math.max(domainTotals[dom].lastActive || 0, itemTs);
+      }
+      if (item.isInternal !== undefined) domainTotals[dom].isInternal = Boolean(item.isInternal);
+      if (item.ratioPercent !== undefined && !domainTotals[dom].ratioPercent) domainTotals[dom].ratioPercent = item.ratioPercent;
     }
     return { totalActiveSeconds, domainTotals };
   }
@@ -538,18 +560,36 @@
   function extractDomainSeconds(entry, rangeSet) {
     let sec = Number(entry.seconds || entry.totalSeconds || 0);
     let sessions = Number(entry.sessionCount || 0);
+    let fgSec = Number(entry.foregroundSeconds || entry.foreground_seconds || 0);
+    let bgSec = Number(entry.backgroundMediaSeconds || entry.background_media_seconds || 0);
+    let lastActive = entry.lastActive || entry.last_active || null;
     if (!entry.days) {
-      return { sec, sessions: Math.max(1, sessions) };
+      return { sec, sessions: Math.max(1, sessions), fgSec, bgSec, lastActive };
     }
     const dateKeys = Object.keys(entry.days);
+    let rangeSec = 0;
+    let rangeSessions = 0;
+    let rangeFg = 0;
+    let rangeBg = 0;
+    let matched = false;
     for (let i = 0; i < dateKeys.length; i++) {
       const k = dateKeys[i];
       if (rangeSet && !rangeSet.has(k)) continue;
+      matched = true;
       const d = entry.days[k];
-      sec += Number(d.seconds || 0);
-      if (!entry.sessionCount) sessions += Number(d.sessions || 1);
+      rangeSec += Number(d.seconds || 0);
+      if (!entry.sessionCount) rangeSessions += Number(d.sessions || 1);
+      rangeFg += Number(d.foregroundSeconds || d.foreground_seconds || d.seconds || 0);
+      rangeBg += Number(d.backgroundMediaSeconds || d.background_media_seconds || 0);
+      if (d.lastActive && (!lastActive || d.lastActive > lastActive)) lastActive = d.lastActive;
     }
-    return { sec, sessions: Math.max(1, sessions) };
+    if (rangeSet || matched) {
+      sec = rangeSec;
+      if (!entry.sessionCount) sessions = rangeSessions;
+      fgSec = rangeFg;
+      bgSec = rangeBg;
+    }
+    return { sec, sessions: Math.max(1, sessions), fgSec, bgSec, lastActive };
   }
 
   /**
@@ -565,10 +605,19 @@
       const dom = doms[i];
       const entry = domainsObj[dom];
       if (!entry) continue;
-      const { sec, sessions } = extractDomainSeconds(entry, rangeSet);
+      const { sec, sessions, fgSec, bgSec, lastActive } = extractDomainSeconds(entry, rangeSet);
       if (sec <= 0) continue;
       totalActiveSeconds += sec;
-      domainTotals[dom] = { activeTime: sec, sessions, category: entry.category || 'work' };
+      domainTotals[dom] = {
+        activeTime: sec,
+        sessions,
+        category: entry.category || 'work',
+        foregroundSeconds: fgSec > 0 ? fgSec : Number(entry.foregroundSeconds || entry.foreground_seconds || sec),
+        backgroundMediaSeconds: bgSec > 0 ? bgSec : Number(entry.backgroundMediaSeconds || entry.background_media_seconds || 0),
+        favicon: entry.favicon || entry.favicon_url || null,
+        lastActive: lastActive || entry.lastActive || entry.last_active || null,
+        isInternal: Boolean(entry.isInternal || (dom.includes('://') || dom.startsWith('chrome-') || dom.startsWith('edge-') || dom === 'Dashboard' || dom === 'Extension'))
+      };
     }
     return { totalActiveSeconds, domainTotals };
   }
@@ -582,8 +631,13 @@
       const dom = doms[i];
       const d = domains[dom];
       domainTotals[dom] = domainTotals[dom] || createDomainTotal(d.category);
-      domainTotals[dom].activeTime += Number(d.activeTime || d.seconds || 0);
+      const sec = Number(d.activeTime || d.seconds || 0);
+      domainTotals[dom].activeTime += sec;
       domainTotals[dom].sessions += Number(d.sessions || 1);
+      domainTotals[dom].foregroundSeconds += Number(d.foregroundSeconds || d.foreground_seconds || sec);
+      domainTotals[dom].backgroundMediaSeconds += Number(d.backgroundMediaSeconds || d.background_media_seconds || 0);
+      if (d.favicon && !domainTotals[dom].favicon) domainTotals[dom].favicon = d.favicon;
+      if (d.lastActive) domainTotals[dom].lastActive = Math.max(domainTotals[dom].lastActive || 0, Number(d.lastActive));
     }
   }
 
@@ -627,7 +681,7 @@
    */
   function normalizeTelemetryDataset(rawData, options = {}) {
     const dataset = rawData || {};
-    const tracking = dataset.tracking_history || dataset.activityData || dataset.trackingHistory || dataset;
+    const tracking = dataset.items || dataset.tracking_history || dataset.activityData || dataset.trackingHistory || dataset;
     const media = dataset.media_history || dataset.mediaHistory || [];
     const selectedDateRange = options.dateRange || null;
 
@@ -641,10 +695,15 @@
     }
 
     const totalMediaSeconds = calculateTotalMediaDuration(media);
-    const sortedDomains = Object.keys(norm.domainTotals).map(dom => ({
-      domain: dom,
-      ...norm.domainTotals[dom]
-    })).sort((a, b) => b.activeTime - a.activeTime);
+    const sortedDomains = Object.keys(norm.domainTotals).map(dom => {
+      const entry = norm.domainTotals[dom];
+      const pct = norm.totalActiveSeconds > 0 ? ((entry.activeTime / norm.totalActiveSeconds) * 100).toFixed(1) : '0.0';
+      return {
+        domain: dom,
+        ...entry,
+        ratioPercent: entry.ratioPercent || pct
+      };
+    }).sort((a, b) => b.activeTime - a.activeTime);
 
     return {
       totalActiveSeconds: norm.totalActiveSeconds,
@@ -747,72 +806,207 @@
   }
 
   /**
-   * Renders detailed domain table rows with category badges.
+   * Formats a timestamp into human-readable date & time string.
+   */
+  function formatTimestamp(ts) {
+    if (!ts) return '-';
+    try {
+      const num = Number(ts);
+      const d = (Number.isFinite(num) && num > 0 && num < 1e11) ? new Date(num * 1000) : new Date(ts);
+      if (isNaN(d.getTime())) return String(ts);
+      return d.toLocaleString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (_) {
+      return String(ts);
+    }
+  }
+
+  /**
+   * Formats category key into live dashboard display pill label.
+   */
+  function formatCategoryLabel(cat) {
+    const c = String(cat || 'utility').toLowerCase();
+    if (c === 'work') return 'Work & Dev';
+    if (c === 'learning') return 'Learning';
+    if (c === 'entertainment') return 'Entertainment';
+    if (c === 'social') return 'Social';
+    if (c === 'utility') return 'Utilities';
+    return c.charAt(0).toUpperCase() + c.slice(1);
+  }
+
+  /**
+   * Renders domain name, favicon, and scheme/extension badge for Table 1.
+   */
+  function renderDomainCellHtml(d) {
+    const dom = escapeHtml(d.domain || '');
+    const isInternal = Boolean(d.isInternal || (dom.includes('://') || dom.startsWith('chrome-') || dom.startsWith('edge-')));
+    let badgeHtml = '';
+    if (dom === 'Dashboard' || dom === 'Extension') {
+      badgeHtml = `<span class="badge-tag badge-extension" title="Extension Dashboard">🧩 ${dom}</span>`;
+    } else if (isInternal) {
+      badgeHtml = `<span class="badge-tag badge-internal" title="Internal Browser Scheme">⚙️ Internal</span>`;
+    }
+    const favSrc = d.favicon ? escapeHtml(d.favicon) : `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d.domain || '')}&sz=32`;
+    return `<div class="domain-cell">
+      <img src="${favSrc}" alt="" class="domain-fav" onerror="this.style.display='none'"/>
+      <span class="domain-name-text">${dom}</span>
+      ${badgeHtml}
+    </div>`;
+  }
+
+  /**
+   * Renders a single 6-column Domain Breakdown table row.
+   */
+  function renderDomainRowItem(d, totalActiveSeconds) {
+    const pct = d.ratioPercent || (totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0.0');
+    const catKey = (d.category || 'work').toLowerCase();
+    const catLabel = formatCategoryLabel(catKey);
+    const domainCell = renderDomainCellHtml(d);
+    const fgSec = d.foregroundSeconds !== undefined ? d.foregroundSeconds : (d.activeTime - (d.backgroundMediaSeconds || 0));
+    const bgSec = d.backgroundMediaSeconds || 0;
+    const sessionCount = Number(d.sessions) || 1;
+    const sessionText = sessionCount === 1 ? '1 session' : `${sessionCount} sessions`;
+    const lastActiveStr = formatTimestamp(d.lastActive);
+
+    return `<tr>
+      <td class="col-domain">${domainCell}</td>
+      <td class="col-category"><span class="badge-tag badge-category badge-cat-${escapeHtml(catKey)}">${escapeHtml(catLabel)}</span></td>
+      <td class="col-time">
+        <span class="time-cell-main">${formatHoursMinutes(d.activeTime)}</span>
+        <div class="time-dual-pills">
+          <span class="pill-mini-fg" title="Foreground Active Time">🖥️ ${formatHoursMinutes(fgSec)}</span>
+          <span class="pill-mini-bg" title="Background Media Playback Time">🎵 ${formatHoursMinutes(bgSec)}</span>
+        </div>
+      </td>
+      <td class="col-ratio">
+        <div class="table-ratio-wrapper">
+          <div class="table-ratio-track"><div class="table-ratio-fill" style="width:${pct}%;"></div></div>
+          <span class="table-ratio-pct">${pct}%</span>
+        </div>
+      </td>
+      <td class="col-sessions"><span class="badge-tag">${escapeHtml(sessionText)}</span></td>
+      <td class="col-last"><span class="time-last-active">${escapeHtml(lastActiveStr)}</span></td>
+    </tr>`;
+  }
+
+  /**
+   * Renders detailed domain table rows matching live dashboard 6-column layout.
    */
   function renderDomainRows(sortedDomains, totalActiveSeconds) {
-    return sortedDomains.slice(0, 30).map((d, i) => {
-      const pct = totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0';
-      const cat = escapeHtml(d.category || 'work');
-      const avgDuration = calculateAverageSessionDuration(d.activeTime, d.sessions);
-      const prodBadge = getProductivityBadge(d.category);
-      return `<tr>
-        <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
-        <td style="font-weight:600;color:#0f172a;">${escapeHtml(d.domain)}</td>
-        <td><span class="badge ${cat}">${cat}</span></td>
-        <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(d.activeTime)}</td>
-        <td style="color:#64748b;">${pct}%</td>
-        <td style="color:#64748b;">${d.sessions}</td>
-        <td style="font-family:monospace;color:#475569;">${avgDuration}</td>
-        <td>${prodBadge}</td>
-      </tr>`;
-    }).join('\n      ');
+    if (!Array.isArray(sortedDomains) || sortedDomains.length === 0) return '';
+    return sortedDomains.slice(0, 30).map(d => renderDomainRowItem(d, totalActiveSeconds)).join('\n      ');
+  }
+
+  /**
+   * Classifies platform name into live dashboard platform badge CSS class.
+   */
+  function formatMediaPlatformClass(platform) {
+    const p = String(platform || '').toLowerCase();
+    if (p.includes('youtube')) return 'platform-youtube';
+    if (p.includes('netflix')) return 'platform-netflix';
+    if (p.includes('vimeo')) return 'platform-vimeo';
+    if (p.includes('twitch')) return 'platform-twitch';
+    return '';
+  }
+
+  /**
+   * Renders resolution badge with optional playback rate & window mode badges.
+   */
+  function renderMediaResolutionBadges(m) {
+    const resRaw = m.resolution || 'Standard';
+    const resCls = (resRaw.includes('4K') || resRaw.includes('2K')) ? 'res-4k' : 'res-hd';
+    let badges = `<span class="badge-tag ${resCls}">${escapeHtml(resRaw)}</span>`;
+    if (m.playbackRate && Number(m.playbackRate) !== 1.0) {
+      badges += `<span class="badge-tag" style="margin-left:4px;font-size:10px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);">⚡ ${escapeHtml(String(m.playbackRate))}x</span>`;
+    }
+    if (m.lastWindowMode && m.lastWindowMode !== 'standard') {
+      const modeLbl = m.lastWindowMode === 'fullscreen' ? '⛶ Fullscreen' : (m.lastWindowMode === 'pip' ? '🪟 PiP' : '🎬 Theater');
+      badges += `<span class="badge-tag" style="margin-left:4px;font-size:10px;background:rgba(139,92,246,0.15);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);">${escapeHtml(modeLbl)}</span>`;
+    }
+    return badges;
+  }
+
+  /**
+   * Renders a single 6-column Media Playback History table row.
+   */
+  function renderMediaRowItem(m) {
+    const isAudio = m.mediaType === 'audio';
+    const mediaIcon = isAudio ? '🎵' : '▶️';
+    const title = escapeHtml(m.title || (isAudio ? 'Audio Stream' : 'Web Video'));
+    const isLive = Boolean(m.isPlaying || m.isActive);
+    const liveBadge = isLive ? '<span class="badge-live-pulse" style="margin-left:6px;">● LIVE</span>' : '';
+    const platform = escapeHtml(m.platform || m.domain || 'Web');
+    const platCls = formatMediaPlatformClass(m.platform || m.domain);
+    const dur = Number(m.watchDuration || m.watchTime || m.duration || 0);
+
+    const avgVol = m.averageVolume !== undefined ? Number(m.averageVolume) : 100;
+    const peakVol = m.peakVolume !== undefined ? Number(m.peakVolume) : avgVol;
+    const lowVol = m.lowVolume !== undefined ? Number(m.lowVolume) : avgVol;
+    const clampedAvg = Math.min(100, Math.max(0, avgVol));
+    const resBadges = renderMediaResolutionBadges(m);
+    const tsStr = formatTimestamp(m.timestamp || m.lastActive || m.date);
+
+    return `<tr ${isLive ? 'class="session-live-active" style="border-left:3px solid #38bdf8;"' : ''}>
+      <td class="col-media-title">
+        <div class="media-title-cell" title="${title}">
+          <span class="media-icon-symbol">${mediaIcon}</span>
+          <span class="media-title-link">${title}</span>
+          ${liveBadge}
+        </div>
+      </td>
+      <td class="col-media-platform"><span class="badge-tag ${platCls}">${platform}</span></td>
+      <td class="col-media-duration">
+        <span class="time-cell-main">${formatHoursMinutes(dur)}</span>
+        <span class="time-cell-sub"> (${dur}s)</span>
+      </td>
+      <td class="col-media-volume">
+        <div class="volume-meter-wrapper">
+          <div class="volume-meter-track"><div class="volume-meter-fill" style="width:${clampedAvg}%;"></div></div>
+          <span class="volume-meter-text">${avgVol}%</span>
+        </div>
+        <div class="volume-extremes-sub">
+          Peak: <span style="color:#fbbf24;">${peakVol}%</span> | Low: <span style="color:#a78bfa;">${lowVol}%</span>
+        </div>
+      </td>
+      <td class="col-media-res">${resBadges}</td>
+      <td class="col-media-date"><span class="time-last-active">${escapeHtml(tsStr)}</span></td>
+    </tr>`;
   }
 
   /**
    * Renders media playback history rows.
    */
-  function renderMediaRows(mediaHistory, totalMediaSeconds) {
+  function renderMediaRows(mediaHistory, totalMediaSeconds = 0) {
     if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
-    const totalSec = Number(totalMediaSeconds) || calculateTotalMediaDuration(mediaHistory);
-    return mediaHistory.slice(0, 25).map((m, i) => {
-      const title = escapeHtml(m.title || 'Untitled Playback');
-      const platform = escapeHtml(m.platform || m.domain || 'Web');
-      const dur = Number(m.watchDuration || m.watchTime || m.duration || 0);
-      const sharePct = totalSec > 0 ? ((dur / totalSec) * 100).toFixed(1) : '0.0';
-      const audioBadge = m.isMuted ? '<span class="badge muted">Muted</span>' : '<span class="badge audible">Audible</span>';
-      const statusBadge = `<span class="badge ${m.isActive ? 'work' : 'utility'}">${m.isActive ? 'Active Stream' : 'Recorded'}</span>`;
-      return `<tr>
-        <td style="font-weight:700;color:#64748b;">#${i + 1}</td>
-        <td style="font-weight:600;color:#0f172a;max-width:260px;word-break:break-word;">${title}</td>
-        <td><span class="badge utility">${platform}</span></td>
-        <td style="font-family:monospace;font-weight:700;">${formatHoursMinutes(dur)}</td>
-        <td style="color:#64748b;font-family:monospace;">${sharePct}%</td>
-        <td>${audioBadge}</td>
-        <td>${statusBadge}</td>
-      </tr>`;
-    }).join('\n      ');
+    return mediaHistory.slice(0, 25).map(m => renderMediaRowItem(m)).join('\n      ');
   }
 
   /**
    * Renders optional media playback table section.
    */
-  function renderMediaSection(mediaHistory, totalMediaSeconds) {
+  function renderMediaSection(mediaHistory, totalMediaSeconds = 0) {
     if (!Array.isArray(mediaHistory) || mediaHistory.length === 0) return '';
     const rows = renderMediaRows(mediaHistory, totalMediaSeconds);
     return `<h2 class="section-title">Media Playback & Streaming Telemetry</h2>
-    <table>
+    <table class="modern-data-table" id="mediaHistoryTable">
       <thead>
         <tr>
-          <th style="width:45px;">#</th>
-          <th>Media Title</th>
-          <th>Platform / Source</th>
-          <th>Watch Duration</th>
-          <th>Playback Share</th>
-          <th>Audio State</th>
-          <th>Playback Status</th>
+          <th class="col-media-title" style="width:30%;">Video Title</th>
+          <th class="col-media-platform" style="width:14%;">Platform</th>
+          <th class="col-media-duration" style="width:14%;">Watch Duration</th>
+          <th class="col-media-volume" style="width:16%;">Volume Profile</th>
+          <th class="col-media-res" style="width:12%;">Resolution</th>
+          <th class="col-media-date" style="width:14%;">Date & Time</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="mediaTableBody">
         ${rows}
       </tbody>
     </table>`;
@@ -1026,6 +1220,55 @@
     .badge.neutral { background: #f1f5f9; color: #475569; }
     .badge.audible { background: #dcfce7; color: #15803d; }
     .badge.muted { background: #fee2e2; color: #991b1b; }
+    .domain-cell { display: flex; align-items: center; gap: 8px; }
+    .domain-fav { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; vertical-align: middle; }
+    .domain-name-text { font-weight: 600; color: var(--text); word-break: break-all; }
+    .badge-tag { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; text-transform: none; letter-spacing: normal; white-space: nowrap; }
+    .badge-extension { background: rgba(59, 130, 246, 0.12); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-internal { background: rgba(100, 116, 139, 0.12); color: #475569; border: 1px solid rgba(100, 116, 139, 0.3); }
+    .badge-category { border-radius: 999px; font-weight: 600; font-size: 0.72rem; padding: 2px 8px; border: 1px solid transparent; }
+    .badge-cat-work { background: rgba(14, 165, 233, 0.12); color: #0284c7; border-color: rgba(14, 165, 233, 0.3); }
+    .badge-cat-learning { background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3); }
+    .badge-cat-entertainment { background: rgba(244, 63, 94, 0.12); color: #e11d48; border-color: rgba(244, 63, 94, 0.3); }
+    .badge-cat-social { background: rgba(168, 85, 247, 0.12); color: #7c3aed; border-color: rgba(168, 85, 247, 0.3); }
+    .badge-cat-utility { background: rgba(245, 158, 11, 0.12); color: #d97706; border-color: rgba(245, 158, 11, 0.3); }
+    .time-cell-main { font-family: monospace; font-weight: 700; color: var(--text); }
+    .time-dual-pills { display: flex; align-items: center; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+    .pill-mini-fg { display: inline-flex; align-items: center; padding: 1px 5px; background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 4px; font-size: 0.68rem; font-family: monospace; color: #1d4ed8; white-space: nowrap; }
+    .pill-mini-bg { display: inline-flex; align-items: center; padding: 1px 5px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 4px; font-size: 0.68rem; font-family: monospace; color: #6d28d9; white-space: nowrap; }
+    .table-ratio-wrapper { display: flex; align-items: center; gap: 6px; width: 100%; max-width: 140px; }
+    .table-ratio-track { flex: 1; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; min-width: 40px; }
+    .table-ratio-fill { height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); border-radius: 999px; }
+    .table-ratio-pct { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); width: 36px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .time-last-active { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+    .media-title-cell { display: flex; align-items: center; gap: 6px; }
+    .media-icon-symbol { font-size: 0.95rem; flex-shrink: 0; line-height: 1; }
+    .media-title-link { font-weight: 600; color: var(--text); word-break: break-word; }
+    .badge-live-pulse { font-size: 9px; padding: 1px 5px; border-radius: 999px; background: rgba(34, 197, 94, 0.15); color: #15803d; font-weight: 700; white-space: nowrap; }
+    .platform-youtube { background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .platform-netflix { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.3); }
+    .platform-vimeo { background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); }
+    .platform-twitch { background: rgba(147, 51, 234, 0.12); color: #7e22ce; border: 1px solid rgba(147, 51, 234, 0.3); }
+    .time-cell-sub { font-size: 0.72rem; color: var(--text-muted); }
+    .volume-meter-wrapper { display: flex; align-items: center; gap: 6px; width: 100%; max-width: 130px; }
+    .volume-meter-track { flex: 1; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; min-width: 40px; }
+    .volume-meter-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #f59e0b); border-radius: 999px; }
+    .volume-meter-text { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); width: 34px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .volume-extremes-sub { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; }
+    .res-hd { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .res-4k { background: rgba(245, 158, 11, 0.12); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 700; }
+    th.col-domain, td.col-domain { width: 26%; }
+    th.col-category, td.col-category { width: 14%; }
+    th.col-time, td.col-time { width: 16%; }
+    th.col-ratio, td.col-ratio { width: 18%; }
+    th.col-sessions, td.col-sessions { width: 12%; }
+    th.col-last, td.col-last { width: 14%; }
+    th.col-media-title, td.col-media-title { width: 30%; }
+    th.col-media-platform, td.col-media-platform { width: 14%; }
+    th.col-media-duration, td.col-media-duration { width: 14%; }
+    th.col-media-volume, td.col-media-volume { width: 16%; }
+    th.col-media-res, td.col-media-res { width: 12%; }
+    th.col-media-date, td.col-media-date { width: 14%; }
     .empty-state-box {
       text-align: center;
       padding: 32px 16px;
@@ -1227,6 +1470,25 @@
       thead { display: table-header-group !important; }
       tbody { display: table-row-group !important; }
       tfoot { display: table-footer-group !important; }
+      .table-ratio-track, .volume-meter-track {
+        background: #e2e8f0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .table-ratio-fill {
+        background: #10b981 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .volume-meter-fill {
+        background: #8b5cf6 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .badge-tag, .time-dual-pills span, .badge-category {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       h1, h2, h3 { break-after: avoid !important; page-break-after: avoid !important; }
       .footer {
         margin-top: 14px !important;
@@ -1767,20 +2029,18 @@ ${serializedPayload}
     </div>
 
     <h2 class="section-title">Detailed Domain Telemetry</h2>
-    <table>
+    <table class="modern-data-table" id="domainAnalyticsTable">
       <thead>
         <tr>
-          <th style="width:45px;">Rank</th>
-          <th>Domain & Host</th>
-          <th>Category</th>
-          <th>Active Duration</th>
-          <th>Proportion Share</th>
-          <th>Total Sessions</th>
-          <th>Avg Session Duration</th>
-          <th>Productivity Impact</th>
+          <th class="col-domain" style="width:26%;">Website / Domain</th>
+          <th class="col-category" style="width:14%;">Category</th>
+          <th class="col-time" style="width:16%;">Time Spent</th>
+          <th class="col-ratio" style="width:18%;">Ratio</th>
+          <th class="col-sessions" style="width:12%;">Sessions</th>
+          <th class="col-last" style="width:14%;">Last Active</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="domainTableBody">
         ${domainRows}
       </tbody>
     </table>`;
@@ -2131,6 +2391,11 @@ ${serializedPayload}
     openConflictResolutionModal,
     closeConflictResolutionModal,
     formatHoursMinutes,
+    formatTimestamp,
+    formatCategoryLabel,
+    renderDomainRows,
+    renderMediaRows,
+    renderMediaSection,
     escapeHtml,
     normalizeTelemetryDataset,
     calculateAverageSessionDuration,

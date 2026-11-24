@@ -554,6 +554,11 @@ label.btn {
     box-sizing: border-box !important;
     word-break: break-word !important;
   }
+
+  .table-ratio-track, .volume-meter-track { background: #e2e8f0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .table-ratio-fill { background: #10b981 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .volume-meter-fill { background: #8b5cf6 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .badge-tag, .time-dual-pills span, .badge-category { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
 /* =============================================================================

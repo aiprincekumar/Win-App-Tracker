@@ -137,23 +137,21 @@ assert(generatedHtml.includes('id="sentinel-digest-payload"'), 'Must embed lossl
 assert(generatedHtml.includes('size: A4 landscape'), 'generatedHtml must include size: A4 landscape in @page');
 assert(generatedHtml.includes('max-width: 1140px'), 'generatedHtml must include max-width: 1140px');
 
-// Assert 8-column domain telemetry table headers
-assert(generatedHtml.includes('Rank'), 'Must include Rank column');
-assert(generatedHtml.includes('Domain & Host') || generatedHtml.includes('Domain'), 'Must include Domain column');
+// Assert exact 6-column domain telemetry table headers
+assert(generatedHtml.includes('Website / Domain'), 'Must include Website / Domain column');
 assert(generatedHtml.includes('Category'), 'Must include Category column');
-assert(generatedHtml.includes('Active Duration') || generatedHtml.includes('Duration'), 'Must include Duration column');
-assert(generatedHtml.includes('Proportion Share') || generatedHtml.includes('Share'), 'Must include Share column');
-assert(generatedHtml.includes('Total Sessions') || generatedHtml.includes('Sessions'), 'Must include Sessions column');
-assert(generatedHtml.includes('Avg Session Duration') || generatedHtml.includes('Avg Session'), 'Must include Avg Session column');
-assert(generatedHtml.includes('Productivity Impact') || generatedHtml.includes('Productivity'), 'Must include Productivity Impact column');
+assert(generatedHtml.includes('Time Spent'), 'Must include Time Spent column');
+assert(generatedHtml.includes('Ratio'), 'Must include Ratio column');
+assert(generatedHtml.includes('Sessions'), 'Must include Sessions column');
+assert(generatedHtml.includes('Last Active'), 'Must include Last Active column');
 
-// Assert 7-column media telemetry table headers
-assert(generatedHtml.includes('Media Title'), 'Must include Media Title column');
-assert(generatedHtml.includes('Platform / Source') || generatedHtml.includes('Platform'), 'Must include Platform column');
+// Assert exact 6-column media telemetry table headers
+assert(generatedHtml.includes('Video Title'), 'Must include Video Title column');
+assert(generatedHtml.includes('Platform'), 'Must include Platform column');
 assert(generatedHtml.includes('Watch Duration'), 'Must include Watch Duration column');
-assert(generatedHtml.includes('Playback Share'), 'Must include Playback Share column');
-assert(generatedHtml.includes('Audio State'), 'Must include Audio State column');
-assert(generatedHtml.includes('Playback Status'), 'Must include Playback Status column');
+assert(generatedHtml.includes('Volume Profile'), 'Must include Volume Profile column');
+assert(generatedHtml.includes('Resolution'), 'Must include Resolution column');
+assert(generatedHtml.includes('Date & Time'), 'Must include Date & Time column');
 
 // Test empty state
 const emptyHtml = feature.generateExecutiveDigestHtml({}, { reportingPeriod: 'Empty Range' });

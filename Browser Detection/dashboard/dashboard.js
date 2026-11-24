@@ -2583,6 +2583,7 @@ let currentTab = 'tracking'; // 'tracking' | 'media' | 'settings'
 let temporalSubtab = 'today'; // 'today' | 'daily' | 'total'
 let dashboardData = null;
 let mediaHistoryData = [];
+let activeTrackingStats = null;
 let lastCalculatedProductivityScore = 85;
 let selectedBrowser = 'all'; // 'all' | 'chrome' | 'edge' | 'brave' | 'opera'
 let selectedTrackingMode = 'all'; // 'all' (Combined) | 'foreground' (Active Only) | 'background_media' (Media Only)
@@ -3682,7 +3683,10 @@ function triggerPrintPdf(options = {}) {
     tracking_history: (dashboardData && dashboardData.activityData) || {},
     media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData))
       ? mediaHistoryData
-      : ((dashboardData && dashboardData.mediaHistory) || [])
+      : ((dashboardData && dashboardData.mediaHistory) || []),
+    items: (activeTrackingStats && Array.isArray(activeTrackingStats.items) && activeTrackingStats.items.length > 0)
+      ? activeTrackingStats.items
+      : ((dashboardData && dashboardData.activityData && dashboardData.activityData.items) || undefined)
   };
   const activeMetrics = (typeof getActiveReportMetrics === 'function')
     ? getActiveReportMetrics(options)
@@ -3725,7 +3729,8 @@ function downloadStandaloneHtmlDigest(data, options = {}) {
   const payload = data || {
     activityData: (dashboardData && dashboardData.activityData) || {},
     tracking_history: (dashboardData && dashboardData.activityData) || {},
-    media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || [])
+    media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || []),
+    items: (activeTrackingStats && Array.isArray(activeTrackingStats.items) && activeTrackingStats.items.length > 0) ? activeTrackingStats.items : ((dashboardData && dashboardData.activityData && dashboardData.activityData.items) || undefined)
   };
   const activeMetrics = (typeof getActiveReportMetrics === 'function') ? getActiveReportMetrics(options) : {};
   const activePeriod = options.reportingPeriod || (typeof currentTemporalRange !== 'undefined' && currentTemporalRange ? `Range: ${currentTemporalRange}` : 'All Recorded Time');
@@ -7089,6 +7094,7 @@ function renderTimeTrackingTab(data) {
     const todayStr = data.todayStr || new Date().toISOString().split('T')[0];
     stats = processTimeTrackingData(actData, temporalSubtab, todayStr);
   }
+  activeTrackingStats = stats;
 
   // 1. Metric Cards (Symmetrical 5x2 Bento Grid)
   const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
