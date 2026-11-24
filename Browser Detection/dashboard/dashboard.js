@@ -3643,6 +3643,14 @@ function extractMediaMetricsFromDom() {
   };
 }
 
+function buildDigestCategoryOptions(options = {}) {
+  const opts = options || {};
+  return {
+    getDomainCategory: typeof opts.getDomainCategory === 'function' ? opts.getDomainCategory : getDomainCategory,
+    domainCategoryOverrides: opts.domainCategoryOverrides || opts.domain_category_overrides || domainCategoryOverrides
+  };
+}
+
 function getActiveReportMetrics(options = {}) {
   const reportingPeriod = (typeof currentTemporalRange !== 'undefined' && currentTemporalRange)
     ? currentTemporalRange : (options.reportingPeriod || 'All Recorded Time');
@@ -3660,7 +3668,7 @@ function getActiveReportMetrics(options = {}) {
   const longestSession = readKpiDomText('trackMetricLongestSession', '0h 00m');
 
   if ((totalTime === '0h 00m' || topDomain === '--') && dashboardData && _BackupHubDigest && typeof _BackupHubDigest.normalizeTelemetryDataset === 'function') {
-    const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData);
+    const norm = _BackupHubDigest.normalizeTelemetryDataset(dashboardData, buildDigestCategoryOptions(options));
     if (totalTime === '0h 00m' && norm.totalActiveSeconds > 0 && typeof formatHHMMSS === 'function') totalTime = formatHHMMSS(norm.totalActiveSeconds);
     if (topDomain === '--' && norm.topDomain && norm.topDomain !== 'None') topDomain = norm.topDomain;
   }
@@ -3699,7 +3707,7 @@ function triggerPrintPdf(options = {}) {
     ? options.productivityIndex
     : (activeMetrics.productivityScore || 85);
 
-  const opts = Object.assign({
+  const opts = Object.assign(buildDigestCategoryOptions(options), {
     data: payload,
     metrics: activeMetrics,
     mediaMetrics: activeMetrics.mediaMetrics || options.mediaMetrics || {},
@@ -3736,7 +3744,7 @@ function downloadStandaloneHtmlDigest(data, options = {}) {
   const activePeriod = options.reportingPeriod || (typeof currentTemporalRange !== 'undefined' && currentTemporalRange ? `Range: ${currentTemporalRange}` : 'All Recorded Time');
   const prodIndex = options.productivityIndex !== undefined ? options.productivityIndex : (activeMetrics.productivityScore || 85);
 
-  const opts = Object.assign({
+  const opts = Object.assign(buildDigestCategoryOptions(options), {
     metrics: activeMetrics,
     mediaMetrics: activeMetrics.mediaMetrics || options.mediaMetrics || {},
     chronoHeatmap: activeMetrics.chronoHeatmap || options.chronoHeatmap || (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__) || null,
@@ -12683,13 +12691,13 @@ function handleExportHtmlDigestClick(e, menu, trigger) {
       activityData: (dashboardData && dashboardData.activityData) || {},
       media_history: (typeof mediaHistoryData !== 'undefined' && Array.isArray(mediaHistoryData)) ? mediaHistoryData : ((dashboardData && dashboardData.mediaHistory) || [])
     });
-    const exportOptions = {
+    const exportOptions = Object.assign(buildDigestCategoryOptions(), {
       metrics: activeMetrics,
       mediaMetrics: activeMetrics.mediaMetrics || {},
       chronoHeatmap: activeMetrics.chronoHeatmap || (typeof window !== 'undefined' && window.__CHRONO_HEATMAP_DATA__) || null,
       reportingPeriod: activeMetrics.reportingPeriod || 'All Recorded Time',
       productivityIndex: activeMetrics.productivityScore || 85
-    };
+    });
     const fnDownload = (typeof downloadStandaloneHtmlDigest === 'function')
       ? downloadStandaloneHtmlDigest
       : (_BackupHubDigest && _BackupHubDigest.downloadStandaloneHtmlDigest ? _BackupHubDigest.downloadStandaloneHtmlDigest : null);

@@ -507,10 +507,107 @@
   }
 
   /**
+   * Copies domain category overrides into target using normalized lowercase keys.
+   */
+  function normalizeOverrideKeys(target, source) {
+    if (!source || typeof source !== 'object') return target;
+    const keys = Object.keys(source);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      target[String(k).toLowerCase().trim()] = source[k];
+    }
+    return target;
+  }
+
+  /**
+   * Extracts merged domain category overrides from telemetry payload and options.
+   */
+  function extractCategoryOverrides(rawData, options) {
+    const opts = options || {};
+    const data = rawData || {};
+    const act = data.activityData || {};
+    const merged = {};
+    normalizeOverrideKeys(merged, data.domainCategoryOverrides || data.domain_category_overrides);
+    normalizeOverrideKeys(merged, act.domainCategoryOverrides || act.domain_category_overrides);
+    normalizeOverrideKeys(merged, opts.domainCategoryOverrides || opts.domain_category_overrides || opts.categoryOverrides);
+    return merged;
+  }
+
+  /**
+   * Resolves the single-source-of-truth domain category classifier function.
+   */
+  function resolveCategoryClassifier(options) {
+    if (options && typeof options.getDomainCategory === 'function') {
+      return options.getDomainCategory;
+    }
+    if (global && global.TemporalProductivityFeature && typeof global.TemporalProductivityFeature.getDomainCategory === 'function') {
+      return global.TemporalProductivityFeature.getDomainCategory;
+    }
+    if (global && typeof global.getDomainCategory === 'function') {
+      return global.getDomainCategory;
+    }
+    if (typeof require !== 'function') return null;
+    try {
+      const mod = require('./temporal_productivity_feature.js');
+      if (mod && typeof mod.getDomainCategory === 'function') return mod.getDomainCategory;
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  /**
+   * Builds reusable category resolution context combining overrides and classifier.
+   */
+  function buildCategoryContext(rawData, options) {
+    const opts = options || {};
+    if (opts.categoryCtx && typeof opts.categoryCtx === 'object') {
+      return opts.categoryCtx;
+    }
+    return {
+      overrides: extractCategoryOverrides(rawData, opts),
+      classifier: resolveCategoryClassifier(opts)
+    };
+  }
+
+  /**
+   * Sanitizes category key for safe CSS badge class and badge rendering.
+   */
+  function sanitizeCategoryKey(rawCategory) {
+    const cleaned = String(rawCategory || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    return cleaned || 'work';
+  }
+
+  /**
+   * Resolves category: user overrides > explicit category > SSOT classifier > 'work'.
+   */
+  function resolveDomainCategory(domain, explicitCategory, categoryCtx) {
+    const ctx = categoryCtx || buildCategoryContext(null, null);
+    const overrides = ctx.overrides || {};
+    const classifier = typeof ctx.classifier === 'function' ? ctx.classifier : null;
+    const cleanDom = String(domain || '').toLowerCase().trim();
+    const ov = cleanDom && Object.prototype.hasOwnProperty.call(overrides, cleanDom) ? overrides[cleanDom] : null;
+    if (ov) {
+      const resolvedOv = classifier ? classifier(domain, overrides) : (typeof ov === 'string' ? ov : ov.category);
+      if (resolvedOv) return sanitizeCategoryKey(resolvedOv);
+    }
+    if (typeof explicitCategory === 'string' && explicitCategory.trim()) {
+      return sanitizeCategoryKey(explicitCategory);
+    }
+    if (classifier) {
+      return sanitizeCategoryKey(classifier(domain, overrides) || 'work');
+    }
+    return 'work';
+  }
+
+  /**
    * Creates initial domain entry accumulator.
    */
-  function createDomainTotal(item = {}) {
-    const cat = typeof item === 'string' ? item : ((item && item.category) || 'work');
+  function createDomainTotal(item = {}, categoryCtx = null, domainName = '') {
+    const isObj = item && typeof item === 'object';
+    const domain = domainName || (isObj ? item.domain : '');
+    const explicitCat = typeof item === 'string' ? item : (isObj ? item.category : '');
+    const cat = domain ? resolveDomainCategory(domain, explicitCat, categoryCtx) : sanitizeCategoryKey(explicitCat);
     return {
       activeTime: 0,
       sessions: 0,
@@ -527,7 +624,7 @@
   /**
    * Normalizes pre-computed items array into domain totals.
    */
-  function normalizeFromItems(itemsArray) {
+  function normalizeFromItems(itemsArray, categoryCtx = null) {
     let totalActiveSeconds = 0;
     const domainTotals = {};
     for (let i = 0; i < itemsArray.length; i++) {
@@ -536,9 +633,8 @@
       const sec = Number(item.computedSeconds !== undefined ? item.computedSeconds : (item.totalSeconds !== undefined ? item.totalSeconds : (item.seconds || 0)));
       totalActiveSeconds += sec;
       const dom = String(item.domain);
-      if (!domainTotals[dom]) {
-        domainTotals[dom] = createDomainTotal(item);
-      }
+      if (!domainTotals[dom]) domainTotals[dom] = createDomainTotal(item, categoryCtx, dom);
+      else if (item.category) domainTotals[dom].category = resolveDomainCategory(dom, item.category, categoryCtx);
       domainTotals[dom].activeTime += sec;
       domainTotals[dom].sessions += Number(item.sessions || item.sessionCount || 1);
       domainTotals[dom].foregroundSeconds += Number(item.foregroundSeconds || item.foreground_seconds || 0);
@@ -595,7 +691,7 @@
   /**
    * Normalizes modern activityData.domains dictionary.
    */
-  function normalizeFromDomains(domainsObj, selectedDateRange) {
+  function normalizeFromDomains(domainsObj, selectedDateRange, categoryCtx = null) {
     let totalActiveSeconds = 0;
     const domainTotals = {};
     const rangeSet = selectedDateRange ? (selectedDateRange instanceof Set ? selectedDateRange : new Set(Array.isArray(selectedDateRange) ? selectedDateRange : [selectedDateRange])) : null;
@@ -611,7 +707,7 @@
       domainTotals[dom] = {
         activeTime: sec,
         sessions,
-        category: entry.category || 'work',
+        category: resolveDomainCategory(dom, entry.category, categoryCtx),
         foregroundSeconds: fgSec > 0 ? fgSec : Number(entry.foregroundSeconds || entry.foreground_seconds || sec),
         backgroundMediaSeconds: bgSec > 0 ? bgSec : Number(entry.backgroundMediaSeconds || entry.background_media_seconds || 0),
         favicon: entry.favicon || entry.favicon_url || null,
@@ -625,12 +721,14 @@
   /**
    * Accumulates domain metrics for a legacy day object.
    */
-  function accumulateLegacyDomains(domains, domainTotals) {
+  function accumulateLegacyDomains(domains, domainTotals, categoryCtx = null) {
     const doms = Object.keys(domains);
     for (let i = 0; i < doms.length; i++) {
       const dom = doms[i];
       const d = domains[dom];
-      domainTotals[dom] = domainTotals[dom] || createDomainTotal(d.category);
+      if (!d) continue;
+      if (!domainTotals[dom]) domainTotals[dom] = createDomainTotal(d, categoryCtx, dom);
+      else if (d.category) domainTotals[dom].category = resolveDomainCategory(dom, d.category, categoryCtx);
       const sec = Number(d.activeTime || d.seconds || 0);
       domainTotals[dom].activeTime += sec;
       domainTotals[dom].sessions += Number(d.sessions || 1);
@@ -644,7 +742,7 @@
   /**
    * Normalizes legacy day-keyed history map.
    */
-  function normalizeFromLegacyDays(trackingObj, selectedDateRange) {
+  function normalizeFromLegacyDays(trackingObj, selectedDateRange, categoryCtx = null) {
     let totalActiveSeconds = 0;
     const domainTotals = {};
     const rangeSet = selectedDateRange ? (selectedDateRange instanceof Set ? selectedDateRange : new Set(Array.isArray(selectedDateRange) ? selectedDateRange : [selectedDateRange])) : null;
@@ -657,7 +755,7 @@
       if (rangeSet && !rangeSet.has(dateKey)) continue;
 
       totalActiveSeconds += Number(day.totalActiveTime || 0);
-      accumulateLegacyDomains(day.domains, domainTotals);
+      accumulateLegacyDomains(day.domains, domainTotals, categoryCtx);
     }
     return { totalActiveSeconds, domainTotals };
   }
@@ -684,14 +782,15 @@
     const tracking = dataset.items || dataset.tracking_history || dataset.activityData || dataset.trackingHistory || dataset;
     const media = dataset.media_history || dataset.mediaHistory || [];
     const selectedDateRange = options.dateRange || null;
+    const categoryCtx = buildCategoryContext(rawData, options);
 
     let norm;
     if (Array.isArray(tracking.items) || Array.isArray(tracking)) {
-      norm = normalizeFromItems(Array.isArray(tracking.items) ? tracking.items : tracking);
+      norm = normalizeFromItems(Array.isArray(tracking.items) ? tracking.items : tracking, categoryCtx);
     } else if (tracking.domains && typeof tracking.domains === 'object') {
-      norm = normalizeFromDomains(tracking.domains, selectedDateRange);
+      norm = normalizeFromDomains(tracking.domains, selectedDateRange, categoryCtx);
     } else {
-      norm = normalizeFromLegacyDays(tracking, selectedDateRange);
+      norm = normalizeFromLegacyDays(tracking, selectedDateRange, categoryCtx);
     }
 
     const totalMediaSeconds = calculateTotalMediaDuration(media);
@@ -865,9 +964,9 @@
   /**
    * Renders a single 6-column Domain Breakdown table row.
    */
-  function renderDomainRowItem(d, totalActiveSeconds) {
+  function renderDomainRowItem(d, totalActiveSeconds, categoryCtx = null) {
     const pct = d.ratioPercent || (totalActiveSeconds > 0 ? ((d.activeTime / totalActiveSeconds) * 100).toFixed(1) : '0.0');
-    const catKey = (d.category || 'work').toLowerCase();
+    const catKey = resolveDomainCategory(d && d.domain, d && d.category, categoryCtx);
     const catLabel = formatCategoryLabel(catKey);
     const domainCell = renderDomainCellHtml(d);
     const fgSec = d.foregroundSeconds !== undefined ? d.foregroundSeconds : (d.activeTime - (d.backgroundMediaSeconds || 0));
@@ -900,9 +999,10 @@
   /**
    * Renders detailed domain table rows matching live dashboard 6-column layout.
    */
-  function renderDomainRows(sortedDomains, totalActiveSeconds) {
+  function renderDomainRows(sortedDomains, totalActiveSeconds, options = {}) {
     if (!Array.isArray(sortedDomains) || sortedDomains.length === 0) return '';
-    return sortedDomains.slice(0, 30).map(d => renderDomainRowItem(d, totalActiveSeconds)).join('\n      ');
+    const categoryCtx = buildCategoryContext(null, options);
+    return sortedDomains.slice(0, 30).map(d => renderDomainRowItem(d, totalActiveSeconds, categoryCtx)).join('\n      ');
   }
 
   /**
@@ -1965,11 +2065,11 @@ ${serializedPayload}
   /**
    * Renders Detailed Domain Telemetry table section (omitted on empty data).
    */
-  function renderDomainTableSection(sortedDomains, totalActiveSeconds) {
+  function renderDomainTableSection(sortedDomains, totalActiveSeconds, options = {}) {
     if (!sortedDomains || sortedDomains.length === 0) {
       return '';
     }
-    const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds);
+    const domainRows = renderDomainRows(sortedDomains, totalActiveSeconds, options);
 
     return `<h2 class="section-title">Detailed Domain Telemetry</h2>
     <table class="modern-data-table" id="domainAnalyticsTable">
@@ -2038,15 +2138,17 @@ ${serializedPayload}
     const mediaHistory = rawData.media_history || rawData.mediaHistory || [];
     const reportingPeriod = options.reportingPeriod || 'All Recorded Time';
     const generatedDate = options.generatedDate || new Date().toLocaleDateString();
-    const norm = normalizeTelemetryDataset(rawData, options);
+    const categoryCtx = buildCategoryContext(rawData, options);
+    const digestOpts = Object.assign({}, options, { categoryCtx });
+    const norm = normalizeTelemetryDataset(rawData, digestOpts);
     const { totalActiveSeconds, totalMediaSeconds, sortedDomains } = norm;
     const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
 
-    const metricsGridHtml = renderExecutiveMetricsGrid(extractDigestKpiMetrics(rawData, norm, options));
+    const metricsGridHtml = renderExecutiveMetricsGrid(extractDigestKpiMetrics(rawData, norm, digestOpts));
     const timeDistributionCardHtml = renderDistributionChartSection(sortedDomains, totalActiveSeconds, colors);
-    const chronoHeatmapHtml = renderChronoHeatmapSection(rawData, options);
-    const domainTableHtml = renderDomainTableSection(sortedDomains, totalActiveSeconds);
-    const mediaGridHtml = renderExecutiveMediaMetricsGrid(extractDigestMediaKpiMetrics(rawData, options));
+    const chronoHeatmapHtml = renderChronoHeatmapSection(rawData, digestOpts);
+    const domainTableHtml = renderDomainTableSection(sortedDomains, totalActiveSeconds, digestOpts);
+    const mediaGridHtml = renderExecutiveMediaMetricsGrid(extractDigestMediaKpiMetrics(rawData, digestOpts));
     const mediaSectionHtml = renderMediaSection(mediaHistory, totalMediaSeconds);
     const headerHtml = buildDigestHeaderHtml(reportingPeriod, generatedDate);
     const bodyContent = buildDigestBodyHtml({
@@ -2091,7 +2193,7 @@ ${serializedPayload}
       productivityScore: prodScore,
       tierBadge: optMetrics.tierBadge || tierBadge,
       tierClass,
-      focusTime: optMetrics.focusTime || (focusSec > 0 ? formatHoursMinutes(focusSec) : totalFormatted),
+      focusTime: optMetrics.focusTime || formatHoursMinutes(focusSec),
       focusSub: 'High-productivity focus',
       topDomain: optMetrics.topDomain && optMetrics.topDomain !== '--' ? optMetrics.topDomain : topDomain,
       topDomainShare,
@@ -2454,6 +2556,7 @@ ${serializedPayload}
     formatHoursMinutes,
     formatTimestamp,
     formatCategoryLabel,
+    resolveDomainCategory,
     renderDomainRows,
     renderMediaRows,
     renderMediaSection,
