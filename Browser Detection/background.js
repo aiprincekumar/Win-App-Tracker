@@ -53,6 +53,7 @@ const createSafeBrowserAPIFallback = () => {
     windows: {
       onFocusChanged: dummyListener,
       getCurrent: async () => null,
+      getLastFocused: async () => null,
       get: async () => null,
       update: async () => null,
       WINDOW_ID_NONE: -1
@@ -65,6 +66,39 @@ const browserAPI = (typeof globalThis.browser !== 'undefined' && globalThis.brow
   : ((typeof globalThis.chrome !== 'undefined' && globalThis.chrome)
     ? globalThis.chrome
     : createSafeBrowserAPIFallback());
+
+// Classic MV3 Service Worker synchronous module hydration (unified runtime + Node VM parity)
+if (typeof importScripts === 'function' && typeof TimestampReconciliation === 'undefined') {
+  try {
+    importScripts(
+      './src/shared/constants.js',
+      './src/shared/contracts.js',
+      './src/shared/formatters.js',
+      './src/background/config/config_manager.js',
+      './src/background/state/state_manager.js',
+      './src/background/storage/storage_manager.js',
+      './src/background/storage/sleep_timer_storage.js',
+      './src/background/ws/reconnect_ladder.js',
+      './src/background/ws/silent_probe.js',
+      './src/background/ws/offline_queue.js',
+      './src/background/ws/data_hub_client.js',
+      './src/background/telemetry/domain_tracker.js',
+      './src/background/telemetry/delta_streamer.js',
+      './src/background/telemetry/sleep_timer_engine.js',
+      './src/background/handlers/tab_listeners.js',
+      './src/background/handlers/alarm_handlers.js',
+      './src/background/handlers/idle_handlers.js',
+      './src/background/handlers/message_router.js',
+      './src/core/feature_registry.js',
+      './src/background/features/background_feature_manager.js',
+      './src/background/telemetry/active_session_resilience.js',
+      './src/background/telemetry/foreground_tracking_guard.js',
+      './src/background/telemetry/timestamp_reconciliation.js'
+    );
+  } catch (err) {
+    console.error('[MediaSentinel] Failed to hydrate classic SW modules via importScripts:', err);
+  }
+}
 
 // =============================================================================
 // Domain-Driven Layered Modular Subsystems (src/shared/ & src/background/)
@@ -89,6 +123,8 @@ const _IdleHandlers = typeof IdleHandlers !== 'undefined' ? IdleHandlers : (type
 const _MessageRouter = typeof MessageRouter !== 'undefined' ? MessageRouter : (typeof require === 'function' ? require('./src/background/handlers/message_router.js') : null);
 const _FeatureRegistry = typeof SentinelFeatureRegistry !== 'undefined' ? SentinelFeatureRegistry : (typeof require === 'function' ? require('./src/core/feature_registry.js') : null);
 const _BackgroundFeatureManager = typeof BackgroundFeatureManager !== 'undefined' ? BackgroundFeatureManager : (typeof require === 'function' ? require('./src/background/features/background_feature_manager.js') : null);
+const _ActiveSessionResilience = typeof ActiveSessionResilience !== 'undefined' ? ActiveSessionResilience : (typeof require === 'function' ? require('./src/background/telemetry/active_session_resilience.js') : null);
+const _ForegroundTrackingGuard = typeof ForegroundTrackingGuard !== 'undefined' ? ForegroundTrackingGuard : (typeof require === 'function' ? require('./src/background/telemetry/foreground_tracking_guard.js') : null);
 const _TimestampReconciliation = typeof TimestampReconciliation !== 'undefined' ? TimestampReconciliation : (typeof require === 'function' ? require('./src/background/telemetry/timestamp_reconciliation.js') : null);
 
 if (typeof globalThis !== 'undefined') {
@@ -113,6 +149,8 @@ if (typeof globalThis !== 'undefined') {
     MessageRouter: _MessageRouter,
     FeatureRegistry: _FeatureRegistry,
     BackgroundFeatureManager: _BackgroundFeatureManager,
+    ActiveSessionResilience: _ActiveSessionResilience,
+    ForegroundTrackingGuard: _ForegroundTrackingGuard,
     TimestampReconciliation: _TimestampReconciliation
   };
 }
@@ -327,7 +365,7 @@ const CONFIG = {
   SETTINGS_STORAGE_KEY: 'media_sentinel_settings',
   OFFLINE_QUEUE_STORAGE_KEY: 'media_sentinel_offline_queue',
   CLIENT_ID_STORAGE_KEY: 'media_sentinel_client_id',
-  IDLE_THRESHOLD_SECONDS: 60,
+  IDLE_THRESHOLD_SECONDS: 300,
   FLUSH_INTERVAL_MINUTES: 1,
   RECONNECT_INITIAL_MS: 5000,
   RECONNECT_MAX_MS: 120000,
@@ -381,7 +419,7 @@ let mediaHistory = [];
 const activeMediaSessions = new Map(); // tabId -> active session
 
 let settings = {
-  idleThresholdSeconds: 60,
+  idleThresholdSeconds: 300,
   wsUrl: 'ws://127.0.0.1:65432',
   autoConnectWs: true,
   mediaTrackingEnabled: true,
@@ -468,6 +506,18 @@ let isBrowserFocused = true;
 let isUserActive = true;
 let isTrackingPaused = false;
 let userIdleStartTime = 0;
+let isSystemLocked = false;
+let activeTabAudible = false;
+let transitionQueue = Promise.resolve();
+
+/**
+ * Serializes async tab and window focus transitions to eliminate interleaving races.
+ */
+function enqueueTransitionOp(taskFn) {
+  const next = transitionQueue.then(() => taskFn(), () => taskFn());
+  transitionQueue = next.catch(() => {});
+  return next;
+}
 
 // Feature 7 & 8: Privacy Tracking Exclusion Blacklist & Domain Budgets
 let trackingBlacklist = ['localhost', 'localhost:*', '127.0.0.1', '127.0.0.1:*', '192.168.*', '192.168.*:*', '10.*.*:*', 'file://*'];
@@ -527,8 +577,9 @@ function matchesTrackingBlacklist(urlOrDomain) {
   return false;
 }
 
-// Media Map: tabId -> Media State Payload
+// Media Map: tabId -> Media State Payload, tabFrameMediaMap: tabId -> Map<frameId, Payload>
 const tabMediaMap = new Map();
+const tabFrameMediaMap = new Map();
 
 // Snapshot Maps for Bidirectional Tab Audio Muting (Solo, Mute All Others, Mute All)
 const soloPreviousMuteStates = new Map();
@@ -1197,6 +1248,101 @@ function scheduleStorageSave(immediate = false) {
 }
 
 /**
+ * Additively merges pre-load in-memory hourly buckets onto stored hourly buckets.
+ */
+function mergePreloadHourlyBuckets(storedBuckets = {}, memBuckets = {}) {
+  const merged = {};
+  for (const [hr, b] of Object.entries(storedBuckets)) {
+    if (b && typeof b === 'object') merged[hr] = { ...b };
+  }
+  for (const [hr, mb] of Object.entries(memBuckets)) {
+    if (!mb || typeof mb !== 'object') continue;
+    const sb = merged[hr];
+    if (!sb) {
+      merged[hr] = { ...mb };
+      continue;
+    }
+    const activeSec = (Number(sb.activeSeconds) || 0) + (Number(mb.activeSeconds) || 0);
+    const bgMediaSec = (Number(sb.backgroundMediaSeconds) || 0) + (Number(mb.backgroundMediaSeconds) || 0);
+    merged[hr] = {
+      ...sb,
+      activeSeconds: activeSec,
+      activeTime: activeSec,
+      backgroundMediaSeconds: bgMediaSec,
+      mediaTime: bgMediaSec,
+      sessions: Math.max(Number(sb.sessions) || 0, Number(mb.sessions) || 0)
+    };
+  }
+  return merged;
+}
+
+/**
+ * Additively merges a single pre-load daily entry onto stored daily metrics.
+ */
+function mergePreloadDayEntry(storedDay, memDay) {
+  if (!storedDay) return { ...memDay };
+  if (!memDay) return { ...storedDay };
+  const storedFg = (storedDay.foregroundSeconds !== undefined)
+    ? (Number(storedDay.foregroundSeconds) || 0)
+    : (Number(storedDay.seconds) || 0);
+  const merged = {
+    ...storedDay,
+    seconds: (Number(storedDay.seconds) || 0) + (Number(memDay.seconds) || 0),
+    foregroundSeconds: storedFg + (Number(memDay.foregroundSeconds) || 0),
+    backgroundMediaSeconds: (Number(storedDay.backgroundMediaSeconds) || 0) + (Number(memDay.backgroundMediaSeconds) || 0),
+    sessions: Math.max(Number(storedDay.sessions) || 1, Number(memDay.sessions) || 1)
+  };
+  if (storedDay.hourlyBuckets || memDay.hourlyBuckets) {
+    merged.hourlyBuckets = mergePreloadHourlyBuckets(storedDay.hourlyBuckets, memDay.hourlyBuckets);
+  }
+  return merged;
+}
+
+/**
+ * Additively merges a pre-load in-memory domain record onto its stored record.
+ */
+function mergePreloadDomainEntry(storedDom, memDom, dom) {
+  if (!storedDom) return memDom;
+  if (!memDom) return storedDom;
+  const memDays = (memDom.days && typeof memDom.days === 'object') ? memDom.days : {};
+  const hasDelta = (Number(memDom.totalSeconds) || 0) > 0 ||
+    (Number(memDom.foregroundSeconds) || 0) > 0 ||
+    (Number(memDom.backgroundMediaSeconds) || 0) > 0 ||
+    Object.keys(memDays).length > 0;
+  if (!hasDelta) return storedDom;
+
+  const mergedDays = { ...(storedDom.days || {}) };
+  for (const [dayKey, memDay] of Object.entries(memDays)) {
+    mergedDays[dayKey] = mergePreloadDayEntry(mergedDays[dayKey], memDay);
+  }
+  const storedFg = (storedDom.foregroundSeconds !== undefined)
+    ? (Number(storedDom.foregroundSeconds) || 0)
+    : (Number(storedDom.totalSeconds) || 0);
+  return {
+    ...storedDom,
+    favicon: memDom.favicon || storedDom.favicon || getFaviconUrl(dom),
+    totalSeconds: (Number(storedDom.totalSeconds) || 0) + (Number(memDom.totalSeconds) || 0),
+    foregroundSeconds: storedFg + (Number(memDom.foregroundSeconds) || 0),
+    backgroundMediaSeconds: (Number(storedDom.backgroundMediaSeconds) || 0) + (Number(memDom.backgroundMediaSeconds) || 0),
+    sessionCount: Math.max(Number(storedDom.sessionCount) || 1, Number(memDom.sessionCount) || 1),
+    lastActive: Math.max(Number(storedDom.lastActive) || 0, Number(memDom.lastActive) || 0),
+    days: mergedDays
+  };
+}
+
+/**
+ * Merges stored domain map with any in-memory deltas accumulated before hydration completed.
+ */
+function mergeStoredDomainsWithMemory(storedDomains) {
+  const mergedDomains = { ...storedDomains };
+  if (!activityData || !activityData.domains) return mergedDomains;
+  for (const [dom, domVal] of Object.entries(activityData.domains)) {
+    mergedDomains[dom] = mergePreloadDomainEntry(mergedDomains[dom], domVal, dom);
+  }
+  return mergedDomains;
+}
+
+/**
  * Initializes and loads persistent data from storage with safe deep-merge
  */
 async function loadStorageData() {
@@ -1233,29 +1379,7 @@ async function loadStorageData() {
     if (res && res[CONFIG.STORAGE_KEY] && typeof res[CONFIG.STORAGE_KEY] === 'object') {
       const stored = res[CONFIG.STORAGE_KEY];
       const storedDomains = (stored.domains && typeof stored.domains === 'object') ? stored.domains : {};
-
-      // Deep merge stored history with in-memory tracking
-      const mergedDomains = { ...storedDomains };
-      if (activityData && activityData.domains) {
-        for (const [dom, domVal] of Object.entries(activityData.domains)) {
-          if (!mergedDomains[dom]) {
-            mergedDomains[dom] = domVal;
-          } else {
-            mergedDomains[dom] = {
-              favicon: domVal.favicon || mergedDomains[dom].favicon || getFaviconUrl(dom),
-              totalSeconds: Math.max(Number(domVal.totalSeconds) || 0, Number(mergedDomains[dom].totalSeconds) || 0),
-              foregroundSeconds: Math.max(Number(domVal.foregroundSeconds) || 0, Number(mergedDomains[dom].foregroundSeconds) || (Number(mergedDomains[dom].totalSeconds) || 0)),
-              backgroundMediaSeconds: Math.max(Number(domVal.backgroundMediaSeconds) || 0, Number(mergedDomains[dom].backgroundMediaSeconds) || 0),
-              sessionCount: Math.max(Number(domVal.sessionCount) || 1, Number(mergedDomains[dom].sessionCount) || 1),
-              lastActive: Math.max(Number(domVal.lastActive) || 0, Number(mergedDomains[dom].lastActive) || 0),
-              days: {
-                ...(mergedDomains[dom].days || {}),
-                ...(domVal.days || {})
-              }
-            };
-          }
-        }
-      }
+      const mergedDomains = mergeStoredDomainsWithMemory(storedDomains);
 
       activityData = {
         domains: mergedDomains,
@@ -1288,6 +1412,11 @@ async function loadStorageData() {
       settings = { ...settings, ...res[CONFIG.SETTINGS_STORAGE_KEY] };
       if (settings.idleThresholdSeconds) {
         CONFIG.IDLE_THRESHOLD_SECONDS = settings.idleThresholdSeconds;
+        try {
+          if (browserAPI.idle && typeof browserAPI.idle.setDetectionInterval === 'function') {
+            browserAPI.idle.setDetectionInterval(CONFIG.IDLE_THRESHOLD_SECONDS);
+          }
+        } catch (_) {}
       }
       if (settings.wsUrl) {
         CONFIG.WS_URL = settings.wsUrl;
@@ -2948,11 +3077,12 @@ function recordForegroundSeconds(domain, validSec, now, rangeStartMs) {
  * Commits elapsed seconds for current active domain (Method A: Foreground Active Only)
  */
 function commitActiveInterval() {
-  if (isTrackingPaused) {
+  if (isTrackingPaused || isSystemLocked) {
     intervalStartTime = Date.now();
     return;
   }
-  if (!activeDomain || !isBrowserFocused || !isUserActive || matchesTrackingBlacklist(activeDomain)) {
+  const isMediaActive = isUserActivelyWatchingMedia();
+  if (!activeDomain || !isBrowserFocused || (!isUserActive && !isMediaActive) || matchesTrackingBlacklist(activeDomain)) {
     intervalStartTime = Date.now();
     return;
   }
@@ -2980,8 +3110,42 @@ function commitActiveInterval() {
       idleStartedAt: null,
       isBrowserFocused,
       isUserActive,
-      isTrackingPaused
+      isTrackingPaused,
+      wasMediaActive: isUserActivelyWatchingMedia()
     });
+  }
+}
+
+/**
+ * Restores active user tracking when keepalive heartbeats detect recent activity while marked idle.
+ */
+async function handleRecentPageActivity(activityAt) {
+  if (isUserActive || isSystemLocked || !isBrowserFocused) return;
+  await flushActiveSessionDelta(activityAt);
+  isUserActive = true;
+  userIdleStartTime = 0;
+  intervalStartTime = activityAt;
+  if (_TimestampReconciliation && browserAPI && activeDomain) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      domain: activeDomain,
+      tabId: activeTabId,
+      windowId: activeWindowId,
+      isUserActive: true,
+      idleStartedAt: null,
+      lastCommittedTime: activityAt,
+      lastHeartbeat: activityAt,
+      lastHeartbeatTime: activityAt
+    });
+  }
+  sendActivityUpdateToHUD();
+}
+
+/**
+ * Commits trailing active interval when a foreground keepalive port disconnects unexpectedly.
+ */
+function handleKeepaliveDisconnect(tabId) {
+  if (tabId === activeTabId && activeDomain && isBrowserFocused && !isSystemLocked && !isTrackingPaused) {
+    commitActiveInterval();
   }
 }
 
@@ -2995,7 +3159,13 @@ function getReconciliationContext() {
     get activeDomain() { return activeDomain; },
     get isBrowserFocused() { return isBrowserFocused; },
     get isUserActive() { return isUserActive; },
+    get isSystemLocked() { return isSystemLocked; },
     get isTrackingPaused() { return isTrackingPaused; },
+    get idleThresholdMs() { return (CONFIG.IDLE_THRESHOLD_SECONDS || 300) * 1000; },
+    isActivelyWatchingMedia: isUserActivelyWatchingMedia,
+    ensureStorageLoaded,
+    onRecentPageActivity: handleRecentPageActivity,
+    onKeepaliveDisconnect: handleKeepaliveDisconnect,
     matchesTrackingBlacklist,
     getTodayDateString,
     getFaviconUrl,
@@ -3004,6 +3174,7 @@ function getReconciliationContext() {
     scheduleStorageSave,
     getActiveTabId: () => activeTabId,
     getActiveWindowId: () => activeWindowId,
+    getIntervalStartTime: () => intervalStartTime,
     setIntervalStartTime: (t) => { intervalStartTime = t; }
   };
 }
@@ -3087,7 +3258,8 @@ function activateTrackedDomainSession(newDomain, isNewSession) {
       idleStartedAt: null,
       isBrowserFocused,
       isUserActive,
-      isTrackingPaused
+      isTrackingPaused,
+      wasMediaActive: isUserActivelyWatchingMedia()
     });
   }
   scheduleStorageSave(true);
@@ -3111,62 +3283,100 @@ async function handleWindowFocusBlur() {
 }
 
 /**
+ * Checks whether focusing a window should preserve existing foreground domain attribution.
+ */
+async function resolveWindowNonClobber(windowId) {
+  const win = (browserAPI.windows && typeof browserAPI.windows.get === 'function')
+    ? await browserAPI.windows.get(windowId).catch(() => null)
+    : null;
+  const direct = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.isNonClobberWindow(win) : (win?.type === 'devtools');
+  return { win, nonClobber: direct };
+}
+
+/**
  * Handles browser window focus restoration by discarding blurred spans and re-syncing active tab.
  */
 async function handleWindowFocusRestore(windowId, focusAt) {
   await flushActiveSessionDelta(focusAt);
-  const focusNow = Date.now();
+  const anchorAt = (typeof focusAt === 'number' && focusAt > 0) ? focusAt : Date.now();
+  const wasBlurred = !isBrowserFocused;
+  const { win, nonClobber } = await resolveWindowNonClobber(windowId);
   isBrowserFocused = true;
-  activeWindowId = windowId;
-  intervalStartTime = focusNow;
-  if (_TimestampReconciliation && browserAPI) {
-    await _TimestampReconciliation.updateActiveSession(browserAPI, {
-      isBrowserFocused: true,
-      focusLostAt: null,
-      lastCommittedTime: focusNow,
-      lastHeartbeat: focusNow,
-      lastHeartbeatTime: focusNow
-    });
+  if (nonClobber && activeDomain) {
+    if (wasBlurred) intervalStartTime = anchorAt;
+    if (_TimestampReconciliation && browserAPI) {
+      await _TimestampReconciliation.updateActiveSession(browserAPI, {
+        isBrowserFocused: true,
+        focusLostAt: null,
+        ...(wasBlurred ? { lastCommittedTime: anchorAt, lastHeartbeat: anchorAt, lastHeartbeatTime: anchorAt } : {})
+      });
+    }
+    return;
   }
   try {
     const tabs = await browserAPI.tabs.query({ active: true, windowId });
     if (tabs && tabs[0]) {
+      activeWindowId = tabs[0].windowId || windowId;
       activeTabId = tabs[0].id;
-      if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
-      const blacklisted = tabs[0].url && matchesTrackingBlacklist(tabs[0].url);
-      const domain = (!blacklisted && tabs[0].url) ? extractDomain(tabs[0].url) : null;
+      activeTabAudible = Boolean(tabs[0].audible);
+      const rawUrl = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.extractTabCandidateUrl(tabs[0]) : (tabs[0].url || tabs[0].pendingUrl || '');
+      const domain = (rawUrl && !matchesTrackingBlacklist(rawUrl)) ? extractDomain(rawUrl) : null;
       switchActiveDomain(domain, false);
-    } else {
+      if (domain && activeDomain === domain) intervalStartTime = anchorAt;
+      return;
+    }
+    const emptyPopupKeep = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.isNonClobberWindow(win ? { ...win, tabs: win.tabs || [] } : null) : nonClobber;
+    if (!emptyPopupKeep) {
+      activeWindowId = windowId;
+      activeTabAudible = false;
       switchActiveDomain(null, false);
     }
   } catch (e) {
+    activeTabAudible = false;
     switchActiveDomain(null, false);
   }
 }
 
 /**
- * Handles system idle/active state transitions with pre-idle flush and cutoff anchoring.
+ * Commits pre-idle/pre-lock delta and freezes tracking state safely.
+ */
+async function freezeTrackingOnIdleOrLock(lockScreen) {
+  commitActiveInterval();
+  const freezeAt = Date.now();
+  if (lockScreen) isSystemLocked = true;
+  await flushActiveSessionDelta(freezeAt);
+  isUserActive = false;
+  userIdleStartTime = freezeAt;
+  if (_TimestampReconciliation && browserAPI) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, { isUserActive: false, idleStartedAt: freezeAt });
+  }
+  scheduleStorageSave(true);
+  await checkInactivityAutoSleep(freezeAt);
+}
+
+/**
+ * Handles system idle/active/locked state transitions with media exemption for focused playback.
  */
 async function handleIdleStateTransition(newState) {
-  if (newState === 'idle' || newState === 'locked') {
-    commitActiveInterval();
-    const idleAt = Date.now();
-    await flushActiveSessionDelta(idleAt);
-    isUserActive = false;
-    userIdleStartTime = idleAt;
-    if (_TimestampReconciliation && browserAPI) {
-      await _TimestampReconciliation.updateActiveSession(browserAPI, {
-        isUserActive: false,
-        idleStartedAt: idleAt
-      });
+  if (newState === 'locked') {
+    await freezeTrackingOnIdleOrLock(true);
+    return;
+  }
+  if (newState === 'idle') {
+    isSystemLocked = false;
+    if (isBrowserFocused && isUserActivelyWatchingMedia()) {
+      isUserActive = true;
+      userIdleStartTime = 0;
+      await refreshActiveInteractionCheckpoint(Date.now());
+      return;
     }
-    scheduleStorageSave(true);
-    await checkInactivityAutoSleep(Date.now());
+    await freezeTrackingOnIdleOrLock(false);
     return;
   }
   if (newState === 'active') {
-    await flushActiveSessionDelta();
+    isSystemLocked = false;
     const activeAt = Date.now();
+    await flushActiveSessionDelta(activeAt);
     isUserActive = true;
     userIdleStartTime = 0;
     intervalStartTime = activeAt;
@@ -3216,6 +3426,7 @@ async function refreshActiveInteractionCheckpoint(now) {
  */
 async function handlePageUserInteraction(sendResponse) {
   await ensureStorageLoaded();
+  isSystemLocked = false;
   const wasIdle = !isUserActive || userIdleStartTime > 0;
   if (wasIdle) {
     await flushActiveSessionDelta();
@@ -4383,6 +4594,7 @@ function cleanStaleTabMedia() {
   const now = Date.now();
   for (const [tabId, mediaState] of tabMediaMap.entries()) {
     if (!mediaState || (!mediaState.hasMedia && !mediaState.anyPlaying && !mediaState.primaryMedia)) {
+      tabFrameMediaMap.delete(tabId);
       tabMediaMap.delete(tabId);
       finalizeMediaSession(tabId);
       sendMediaTelemetryToHUD();
@@ -4391,6 +4603,7 @@ function cleanStaleTabMedia() {
     if (mediaState && mediaState.timestamp && (now - mediaState.timestamp > 15000)) {
       browserAPI.tabs.get(tabId, (tab) => {
         if (browserAPI.runtime.lastError || !tab) {
+          tabFrameMediaMap.delete(tabId);
           tabMediaMap.delete(tabId);
           finalizeMediaSession(tabId);
           sendMediaTelemetryToHUD();
@@ -4404,52 +4617,61 @@ function cleanStaleTabMedia() {
 // Chrome Lifecycle Event Listeners
 // -----------------------------------------------------------------------------
 
-// Active Tab Changed
-browserAPI.tabs.onActivated.addListener(async (activeInfo) => {
-  await ensureStorageLoaded();
-  activeTabId = activeInfo.tabId;
-  if (activeInfo.windowId) {
-    activeWindowId = activeInfo.windowId;
+/**
+ * Ignores tab activations inside background unfocused/minimized or auxiliary windows.
+ */
+async function shouldIgnoreBackgroundActivation(activeInfo) {
+  if (!activeInfo || !activeInfo.windowId || !browserAPI.windows || typeof browserAPI.windows.get !== 'function') {
+    return false;
   }
+  const win = await browserAPI.windows.get(activeInfo.windowId).catch(() => null);
+  const isAux = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.isNonClobberWindow(win) : Boolean(win && win.type === 'devtools');
+  if (isAux) return true;
+  const isUnfocused = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.isUnfocusedActivationWindow(win) : Boolean(win && (win.focused === false || win.state === 'minimized'));
+  return Boolean(isUnfocused && isBrowserFocused && activeWindowId && activeWindowId !== activeInfo.windowId);
+}
+
+/**
+ * Handles serialized tabs.onActivated transitions with pendingUrl fallback and focus guards.
+ */
+async function handleTabActivatedTransition(activeInfo) {
+  await ensureStorageLoaded();
+  if (await shouldIgnoreBackgroundActivation(activeInfo)) return;
+  activeTabId = activeInfo.tabId;
+  if (activeInfo.windowId) activeWindowId = activeInfo.windowId;
   try {
     const tab = await browserAPI.tabs.get(activeTabId);
     if (tab) {
       if (tab.windowId) activeWindowId = tab.windowId;
-      if (tab.url && matchesTrackingBlacklist(tab.url)) {
+      activeTabAudible = Boolean(tab.audible);
+      const rawUrl = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.extractTabCandidateUrl(tab) : (tab.url || tab.pendingUrl || '');
+      if (rawUrl && matchesTrackingBlacklist(rawUrl)) {
         switchActiveDomain(null, false);
       } else {
-        const domain = tab.url ? extractDomain(tab.url) : null;
+        const domain = rawUrl ? extractDomain(rawUrl) : null;
         switchActiveDomain(domain, true);
-        if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
-          if (isDistractingDomain(domain, tab.url)) {
-            safeSendRuntimeMessage({
-              type: 'FOCUS_DISTRACTION_EVENT',
-              action: 'FOCUS_DISTRACTION_EVENT',
-              domain: domain || 'unknown',
-              reason: 'distracting_domain'
-            });
-          }
+        if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS' && isDistractingDomain(domain, rawUrl)) {
+          safeSendRuntimeMessage({ type: 'FOCUS_DISTRACTION_EVENT', action: 'FOCUS_DISTRACTION_EVENT', domain: domain || 'unknown', reason: 'distracting_domain' });
         }
       }
     } else {
+      activeTabAudible = false;
       switchActiveDomain(null, false);
     }
   } catch (e) {
+    activeTabAudible = false;
     switchActiveDomain(null, false);
   }
-
-  // Defect 07: Auto-Pause on Tab Switch
-  if (activeInfo && activeInfo.tabId) {
-    handleAutoPauseOnTabChange(activeInfo.tabId).catch(() => {});
-  }
-
-  // Gentle wake-up if paused and cooled down (e.g. 2 minutes since last attempt)
+  if (activeInfo && activeInfo.tabId) handleAutoPauseOnTabChange(activeInfo.tabId).catch(() => {});
   const tabSwitchNow = Date.now();
   if ((!wsConnected && wsReconnectPaused && (tabSwitchNow - lastWsAttemptTime > 120000)) ||
       (!dataHubConnected && dataHubReconnectPaused && (tabSwitchNow - lastDataHubAttemptTime > 120000))) {
     probeAndConnectServices();
   }
-});
+}
+
+// Active Tab Changed
+browserAPI.tabs.onActivated.addListener((activeInfo) => enqueueTransitionOp(() => handleTabActivatedTransition(activeInfo)));
 
 // New Tab Created (Defect 07: Auto-Pause on New Tab)
 if (browserAPI.tabs && browserAPI.tabs.onCreated) {
@@ -4463,8 +4685,10 @@ if (browserAPI.tabs && browserAPI.tabs.onCreated) {
   });
 }
 
-// Tab Updated (URL changed, page navigated, or audible audio state changed)
-browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+/**
+ * Processes URL changes and media cleanup for tabs.onUpdated cleanly under serialization.
+ */
+async function handleTabUpdateTransition(tabId, changeInfo, tab) {
   await ensureStorageLoaded();
   if (tabId === activeTabId && changeInfo.url) {
     if (matchesTrackingBlacklist(changeInfo.url)) {
@@ -4472,67 +4696,51 @@ browserAPI.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     } else {
       const domain = extractDomain(changeInfo.url);
       switchActiveDomain(domain, false);
-      if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
-        if (isDistractingDomain(domain, changeInfo.url)) {
-          safeSendRuntimeMessage({
-            type: 'FOCUS_DISTRACTION_EVENT',
-            action: 'FOCUS_DISTRACTION_EVENT',
-            domain: domain || 'unknown',
-            reason: 'distracting_domain'
-          });
-        }
+      if (focusTimerState && focusTimerState.state === 'RUNNING_FOCUS' && isDistractingDomain(domain, changeInfo.url)) {
+        safeSendRuntimeMessage({ type: 'FOCUS_DISTRACTION_EVENT', action: 'FOCUS_DISTRACTION_EVENT', domain: domain || 'unknown', reason: 'distracting_domain' });
       }
     }
   }
-
-  // Finalize active media session on URL navigation (e.g. SPA route or new video URL)
   if (changeInfo.url && activeMediaSessions.has(tabId)) {
     const existingSession = activeMediaSessions.get(tabId);
-    if (existingSession && existingSession.url) {
-      const prevKey = extractCanonicalMediaId(existingSession.url);
-      const newKey = extractCanonicalMediaId(changeInfo.url);
-      if (prevKey && newKey && prevKey !== newKey) {
-        finalizeMediaSession(tabId);
-      }
-    } else {
+    const prevKey = existingSession?.url ? extractCanonicalMediaId(existingSession.url) : null;
+    const newKey = extractCanonicalMediaId(changeInfo.url);
+    if (!existingSession?.url || (prevKey && newKey && prevKey !== newKey)) {
       finalizeMediaSession(tabId);
     }
   }
-
-  // Audio state change (tab.audible becomes true / false)
   if (changeInfo.audible !== undefined) {
+    if (tabId === activeTabId) activeTabAudible = Boolean(changeInfo.audible);
     handleTabAudibleStateChange(tabId, changeInfo.audible, tab);
-    if (changeInfo.audible === true && focusTimerState && focusTimerState.state === 'RUNNING_FOCUS') {
-      if (tabId !== activeTabId) {
-        checkAndAutoMuteBackgroundTab(tabId).catch(() => {});
-      }
+    if (changeInfo.audible === true && focusTimerState && focusTimerState.state === 'RUNNING_FOCUS' && tabId !== activeTabId) {
+      checkAndAutoMuteBackgroundTab(tabId).catch(() => {});
     }
   }
-
-  // Clear stale media state if tab reloads or navigates to a new page
   if (changeInfo.status === 'loading') {
-    if (activeMediaSessions.has(tabId)) {
-      finalizeMediaSession(tabId);
-    }
-    const existing = tabMediaMap.get(tabId);
-    if (existing) {
-      tabMediaMap.delete(tabId);
-      sendMediaTelemetryToHUD();
-    }
+    if (activeMediaSessions.has(tabId)) finalizeMediaSession(tabId);
+    tabFrameMediaMap.delete(tabId);
+    if (tabMediaMap.delete(tabId)) sendMediaTelemetryToHUD();
   }
+}
+
+// Tab Updated (URL changed, page navigated, or audible audio state changed)
+browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  return enqueueTransitionOp(() => handleTabUpdateTransition(tabId, changeInfo, tab));
 });
 
 // Tab Removed
-browserAPI.tabs.onRemoved.addListener(async (tabId) => {
+browserAPI.tabs.onRemoved.addListener((tabId) => enqueueTransitionOp(async () => {
   await ensureStorageLoaded();
   if (activeMediaSessions.has(tabId)) {
     finalizeMediaSession(tabId);
   }
+  tabFrameMediaMap.delete(tabId);
   if (tabMediaMap.has(tabId)) {
     tabMediaMap.delete(tabId);
     sendMediaTelemetryToHUD();
   }
   if (tabId === activeTabId) {
+    activeTabAudible = false;
     commitActiveInterval();
     await flushActiveSessionDelta();
     activeDomain = null;
@@ -4542,18 +4750,20 @@ browserAPI.tabs.onRemoved.addListener(async (tabId) => {
     }
     scheduleStorageSave(true);
   }
-});
+}));
 
 // Window Focus Changed
-browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
-  await ensureStorageLoaded();
+browserAPI.windows.onFocusChanged.addListener((windowId) => {
   const eventNow = Date.now();
-  if (windowId === browserAPI.windows.WINDOW_ID_NONE) {
-    await handleWindowFocusBlur();
-  } else {
-    await handleWindowFocusRestore(windowId, eventNow);
-  }
-  sendActivityUpdateToHUD();
+  return enqueueTransitionOp(async () => {
+    await ensureStorageLoaded();
+    if (windowId === browserAPI.windows.WINDOW_ID_NONE) {
+      await handleWindowFocusBlur();
+    } else {
+      await handleWindowFocusRestore(windowId, eventNow);
+    }
+    sendActivityUpdateToHUD();
+  });
 });
 
 /**
@@ -4562,6 +4772,7 @@ browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
  */
 function isUserActivelyWatchingMedia() {
   if (!isBrowserFocused || !activeTabId) return false;
+  if (typeof activeTabAudible !== 'undefined' && activeTabAudible === true) return true;
   const session = activeMediaSessions.get(activeTabId);
   if (session && session.isPlaying) return true;
   const mState = tabMediaMap.get(activeTabId) || tabMediaMap.get(String(activeTabId));
@@ -4630,11 +4841,11 @@ async function checkInactivityAutoSleep(now = Date.now()) {
 
 // Idle State Monitoring
 browserAPI.idle.setDetectionInterval(CONFIG.IDLE_THRESHOLD_SECONDS);
-browserAPI.idle.onStateChanged.addListener(async (newState) => {
+browserAPI.idle.onStateChanged.addListener((newState) => enqueueTransitionOp(async () => {
   await ensureStorageLoaded();
   await handleIdleStateTransition(newState);
   sendActivityUpdateToHUD();
-});
+}));
 
 // Service Worker Suspension Lifecycle Guard (Manifest V3 Standard)
 if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
@@ -4662,7 +4873,8 @@ if (browserAPI.runtime && browserAPI.runtime.onSuspend) {
         lastHeartbeatTime: now,
         isBrowserFocused,
         isUserActive,
-        isTrackingPaused
+        isTrackingPaused,
+        wasMediaActive: isUserActivelyWatchingMedia()
       });
     }
     saveStorageData();
@@ -4745,6 +4957,7 @@ async function handleDoomscrollCheck() {
 }
 
 browserAPI.alarms.onAlarm.addListener(async (alarm) => {
+  await ensureStorageLoaded();
   if (alarm.name === 'DOOMSCROLL_CHECK_ALARM') {
     await handleDoomscrollCheck();
     return;
@@ -4854,6 +5067,180 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
+/**
+ * Returns true when a frame media payload reports active playback.
+ */
+function isFrameMediaPlaying(payload) {
+  return Boolean(payload && (payload.anyPlaying || (payload.primaryMedia && payload.primaryMedia.isPlaying)));
+}
+
+/**
+ * Attaches tabId and windowId onto a media state payload and its primaryMedia descriptor.
+ */
+function stampTabMediaPayload(payload, tabId, windowId) {
+  if (!payload) return payload;
+  payload.tabId = tabId;
+  payload.windowId = windowId;
+  if (payload.primaryMedia) {
+    payload.primaryMedia.tabId = tabId;
+    payload.primaryMedia.windowId = windowId;
+  }
+  return payload;
+}
+
+/**
+ * Synthesizes a single authoritative tab media state across all active frames of a tab,
+ * prioritizing any playing video/audio frame so idle top frames never clobber playing embeds.
+ */
+function synthesizeTabMediaFromFrames(tabId) {
+  const frames = tabFrameMediaMap.get(tabId);
+  if (!frames || frames.size === 0) return null;
+  let best = null;
+  for (const entry of frames.values()) {
+    if (!entry) continue;
+    if (!best) {
+      best = entry;
+      continue;
+    }
+    const bestPlay = isFrameMediaPlaying(best);
+    const curPlay = isFrameMediaPlaying(entry);
+    if (curPlay && !bestPlay) {
+      best = entry;
+    } else if (curPlay === bestPlay && entry.primaryMedia?.mediaType === 'video' && best.primaryMedia?.mediaType !== 'video') {
+      best = entry;
+    }
+  }
+  return best;
+}
+
+/**
+ * Clears one frame (or entire tab) from tabFrameMediaMap and updates synthesized tab state.
+ */
+function clearTabFrameMedia(tabId, frameId) {
+  const frames = tabFrameMediaMap.get(tabId);
+  if (frames && frameId !== undefined) {
+    frames.delete(frameId);
+    if (frames.size > 0) {
+      const synthesized = synthesizeTabMediaFromFrames(tabId);
+      if (synthesized) {
+        tabMediaMap.set(tabId, synthesized);
+        sendMediaTelemetryToHUD();
+        trackMediaSession(tabId, synthesized);
+        safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+        return false;
+      }
+    }
+  }
+  tabFrameMediaMap.delete(tabId);
+  if (tabMediaMap.has(tabId)) {
+    finalizeMediaSession(tabId);
+    tabMediaMap.delete(tabId);
+    sendMediaTelemetryToHUD();
+    safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  }
+  return true;
+}
+
+/**
+ * Restores active foreground tracking when focused unlocked media playback resumes after idle.
+ */
+function wakeActiveTabIdleForMedia(now = Date.now()) {
+  if (!isBrowserFocused || isSystemLocked || isTrackingPaused) return;
+  if (isUserActive && userIdleStartTime === 0) return;
+  isUserActive = true;
+  userIdleStartTime = 0;
+  intervalStartTime = now;
+  if (_TimestampReconciliation && browserAPI && activeDomain) {
+    _TimestampReconciliation.updateActiveSession(browserAPI, {
+      domain: activeDomain,
+      tabId: activeTabId,
+      windowId: activeWindowId,
+      isUserActive: true,
+      idleStartedAt: null,
+      wasMediaActive: true,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now
+    });
+  }
+  sendActivityUpdateToHUD();
+}
+
+/**
+ * Probes active tab media safely with a bounded timeout for MV3 startup and post-reinject hydration.
+ */
+async function probeActiveTabMediaSafe(tabId, windowId, timeoutMs = 250) {
+  if (!tabId || typeof tabId !== 'number') return false;
+  let timer = null;
+  try {
+    const res = await Promise.race([
+      safeSendTabMessage(tabId, { type: 'QUERY_PAGE_MEDIA' }),
+      new Promise((r) => { timer = setTimeout(() => r(null), timeoutMs); })
+    ]);
+    if (timer) clearTimeout(timer);
+    if (!res || !res.hasMedia) return false;
+    stampTabMediaPayload(res, tabId, windowId || 0);
+    let frames = tabFrameMediaMap.get(tabId);
+    if (!frames) {
+      frames = new Map();
+      tabFrameMediaMap.set(tabId, frames);
+    }
+    frames.set(0, res);
+    const synthesized = synthesizeTabMediaFromFrames(tabId) || res;
+    tabMediaMap.set(tabId, synthesized);
+    trackMediaSession(tabId, synthesized);
+    return isFrameMediaPlaying(synthesized);
+  } catch (_) {
+    if (timer) clearTimeout(timer);
+    return false;
+  }
+}
+
+/**
+ * Handles MEDIA_STATE_CHANGED with multi-frame synthesis and focused-media idle wake.
+ */
+function handleMediaStateChangedMessage(message, sender, sendResponse) {
+  const tabId = sender.tab ? sender.tab.id : 0;
+  const windowId = sender.tab ? sender.tab.windowId : (activeWindowId || 0);
+  const frameId = sender.frameId || 0;
+  const payload = message.payload || {};
+  if (!tabId) {
+    sendResponse({ received: true });
+    return;
+  }
+  const hasMediaContent = Boolean(
+    payload.hasMedia ||
+    payload.anyPlaying ||
+    (payload.totalVideos && payload.totalVideos > 0) ||
+    (payload.totalAudios && payload.totalAudios > 0) ||
+    (payload.primaryMedia && (payload.primaryMedia.isPlaying || payload.primaryMedia.src || (typeof payload.primaryMedia.duration === 'number' && payload.primaryMedia.duration > 0)))
+  );
+  if (frameId !== 0 && !hasMediaContent && !tabFrameMediaMap.get(tabId)?.has(frameId)) {
+    sendResponse({ received: true, ignored: true });
+    return;
+  }
+  if (!hasMediaContent) {
+    const removedAll = clearTabFrameMedia(tabId, frameId);
+    sendResponse({ received: true, removed: removedAll });
+    return;
+  }
+  stampTabMediaPayload(payload, tabId, windowId);
+  let frames = tabFrameMediaMap.get(tabId);
+  if (!frames) {
+    frames = new Map();
+    tabFrameMediaMap.set(tabId, frames);
+  }
+  frames.set(frameId, payload);
+  const synthesized = synthesizeTabMediaFromFrames(tabId) || payload;
+  tabMediaMap.set(tabId, synthesized);
+  sendMediaTelemetryToHUD();
+  trackMediaSession(tabId, synthesized);
+  if (tabId === activeTabId && isFrameMediaPlaying(synthesized) && isBrowserFocused && !isSystemLocked) {
+    wakeActiveTabIdleForMedia(Date.now());
+  }
+  safeSendRuntimeMessage({ type: 'LIVE_MEDIA_UPDATE', payload: synthesizeGlobalMediaState() });
+  sendResponse({ received: true });
+}
+
 // Message Handling from Content Scripts and Popup
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || (!message.type && !message.action)) return;
@@ -4861,73 +5248,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Media state reported from content script
   if (message.type === 'MEDIA_STATE_CHANGED') {
-    const tabId = sender.tab ? sender.tab.id : 0;
-    const windowId = sender.tab ? sender.tab.windowId : (activeWindowId || 0);
-    const frameId = sender.frameId || 0;
-    const payload = message.payload || {};
-
-    if (tabId) {
-      const existing = tabMediaMap.get(tabId);
-
-      // Guard: Ignore messages from subframes that have NO media
-      if (frameId !== 0 && !payload.hasMedia) {
-        sendResponse({ received: true, ignored: true });
-        return true;
-      }
-
-      // Check whether this payload actually contains verifiable media
-      const hasMediaContent = Boolean(
-        payload.hasMedia ||
-        payload.anyPlaying ||
-        (payload.totalVideos && payload.totalVideos > 0) ||
-        (payload.totalAudios && payload.totalAudios > 0) ||
-        (payload.primaryMedia && (payload.primaryMedia.isPlaying || payload.primaryMedia.src || (typeof payload.primaryMedia.duration === 'number' && payload.primaryMedia.duration > 0)))
-      );
-
-      // If page has NO media content, purge from tabMediaMap and finalize session
-      if (!hasMediaContent) {
-        if (tabMediaMap.has(tabId)) {
-          finalizeMediaSession(tabId);
-          tabMediaMap.delete(tabId);
-          sendMediaTelemetryToHUD();
-          safeSendRuntimeMessage({
-            type: 'LIVE_MEDIA_UPDATE',
-            payload: synthesizeGlobalMediaState()
-          });
-        }
-        sendResponse({ received: true, removed: true });
-        return true;
-      }
-
-      // Stamp tabId and windowId on telemetry payload
-      payload.tabId = tabId;
-      payload.windowId = windowId;
-
-      // If top frame or subframe with media: attach tabId and windowId
-      if (payload.primaryMedia) {
-        payload.primaryMedia.tabId = tabId;
-        payload.primaryMedia.windowId = windowId;
-      }
-
-      // Guard: Do not allow an idle subframe to overwrite an active playing top frame
-      if (existing && existing.anyPlaying && !payload.anyPlaying && frameId !== 0) {
-        sendResponse({ received: true, retained: true });
-        return true;
-      }
-
-      tabMediaMap.set(tabId, payload);
-      sendMediaTelemetryToHUD();
-
-      // Track session and persist to mediaHistory
-      trackMediaSession(tabId, payload);
-
-      // Broadcast live media update immediately to open popup / dashboard (safe IPC broadcast)
-      safeSendRuntimeMessage({
-        type: 'LIVE_MEDIA_UPDATE',
-        payload: synthesizeGlobalMediaState()
-      });
-    }
-    sendResponse({ received: true });
+    handleMediaStateChangedMessage(message, sender, sendResponse);
     return true;
   }
 
@@ -6092,26 +6413,113 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
   }
 });
 
+/**
+ * Safely queries system idle state on Service Worker startup.
+ */
+async function queryInitialIdleState() {
+  if (!browserAPI.idle || typeof browserAPI.idle.queryState !== 'function') return 'active';
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (st) => {
+      if (settled) return;
+      settled = true;
+      resolve(typeof st === 'string' && st ? st : 'active');
+    };
+    try {
+      const ret = browserAPI.idle.queryState(CONFIG.IDLE_THRESHOLD_SECONDS, finish);
+      if (ret && typeof ret.then === 'function') ret.then(finish).catch(() => finish('active'));
+    } catch (_) {
+      finish('active');
+    }
+  });
+}
+
+/**
+ * Queries last focused window and active foreground tab safely for MV3 bootstrap.
+ */
+async function queryStartupWindowAndTab() {
+  let lastWin = null;
+  try {
+    if (browserAPI.windows && typeof browserAPI.windows.getLastFocused === 'function') {
+      lastWin = await browserAPI.windows.getLastFocused({ populate: true });
+    }
+  } catch (_) {}
+  if (lastWin && (lastWin.focused === false || lastWin.state === 'minimized')) {
+    isBrowserFocused = false;
+  }
+  let tabs = [];
+  let queryFailed = false;
+  try {
+    tabs = (await browserAPI.tabs.query({ active: true, lastFocusedWindow: true })) || [];
+  } catch (_) {
+    queryFailed = true;
+  }
+  let tab = tabs[0] || null;
+  if (!tab && lastWin && Array.isArray(lastWin.tabs)) {
+    tab = lastWin.tabs.find((t) => t && t.active) || null;
+  }
+  return { lastWin, tab, queryFailed };
+}
+
+/**
+ * Initializes active foreground tab, window focus, idle posture, and domain continuity on boot.
+ */
+async function initializeActiveTabOnStartup() {
+  let prevSession = null;
+  try {
+    if (_TimestampReconciliation && browserAPI) {
+      prevSession = await _TimestampReconciliation.getActiveSessionCheckpoint(browserAPI);
+    }
+  } catch (_) {}
+  const { lastWin, tab, queryFailed } = await queryStartupWindowAndTab();
+  if (tab) {
+    activeTabId = tab.id;
+    activeWindowId = tab.windowId || (lastWin && lastWin.id) || activeWindowId;
+    activeTabAudible = Boolean(tab.audible);
+    await probeActiveTabMediaSafe(tab.id, activeWindowId);
+  }
+  const idleState = await queryInitialIdleState();
+  isSystemLocked = idleState === 'locked';
+  const delayIdle = _ActiveSessionResilience
+    ? _ActiveSessionResilience.shouldDelayStartupIdleFreeze(idleState, getReconciliationContext(), prevSession)
+    : isUserActivelyWatchingMedia();
+  if (idleState === 'locked' || (idleState === 'idle' && (!isBrowserFocused || (!isUserActivelyWatchingMedia() && !delayIdle)))) {
+    isUserActive = false;
+  }
+  if (tab) {
+    if (prevSession && isUserActivelyWatchingMedia()) {
+      await reconcileTrackingSessionOnStartup();
+    }
+    const rawUrl = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.extractTabCandidateUrl(tab) : (tab.url || tab.pendingUrl || '');
+    const blacklisted = rawUrl && matchesTrackingBlacklist(rawUrl);
+    const domain = (!blacklisted && rawUrl) ? extractDomain(rawUrl) : null;
+    const isNewSession = Boolean(domain && prevSession?.domain !== domain);
+    switchActiveDomain(domain, isNewSession);
+    return;
+  }
+  const nonClobber = _ForegroundTrackingGuard ? _ForegroundTrackingGuard.isNonClobberWindow(lastWin) : (lastWin?.type === 'devtools');
+  if (!queryFailed && !nonClobber) {
+    activeTabAudible = false;
+    switchActiveDomain(null, false);
+  }
+}
+
 // Bootstrap Initialization
 (async () => {
   await ensureStorageLoaded();
   await initClientIdAndBrowser();
-  
-  // Find current active tab on startup
-  try {
-    const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-    if (tabs && tabs[0]) {
-      activeTabId = tabs[0].id;
-      if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
-      const domain = tabs[0].url ? extractDomain(tabs[0].url) : null;
-      switchActiveDomain(domain, true);
-    } else {
-      switchActiveDomain(null, false);
-    }
-  } catch (e) {}
+
+  await enqueueTransitionOp(() => initializeActiveTabOnStartup());
+
+  // Pre-flight probe host services and connect safely without console errors
+  probeAndConnectServices();
 
   // Re-inject content scripts to reconnect existing open tabs without page reload
   await reinjectContentScripts();
+  if (activeTabId && isBrowserFocused && !isSystemLocked) {
+    const playingNow = await probeActiveTabMediaSafe(activeTabId, activeWindowId);
+    if (playingNow) wakeActiveTabIdleForMedia(Date.now());
+  }
 
   // Immediate audible tab sweep on boot: capture any background tabs already playing audio
   try {
@@ -6125,14 +6533,12 @@ browserAPI.storage.onChanged.addListener((changes, areaName) => {
     }
   } catch (_) {}
 
-  // Pre-flight probe host services and connect safely without console errors
-  probeAndConnectServices();
-
   // Setup periodic 5-second streaming ticker for active domain delta commits and background media playback
   if (deltaCommitTicker) clearInterval(deltaCommitTicker);
   deltaCommitTicker = setInterval(async () => {
+    if (!isStorageLoaded) await ensureStorageLoaded();
     // 1. Commit active foreground domain interval (only when tracking is active)
-    if (!isTrackingPaused && isBrowserFocused && isUserActive && activeDomain) {
+    if (!isTrackingPaused && !isSystemLocked && isBrowserFocused && (isUserActive || isUserActivelyWatchingMedia()) && activeDomain) {
       commitActiveInterval();
     }
 
@@ -6268,6 +6674,16 @@ if (typeof globalThis !== 'undefined') {
   globalThis.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
   globalThis.flushActiveSessionDelta = flushActiveSessionDelta;
   globalThis.getReconciliationContext = getReconciliationContext;
+  globalThis.initializeActiveTabOnStartup = initializeActiveTabOnStartup;
+  globalThis.enqueueTransitionOp = enqueueTransitionOp;
+  globalThis.getIsBrowserFocused = () => isBrowserFocused;
+  globalThis.getIsUserActive = () => isUserActive;
+  globalThis.getIsSystemLocked = () => isSystemLocked;
+  globalThis.setIsSystemLocked = (v) => { isSystemLocked = Boolean(v); };
+  globalThis.getActiveTabAudible = () => activeTabAudible;
+  globalThis.setActiveTabAudible = (v) => { activeTabAudible = Boolean(v); };
+  globalThis.ActiveSessionResilience = _ActiveSessionResilience;
+  globalThis.ForegroundTrackingGuard = _ForegroundTrackingGuard;
   globalThis.TimestampReconciliation = _TimestampReconciliation;
   if (globalThis.SentinelBackgroundModules) {
     globalThis.SentinelBackgroundModules.handleDoomscrollCheck = handleDoomscrollCheck;
@@ -6341,6 +6757,10 @@ if (typeof globalThis !== 'undefined') {
     globalThis.SentinelBackgroundModules.handleTrackingKeepaliveConnect = handleTrackingKeepaliveConnect;
     globalThis.SentinelBackgroundModules.flushActiveSessionDelta = flushActiveSessionDelta;
     globalThis.SentinelBackgroundModules.getReconciliationContext = getReconciliationContext;
+    globalThis.SentinelBackgroundModules.initializeActiveTabOnStartup = initializeActiveTabOnStartup;
+    globalThis.SentinelBackgroundModules.enqueueTransitionOp = enqueueTransitionOp;
+    globalThis.SentinelBackgroundModules.ActiveSessionResilience = _ActiveSessionResilience;
+    globalThis.SentinelBackgroundModules.ForegroundTrackingGuard = _ForegroundTrackingGuard;
     globalThis.SentinelBackgroundModules.TimestampReconciliation = _TimestampReconciliation;
   }
 }
@@ -6351,6 +6771,10 @@ if (typeof module !== 'undefined' && module.exports) {
     handleTrackingKeepaliveConnect,
     flushActiveSessionDelta,
     getReconciliationContext,
+    initializeActiveTabOnStartup,
+    enqueueTransitionOp,
+    ActiveSessionResilience: _ActiveSessionResilience,
+    ForegroundTrackingGuard: _ForegroundTrackingGuard,
     TimestampReconciliation: _TimestampReconciliation,
     pauseSleepTimer,
     resumeSleepTimer,

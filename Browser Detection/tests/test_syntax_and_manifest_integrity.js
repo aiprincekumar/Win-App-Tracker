@@ -148,9 +148,19 @@ console.log('\nTest 4: Manifest V3 Schema, Permissions & Version 2.5.0 Validatio
     assert(manifest.permissions.includes(perm), `manifest.permissions must include "${perm}"`);
   });
 
-  // Verify background worker
+  // Verify background worker (classic MV3 SW for synchronous importScripts parity)
   assert.strictEqual(manifest.background.service_worker, 'background.js', 'background worker must be background.js');
-  assert.strictEqual(manifest.background.type, 'module', 'background worker type must be module');
+  assert.ok(!manifest.background.type || manifest.background.type === 'classic', 'background worker must run in classic MV3 mode for importScripts() parity');
+
+  const bgSource = fs.readFileSync(path.join(baseDir, 'background.js'), 'utf8');
+  const importMatch = bgSource.match(/importScripts\s*\(([\s\S]*?)\)\s*;/);
+  assert.ok(importMatch, 'background.js must include importScripts(...) loader for classic MV3 runtime hydration');
+  const importedFiles = [...importMatch[1].matchAll(/['"]([^'"]+\.js)['"]/g)].map((m) => m[1]);
+  assert.ok(importedFiles.length >= 20, 'importScripts must load modular src/ scripts in dependency order');
+  importedFiles.forEach((relScript) => {
+    const absScript = path.join(baseDir, relScript.replace(/^\.\//, ''));
+    assert.ok(fs.existsSync(absScript), `Imported worker script must exist on disk: ${relScript}`);
+  });
 
   // Verify action popup
   assert.strictEqual(manifest.action.default_popup, 'popup/popup.html', 'default_popup must be popup/popup.html');

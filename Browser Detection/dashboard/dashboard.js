@@ -4029,7 +4029,7 @@ let hubReconnectAttempts = 0;
 let hubReconnectTimer = null;
 const HUB_RETRY_INTERVALS = [1000, 2000, 5000, 10000, 30000];
 let cachedSettings = {
-  idleThresholdSeconds: 60,
+  idleThresholdSeconds: 300,
   wsUrl: 'ws://127.0.0.1:65432',
   autoConnectWs: true,
   mediaTrackingEnabled: true,
@@ -5686,7 +5686,7 @@ function playSyntheticFocusChime(audioCtx) {
 function updateDashboardFocusMetrics(metrics) {
   const elFocusTime = document.getElementById('trackMetricFocusTime');
   const elFocusSessions = document.getElementById('trackMetricFocusSessions');
-  const todayKey = new Date().toISOString().split('T')[0];
+  const todayKey = formatYMD(new Date());
   const today = (metrics && metrics[todayKey]) ? metrics[todayKey] : (metrics && metrics.totalFocusSeconds !== undefined ? metrics : null);
   const totalSec = today ? (today.totalFocusSeconds || 0) : 0;
   const sessions = today ? (today.completedSessions || 0) : 0;
@@ -6999,7 +6999,7 @@ function renderTimeTrackingTab(data) {
 
   if (dataHubConnected && dataHubAnalytics && Array.isArray(dataHubAnalytics.domain_distribution)) {
     const historyDays = Math.max(1, dataHubAnalytics.total_tracked_days || 1);
-    const firstTrackedDate = dataHubAnalytics.first_tracked_date || dataHubAnalytics.query_date || new Date().toISOString().split('T')[0];
+    const firstTrackedDate = dataHubAnalytics.first_tracked_date || dataHubAnalytics.query_date || formatYMD(new Date());
 
     // Filter raw domain distributions by selectedDomainCategory before aggregating
     const rawTodayList = (Array.isArray(dataHubAnalytics.domain_distribution) ? dataHubAnalytics.domain_distribution : []).filter(d => {
@@ -7026,7 +7026,7 @@ function renderTimeTrackingTab(data) {
     const isRangeMode = (temporalSubtab === 'yesterday' || temporalSubtab === '7d' || temporalSubtab === '30d' || temporalSubtab === 'custom');
 
     if (isRangeMode && data && data.activityData && data.activityData.domains) {
-      const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
+      const todayStr = (data && data.todayStr) || formatYMD(new Date());
       stats = processTimeTrackingData(data.activityData, temporalSubtab, todayStr);
       stats.totalSec = allTimeSec || stats.totalSec;
       stats.todaySec = todaySec || stats.todaySec;
@@ -7099,13 +7099,13 @@ function renderTimeTrackingTab(data) {
     }
   } else {
     const actData = data.activityData || {};
-    const todayStr = data.todayStr || new Date().toISOString().split('T')[0];
+    const todayStr = data.todayStr || formatYMD(new Date());
     stats = processTimeTrackingData(actData, temporalSubtab, todayStr);
   }
   activeTrackingStats = stats;
 
   // 1. Metric Cards (Symmetrical 5x2 Bento Grid)
-  const todayStr = (data && data.todayStr) || new Date().toISOString().split('T')[0];
+  const todayStr = (data && data.todayStr) || formatYMD(new Date());
   try {
     updateTimeTrackingKpiView(data, stats, temporalSubtab, todayStr);
   } catch (e) {
@@ -8330,7 +8330,7 @@ function saveDashboardSettings() {
   const selectedLang = langSelect ? langSelect.value : currentLang;
 
   const newSettings = {
-    idleThresholdSeconds: parseInt(idleSelect.value, 10) || 60,
+    idleThresholdSeconds: parseInt(idleSelect.value, 10) || 300,
     language: selectedLang,
     wsUrl: wsInput.value.trim() || 'ws://127.0.0.1:65432',
     mediaTrackingEnabled: mediaToggle.checked,
@@ -8468,7 +8468,7 @@ function exportTimeTrackingCsv(customData) {
 
   const actData = data.activityData;
   const domains = actData.domains || {};
-  const todayStr = data.todayStr || new Date().toISOString().split('T')[0];
+  const todayStr = data.todayStr || formatYMD(new Date());
 
   const headers = [
     'Domain',
@@ -8817,7 +8817,7 @@ function refreshDashboard(forceRefresh = false) {
               query: 'ANALYTICS',
               browser: selectedBrowser,
               tracking_mode: selectedTrackingMode,
-              date: response.todayStr || new Date().toISOString().split('T')[0]
+              date: response.todayStr || formatYMD(new Date())
             }, (hr) => {
               clearTimeout(timer);
               if (!hr || !hr.success) {

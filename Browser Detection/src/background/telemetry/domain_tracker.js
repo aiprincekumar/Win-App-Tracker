@@ -54,17 +54,22 @@
    */
   function commitActiveInterval(state, context = {}) {
     if (!state) return 0;
-    if (state.isTrackingPaused || !state.activeDomain || !state.isBrowserFocused || !state.isUserActive) {
+    const isMediaActive = !state.isSystemLocked &&
+      typeof context.isActivelyWatchingMedia === 'function' &&
+      context.isActivelyWatchingMedia() === true;
+    if (state.isTrackingPaused || state.isSystemLocked || !state.activeDomain || !state.isBrowserFocused || (!state.isUserActive && !isMediaActive)) {
       state.intervalStartTime = Date.now();
       return 0;
     }
 
     const now = Date.now();
-    const elapsedMs = now - (state.intervalStartTime || now);
+    const prevStart = state.intervalStartTime || now;
+    const elapsedMs = Math.max(0, now - prevStart);
     const elapsedSec = Math.floor(elapsedMs / 1000);
 
     if (elapsedSec > 0) {
       const validSec = Math.min(elapsedSec, 3600);
+      const commitEndMs = (validSec === elapsedSec) ? (prevStart + validSec * 1000) : now;
       const today = getToday();
       const domainEntry = ensureDomainRecord(state.activityData, state.activeDomain);
 
@@ -79,7 +84,7 @@
       dayEntry.seconds = (dayEntry.seconds || 0) + validSec;
       dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
 
-      state.intervalStartTime = now;
+      state.intervalStartTime = commitEndMs;
       if (state.activityData) {
         state.activityData.lastUpdated = now;
       }

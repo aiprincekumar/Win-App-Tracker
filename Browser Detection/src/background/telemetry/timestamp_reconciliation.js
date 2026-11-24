@@ -8,6 +8,13 @@
 (function (global) {
   'use strict';
 
+  const Guard = (typeof module !== 'undefined' && module.exports)
+    ? require('./foreground_tracking_guard.js')
+    : (global.ForegroundTrackingGuard || null);
+  const Resilience = (typeof module !== 'undefined' && module.exports)
+    ? require('./active_session_resilience.js')
+    : (global.ActiveSessionResilience || null);
+
   const STORAGE_KEY_ACTIVE_SESSION = 'sentinel_active_session';
   const PORT_NAME_KEEPALIVE = 'sentinel_tracking_keepalive';
   const KEEPALIVE_HEARTBEAT_INTERVAL_MS = 15000;
@@ -133,6 +140,7 @@
       focusLostAt: resolveInactiveStamp(updates.focusLostAt, nextFocused === false, prevFocusLost),
       idleStartedAt: resolveInactiveStamp(updates.idleStartedAt, nextActive === false, prevIdleAt),
       pausedAt: resolveInactiveStamp(updates.pausedAt, nextPaused === true, prevPausedAt),
+      wasMediaActive: updates.wasMediaActive !== undefined ? Boolean(updates.wasMediaActive) : Boolean(!isDomainChange && existing.wasMediaActive),
       heartbeatCount: (existing.heartbeatCount || 0) + 1,
       schemaVersion: 1
     };
@@ -290,9 +298,14 @@
 
   function resolveReconciliationPlan(session, context, now = Date.now()) {
     const lastTime = session.lastCommittedTime || session.lastHeartbeat || session.lastHeartbeatTime || session.startTime || now;
+    const isMediaActive = (Guard ? Guard.isMediaExemptionActive(context) : (!context?.isSystemLocked && typeof context?.isActivelyWatchingMedia === 'function' && context.isActivelyWatchingMedia() === true)) ||
+      Boolean(session.wasMediaActive && !context?.isSystemLocked && (typeof context?.getActiveTabId !== 'function' || context.getActiveTabId() === null));
     const isFocused = (session.isBrowserFocused !== false) && (context?.isBrowserFocused !== false);
-    const isActive = (session.isUserActive !== false) && (context?.isUserActive !== false);
+    const isActive = ((session.isUserActive !== false) && (context?.isUserActive !== false)) || isMediaActive;
     if (isFocused && isActive) {
+      if (isMediaActive && Resilience?.resolveActiveMediaReconciliation) {
+        return Resilience.resolveActiveMediaReconciliation(session, lastTime, now, MAX_RECONCILE_DRIFT_SEC);
+      }
       return resolveActiveSessionPlan(session, lastTime, now);
     }
 
@@ -330,7 +343,8 @@
       const plan = resolveReconciliationPlan(session, context, now);
       if (plan.creditedSeconds > 0) {
         creditDomainTime(context, session.domain, plan.creditedSeconds, now, { startMs: plan.creditStartMs, endMs: plan.creditEndMs });
-        const canResetAnchor = typeof context.setIntervalStartTime === 'function' && (!context.activeDomain || context.activeDomain === session.domain);
+        const curAnchor = typeof context.getIntervalStartTime === 'function' ? (context.getIntervalStartTime() || 0) : 0;
+        const canResetAnchor = typeof context.setIntervalStartTime === 'function' && (!context.activeDomain || context.activeDomain === session.domain) && plan.committedAt > curAnchor;
         if (canResetAnchor) context.setIntervalStartTime(plan.committedAt);
       }
 
@@ -356,39 +370,60 @@
 
   function resolveHeartbeatCommit(sameDomainSession, context, meta) {
     const { domain, now } = meta;
-    const lastTime = sameDomainSession?.lastCommittedTime || sameDomainSession?.lastHeartbeat || sameDomainSession?.startTime || now;
+    const lastTime = Guard
+      ? Guard.resolveMonotonicLastCommitted(sameDomainSession, context, domain, now)
+      : (() => {
+          const base = sameDomainSession?.lastCommittedTime || sameDomainSession?.lastHeartbeat || sameDomainSession?.startTime || now;
+          const cur = (context?.activeDomain === domain && typeof context.getIntervalStartTime === 'function') ? (context.getIntervalStartTime() || 0) : 0;
+          return (cur > base && cur <= now) ? cur : base;
+        })();
     const rawElapsedSec = Math.max(0, Math.floor((now - lastTime) / 1000));
     const cappedDelta = Math.min(rawElapsedSec, MAX_RECONCILE_DRIFT_SEC);
-    const canCredit = (context.isBrowserFocused !== false) && (context.isUserActive !== false) && !context.isTrackingPaused;
+    const isMediaActive = Guard ? Guard.isMediaExemptionActive(context) : (!context?.isSystemLocked && typeof context?.isActivelyWatchingMedia === 'function' && context.isActivelyWatchingMedia() === true);
+    const canCredit = (context.isBrowserFocused !== false) && ((context.isUserActive !== false) || isMediaActive) && !context.isTrackingPaused && !context.isSystemLocked;
 
     if (cappedDelta > 0 && canCredit) {
       const committedAt = (rawElapsedSec === cappedDelta) ? (lastTime + cappedDelta * 1000) : now;
       creditDomainTime(context, domain, cappedDelta, now, { startMs: committedAt - cappedDelta * 1000, endMs: committedAt });
-      if (typeof context.setIntervalStartTime === 'function') {
+      const curAnchor = typeof context.getIntervalStartTime === 'function' ? (context.getIntervalStartTime() || 0) : 0;
+      if (typeof context.setIntervalStartTime === 'function' && committedAt > curAnchor) {
         context.setIntervalStartTime(committedAt);
       }
       return committedAt;
     }
     if (canCredit && cappedDelta === 0) {
-      return sameDomainSession?.lastCommittedTime || lastTime;
+      return Math.max(lastTime, sameDomainSession?.lastCommittedTime || 0);
     }
     const hasUnflushedFocus = typeof sameDomainSession?.focusLostAt === 'number' && sameDomainSession.focusLostAt > lastTime;
     const hasUnflushedIdle = typeof sameDomainSession?.idleStartedAt === 'number' && sameDomainSession.idleStartedAt > lastTime;
     return (sameDomainSession && (hasUnflushedFocus || hasUnflushedIdle)) ? lastTime : now;
   }
 
-  function processKeepaliveHeartbeat(msg, port, tabId, context) {
-    if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT' || !msg.domain) return Promise.resolve();
+  async function processKeepaliveHeartbeat(msg, port, tabId, context) {
+    if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT' || !msg.domain) return;
     const domain = msg.domain;
     if (typeof context?.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(domain)) {
       try { port?.disconnect(); } catch (_) {}
-      return Promise.resolve();
+      return;
+    }
+    if (typeof context?.ensureStorageLoaded === 'function') {
+      await context.ensureStorageLoaded();
     }
     const currentActiveTabId = typeof context?.getActiveTabId === 'function' ? context.getActiveTabId() : null;
     const isForegroundTab = currentActiveTabId === null || currentActiveTabId === tabId;
-    if (!isForegroundTab || !context?.browserAPI) return Promise.resolve();
+    if (!isForegroundTab && msg.isFinalFlush === true && Resilience?.processOutgoingFinalFlush) {
+      return Resilience.processOutgoingFinalFlush(msg, tabId, context, { readCheckpointRaw, writeCheckpointRaw, resolveHeartbeatCommit, applyMergedSessionUpdates, enqueueCheckpointOp });
+    }
+    if (!isForegroundTab || !context?.browserAPI) return;
 
     const now = (typeof msg?.timestamp === 'number' && msg.timestamp > 0) ? msg.timestamp : Date.now();
+    const recentActive = Guard
+      ? Guard.shouldWakeOnRecentActivity(msg, context)
+      : (context.isUserActive === false && !context.isSystemLocked && context.isBrowserFocused !== false && typeof msg.timeSinceLastActivity === 'number' && msg.timeSinceLastActivity >= 0 && msg.timeSinceLastActivity < (context.idleThresholdMs || 60000));
+    if (recentActive && typeof context.onRecentPageActivity === 'function') {
+      await context.onRecentPageActivity(now);
+    }
+
     return enqueueCheckpointOp(context.browserAPI, async () => {
       const session = await readCheckpointRaw(context.browserAPI);
       const sameDomainSession = (session && session.domain === domain) ? session : null;
@@ -400,7 +435,7 @@
         lastHeartbeatTime: now,
         lastCommittedTime: nextLastCommittedTime,
         isBrowserFocused: context.isBrowserFocused !== false,
-        isUserActive: context.isUserActive !== false,
+        isUserActive: (context.isUserActive !== false) || recentActive,
         isTrackingPaused: !!context.isTrackingPaused
       }, now);
       await writeCheckpointRaw(context.browserAPI, merged);
@@ -424,6 +459,9 @@
 
     port.onDisconnect.addListener(() => {
       activeKeepalivePorts.delete(tabId);
+      if (typeof context?.onKeepaliveDisconnect === 'function') {
+        context.onKeepaliveDisconnect(tabId);
+      }
     });
 
     return true;

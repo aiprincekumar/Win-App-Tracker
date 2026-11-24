@@ -78,6 +78,7 @@
   let keepaliveTimer = null;
   let reconnectTimeout = null;
   let reconnectBackoffMs = 1000;
+  let lastHeartbeatSentAt = 0;
 
   // Tracked listeners for clean unregistration on context invalidation
   let storageListenerAd = null;
@@ -221,6 +222,7 @@
       };
       if (isFinal) payload.isFinalFlush = true;
       keepalivePort.postMessage(payload);
+      lastHeartbeatSentAt = now;
     } catch (err) {
       handleHeartbeatPostError(err, isFinal);
     }
@@ -247,6 +249,10 @@
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
     if (typeof window.location !== 'undefined' && isExcludedTrackingHost(window.location.hostname)) return;
     if (keepalivePort) return;
+    if (reconnectTimeout) {
+      safeClearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
 
     try {
       if (!browserAPI || !browserAPI.runtime || typeof browserAPI.runtime.connect !== 'function') return;
@@ -261,7 +267,7 @@
             reconnectTimeout = null;
           }
           if (isExtensionContextValid() && typeof document !== 'undefined' && document.visibilityState === 'visible') {
-            reconnectTimeout = setTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
+            reconnectTimeout = safeSetTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
             reconnectBackoffMs = Math.min(8000, reconnectBackoffMs * 2);
           }
         });
@@ -292,8 +298,11 @@
 
   function handleWindowFocusKeepaliveSync() {
     if (isContextInvalidated || !isExtensionContextValid()) return;
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !keepalivePort) {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+    if (!keepalivePort) {
       connectTrackingKeepalivePort();
+    } else if (Date.now() - lastHeartbeatSentAt >= 5000) {
+      sendTrackingHeartbeat(false);
     }
   }
 
@@ -1462,8 +1471,12 @@
 
     if (!isTopFrame) {
       notifySubframeActivity(now);
-    } else if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      connectTrackingKeepalivePort();
+    } else if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (!keepalivePort) {
+        connectTrackingKeepalivePort();
+      } else if (now - lastHeartbeatSentAt >= 15000) {
+        sendTrackingHeartbeat(false);
+      }
     }
 
     // Tier 2 (IPC Throttle: 10,000ms)
@@ -2635,6 +2648,16 @@
     const safeTs = (typeof ts === 'number' && ts > 0 && ts <= now + 5000) ? ts : now;
     lastActivityTimestamp = Math.max(lastActivityTimestamp, safeTs);
     lastLocalInteraction = Math.max(lastLocalInteraction, now);
+    if (isTopFrame && now - lastIpcBroadcastTime >= 10000) {
+      lastIpcBroadcastTime = now;
+      safeSendMessage({
+        type: 'PAGE_USER_INTERACTION',
+        payload: {
+          domain: (window.location && window.location.hostname) || '',
+          timestamp: safeTs
+        }
+      });
+    }
     if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
       connectTrackingKeepalivePort();
       return;
@@ -3231,6 +3254,7 @@
           document.addEventListener('visibilitychange', handleVisibilityKeepaliveSync);
           window.addEventListener('pagehide', handlePagehideKeepaliveSync);
           window.addEventListener('focus', handleWindowFocusKeepaliveSync);
+          window.addEventListener('pageshow', handleWindowFocusKeepaliveSync);
           if (document.visibilityState === 'visible') {
             connectTrackingKeepalivePort();
           }
