@@ -785,7 +785,7 @@
       const totalCirc = 238.76;
       const offset = totalCirc * (1 - clampedScore / 100);
       circle.style.strokeDashoffset = String(offset);
-      circle.className = `gauge-progress tier-${resolvedTier}`;
+      circle.setAttribute('class', `gauge-progress tier-${resolvedTier}`);
       if (resolvedTier === 'focus') {
         circle.style.stroke = '#10b981';
       } else if (resolvedTier === 'balanced') {

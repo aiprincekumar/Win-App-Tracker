@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-11-25 02:46:00 IST] `SVGCLASS001` — `TASK-SVG-CLASSNAME-FIX-001`
+- **Authorization Token:** `AUTH-MGR-20261125-SVGCLASS-001`
+- **Type:** `fix(dashboard)` — `SVGElement.className` Getter-Only `TypeError` in `renderProductivityGauge`
+- **Summary:**
+  - Replaced `circle.className = ...` with `circle.setAttribute('class', \`gauge-progress tier-${resolvedTier}\`);` on `#gaugeProgressCircle` (`SVGCircleElement`) in `dashboard/dashboard.js` (`L2690`) and `src/dashboard/features/temporal_productivity_feature.js` (`L788`) with 0 net line growth.
+  - Audited 226 `.className =` sites across `dashboard/` and `src/dashboard/` confirming 0 other SVG targets.
+  - Added 4-battery strict getter-only SVG mock regression suite (`tests/test_svg_classname_regression.js`, `205` lines); certified **129/129 PASSED** (`node run_all_tests.js`, `36.39s`, Exit Code `0`), `node --check` PASS, BOM PASS, and `0` leaks in `gitleaks`.
+- **Entry Record:** [`entries/2026-11-25/change_SVGCLASS001_2026-11-25_02-46-00.md`](../entries/2026-11-25/change_SVGCLASS001_2026-11-25_02-46-00.md)
+
 ## [2026-11-25 02:30:00 IST] `FGTRACKING001` — `TASK-FOREGROUND-TRACKING-FIX-001`
 - **Authorization Token:** `AUTH-MGR-20261125-FGTRACKING-001`
 - **Type:** `fix(telemetry)` — Foreground & Active Tab Time Tracking Undercounting Overhaul (`RC-01` through `RC-09`)

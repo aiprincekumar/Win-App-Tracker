@@ -2687,7 +2687,7 @@ function renderProductivityGauge(score, tier) {
   }
   if (circle) {
     circle.style.strokeDashoffset = String(238.76 * (1 - clampedScore / 100));
-    circle.className = `gauge-progress tier-${resolvedTier}`;
+    circle.setAttribute('class', `gauge-progress tier-${resolvedTier}`);
     circle.style.stroke = resolvedTier === 'focus' ? '#10b981' : resolvedTier === 'balanced' ? '#f59e0b' : '#f43f5e';
   }
 }
