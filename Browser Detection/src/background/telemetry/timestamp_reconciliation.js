@@ -15,6 +15,8 @@
   const SLEEP_THRESHOLD_SEC = 60;
 
   const activeKeepalivePorts = new Map();
+  const storageQueues = new WeakMap();
+  let fallbackQueue = Promise.resolve();
 
   function getSessionStorageArea(browserAPI) {
     if (browserAPI && browserAPI.storage && browserAPI.storage.session) {
@@ -26,7 +28,7 @@
     return null;
   }
 
-  async function getActiveSessionCheckpoint(browserAPI) {
+  async function readCheckpointRaw(browserAPI) {
     const storage = getSessionStorageArea(browserAPI);
     if (!storage || typeof storage.get !== 'function') return null;
     try {
@@ -37,7 +39,7 @@
     }
   }
 
-  async function saveActiveSessionCheckpoint(browserAPI, sessionData) {
+  async function writeCheckpointRaw(browserAPI, sessionData) {
     const storage = getSessionStorageArea(browserAPI);
     if (!storage || typeof storage.set !== 'function') return;
     try {
@@ -45,7 +47,7 @@
     } catch (_) {}
   }
 
-  async function clearActiveSessionCheckpoint(browserAPI) {
+  async function removeCheckpointRaw(browserAPI) {
     const storage = getSessionStorageArea(browserAPI);
     if (!storage) return;
     try {
@@ -55,6 +57,31 @@
         await storage.set({ [STORAGE_KEY_ACTIVE_SESSION]: null });
       }
     } catch (_) {}
+  }
+
+  function enqueueCheckpointOp(browserAPI, taskFn) {
+    const storage = getSessionStorageArea(browserAPI);
+    const prev = storage ? (storageQueues.get(storage) || Promise.resolve()) : fallbackQueue;
+    const next = prev.catch(() => {}).then(() => taskFn());
+    const settled = next.catch(() => {});
+    if (storage) {
+      storageQueues.set(storage, settled);
+    } else {
+      fallbackQueue = settled;
+    }
+    return next;
+  }
+
+  function getActiveSessionCheckpoint(browserAPI) {
+    return enqueueCheckpointOp(browserAPI, () => readCheckpointRaw(browserAPI));
+  }
+
+  function saveActiveSessionCheckpoint(browserAPI, sessionData) {
+    return enqueueCheckpointOp(browserAPI, () => writeCheckpointRaw(browserAPI, sessionData));
+  }
+
+  function clearActiveSessionCheckpoint(browserAPI) {
+    return enqueueCheckpointOp(browserAPI, () => removeCheckpointRaw(browserAPI));
   }
 
   function calculateReconciledDelta(session, now = Date.now()) {
@@ -76,26 +103,49 @@
     return { deltaSeconds, isSleepGap: false, rawElapsedSec };
   }
 
-  async function updateActiveSession(browserAPI, updates = {}) {
-    if (!browserAPI) return null;
-    const existing = (await getActiveSessionCheckpoint(browserAPI)) || {};
-    const now = Date.now();
-    const merged = {
+  function resolveInactiveStamp(explicitVal, isInactive, prevStamp) {
+    if (!isInactive) return null;
+    return explicitVal !== undefined ? explicitVal : prevStamp;
+  }
+
+  function applyMergedSessionUpdates(existing, updates, now) {
+    const isDomainChange = updates.domain !== undefined && existing.domain && updates.domain !== existing.domain;
+    const fallbackCommitted = isDomainChange ? now : (existing.lastCommittedTime || existing.lastHeartbeat || existing.lastHeartbeatTime || existing.startTime || now);
+    const nextFocused = updates.isBrowserFocused !== undefined ? updates.isBrowserFocused : (existing.isBrowserFocused !== false);
+    const nextActive = updates.isUserActive !== undefined ? updates.isUserActive : (existing.isUserActive !== false);
+    const nextPaused = updates.isTrackingPaused !== undefined ? updates.isTrackingPaused : !!existing.isTrackingPaused;
+
+    const prevFocusLost = isDomainChange ? null : (existing.isBrowserFocused !== false ? now : (existing.focusLostAt ?? null));
+    const prevIdleAt = isDomainChange ? null : (existing.isUserActive !== false ? now : (existing.idleStartedAt ?? null));
+    const prevPausedAt = !existing.isTrackingPaused ? now : (existing.pausedAt ?? null);
+
+    return {
       domain: updates.domain !== undefined ? updates.domain : existing.domain,
       tabId: updates.tabId !== undefined ? updates.tabId : existing.tabId,
       windowId: updates.windowId !== undefined ? updates.windowId : existing.windowId,
-      startTime: updates.startTime || existing.startTime || now,
+      startTime: updates.startTime || (isDomainChange ? now : (existing.startTime || now)),
       lastHeartbeat: updates.lastHeartbeat || now,
       lastHeartbeatTime: updates.lastHeartbeatTime || updates.lastHeartbeat || now,
-      lastCommittedTime: updates.lastCommittedTime || existing.lastCommittedTime || now,
-      isBrowserFocused: updates.isBrowserFocused !== undefined ? updates.isBrowserFocused : (existing.isBrowserFocused !== false),
-      isUserActive: updates.isUserActive !== undefined ? updates.isUserActive : (existing.isUserActive !== false),
-      isTrackingPaused: updates.isTrackingPaused !== undefined ? updates.isTrackingPaused : !!existing.isTrackingPaused,
+      lastCommittedTime: updates.lastCommittedTime || fallbackCommitted,
+      isBrowserFocused: nextFocused,
+      isUserActive: nextActive,
+      isTrackingPaused: nextPaused,
+      focusLostAt: resolveInactiveStamp(updates.focusLostAt, nextFocused === false, prevFocusLost),
+      idleStartedAt: resolveInactiveStamp(updates.idleStartedAt, nextActive === false, prevIdleAt),
+      pausedAt: resolveInactiveStamp(updates.pausedAt, nextPaused === true, prevPausedAt),
       heartbeatCount: (existing.heartbeatCount || 0) + 1,
       schemaVersion: 1
     };
-    await saveActiveSessionCheckpoint(browserAPI, merged);
-    return merged;
+  }
+
+  function updateActiveSession(browserAPI, updates = {}) {
+    if (!browserAPI) return Promise.resolve(null);
+    return enqueueCheckpointOp(browserAPI, async () => {
+      const existing = (await readCheckpointRaw(browserAPI)) || {};
+      const merged = applyMergedSessionUpdates(existing, updates, Date.now());
+      await writeCheckpointRaw(browserAPI, merged);
+      return merged;
+    });
   }
 
   function creditDomainTime(context, domain, seconds, now = Date.now()) {
@@ -136,76 +186,132 @@
     }
   }
 
-  async function reconcileSessionDelta(context, now = Date.now()) {
-    if (!context || !context.browserAPI) return null;
-    const session = await getActiveSessionCheckpoint(context.browserAPI);
-    if (!session || !session.domain) return null;
+  function resolveReconciliationPlan(session, context, now = Date.now()) {
+    const lastTime = session.lastCommittedTime || session.lastHeartbeat || session.lastHeartbeatTime || session.startTime || now;
+    const isFocused = (session.isBrowserFocused !== false) && (context?.isBrowserFocused !== false);
+    const isActive = (session.isUserActive !== false) && (context?.isUserActive !== false);
 
-    if (typeof context.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(session.domain)) {
-      await clearActiveSessionCheckpoint(context.browserAPI);
-      return null;
-    }
-    if (context.isTrackingPaused || session.isTrackingPaused) {
-      return null;
-    }
-
-    const { deltaSeconds, isSleepGap, rawElapsedSec } = calculateReconciledDelta(session, now);
-    const canCredit = (session.isBrowserFocused !== false) && (session.isUserActive !== false);
-
-    if (deltaSeconds > 0 && canCredit) {
-      creditDomainTime(context, session.domain, deltaSeconds, now);
-      if (typeof context.setIntervalStartTime === 'function') {
-        context.setIntervalStartTime(now);
+    if (isFocused && isActive) {
+      const { deltaSeconds, isSleepGap, rawElapsedSec } = calculateReconciledDelta(session, now);
+      if (isSleepGap) {
+        return { creditedSeconds: deltaSeconds, isSleepGap: true, rawElapsedSec, committedAt: now };
       }
+      if (deltaSeconds > 0) {
+        const committedAt = (rawElapsedSec === deltaSeconds) ? (lastTime + deltaSeconds * 1000) : now;
+        return { creditedSeconds: deltaSeconds, isSleepGap: false, rawElapsedSec, committedAt };
+      }
+      return { creditedSeconds: 0, isSleepGap: false, rawElapsedSec, committedAt: lastTime };
     }
 
-    if (isSleepGap) {
-      await clearActiveSessionCheckpoint(context.browserAPI);
-    } else {
-      session.lastHeartbeat = now;
-      session.lastHeartbeatTime = now;
-      session.lastCommittedTime = now;
-      await saveActiveSessionCheckpoint(context.browserAPI, session);
-    }
+    const focusCutoff = (typeof session.focusLostAt === 'number' && session.focusLostAt > lastTime) ? session.focusLostAt : Infinity;
+    const idleCutoff = (typeof session.idleStartedAt === 'number' && session.idleStartedAt > lastTime) ? session.idleStartedAt : Infinity;
+    const cutoff = Math.min(now, focusCutoff, idleCutoff);
+    const overall = calculateReconciledDelta(session, now);
+    const hasPreCutoff = (focusCutoff <= now || idleCutoff <= now) && cutoff > lastTime;
 
-    return { domain: session.domain, creditedSeconds: canCredit ? deltaSeconds : 0, isSleepGap, rawElapsedSec };
+    if (hasPreCutoff) {
+      const preCalc = calculateReconciledDelta({ ...session, lastCommittedTime: lastTime }, cutoff);
+      return {
+        creditedSeconds: preCalc.deltaSeconds,
+        isSleepGap: preCalc.isSleepGap || overall.isSleepGap,
+        rawElapsedSec: overall.rawElapsedSec,
+        committedAt: now
+      };
+    }
+    return { creditedSeconds: 0, isSleepGap: overall.isSleepGap, rawElapsedSec: overall.rawElapsedSec, committedAt: now };
   }
 
-  async function processKeepaliveHeartbeat(msg, port, tabId, context) {
-    if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT') return;
-    const domain = msg.domain;
-    if (!domain) return;
-    if (typeof context?.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(domain)) {
-      try { port?.disconnect(); } catch (_) {}
-      return;
-    }
-    const currentActiveTabId = typeof context?.getActiveTabId === 'function' ? context.getActiveTabId() : null;
-    const isForegroundTab = currentActiveTabId === null || currentActiveTabId === tabId;
-    if (!isForegroundTab || !context?.browserAPI) return;
+  function reconcileSessionDelta(context, now = Date.now()) {
+    if (!context || !context.browserAPI) return Promise.resolve(null);
+    return enqueueCheckpointOp(context.browserAPI, async () => {
+      const session = await readCheckpointRaw(context.browserAPI);
+      if (!session || !session.domain) return null;
 
-    const now = (typeof msg?.timestamp === 'number' && msg.timestamp > 0) ? msg.timestamp : Date.now();
-    const session = await getActiveSessionCheckpoint(context.browserAPI);
-    const lastTime = session?.lastCommittedTime || session?.lastHeartbeat || session?.startTime || now;
+      if (typeof context.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(session.domain)) {
+        await removeCheckpointRaw(context.browserAPI);
+        return null;
+      }
+      if (context.isTrackingPaused || session.isTrackingPaused) {
+        return null;
+      }
+
+      const plan = resolveReconciliationPlan(session, context, now);
+      if (plan.creditedSeconds > 0) {
+        creditDomainTime(context, session.domain, plan.creditedSeconds, now);
+        const canResetAnchor = typeof context.setIntervalStartTime === 'function' && (!context.activeDomain || context.activeDomain === session.domain);
+        if (canResetAnchor) context.setIntervalStartTime(plan.committedAt);
+      }
+
+      if (plan.isSleepGap) {
+        await removeCheckpointRaw(context.browserAPI);
+      } else {
+        session.lastHeartbeat = now;
+        session.lastHeartbeatTime = now;
+        session.lastCommittedTime = plan.committedAt;
+        session.focusLostAt = null;
+        session.idleStartedAt = null;
+        await writeCheckpointRaw(context.browserAPI, session);
+      }
+
+      return {
+        domain: session.domain,
+        creditedSeconds: plan.creditedSeconds,
+        isSleepGap: plan.isSleepGap,
+        rawElapsedSec: plan.rawElapsedSec
+      };
+    });
+  }
+
+  function resolveHeartbeatCommit(sameDomainSession, context, meta) {
+    const { domain, now } = meta;
+    const lastTime = sameDomainSession?.lastCommittedTime || sameDomainSession?.lastHeartbeat || sameDomainSession?.startTime || now;
     const rawElapsedSec = Math.max(0, Math.floor((now - lastTime) / 1000));
     const cappedDelta = Math.min(rawElapsedSec, MAX_RECONCILE_DRIFT_SEC);
     const canCredit = (context.isBrowserFocused !== false) && (context.isUserActive !== false) && !context.isTrackingPaused;
 
     if (cappedDelta > 0 && canCredit) {
+      const committedAt = (rawElapsedSec === cappedDelta) ? (lastTime + cappedDelta * 1000) : now;
       creditDomainTime(context, domain, cappedDelta, now);
       if (typeof context.setIntervalStartTime === 'function') {
-        context.setIntervalStartTime(now);
+        context.setIntervalStartTime(committedAt);
       }
+      return committedAt;
     }
+    if (canCredit && cappedDelta === 0) {
+      return sameDomainSession?.lastCommittedTime || lastTime;
+    }
+    const hasUnflushedFocus = typeof sameDomainSession?.focusLostAt === 'number' && sameDomainSession.focusLostAt > lastTime;
+    const hasUnflushedIdle = typeof sameDomainSession?.idleStartedAt === 'number' && sameDomainSession.idleStartedAt > lastTime;
+    return (sameDomainSession && (hasUnflushedFocus || hasUnflushedIdle)) ? lastTime : now;
+  }
 
-    await updateActiveSession(context.browserAPI, {
-      domain,
-      tabId: typeof tabId === 'number' ? tabId : undefined,
-      lastHeartbeat: now,
-      lastHeartbeatTime: now,
-      lastCommittedTime: now,
-      isBrowserFocused: context.isBrowserFocused !== false,
-      isUserActive: context.isUserActive !== false,
-      isTrackingPaused: !!context.isTrackingPaused
+  function processKeepaliveHeartbeat(msg, port, tabId, context) {
+    if (!msg || msg.type !== 'KEEPALIVE_HEARTBEAT' || !msg.domain) return Promise.resolve();
+    const domain = msg.domain;
+    if (typeof context?.matchesTrackingBlacklist === 'function' && context.matchesTrackingBlacklist(domain)) {
+      try { port?.disconnect(); } catch (_) {}
+      return Promise.resolve();
+    }
+    const currentActiveTabId = typeof context?.getActiveTabId === 'function' ? context.getActiveTabId() : null;
+    const isForegroundTab = currentActiveTabId === null || currentActiveTabId === tabId;
+    if (!isForegroundTab || !context?.browserAPI) return Promise.resolve();
+
+    const now = (typeof msg?.timestamp === 'number' && msg.timestamp > 0) ? msg.timestamp : Date.now();
+    return enqueueCheckpointOp(context.browserAPI, async () => {
+      const session = await readCheckpointRaw(context.browserAPI);
+      const sameDomainSession = (session && session.domain === domain) ? session : null;
+      const nextLastCommittedTime = resolveHeartbeatCommit(sameDomainSession, context, { domain, now });
+      const merged = applyMergedSessionUpdates(session || {}, {
+        domain,
+        tabId: typeof tabId === 'number' ? tabId : undefined,
+        lastHeartbeat: now,
+        lastHeartbeatTime: now,
+        lastCommittedTime: nextLastCommittedTime,
+        isBrowserFocused: context.isBrowserFocused !== false,
+        isUserActive: context.isUserActive !== false,
+        isTrackingPaused: !!context.isTrackingPaused
+      }, now);
+      await writeCheckpointRaw(context.browserAPI, merged);
     });
   }
 
@@ -243,6 +349,8 @@
     saveActiveSessionCheckpoint,
     clearActiveSessionCheckpoint,
     calculateReconciledDelta,
+    resolveReconciliationPlan,
+    applyMergedSessionUpdates,
     updateActiveSession,
     creditDomainTime,
     reconcileSessionDelta,

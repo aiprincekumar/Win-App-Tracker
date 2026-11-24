@@ -2903,6 +2903,38 @@ function updateMediaHistoryEntry(session, persist = false) {
 }
 
 /**
+ * Records whole foreground seconds to activityData and hourly telemetry buckets.
+ */
+function recordForegroundSeconds(domain, validSec, now) {
+  const today = getTodayDateString();
+  if (!activityData.domains[domain]) {
+    activityData.domains[domain] = {
+      favicon: getFaviconUrl(domain),
+      totalSeconds: 0,
+      foregroundSeconds: 0,
+      backgroundMediaSeconds: 0,
+      sessionCount: 1,
+      lastActive: now,
+      days: {}
+    };
+  }
+  const domainEntry = activityData.domains[domain];
+  domainEntry.totalSeconds += validSec;
+  domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + validSec;
+  domainEntry.lastActive = now;
+
+  if (!domainEntry.days[today]) {
+    domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+  }
+  const dayEntry = domainEntry.days[today];
+  dayEntry.seconds += validSec;
+  dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
+  updateHourlyBucket(dayEntry, validSec, true, now);
+  streamActivityDelta(domain, validSec, false, 'foreground');
+  scheduleStorageSave(false);
+}
+
+/**
  * Commits elapsed seconds for current active domain (Method A: Foreground Active Only)
  */
 function commitActiveInterval() {
@@ -2910,55 +2942,19 @@ function commitActiveInterval() {
     intervalStartTime = Date.now();
     return;
   }
-
   if (!activeDomain || !isBrowserFocused || !isUserActive || matchesTrackingBlacklist(activeDomain)) {
     intervalStartTime = Date.now();
     return;
   }
 
   const now = Date.now();
-  const elapsedMs = now - intervalStartTime;
+  const elapsedMs = Math.max(0, now - intervalStartTime);
   const elapsedSec = Math.floor(elapsedMs / 1000);
+  if (elapsedSec <= 0) return;
 
-  if (elapsedSec > 0) {
-    // Avoid aberrant giant leaps (> 3600s in one interval)
-    const validSec = Math.min(elapsedSec, 3600);
-    const today = getTodayDateString();
-
-    if (!activityData.domains[activeDomain]) {
-      activityData.domains[activeDomain] = {
-        favicon: getFaviconUrl(activeDomain),
-        totalSeconds: 0,
-        foregroundSeconds: 0,
-        backgroundMediaSeconds: 0,
-        sessionCount: 1,
-        lastActive: now,
-        days: {}
-      };
-    }
-
-    const domainEntry = activityData.domains[activeDomain];
-    domainEntry.totalSeconds += validSec;
-    domainEntry.foregroundSeconds = (domainEntry.foregroundSeconds || 0) + validSec;
-    domainEntry.lastActive = now;
-
-    if (!domainEntry.days[today]) {
-      domainEntry.days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
-    }
-    const dayEntry = domainEntry.days[today];
-    dayEntry.seconds += validSec;
-    dayEntry.foregroundSeconds = (dayEntry.foregroundSeconds || 0) + validSec;
-    updateHourlyBucket(dayEntry, validSec, true, now);
-
-    // Reset interval anchor
-    intervalStartTime = now;
-
-    // Stream delta to Data Hub with tracking_type = 'foreground'
-    streamActivityDelta(activeDomain, validSec, false, 'foreground');
-
-    // Debounced auto-save ensures freshly tracked seconds are never lost on reload
-    scheduleStorageSave(false);
-  }
+  const validSec = Math.min(elapsedSec, 3600);
+  recordForegroundSeconds(activeDomain, validSec, now);
+  intervalStartTime = (validSec === elapsedSec) ? (intervalStartTime + validSec * 1000) : now;
 
   if (_TimestampReconciliation && browserAPI && activeDomain) {
     _TimestampReconciliation.updateActiveSession(browserAPI, {
@@ -2967,7 +2963,9 @@ function commitActiveInterval() {
       windowId: activeWindowId,
       lastHeartbeat: now,
       lastHeartbeatTime: now,
-      lastCommittedTime: now,
+      lastCommittedTime: intervalStartTime,
+      focusLostAt: null,
+      idleStartedAt: null,
       isBrowserFocused,
       isUserActive,
       isTrackingPaused
@@ -2976,16 +2974,16 @@ function commitActiveInterval() {
 }
 
 /**
- * Helper to build execution context for timestamp reconciliation
+ * Helper to build live execution context for timestamp reconciliation
  */
 function getReconciliationContext() {
   return {
     browserAPI,
-    activityData,
-    activeDomain,
-    isBrowserFocused,
-    isUserActive,
-    isTrackingPaused,
+    get activityData() { return activityData; },
+    get activeDomain() { return activeDomain; },
+    get isBrowserFocused() { return isBrowserFocused; },
+    get isUserActive() { return isUserActive; },
+    get isTrackingPaused() { return isTrackingPaused; },
     matchesTrackingBlacklist,
     getTodayDateString,
     getFaviconUrl,
@@ -2993,6 +2991,7 @@ function getReconciliationContext() {
     streamActivityDelta,
     scheduleStorageSave,
     getActiveTabId: () => activeTabId,
+    getActiveWindowId: () => activeWindowId,
     setIntervalStartTime: (t) => { intervalStartTime = t; }
   };
 }
@@ -3001,7 +3000,7 @@ function getReconciliationContext() {
  * Flushes active session delta before domain switches, blur events, or dashboard data serialization.
  */
 async function flushActiveSessionDelta(now = Date.now()) {
-  if (!_TimestampReconciliation || !activeDomain) return null;
+  if (!_TimestampReconciliation) return null;
   return await _TimestampReconciliation.reconcileSessionDelta(getReconciliationContext(), now);
 }
 
@@ -3019,6 +3018,213 @@ async function reconcileTrackingSessionOnStartup() {
 function handleTrackingKeepaliveConnect(port) {
   if (!_TimestampReconciliation) return false;
   return _TimestampReconciliation.handleKeepaliveConnect(port, getReconciliationContext());
+}
+
+/**
+ * Clears active tracked domain and resets checkpoint boundary.
+ */
+function clearTrackedActiveDomain() {
+  if (activeDomain === null) return;
+  activeDomain = null;
+  intervalStartTime = Date.now();
+  if (_TimestampReconciliation && browserAPI) {
+    _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
+  }
+  sendActivityUpdateToHUD();
+  scheduleStorageSave(true);
+}
+
+/**
+ * Initializes domain stats and checkpoints a newly activated foreground domain.
+ */
+function activateTrackedDomainSession(newDomain, isNewSession) {
+  activeDomain = newDomain;
+  intervalStartTime = Date.now();
+  const today = getTodayDateString();
+  if (!activityData.domains[activeDomain]) {
+    activityData.domains[activeDomain] = {
+      favicon: getFaviconUrl(activeDomain),
+      totalSeconds: 0,
+      foregroundSeconds: 0,
+      backgroundMediaSeconds: 0,
+      sessionCount: 1,
+      lastActive: intervalStartTime,
+      days: { [today]: { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 } }
+    };
+    streamActivityDelta(activeDomain, 0, true, 'foreground');
+  } else if (isNewSession) {
+    activityData.domains[activeDomain].sessionCount = (activityData.domains[activeDomain].sessionCount || 0) + 1;
+    if (!activityData.domains[activeDomain].days[today]) {
+      activityData.domains[activeDomain].days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
+    } else {
+      activityData.domains[activeDomain].days[today].sessions = (activityData.domains[activeDomain].days[today].sessions || 0) + 1;
+    }
+    streamActivityDelta(activeDomain, 0, true, 'foreground');
+  }
+  sendActivityUpdateToHUD();
+  if (_TimestampReconciliation && browserAPI && activeDomain) {
+    _TimestampReconciliation.updateActiveSession(browserAPI, {
+      domain: activeDomain,
+      tabId: activeTabId,
+      windowId: activeWindowId,
+      startTime: intervalStartTime,
+      lastHeartbeat: intervalStartTime,
+      lastHeartbeatTime: intervalStartTime,
+      lastCommittedTime: intervalStartTime,
+      focusLostAt: null,
+      idleStartedAt: null,
+      isBrowserFocused,
+      isUserActive,
+      isTrackingPaused
+    });
+  }
+  scheduleStorageSave(true);
+}
+
+/**
+ * Handles browser window blur by flushing pre-blur seconds and stamping focusLostAt.
+ */
+async function handleWindowFocusBlur() {
+  commitActiveInterval();
+  const blurAt = Date.now();
+  await flushActiveSessionDelta(blurAt);
+  isBrowserFocused = false;
+  if (_TimestampReconciliation && browserAPI) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      isBrowserFocused: false,
+      focusLostAt: blurAt
+    });
+  }
+  scheduleStorageSave(true);
+}
+
+/**
+ * Handles browser window focus restoration by discarding blurred spans and re-syncing active tab.
+ */
+async function handleWindowFocusRestore(windowId, focusAt) {
+  await flushActiveSessionDelta(focusAt);
+  const focusNow = Date.now();
+  isBrowserFocused = true;
+  activeWindowId = windowId;
+  intervalStartTime = focusNow;
+  if (_TimestampReconciliation && browserAPI) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      isBrowserFocused: true,
+      focusLostAt: null,
+      lastCommittedTime: focusNow,
+      lastHeartbeat: focusNow,
+      lastHeartbeatTime: focusNow
+    });
+  }
+  try {
+    const tabs = await browserAPI.tabs.query({ active: true, windowId });
+    if (tabs && tabs[0]) {
+      activeTabId = tabs[0].id;
+      if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
+      const blacklisted = tabs[0].url && matchesTrackingBlacklist(tabs[0].url);
+      const domain = (!blacklisted && tabs[0].url) ? extractDomain(tabs[0].url) : null;
+      switchActiveDomain(domain, false);
+    } else {
+      switchActiveDomain(null, false);
+    }
+  } catch (e) {
+    switchActiveDomain(null, false);
+  }
+}
+
+/**
+ * Handles system idle/active state transitions with pre-idle flush and cutoff anchoring.
+ */
+async function handleIdleStateTransition(newState) {
+  if (newState === 'idle' || newState === 'locked') {
+    commitActiveInterval();
+    const idleAt = Date.now();
+    await flushActiveSessionDelta(idleAt);
+    isUserActive = false;
+    userIdleStartTime = idleAt;
+    if (_TimestampReconciliation && browserAPI) {
+      await _TimestampReconciliation.updateActiveSession(browserAPI, {
+        isUserActive: false,
+        idleStartedAt: idleAt
+      });
+    }
+    scheduleStorageSave(true);
+    await checkInactivityAutoSleep(Date.now());
+    return;
+  }
+  if (newState === 'active') {
+    await flushActiveSessionDelta();
+    const activeAt = Date.now();
+    isUserActive = true;
+    userIdleStartTime = 0;
+    intervalStartTime = activeAt;
+    if (_TimestampReconciliation && browserAPI) {
+      await _TimestampReconciliation.updateActiveSession(browserAPI, {
+        isUserActive: true,
+        idleStartedAt: null,
+        lastCommittedTime: activeAt,
+        lastHeartbeat: activeAt,
+        lastHeartbeatTime: activeAt
+      });
+    }
+  }
+}
+
+/**
+ * Handles PAGE_USER_INTERACTION with idle-gap discard when waking from idle state.
+ */
+async function handlePageUserInteraction(sendResponse) {
+  await ensureStorageLoaded();
+  const wasIdle = !isUserActive || userIdleStartTime > 0;
+  if (wasIdle) {
+    await flushActiveSessionDelta();
+    const now = Date.now();
+    isUserActive = true;
+    userIdleStartTime = 0;
+    intervalStartTime = now;
+    if (_TimestampReconciliation && browserAPI) {
+      await _TimestampReconciliation.updateActiveSession(browserAPI, {
+        isUserActive: true,
+        idleStartedAt: null,
+        lastCommittedTime: now,
+        lastHeartbeat: now,
+        lastHeartbeatTime: now
+      });
+    }
+    sendActivityUpdateToHUD();
+  } else {
+    isUserActive = true;
+    userIdleStartTime = 0;
+  }
+  sendResponse({ received: true });
+}
+
+/**
+ * Handles TOGGLE_TRACKING_PAUSE ensuring uncommitted active seconds flush before pausing.
+ */
+async function handleToggleTrackingPause(sendResponse) {
+  await ensureStorageLoaded();
+  if (!isTrackingPaused) {
+    commitActiveInterval();
+    await flushActiveSessionDelta();
+    isTrackingPaused = true;
+  } else {
+    isTrackingPaused = false;
+    intervalStartTime = Date.now();
+  }
+  const now = Date.now();
+  await browserAPI.storage.local.set({ sentinel_tracking_paused: isTrackingPaused });
+  if (_TimestampReconciliation && browserAPI) {
+    await _TimestampReconciliation.updateActiveSession(browserAPI, {
+      isTrackingPaused,
+      pausedAt: isTrackingPaused ? now : null,
+      lastCommittedTime: now,
+      lastHeartbeat: now,
+      lastHeartbeatTime: now
+    });
+  }
+  safeSendRuntimeMessage({ type: 'TRACKING_PAUSE_CHANGED', isTrackingPaused });
+  sendResponse({ success: true, isTrackingPaused });
 }
 
 /**
@@ -3098,81 +3304,16 @@ function commitBackgroundMediaDelta(domain, seconds) {
  * If newDomain is null or an untracked page, clears activeDomain so seconds NEVER leak to previous tab!
  */
 function switchActiveDomain(newDomain, isNewSession = false) {
-  flushActiveSessionDelta();
   commitActiveInterval();
+  flushActiveSessionDelta();
 
-  if (newDomain && matchesTrackingBlacklist(newDomain)) {
-    if (activeDomain !== null) {
-      activeDomain = null;
-      intervalStartTime = Date.now();
-      if (_TimestampReconciliation && browserAPI) {
-        _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
-      }
-      sendActivityUpdateToHUD();
-      scheduleStorageSave(true);
-    }
-    return;
-  }
-
-  if (!newDomain) {
-    if (activeDomain !== null) {
-      activeDomain = null;
-      intervalStartTime = Date.now();
-      if (_TimestampReconciliation && browserAPI) {
-        _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
-      }
-      sendActivityUpdateToHUD();
-      scheduleStorageSave(true);
-    }
+  if (!newDomain || matchesTrackingBlacklist(newDomain)) {
+    clearTrackedActiveDomain();
     return;
   }
 
   if (newDomain !== activeDomain) {
-    activeDomain = newDomain;
-    intervalStartTime = Date.now();
-    const today = getTodayDateString();
-
-    if (!activityData.domains[activeDomain]) {
-      activityData.domains[activeDomain] = {
-        favicon: getFaviconUrl(activeDomain),
-        totalSeconds: 0,
-        foregroundSeconds: 0,
-        backgroundMediaSeconds: 0,
-        sessionCount: 1,
-        lastActive: intervalStartTime,
-        days: {
-          [today]: { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 }
-        }
-      };
-      streamActivityDelta(activeDomain, 0, true, 'foreground');
-    } else if (isNewSession) {
-      activityData.domains[activeDomain].sessionCount = (activityData.domains[activeDomain].sessionCount || 0) + 1;
-      if (!activityData.domains[activeDomain].days[today]) {
-        activityData.domains[activeDomain].days[today] = { seconds: 0, foregroundSeconds: 0, backgroundMediaSeconds: 0, sessions: 1 };
-      } else {
-        activityData.domains[activeDomain].days[today].sessions = (activityData.domains[activeDomain].days[today].sessions || 0) + 1;
-      }
-      streamActivityDelta(activeDomain, 0, true, 'foreground');
-    }
-
-    sendActivityUpdateToHUD();
-
-    if (_TimestampReconciliation && browserAPI && activeDomain) {
-      _TimestampReconciliation.updateActiveSession(browserAPI, {
-        domain: activeDomain,
-        tabId: activeTabId,
-        windowId: activeWindowId,
-        startTime: intervalStartTime,
-        lastHeartbeat: intervalStartTime,
-        lastHeartbeatTime: intervalStartTime,
-        isBrowserFocused,
-        isUserActive,
-        isTrackingPaused
-      });
-    }
-
-    // Immediate save ensures domain switches and tab transitions are committed immediately
-    scheduleStorageSave(true);
+    activateTrackedDomainSession(newDomain, isNewSession);
   }
 }
 
@@ -4351,7 +4492,12 @@ browserAPI.tabs.onRemoved.addListener(async (tabId) => {
   }
   if (tabId === activeTabId) {
     commitActiveInterval();
+    await flushActiveSessionDelta();
     activeDomain = null;
+    intervalStartTime = Date.now();
+    if (_TimestampReconciliation && browserAPI) {
+      await _TimestampReconciliation.clearActiveSessionCheckpoint(browserAPI);
+    }
     scheduleStorageSave(true);
   }
 });
@@ -4359,34 +4505,11 @@ browserAPI.tabs.onRemoved.addListener(async (tabId) => {
 // Window Focus Changed
 browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
   await ensureStorageLoaded();
-  await flushActiveSessionDelta();
+  const eventNow = Date.now();
   if (windowId === browserAPI.windows.WINDOW_ID_NONE) {
-    commitActiveInterval();
-    isBrowserFocused = false;
-    if (_TimestampReconciliation && browserAPI) {
-      _TimestampReconciliation.updateActiveSession(browserAPI, { isBrowserFocused: false });
-    }
-    scheduleStorageSave(true);
+    await handleWindowFocusBlur();
   } else {
-    isBrowserFocused = true;
-    if (_TimestampReconciliation && browserAPI) {
-      _TimestampReconciliation.updateActiveSession(browserAPI, { isBrowserFocused: true });
-    }
-    activeWindowId = windowId;
-    intervalStartTime = Date.now();
-    try {
-      const tabs = await browserAPI.tabs.query({ active: true, windowId });
-      if (tabs && tabs[0]) {
-        activeTabId = tabs[0].id;
-        if (tabs[0].windowId) activeWindowId = tabs[0].windowId;
-        const domain = tabs[0].url ? extractDomain(tabs[0].url) : null;
-        switchActiveDomain(domain, false);
-      } else {
-        switchActiveDomain(null, false);
-      }
-    } catch (e) {
-      switchActiveDomain(null, false);
-    }
+    await handleWindowFocusRestore(windowId, eventNow);
   }
   sendActivityUpdateToHUD();
 });
@@ -4467,25 +4590,7 @@ async function checkInactivityAutoSleep(now = Date.now()) {
 browserAPI.idle.setDetectionInterval(CONFIG.IDLE_THRESHOLD_SECONDS);
 browserAPI.idle.onStateChanged.addListener(async (newState) => {
   await ensureStorageLoaded();
-  if (newState === 'idle' || newState === 'locked') {
-    commitActiveInterval();
-    isUserActive = false;
-    userIdleStartTime = Date.now();
-    if (_TimestampReconciliation && browserAPI) {
-      _TimestampReconciliation.updateActiveSession(browserAPI, { isUserActive: false });
-    }
-    scheduleStorageSave(true);
-    // Note: Do NOT prematurely pause media on initial 60s idle state change.
-    // Inactivity auto-sleep is evaluated after user-configured inactivityThresholdMinutes.
-    await checkInactivityAutoSleep(Date.now());
-  } else if (newState === 'active') {
-    isUserActive = true;
-    userIdleStartTime = 0;
-    intervalStartTime = Date.now();
-    if (_TimestampReconciliation && browserAPI) {
-      _TimestampReconciliation.updateActiveSession(browserAPI, { isUserActive: true });
-    }
-  }
+  await handleIdleStateTransition(newState);
   sendActivityUpdateToHUD();
 });
 
@@ -4786,8 +4891,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // User presence reported from page
   if (message.type === 'PAGE_USER_INTERACTION') {
-    isUserActive = true;
-    sendResponse({ received: true });
+    handlePageUserInteraction(sendResponse);
     return true;
   }
 
@@ -5629,18 +5733,7 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Toggle time tracking pause/resume state
   if (msgType === 'TOGGLE_TRACKING_PAUSE') {
-    (async () => {
-      await ensureStorageLoaded();
-      isTrackingPaused = !isTrackingPaused;
-      await browserAPI.storage.local.set({ sentinel_tracking_paused: isTrackingPaused });
-      if (!isTrackingPaused) {
-        intervalStartTime = Date.now();
-      } else {
-        commitActiveInterval();
-      }
-      safeSendRuntimeMessage({ type: 'TRACKING_PAUSE_CHANGED', isTrackingPaused });
-      sendResponse({ success: true, isTrackingPaused });
-    })();
+    handleToggleTrackingPause(sendResponse);
     return true;
   }
 

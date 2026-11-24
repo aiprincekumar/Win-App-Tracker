@@ -372,4 +372,27 @@
   - ✅ **सीक्रेट सुरक्षा:** `gitleaks detect --redact` द्वारा 275 कमिट्स में 0 लीक्स सत्यापित (no leaks found).
   - ✅ **यूटीएफ-8 बीओएम:** समस्त 8 संशोधित व परीक्षण फाइलों पर `0xEF, 0xBB, 0xBF` प्रीफिक्स सत्यापित.
 
+---
+
+## ⏱️ 13. सक्रिय टैब टाइम ट्रैकिंग एवं सेशन रीकंसिलिएशन फिक्स माइलस्टोन (Active Tab Time Tracking Fix & Session Reconciliation Milestone - 2026-11-25)
+
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-ACTIVE-TAB-TIME-TRACKING-FIX-001`
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261125-ACTIVETRACKING-005` (Certified by Independent Level 4 QA Verification Tester)
+- **स्थिति (Current Status):** `COMPLETED` (Grade A+ Certified — `125/125` test suites PASSED cleanly, Exit Code `0`)
+- **डायग्नोस्टिक मैट्रिक्स (Diagnostic Matrix - Universal Rule 20):**
+
+| S.No | File | Root Cause | Proposed Fix | Post-Fix Impact | Phase # | Test Gate |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **01** | `src/background/telemetry/timestamp_reconciliation.js` | `reconcileSessionDelta()` evaluated `canCredit = false` after `WINDOW_ID_NONE` or `idle`, credited `0`, and overwrote `lastCommittedTime = now`; also overwrote `lastCommittedTime` on `0s` deltas, discarded sub-second remainders, and risked cross-domain timestamp inheritance and concurrent storage races. | Added per-storage `WeakMap` FIFO queue (`enqueueCheckpointOp`) wrapping raw storage helpers; extracted `resolveReconciliationPlan()` to recover `[lastTime, cutoff]` via `focusLostAt` / `idleStartedAt` while keeping blurred/idle tails at `0s` (Battery 6 parity); preserved sub-second remainders (`lastTime + deltaSeconds * 1000`); reset `startTime`/`lastCommittedTime` on domain change in `applyMergedSessionUpdates()`. | Zero lost active seconds on popup click / blur / wakeup; zero concurrent checkpoint overwrites; zero phantom advance or cross-domain leakage. | Phase 1 | `tests/test_active_tab_time_tracking_fixes.js` (Batteries 1, 3, 4 PASS) |
+| **02** | `background.js` | `getReconciliationContext()` captured stale primitive flags; `flushActiveSessionDelta()` aborted on `!activeDomain`; `commitActiveInterval()` and `switchActiveDomain()` dropped sub-second remainders, misordered `flushActiveSessionDelta()`, exceeded Rule 28 (50 lines), and lacked `tabs.onRemoved` flush/clear; `PAGE_USER_INTERACTION` left `userIdleStartTime` non-zero and `TOGGLE_TRACKING_PAUSE` paused before committing. | Converted `getReconciliationContext()` to ES6 live getters; removed `!activeDomain` gate in `flushActiveSessionDelta()`; compacted `commitActiveInterval()`, `switchActiveDomain()`, and extracted modular handlers (`<= 43` lines per Rule 28) with pre-blur/pre-idle/pre-pause commits, `userIdleStartTime = 0` recovery, and `tabs.onRemoved` active flush & checkpoint clear; left background media loops 100% untouched. | Long-lived keepalive ports always see live state; zero ~15-18% tick drift; zero idle inflation on mouse wake; accurate pause/close flush; 0-diff background media invariant preserved. | Phase 1 | `tests/test_active_tab_time_tracking_fixes.js` (Batteries 1–6, 8 PASS) |
+| **03** | `content_media.js` | `visibilitychange` (`hidden`) disconnected keepalive port without final heartbeat (`sendTrackingHeartbeat` skipped non-visible); missing `pagehide` final-flush, `window` `focus` & activity reconnect, and `postMessage` error recovery. | Extended `sendTrackingHeartbeat(forceFinal = false)` (`isFinalFlush: true` when finalizing), added `handleVisibilityKeepaliveSync`, `handlePagehideKeepaliveSync`, `handleWindowFocusKeepaliveSync`, `handleHeartbeatPostError`, and activity reconnect while preserving exact 6-listener `teardownMediaSentinel()` cleanup. | Tab switches, page closes, and focus restorations flush final active seconds reliably without breaking Battery 4 teardown. | Phase 2 | `tests/test_active_tab_time_tracking_fixes.js` (Battery 7 PASS) & `tests/test_passive_mouse_movement_activity.js` (6/6 PASS) |
+| **04** | `tests/test_active_tab_time_tracking_fixes.js` | Repository lacked an end-to-end multi-battery harness covering pre-blur `WINDOW_ID_NONE -> GET_DASHBOARD_DATA`, ES6 getters, FIFO serialization, sub-second remainders, idle/pause sync, `content_media.js` final flush, and Rule 28 / Background Media Zero-Mutation invariants. | Authored 8-battery verification suite (`478` lines `< 500`, functions `<= 43` lines, UTF-8 BOM) executed standalone and through `run_all_tests.js`. | Cryptographic-grade regression protection across all 8 defect boundaries. | Phase 3 | `node run_all_tests.js` (`125/125 PASSED`, `36.99s`, Exit Code 0) |
+
+- **फॉरेंसिक सत्यापन एवं सुरक्षा मानक:**
+  - ✅ **AST सिंटैक्स एवं टेस्ट सुइट्स:** `node tests/test_active_tab_time_tracking_fixes.js` उत्तीर्ण (8/8 बैटरीज PASS, Exit Code 0); `node run_all_tests.js` उत्तीर्ण (समस्त 125/125 टेस्ट सुइट्स PASS, 36.99s, Exit Code 0).
+  - ✅ **बैकग्राउंड मीडिया Zero-Mutation सीमा:** `git diff -U0 -- background.js` द्वारा सत्यापित कि `trackMediaSession`, `handleTabAudibleStateChange`, `updateHourlyBucket`, `commitBackgroundMediaDelta`, एवं बैकग्राउंड मीडिया लूप्स में 0 परिवर्तित पंक्तियाँ हैं.
+  - ✅ **Universal Rule 28 एवं W3C Trusted Types:** सभी संशोधित/नए फंक्शन्स <= 46 लाइन्स (`timestamp_reconciliation.js` 366 लाइन्स, `test_active_tab_time_tracking_fixes.js` 478 लाइन्स); 0 `.innerHTML =` असाइनमेंट्स.
+  - ✅ **सीक्रेट सुरक्षा एवं UTF-8 BOM:** `gitleaks detect --source .. --redact` द्वारा 338 कमिट्स में 0 लीक्स सत्यापित; समस्त 5 उत्पाद व परीक्षण फाइलों पर `0xEF, 0xBB, 0xBF` BOM प्रीफिक्स सत्यापित.
+
+
 

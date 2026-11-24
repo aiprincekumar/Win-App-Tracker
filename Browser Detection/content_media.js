@@ -188,24 +188,41 @@
     );
   }
 
-  function sendTrackingHeartbeat() {
+  function handleHeartbeatPostError(err, isFinal) {
+    if (isInvalidationError(err)) {
+      teardownMediaSentinel();
+      return;
+    }
+    disconnectTrackingKeepalivePort();
+    const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
+    if (!isFinal && isExtensionContextValid() && isVisible) {
+      reconnectTimeout = safeSetTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
+      reconnectBackoffMs = Math.min(8000, reconnectBackoffMs * 2);
+    }
+  }
+
+  function sendTrackingHeartbeat(forceFinal = false) {
+    const isFinal = forceFinal === true;
     if (!keepalivePort || !isExtensionContextValid()) return;
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (!isFinal && typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (typeof window === 'undefined' || !window.location) return;
     try {
-      if (typeof window !== 'undefined' && window.location) {
-        const now = Date.now();
-        keepalivePort.postMessage({
-          type: 'KEEPALIVE_HEARTBEAT',
-          domain: window.location.hostname,
-          url: window.location.href,
-          visibilityState: document.visibilityState,
-          hasFocus: document.hasFocus ? document.hasFocus() : true,
-          timestamp: now,
-          lastActivityTimestamp,
-          timeSinceLastActivity: Math.max(0, now - lastActivityTimestamp)
-        });
-      }
-    } catch (_) {}
+      const now = Date.now();
+      const payload = {
+        type: 'KEEPALIVE_HEARTBEAT',
+        domain: window.location.hostname,
+        url: window.location.href,
+        visibilityState: typeof document !== 'undefined' ? document.visibilityState : 'visible',
+        hasFocus: typeof document !== 'undefined' && document.hasFocus ? document.hasFocus() : true,
+        timestamp: now,
+        lastActivityTimestamp,
+        timeSinceLastActivity: Math.max(0, now - lastActivityTimestamp)
+      };
+      if (isFinal) payload.isFinalFlush = true;
+      keepalivePort.postMessage(payload);
+    } catch (err) {
+      handleHeartbeatPostError(err, isFinal);
+    }
   }
 
   function disconnectTrackingKeepalivePort() {
@@ -249,11 +266,34 @@
         });
       }
 
-      sendTrackingHeartbeat();
+      sendTrackingHeartbeat(false);
       if (!keepaliveTimer) {
-        keepaliveTimer = setInterval(sendTrackingHeartbeat, 15000);
+        keepaliveTimer = setInterval(() => sendTrackingHeartbeat(false), 15000);
       }
     } catch (_) {}
+  }
+
+  function handleVisibilityKeepaliveSync() {
+    if (isContextInvalidated || !isExtensionContextValid()) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      connectTrackingKeepalivePort();
+      return;
+    }
+    if (keepalivePort) sendTrackingHeartbeat(true);
+    disconnectTrackingKeepalivePort();
+  }
+
+  function handlePagehideKeepaliveSync() {
+    if (isContextInvalidated || !isExtensionContextValid()) return;
+    if (keepalivePort) sendTrackingHeartbeat(true);
+    disconnectTrackingKeepalivePort();
+  }
+
+  function handleWindowFocusKeepaliveSync() {
+    if (isContextInvalidated || !isExtensionContextValid()) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible' && !keepalivePort) {
+      connectTrackingKeepalivePort();
+    }
   }
 
   /**
@@ -1411,6 +1451,10 @@
       lastActivityTimestamp = now;
       lastLocalInteraction = now;
       lastThrottledTick = now;
+
+      if (!keepalivePort && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        connectTrackingKeepalivePort();
+      }
 
       // Tier 2 (IPC Throttle: 10,000ms)
       if (now - lastIpcBroadcastTime >= 10000) {
@@ -3121,13 +3165,9 @@
       } catch (_) {}
       try {
         if (typeof document !== 'undefined') {
-          document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-              connectTrackingKeepalivePort();
-            } else {
-              disconnectTrackingKeepalivePort();
-            }
-          });
+          document.addEventListener('visibilitychange', handleVisibilityKeepaliveSync);
+          window.addEventListener('pagehide', handlePagehideKeepaliveSync);
+          window.addEventListener('focus', handleWindowFocusKeepaliveSync);
           if (document.visibilityState === 'visible') {
             connectTrackingKeepalivePort();
           }
@@ -3161,6 +3201,9 @@
       connectTrackingKeepalivePort,
       disconnectTrackingKeepalivePort,
       sendTrackingHeartbeat,
+      handleVisibilityKeepaliveSync,
+      handlePagehideKeepaliveSync,
+      handleWindowFocusKeepaliveSync,
       getKeepalivePort: () => keepalivePort,
       isExcludedTrackingHost,
       setupUserActivityListeners,
