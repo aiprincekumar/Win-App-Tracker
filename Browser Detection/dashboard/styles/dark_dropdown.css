@@ -1,0 +1,159 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Dashboard Dark Mode Dropdown & Select Companion Stylesheet
+ * File: dashboard/styles/dark_dropdown.css
+ * Defect Resolution: Dark Mode Dropdown Option Text Visibility (WCAG AAA)
+ * Enforces dark OS substrate (#0f172a) and high-contrast text (#f8fafc) on all <select> & <option>
+ * elements across Chromium Windows dashboard host environments, eliminating white-on-white popups.
+ */
+
+/* ==========================================================================
+   1. Root & Body Dark Color Scheme Enforcement
+   ========================================================================== */
+:root:not([data-theme="light"]):not(.theme-light),
+[data-theme="dark"],
+body.theme-dark,
+body:not([data-theme="light"]):not(.theme-light) {
+  color-scheme: dark !important;
+}
+
+/* ==========================================================================
+   2. Dashboard Dark Mode Select Baseline Styling & Focus Rings
+   ========================================================================== */
+body.theme-dark select,
+body.theme-dark .styled-select,
+body.theme-dark .form-control-select,
+body.theme-dark .soundscape-select,
+body.theme-dark .chime-select,
+body.theme-dark .dash-sleep-select-sm,
+body.theme-dark .browser-filter-select,
+body.theme-dark .visualizer-mode-select,
+body.theme-dark .eq-preset-dropdown,
+body.theme-dark .select-snapshot,
+[data-theme="dark"] select,
+[data-theme="dark"] .styled-select,
+[data-theme="dark"] .form-control-select,
+[data-theme="dark"] .soundscape-select,
+[data-theme="dark"] .chime-select,
+[data-theme="dark"] .dash-sleep-select-sm,
+[data-theme="dark"] .browser-filter-select,
+[data-theme="dark"] .visualizer-mode-select,
+[data-theme="dark"] .eq-preset-dropdown,
+[data-theme="dark"] .select-snapshot {
+  color-scheme: dark !important;
+  color: #f8fafc !important;
+  background-color: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.theme-dark select:focus-visible,
+body.theme-dark .styled-select:focus-visible,
+body.theme-dark .form-control-select:focus-visible,
+body.theme-dark .soundscape-select:focus-visible,
+body.theme-dark .chime-select:focus-visible,
+body.theme-dark .dash-sleep-select-sm:focus-visible,
+body.theme-dark .browser-filter-select:focus-visible,
+body.theme-dark .visualizer-mode-select:focus-visible,
+body.theme-dark .eq-preset-dropdown:focus-visible,
+body.theme-dark .select-snapshot:focus-visible {
+  outline: 2px solid var(--accent-emerald, #10b981) !important;
+  outline-offset: 1px !important;
+  border-color: var(--accent-emerald, #10b981) !important;
+}
+
+/* ==========================================================================
+   3. Dashboard Dark Mode Option Substrates & High-Contrast Typography (WCAG AAA)
+   ========================================================================== */
+body.theme-dark select option,
+body.theme-dark .styled-select option,
+body.theme-dark .form-control-select option,
+body.theme-dark .soundscape-select option,
+body.theme-dark .chime-select option,
+body.theme-dark .dash-sleep-select-sm option,
+body.theme-dark .browser-filter-select option,
+body.theme-dark .visualizer-mode-select option,
+body.theme-dark .eq-preset-dropdown option,
+body.theme-dark .select-snapshot option,
+[data-theme="dark"] select option,
+[data-theme="dark"] .styled-select option,
+[data-theme="dark"] .form-control-select option,
+[data-theme="dark"] .soundscape-select option,
+[data-theme="dark"] .chime-select option,
+[data-theme="dark"] .dash-sleep-select-sm option,
+[data-theme="dark"] .browser-filter-select option,
+[data-theme="dark"] .visualizer-mode-select option,
+[data-theme="dark"] .eq-preset-dropdown option,
+[data-theme="dark"] .select-snapshot option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 6px 10px;
+}
+
+body.theme-dark select option:checked,
+body.theme-dark select option:hover,
+body.theme-dark .styled-select option:checked,
+body.theme-dark .styled-select option:hover,
+body.theme-dark .form-control-select option:checked,
+body.theme-dark .form-control-select option:hover,
+body.theme-dark .soundscape-select option:checked,
+body.theme-dark .soundscape-select option:hover,
+body.theme-dark .chime-select option:checked,
+body.theme-dark .chime-select option:hover,
+body.theme-dark .dash-sleep-select-sm option:checked,
+body.theme-dark .dash-sleep-select-sm option:hover,
+body.theme-dark .browser-filter-select option:checked,
+body.theme-dark .browser-filter-select option:hover,
+body.theme-dark .visualizer-mode-select option:checked,
+body.theme-dark .visualizer-mode-select option:hover,
+body.theme-dark .eq-preset-dropdown option:checked,
+body.theme-dark .eq-preset-dropdown option:hover,
+[data-theme="dark"] select option:checked,
+[data-theme="dark"] select option:hover,
+[data-theme="dark"] .styled-select option:checked,
+[data-theme="dark"] .styled-select option:hover {
+  background-color: #1e293b !important;
+  color: #10b981 !important;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   4. Zero Light-Mode Regression Guardrails
+   ========================================================================== */
+body.theme-light,
+body.light-theme,
+[data-theme="light"] {
+  color-scheme: light !important;
+}
+
+body.theme-light select option,
+body.theme-light .styled-select option,
+body.theme-light .form-control-select option,
+body.theme-light .soundscape-select option,
+body.theme-light .chime-select option,
+body.theme-light .dash-sleep-select-sm option,
+body.theme-light .browser-filter-select option,
+body.theme-light .visualizer-mode-select option,
+body.theme-light .eq-preset-dropdown option,
+body.theme-light .select-snapshot option,
+body.light-theme select option,
+body.light-theme .styled-select option,
+body.light-theme .form-control-select option,
+body.light-theme .soundscape-select option,
+body.light-theme .chime-select option,
+body.light-theme .dash-sleep-select-sm option,
+body.light-theme .browser-filter-select option,
+body.light-theme .visualizer-mode-select option,
+body.light-theme .eq-preset-dropdown option,
+body.light-theme .select-snapshot option,
+[data-theme="light"] select option,
+[data-theme="light"] .styled-select option,
+[data-theme="light"] .form-control-select option,
+[data-theme="light"] .soundscape-select option,
+[data-theme="light"] .chime-select option,
+[data-theme="light"] .dash-sleep-select-sm option,
+[data-theme="light"] .browser-filter-select option,
+[data-theme="light"] .visualizer-mode-select option,
+[data-theme="light"] .eq-preset-dropdown option,
+[data-theme="light"] .select-snapshot option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}

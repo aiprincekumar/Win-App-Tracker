@@ -1,0 +1,156 @@
+﻿/**
+ * Sentinel Web Activity & Media Sentinel - Dark Mode Dropdown & Select Companion Stylesheet
+ * File: popup/styles/themes/dark_dropdown.css
+ * Defect Resolution: Dark Mode Dropdown Option Text Visibility (WCAG AAA)
+ * Enforces dark OS substrate (#0f172a) and high-contrast text (#f8fafc) on all <select> & <option>
+ * elements across Chromium Windows popup host environments, eliminating white-on-white popups.
+ */
+
+/* ==========================================================================
+   1. Root & Body Dark Color Scheme Enforcement
+   ========================================================================== */
+:root:not([data-theme="light"]),
+[data-theme="dark"],
+body:not([data-theme="light"]),
+body.theme-dark {
+  color-scheme: dark !important;
+}
+
+/* ==========================================================================
+   2. Dark Mode Select Baseline Styling & Focus Rings
+   ========================================================================== */
+body:not([data-theme="light"]) select,
+body:not([data-theme="light"]) .setting-select,
+body:not([data-theme="light"]) .setting-select-sm,
+body:not([data-theme="light"]) .eq-preset-dropdown,
+body:not([data-theme="light"]) .browser-filter-select-popup,
+body:not([data-theme="light"]) .doomscroll-select,
+[data-theme="dark"] select,
+[data-theme="dark"] .setting-select,
+[data-theme="dark"] .setting-select-sm,
+[data-theme="dark"] .eq-preset-dropdown,
+[data-theme="dark"] .browser-filter-select-popup,
+[data-theme="dark"] .doomscroll-select {
+  color-scheme: dark !important;
+  color: #f8fafc !important;
+  background-color: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body:not([data-theme="light"]) select:focus-visible,
+body:not([data-theme="light"]) .setting-select:focus-visible,
+body:not([data-theme="light"]) .setting-select-sm:focus-visible,
+body:not([data-theme="light"]) .eq-preset-dropdown:focus-visible,
+body:not([data-theme="light"]) .browser-filter-select-popup:focus-visible,
+body:not([data-theme="light"]) .doomscroll-select:focus-visible,
+[data-theme="dark"] select:focus-visible,
+[data-theme="dark"] .setting-select:focus-visible,
+[data-theme="dark"] .setting-select-sm:focus-visible,
+[data-theme="dark"] .eq-preset-dropdown:focus-visible,
+[data-theme="dark"] .browser-filter-select-popup:focus-visible,
+[data-theme="dark"] .doomscroll-select:focus-visible {
+  outline: 2px solid var(--accent-emerald, #10b981) !important;
+  outline-offset: 1px !important;
+  border-color: var(--accent-emerald, #10b981) !important;
+}
+
+/* ==========================================================================
+   3. Dark Mode Option Substrate & High-Contrast Typography (WCAG AAA)
+   ========================================================================== */
+body:not([data-theme="light"]) select option,
+body:not([data-theme="light"]) .setting-select option,
+body:not([data-theme="light"]) .setting-select-sm option,
+body:not([data-theme="light"]) .eq-preset-dropdown option,
+body:not([data-theme="light"]) .browser-filter-select-popup option,
+body:not([data-theme="light"]) .doomscroll-select option,
+[data-theme="dark"] select option,
+[data-theme="dark"] .setting-select option,
+[data-theme="dark"] .setting-select-sm option,
+[data-theme="dark"] .eq-preset-dropdown option,
+[data-theme="dark"] .browser-filter-select-popup option,
+[data-theme="dark"] .doomscroll-select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 6px 10px;
+}
+
+/* Hover and Checked/Selected State */
+body:not([data-theme="light"]) select option:checked,
+body:not([data-theme="light"]) select option:hover,
+body:not([data-theme="light"]) .setting-select option:checked,
+body:not([data-theme="light"]) .setting-select option:hover,
+body:not([data-theme="light"]) .setting-select-sm option:checked,
+body:not([data-theme="light"]) .setting-select-sm option:hover,
+body:not([data-theme="light"]) .eq-preset-dropdown option:checked,
+body:not([data-theme="light"]) .eq-preset-dropdown option:hover,
+body:not([data-theme="light"]) .browser-filter-select-popup option:checked,
+body:not([data-theme="light"]) .browser-filter-select-popup option:hover,
+body:not([data-theme="light"]) .doomscroll-select option:checked,
+body:not([data-theme="light"]) .doomscroll-select option:hover,
+[data-theme="dark"] select option:checked,
+[data-theme="dark"] select option:hover,
+[data-theme="dark"] .setting-select option:checked,
+[data-theme="dark"] .setting-select option:hover,
+[data-theme="dark"] .setting-select-sm option:checked,
+[data-theme="dark"] .setting-select-sm option:hover,
+[data-theme="dark"] .eq-preset-dropdown option:checked,
+[data-theme="dark"] .eq-preset-dropdown option:hover,
+[data-theme="dark"] .browser-filter-select-popup option:checked,
+[data-theme="dark"] .browser-filter-select-popup option:hover,
+[data-theme="dark"] .doomscroll-select option:checked,
+[data-theme="dark"] .doomscroll-select option:hover {
+  background-color: #1e293b !important;
+  color: #10b981 !important;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   4. Zero Light-Mode Regression Guardrails
+   ========================================================================== */
+[data-theme="light"],
+body[data-theme="light"],
+body.theme-light {
+  color-scheme: light !important;
+}
+
+[data-theme="light"] select,
+[data-theme="light"] .setting-select,
+[data-theme="light"] .setting-select-sm,
+[data-theme="light"] .eq-preset-dropdown,
+[data-theme="light"] .browser-filter-select-popup,
+[data-theme="light"] .doomscroll-select,
+body[data-theme="light"] select,
+body[data-theme="light"] .setting-select,
+body[data-theme="light"] .setting-select-sm,
+body[data-theme="light"] .eq-preset-dropdown,
+body[data-theme="light"] .browser-filter-select-popup,
+body[data-theme="light"] .doomscroll-select {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] select option,
+[data-theme="light"] .setting-select option,
+[data-theme="light"] .setting-select-sm option,
+[data-theme="light"] .eq-preset-dropdown option,
+[data-theme="light"] .browser-filter-select-popup option,
+[data-theme="light"] .doomscroll-select option,
+body[data-theme="light"] select option,
+body[data-theme="light"] .setting-select option,
+body[data-theme="light"] .setting-select-sm option,
+body[data-theme="light"] .eq-preset-dropdown option,
+body[data-theme="light"] .browser-filter-select-popup option,
+body[data-theme="light"] .doomscroll-select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] select option:checked,
+[data-theme="light"] select option:hover,
+body[data-theme="light"] select option:checked,
+body[data-theme="light"] select option:hover {
+  background-color: #f1f5f9 !important;
+  color: #047857 !important;
+}

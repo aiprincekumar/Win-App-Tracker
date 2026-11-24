@@ -48,10 +48,12 @@
 :root,
 [data-theme="dark"] {
   --theme-mode: dark;
+  color-scheme: dark;
 }
 
 [data-theme="light"] {
   --theme-mode: light;
+  color-scheme: light;
   --bg-primary: #f8fafc;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
@@ -5769,4 +5771,71 @@ body.high-contrast-mode .tier1-segmented-nav .tier1-nav-btn.active {
   .drawer-inner-content {
     transition: none !important;
   }
+}
+
+/* ==========================================================================
+   Dark Mode Dropdown & Select Companion Rules (WCAG AAA)
+   ========================================================================== */
+body:not([data-theme="light"]) select,
+body:not([data-theme="light"]) .setting-select,
+body:not([data-theme="light"]) .setting-select-sm,
+body:not([data-theme="light"]) .eq-preset-dropdown,
+body:not([data-theme="light"]) .browser-filter-select-popup,
+body:not([data-theme="light"]) .doomscroll-select,
+[data-theme="dark"] select,
+[data-theme="dark"] .setting-select,
+[data-theme="dark"] .setting-select-sm,
+[data-theme="dark"] .eq-preset-dropdown,
+[data-theme="dark"] .browser-filter-select-popup,
+[data-theme="dark"] .doomscroll-select {
+  color-scheme: dark !important;
+  color: #f8fafc !important;
+  background-color: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body:not([data-theme="light"]) select option,
+body:not([data-theme="light"]) .setting-select option,
+body:not([data-theme="light"]) .setting-select-sm option,
+body:not([data-theme="light"]) .eq-preset-dropdown option,
+body:not([data-theme="light"]) .browser-filter-select-popup option,
+body:not([data-theme="light"]) .doomscroll-select option,
+[data-theme="dark"] select option,
+[data-theme="dark"] .setting-select option,
+[data-theme="dark"] .setting-select-sm option,
+[data-theme="dark"] .eq-preset-dropdown option,
+[data-theme="dark"] .browser-filter-select-popup option,
+[data-theme="dark"] .doomscroll-select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 6px 10px;
+}
+
+body:not([data-theme="light"]) select option:checked,
+body:not([data-theme="light"]) select option:hover,
+body:not([data-theme="light"]) .setting-select option:checked,
+body:not([data-theme="light"]) .setting-select option:hover,
+body:not([data-theme="light"]) .setting-select-sm option:checked,
+body:not([data-theme="light"]) .setting-select-sm option:hover,
+body:not([data-theme="light"]) .eq-preset-dropdown option:checked,
+body:not([data-theme="light"]) .eq-preset-dropdown option:hover,
+body:not([data-theme="light"]) .browser-filter-select-popup option:checked,
+body:not([data-theme="light"]) .browser-filter-select-popup option:hover,
+body:not([data-theme="light"]) .doomscroll-select option:checked,
+body:not([data-theme="light"]) .doomscroll-select option:hover,
+[data-theme="dark"] select option:checked,
+[data-theme="dark"] select option:hover,
+[data-theme="dark"] .setting-select option:checked,
+[data-theme="dark"] .setting-select option:hover,
+[data-theme="dark"] .setting-select-sm option:checked,
+[data-theme="dark"] .setting-select-sm option:hover,
+[data-theme="dark"] .eq-preset-dropdown option:checked,
+[data-theme="dark"] .eq-preset-dropdown option:hover,
+[data-theme="dark"] .browser-filter-select-popup option:checked,
+[data-theme="dark"] .browser-filter-select-popup option:hover,
+[data-theme="dark"] .doomscroll-select option:checked,
+[data-theme="dark"] .doomscroll-select option:hover {
+  background-color: #1e293b !important;
+  color: #10b981 !important;
+  font-weight: 600;
 }

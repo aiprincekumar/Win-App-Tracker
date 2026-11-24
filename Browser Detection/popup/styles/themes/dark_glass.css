@@ -4,6 +4,8 @@
  * Dark Mode Substrates, Specular Highlights & High Contrast Mode Accessibility (WCAG AAA)
  */
 
+@import './dark_dropdown.css';
+
 /* ==========================================================================
    Defect 16: High Contrast Mode Accessibility Architecture
    ========================================================================== */

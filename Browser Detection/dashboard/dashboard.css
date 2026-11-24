@@ -10093,3 +10093,84 @@ body.light-theme .time-scroll-to-top:hover {
   gap: 10px;
 }
 
+
+/* ==========================================================================
+   Dark Mode Dropdown & Select Companion Rules (WCAG AAA)
+   ========================================================================== */
+body.theme-dark select,
+body.theme-dark .styled-select,
+body.theme-dark .form-control-select,
+body.theme-dark .soundscape-select,
+body.theme-dark .chime-select,
+body.theme-dark .dash-sleep-select-sm,
+body.theme-dark .browser-filter-select,
+body.theme-dark .visualizer-mode-select,
+body.theme-dark .eq-preset-dropdown,
+body.theme-dark .select-snapshot,
+[data-theme="dark"] select,
+[data-theme="dark"] .styled-select,
+[data-theme="dark"] .form-control-select,
+[data-theme="dark"] .soundscape-select,
+[data-theme="dark"] .chime-select,
+[data-theme="dark"] .dash-sleep-select-sm,
+[data-theme="dark"] .browser-filter-select,
+[data-theme="dark"] .visualizer-mode-select,
+[data-theme="dark"] .eq-preset-dropdown,
+[data-theme="dark"] .select-snapshot {
+  color-scheme: dark !important;
+  color: #f8fafc !important;
+  background-color: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.theme-dark select option,
+body.theme-dark .styled-select option,
+body.theme-dark .form-control-select option,
+body.theme-dark .soundscape-select option,
+body.theme-dark .chime-select option,
+body.theme-dark .dash-sleep-select-sm option,
+body.theme-dark .browser-filter-select option,
+body.theme-dark .visualizer-mode-select option,
+body.theme-dark .eq-preset-dropdown option,
+body.theme-dark .select-snapshot option,
+[data-theme="dark"] select option,
+[data-theme="dark"] .styled-select option,
+[data-theme="dark"] .form-control-select option,
+[data-theme="dark"] .soundscape-select option,
+[data-theme="dark"] .chime-select option,
+[data-theme="dark"] .dash-sleep-select-sm option,
+[data-theme="dark"] .browser-filter-select option,
+[data-theme="dark"] .visualizer-mode-select option,
+[data-theme="dark"] .eq-preset-dropdown option,
+[data-theme="dark"] .select-snapshot option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 6px 10px;
+}
+
+body.theme-dark select option:checked,
+body.theme-dark select option:hover,
+body.theme-dark .styled-select option:checked,
+body.theme-dark .styled-select option:hover,
+body.theme-dark .form-control-select option:checked,
+body.theme-dark .form-control-select option:hover,
+body.theme-dark .soundscape-select option:checked,
+body.theme-dark .soundscape-select option:hover,
+body.theme-dark .chime-select option:checked,
+body.theme-dark .chime-select option:hover,
+body.theme-dark .dash-sleep-select-sm option:checked,
+body.theme-dark .dash-sleep-select-sm option:hover,
+body.theme-dark .browser-filter-select option:checked,
+body.theme-dark .browser-filter-select option:hover,
+body.theme-dark .visualizer-mode-select option:checked,
+body.theme-dark .visualizer-mode-select option:hover,
+body.theme-dark .eq-preset-dropdown option:checked,
+body.theme-dark .eq-preset-dropdown option:hover,
+[data-theme="dark"] select option:checked,
+[data-theme="dark"] select option:hover,
+[data-theme="dark"] .styled-select option:checked,
+[data-theme="dark"] .styled-select option:hover {
+  background-color: #1e293b !important;
+  color: #10b981 !important;
+  font-weight: 600;
+}
