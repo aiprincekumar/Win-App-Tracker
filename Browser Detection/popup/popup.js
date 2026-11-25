@@ -35,6 +35,57 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.addEventListener === 
   });
 }
 
+function safePopupRuntimeSendMessage(message, callback) {
+  try {
+    if (browserAPI && browserAPI.runtime && typeof browserAPI.runtime.sendMessage === 'function') {
+      const p = browserAPI.runtime.sendMessage(message, (res) => {
+        let err = null;
+        try { err = browserAPI.runtime ? browserAPI.runtime.lastError : null; } catch (_) {}
+        if (typeof callback === 'function') {
+          try { callback(res, err); } catch (_) {}
+        }
+      });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      return p;
+    }
+  } catch (_) {}
+  return null;
+}
+
+function safePopupTabSendMessage(tabId, message, callback) {
+  try {
+    if (tabId && browserAPI && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
+      const p = browserAPI.tabs.sendMessage(tabId, message, (res) => {
+        let err = null;
+        try { err = browserAPI.runtime ? browserAPI.runtime.lastError : null; } catch (_) {}
+        if (typeof callback === 'function') {
+          try { callback(res, err); } catch (_) {}
+        }
+      });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      return p;
+    }
+  } catch (_) {}
+  return null;
+}
+
+function safePopupTabsQuery(queryInfo, callback) {
+  try {
+    if (browserAPI && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
+      const p = browserAPI.tabs.query(queryInfo, (tabs) => {
+        let err = null;
+        try { err = browserAPI.runtime ? browserAPI.runtime.lastError : null; } catch (_) {}
+        if (typeof callback === 'function') {
+          try { callback(err ? [] : (tabs || []), err); } catch (_) {}
+        }
+      });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      return p;
+    }
+  } catch (_) {}
+  return null;
+}
+
 // =============================================================================
 // Modular Popup Subsystems (src/popup/)
 // =============================================================================
@@ -1227,50 +1278,43 @@ function sendMediaControl(action, data = {}, tabId = null) {
   let resolvedTabId = tabId || getActiveMediaTabId();
 
   const dispatch = (finalTabId) => {
-    try {
-      const p = browserAPI.runtime.sendMessage({
-        type: 'CONTROL_MEDIA',
-        action,
-        data,
-        tabId: finalTabId
-      }, () => {
-        if (!isDraggingVolume && !isDraggingProgress) {
-          setTimeout(refreshDashboard, 120);
-        }
-      });
-      if (p && typeof p.catch === 'function') {
-        p.catch(() => {});
+    safePopupRuntimeSendMessage({
+      type: 'CONTROL_MEDIA',
+      action,
+      data,
+      tabId: finalTabId
+    }, () => {
+      if (!isDraggingVolume && !isDraggingProgress) {
+        setTimeout(refreshDashboard, 120);
       }
-    } catch (_) {}
+    });
   };
 
   if (!resolvedTabId && browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-    try {
-      browserAPI.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-        if (tabs && tabs[0] && tabs[0].id) {
-          resolvedTabId = tabs[0].id;
-          activeTabId = resolvedTabId;
-          dispatch(resolvedTabId);
-        } else {
-          browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs2) => {
-            if (tabs2 && tabs2[0] && tabs2[0].id) {
-              resolvedTabId = tabs2[0].id;
-              activeTabId = resolvedTabId;
+    safePopupTabsQuery({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        resolvedTabId = tabs[0].id;
+        activeTabId = resolvedTabId;
+        dispatch(resolvedTabId);
+      } else {
+        safePopupTabsQuery({ active: true, currentWindow: true }, (tabs2) => {
+          if (tabs2 && tabs2[0] && tabs2[0].id) {
+            resolvedTabId = tabs2[0].id;
+            activeTabId = resolvedTabId;
+            dispatch(resolvedTabId);
+          } else {
+            safePopupTabsQuery({ audible: true }, (tabs3) => {
+              if (tabs3 && tabs3[0] && tabs3[0].id) {
+                resolvedTabId = tabs3[0].id;
+                activeTabId = resolvedTabId;
+              }
               dispatch(resolvedTabId);
-            } else {
-              browserAPI.tabs.query({ audible: true }, (tabs3) => {
-                if (tabs3 && tabs3[0] && tabs3[0].id) {
-                  resolvedTabId = tabs3[0].id;
-                  activeTabId = resolvedTabId;
-                }
-                dispatch(resolvedTabId);
-              });
-            }
-          });
-        }
-      });
-      return;
-    } catch (_) {}
+            });
+          }
+        });
+      }
+    });
+    return;
   }
 
   dispatch(resolvedTabId);
@@ -2350,27 +2394,17 @@ function persistAudioSettings() {
     browserAPI.storage.local.set({ audio_lab_settings: audioLabSettings });
     const targetTabId = getActiveMediaTabId();
     if (targetTabId && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
-      try {
-        const p = browserAPI.tabs.sendMessage(targetTabId, {
-          type: 'APPLY_AUDIO_LAB_SETTINGS',
-          settings: audioLabSettings
-        });
-        if (p && typeof p.catch === 'function') {
-          p.catch(() => {});
-        }
-      } catch (_) {}
+      safePopupTabSendMessage(targetTabId, {
+        type: 'APPLY_AUDIO_LAB_SETTINGS',
+        settings: audioLabSettings
+      });
     }
     // Also dispatch to background service worker for reliable relay
-    try {
-      const p2 = browserAPI.runtime.sendMessage({
-        type: 'APPLY_AUDIO_LAB_SETTINGS',
-        settings: audioLabSettings,
-        tabId: targetTabId
-      });
-      if (p2 && typeof p2.catch === 'function') {
-        p2.catch(() => {});
-      }
-    } catch (_) {}
+    safePopupRuntimeSendMessage({
+      type: 'APPLY_AUDIO_LAB_SETTINGS',
+      settings: audioLabSettings,
+      tabId: targetTabId
+    });
   } catch (_) {}
 }
 
@@ -2820,9 +2854,7 @@ function extendSleepTimerMinutes(minsToAdd) {
     }
 
     browserAPI.storage.local.set({ sentinel_sleep_timer: timer }, () => {
-      try {
-        browserAPI.runtime.sendMessage({ action: 'EXTEND_SLEEP_TIMER', extraMinutes: minsToAdd });
-      } catch (e) {}
+      safePopupRuntimeSendMessage({ action: 'EXTEND_SLEEP_TIMER', extraMinutes: minsToAdd });
       renderSleepTimerUI(timer);
       showPopupToast(`Added +${minsToAdd}m to sleep timer`, 'success');
     });
@@ -2854,18 +2886,16 @@ function startSleepTimerWithMinutes(minutes) {
     endOfVideo: endVideo
   };
 
-  try {
-    const p = browserAPI.runtime.sendMessage({
-      type: 'SET_SLEEP_TIMER',
-      durationMinutes: mins,
-      enableFade: enableFade
-    }, (res) => {
-      const stateToRender = (res && res.success && res.state) ? res.state : timer;
-      renderSleepTimerUI(stateToRender);
-      showPopupToast(`Sleep timer set for ${mins}m`, 'success');
-    });
-    if (p && typeof p.catch === 'function') p.catch(() => {});
-  } catch (_) {
+  const sent = safePopupRuntimeSendMessage({
+    type: 'SET_SLEEP_TIMER',
+    durationMinutes: mins,
+    enableFade: enableFade
+  }, (res) => {
+    const stateToRender = (res && res.success && res.state) ? res.state : timer;
+    renderSleepTimerUI(stateToRender);
+    showPopupToast(`Sleep timer set for ${mins}m`, 'success');
+  });
+  if (!sent) {
     renderSleepTimerUI(timer);
   }
 
@@ -3140,12 +3170,8 @@ function setupEventListeners() {
       if (!frameDataUrl && browserAPI.tabs && typeof browserAPI.tabs.sendMessage === 'function') {
         try {
           const ipcRes = await new Promise((resolve) => {
-            browserAPI.tabs.sendMessage(targetTabId, { action: 'CAPTURE_VIDEO_FRAME' }, (res) => {
-              if (browserAPI.runtime && browserAPI.runtime.lastError) {
-                resolve(null);
-              } else {
-                resolve(res);
-              }
+            safePopupTabSendMessage(targetTabId, { action: 'CAPTURE_VIDEO_FRAME' }, (res, err) => {
+              resolve(err ? null : res);
             });
           });
           if (ipcRes && ipcRes.success && ipcRes.dataUrl) {
@@ -3659,7 +3685,7 @@ function setupEventListeners() {
   function adjustPopupFocusMinutes(deltaMinutes) {
     if (!browserAPI?.runtime?.sendMessage) return;
     const req = { action: 'EXTEND_FOCUS_TIMER', extraMinutes: deltaMinutes };
-    browserAPI.runtime.sendMessage(req, (res) => {
+    safePopupRuntimeSendMessage(req, (res) => {
       if (!res?.state) return;
       syncPopupFocusState(res.state);
       const sign = deltaMinutes > 0 ? `+${deltaMinutes}` : `${deltaMinutes}`;
@@ -3678,7 +3704,7 @@ function setupEventListeners() {
     const mins = Math.min(1440, rawVal);
     if (!browserAPI?.runtime?.sendMessage) return;
     const req = { action: 'START_FOCUS_TIMER', durationMinutes: mins, mode: 'focus' };
-    browserAPI.runtime.sendMessage(req, (res) => {
+    safePopupRuntimeSendMessage(req, (res) => {
       if (!res?.state) return;
       syncPopupFocusState(res.state);
       showPopupToast(`Focus set: ${mins}m`);
@@ -3744,26 +3770,20 @@ function setupEventListeners() {
       const isPaused = (popupFocusBackendState.state === 'PAUSED_FOCUS' || popupFocusBackendState.state === 'PAUSED_BREAK');
 
       if (isRunning) {
-        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-          browserAPI.runtime.sendMessage({ action: 'PAUSE_FOCUS_TIMER' }, (res) => {
-            if (res && res.state) syncPopupFocusState(res.state);
-          });
-        }
+        safePopupRuntimeSendMessage({ action: 'PAUSE_FOCUS_TIMER' }, (res) => {
+          if (res && res.state) syncPopupFocusState(res.state);
+        });
         showPopupToast('Focus timer paused');
       } else if (isPaused) {
-        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-          browserAPI.runtime.sendMessage({ action: 'RESUME_FOCUS_TIMER' }, (res) => {
-            if (res && res.state) syncPopupFocusState(res.state);
-          });
-        }
+        safePopupRuntimeSendMessage({ action: 'RESUME_FOCUS_TIMER' }, (res) => {
+          if (res && res.state) syncPopupFocusState(res.state);
+        });
         showPopupToast('Focus timer resumed');
       } else {
         const targetMins = popupFocusBackendState.durationMinutes || 25;
-        if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-          browserAPI.runtime.sendMessage({ action: 'START_FOCUS_TIMER', durationMinutes: targetMins, mode: 'focus' }, (res) => {
-            if (res && res.state) syncPopupFocusState(res.state);
-          });
-        }
+        safePopupRuntimeSendMessage({ action: 'START_FOCUS_TIMER', durationMinutes: targetMins, mode: 'focus' }, (res) => {
+          if (res && res.state) syncPopupFocusState(res.state);
+        });
         showPopupToast(`Focus timer started (${targetMins}m)`);
       }
     });
@@ -3778,11 +3798,9 @@ function setupEventListeners() {
 
   if (btnPopupFocusReset) {
     btnPopupFocusReset.addEventListener('click', () => {
-      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-        browserAPI.runtime.sendMessage({ action: 'RESET_FOCUS_TIMER' }, (res) => {
-          if (res && res.state) syncPopupFocusState(res.state);
-        });
-      }
+      safePopupRuntimeSendMessage({ action: 'RESET_FOCUS_TIMER' }, (res) => {
+        if (res && res.state) syncPopupFocusState(res.state);
+      });
       showPopupToast('Focus timer reset');
     });
   }
@@ -3791,18 +3809,16 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       const mins = parseInt(btn.getAttribute('data-minutes'), 10);
       if (!mins) return;
-      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-        browserAPI.runtime.sendMessage({
-          action: 'START_FOCUS_TIMER',
-          durationMinutes: mins,
-          mode: 'focus'
-        }, (res) => {
-          if (res && res.state) {
-            syncPopupFocusState(res.state);
-            showPopupToast(`Focus started: ${mins}m`);
-          }
-        });
-      }
+      safePopupRuntimeSendMessage({
+        action: 'START_FOCUS_TIMER',
+        durationMinutes: mins,
+        mode: 'focus'
+      }, (res) => {
+        if (res && res.state) {
+          syncPopupFocusState(res.state);
+          showPopupToast(`Focus started: ${mins}m`);
+        }
+      });
     });
   });
 
@@ -3817,15 +3833,11 @@ function setupEventListeners() {
     });
   }
 
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    try {
-      browserAPI.runtime.sendMessage({ action: 'GET_FOCUS_TIMER_STATE' }, (res) => {
-        if (res && res.success && res.state) {
-          syncPopupFocusState(res.state);
-        }
-      });
-    } catch (_) {}
-  }
+  safePopupRuntimeSendMessage({ action: 'GET_FOCUS_TIMER_STATE' }, (res) => {
+    if (res && res.success && res.state) {
+      syncPopupFocusState(res.state);
+    }
+  });
 
   if (btnGoToTracking) {
     btnGoToTracking.addEventListener('click', () => {
@@ -3953,28 +3965,22 @@ function setupEventListeners() {
     showPopupToast(t('toast_hud_launching'), 'starting');
 
     // 1. Dispatch Native Messaging Host request
-    try {
-      const p1 = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
-        if (res && res.fallbackRequired) {
-          try {
-            let iframe = document.getElementById('__hud_launcher_frame__');
-            if (!iframe) {
-              iframe = document.createElement('iframe');
-              iframe.id = '__hud_launcher_frame__';
-              iframe.style.display = 'none';
-              document.body.appendChild(iframe);
-            }
-            iframe.src = 'videohud://launch';
-          } catch (_) {}
-        }
-      });
-      if (p1 && typeof p1.catch === 'function') p1.catch(() => {});
-    } catch (_) {}
+    safePopupRuntimeSendMessage({ type: 'LAUNCH_DESKTOP_HUD' }, (res) => {
+      if (res && res.fallbackRequired) {
+        try {
+          let iframe = document.getElementById('__hud_launcher_frame__');
+          if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = '__hud_launcher_frame__';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+          }
+          iframe.src = 'videohud://launch';
+        } catch (_) {}
+      }
+    });
 
-    try {
-      const p2 = browserAPI.runtime.sendMessage({ type: 'TRIGGER_WS_RECONNECT' });
-      if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
-    } catch (_) {}
+    safePopupRuntimeSendMessage({ type: 'TRIGGER_WS_RECONNECT' });
 
     let attempts = 0;
     const pollInterval = setInterval(async () => {
@@ -4039,10 +4045,7 @@ function setupEventListeners() {
         } catch (_) {}
       }
 
-      try {
-        const p = browserAPI.runtime.sendMessage({ type: 'LAUNCH_DATA_HUB' });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      safePopupRuntimeSendMessage({ type: 'LAUNCH_DATA_HUB' });
 
       let attempts = 0;
       const pollInterval = setInterval(async () => {
@@ -4114,20 +4117,17 @@ function setupEventListeners() {
         : (dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia);
       const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
       const targetWindowId = (pm && pm.windowId) ? pm.windowId : undefined;
-      try {
-        const p = browserAPI.runtime.sendMessage({
-          type: 'JUMP_TO_MEDIA_TAB',
-          tabId: targetTabId,
-          windowId: targetWindowId
-        }, (res) => {
-          if (res && res.success) {
-            showPopupToast(t('toast_switched_tab'), 'success');
-          } else {
-            showPopupToast(t('toast_no_media_tab'), 'danger');
-          }
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      safePopupRuntimeSendMessage({
+        type: 'JUMP_TO_MEDIA_TAB',
+        tabId: targetTabId,
+        windowId: targetWindowId
+      }, (res) => {
+        if (res && res.success) {
+          showPopupToast(t('toast_switched_tab'), 'success');
+        } else {
+          showPopupToast(t('toast_no_media_tab'), 'danger');
+        }
+      });
     });
   }
 
@@ -4144,15 +4144,12 @@ function setupEventListeners() {
   const btnGlobalMediaToggle = document.getElementById('btnGlobalMediaToggle');
   if (btnGlobalMediaToggle) {
     btnGlobalMediaToggle.addEventListener('click', () => {
-      try {
-        const p = browserAPI.runtime.sendMessage({ type: 'TOGGLE_GLOBAL_MEDIA' }, (res) => {
-          if (res && res.action) {
-            showPopupToast(res.action === 'PAUSE_ALL' ? 'Paused all media' : 'Resumed media', 'info');
-          }
-          refreshDashboard(true);
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      safePopupRuntimeSendMessage({ type: 'TOGGLE_GLOBAL_MEDIA' }, (res) => {
+        if (res && res.action) {
+          showPopupToast(res.action === 'PAUSE_ALL' ? 'Paused all media' : 'Resumed media', 'info');
+        }
+        refreshDashboard(true);
+      });
     });
   }
 
@@ -4160,21 +4157,18 @@ function setupEventListeners() {
   const btnToggleTrackingPause = document.getElementById('btnToggleTrackingPause');
   if (btnToggleTrackingPause) {
     btnToggleTrackingPause.addEventListener('click', () => {
-      try {
-        const p = browserAPI.runtime.sendMessage({ type: 'TOGGLE_TRACKING_PAUSE' }, (res) => {
-          if (res && typeof res.isTrackingPaused === 'boolean') {
-            isTrackingPaused = res.isTrackingPaused;
-            updateTrackingPauseButtonUI(isTrackingPaused);
-            if (isTrackingPaused) {
-              showPopupToast(t('toast_tracking_paused'), 'info');
-            } else {
-              showPopupToast(t('toast_tracking_resumed'), 'success');
-            }
+      safePopupRuntimeSendMessage({ type: 'TOGGLE_TRACKING_PAUSE' }, (res) => {
+        if (res && typeof res.isTrackingPaused === 'boolean') {
+          isTrackingPaused = res.isTrackingPaused;
+          updateTrackingPauseButtonUI(isTrackingPaused);
+          if (isTrackingPaused) {
+            showPopupToast(t('toast_tracking_paused'), 'info');
+          } else {
+            showPopupToast(t('toast_tracking_resumed'), 'success');
           }
-          refreshDashboard(true);
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+        }
+        refreshDashboard(true);
+      });
     });
   }
 
@@ -4234,19 +4228,16 @@ function setupEventListeners() {
       const fadeToggle = document.getElementById('toggleSleepFade');
       const enableFade = fadeToggle ? fadeToggle.checked : true;
 
-      try {
-        const p = browserAPI.runtime.sendMessage({
-          type: 'SET_SLEEP_TIMER',
-          durationMinutes: minutes,
-          enableFade: enableFade
-        }, (res) => {
-          if (res && res.success && res.state) {
-            renderSleepTimerUI(res.state);
-            showPopupToast(`Sleep timer set for ${minutes}m`, 'success');
-          }
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      safePopupRuntimeSendMessage({
+        type: 'SET_SLEEP_TIMER',
+        durationMinutes: minutes,
+        enableFade: enableFade
+      }, (res) => {
+        if (res && res.success && res.state) {
+          renderSleepTimerUI(res.state);
+          showPopupToast(`Sleep timer set for ${minutes}m`, 'success');
+        }
+      });
     });
   });
 
@@ -4263,20 +4254,17 @@ function setupEventListeners() {
     const fadeToggle = document.getElementById('toggleSleepFade');
     const enableFade = fadeToggle ? fadeToggle.checked : true;
 
-    try {
-      const p = browserAPI.runtime.sendMessage({
-        type: 'SET_SLEEP_TIMER',
-        durationMinutes: mins,
-        enableFade: enableFade
-      }, (res) => {
-        if (res && res.success && res.state) {
-          renderSleepTimerUI(res.state);
-          showPopupToast(`Sleep timer set for ${mins}m`, 'success');
-          customInput.value = '';
-        }
-      });
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch (_) {}
+    safePopupRuntimeSendMessage({
+      type: 'SET_SLEEP_TIMER',
+      durationMinutes: mins,
+      enableFade: enableFade
+    }, (res) => {
+      if (res && res.success && res.state) {
+        renderSleepTimerUI(res.state);
+        showPopupToast(`Sleep timer set for ${mins}m`, 'success');
+        customInput.value = '';
+      }
+    });
   };
 
   if (btnSetCustom) {
@@ -4292,15 +4280,12 @@ function setupEventListeners() {
   const btnCancelActive = document.getElementById('btnCancelActiveTimer');
   if (btnCancelActive) {
     btnCancelActive.addEventListener('click', () => {
-      try {
-        const p = browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER' }, (res) => {
-          if (res && res.success) {
-            renderSleepTimerUI({ state: 'IDLE' });
-            showPopupToast('Sleep timer cancelled', 'info');
-          }
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      safePopupRuntimeSendMessage({ type: 'CANCEL_SLEEP_TIMER' }, (res) => {
+        if (res && res.success) {
+          renderSleepTimerUI({ state: 'IDLE' });
+          showPopupToast('Sleep timer cancelled', 'info');
+        }
+      });
     });
   }
 
@@ -4320,13 +4305,11 @@ function setupEventListeners() {
   const btnSleepReset = document.getElementById('btnSleepReset');
   if (btnSleepReset) {
     btnSleepReset.addEventListener('click', () => {
-      try {
-        const p = browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER' }, (res) => {
-          renderSleepTimerUI({ state: 'IDLE' });
-          showPopupToast('Sleep timer cancelled', 'info');
-        });
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {
+      const sent = safePopupRuntimeSendMessage({ type: 'CANCEL_SLEEP_TIMER' }, () => {
+        renderSleepTimerUI({ state: 'IDLE' });
+        showPopupToast('Sleep timer cancelled', 'info');
+      });
+      if (!sent) {
         renderSleepTimerUI({ state: 'IDLE' });
       }
     });
@@ -4336,24 +4319,23 @@ function setupEventListeners() {
   if (btnSleepToggleRun) {
     btnSleepToggleRun.addEventListener('click', () => {
       if (currentSleepTimer && (currentSleepTimer.state === 'RUNNING' || currentSleepTimer.state === 'FADING')) {
-        try {
-          browserAPI.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
-            if (res && res.success && res.state) {
-              currentSleepTimer = res.state;
+        const sentPause = safePopupRuntimeSendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
+          if (res && res.success && res.state) {
+            currentSleepTimer = res.state;
+            renderSleepTimerUI(currentSleepTimer);
+          } else {
+            const now = Date.now();
+            const rem = Math.max(0, currentSleepTimer.targetTime - now);
+            currentSleepTimer.state = 'PAUSED';
+            currentSleepTimer.remainingMs = rem;
+            currentSleepTimer.pausedAt = now;
+            browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
               renderSleepTimerUI(currentSleepTimer);
-            } else {
-              const now = Date.now();
-              const rem = Math.max(0, currentSleepTimer.targetTime - now);
-              currentSleepTimer.state = 'PAUSED';
-              currentSleepTimer.remainingMs = rem;
-              currentSleepTimer.pausedAt = now;
-              browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
-                renderSleepTimerUI(currentSleepTimer);
-              });
-            }
-            showPopupToast('Sleep timer paused', 'info');
-          });
-        } catch (_) {
+            });
+          }
+          showPopupToast('Sleep timer paused', 'info');
+        });
+        if (!sentPause) {
           const now = Date.now();
           const rem = Math.max(0, currentSleepTimer.targetTime - now);
           currentSleepTimer.state = 'PAUSED';
@@ -4365,25 +4347,24 @@ function setupEventListeners() {
           });
         }
       } else if (currentSleepTimer && currentSleepTimer.state === 'PAUSED') {
-        try {
-          browserAPI.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
-            if (res && res.success && res.state) {
-              currentSleepTimer = res.state;
+        const sentResume = safePopupRuntimeSendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
+          if (res && res.success && res.state) {
+            currentSleepTimer = res.state;
+            renderSleepTimerUI(currentSleepTimer);
+          } else {
+            const now = Date.now();
+            const rem = currentSleepTimer.remainingMs || 60000;
+            currentSleepTimer.state = 'RUNNING';
+            currentSleepTimer.targetTime = now + rem;
+            delete currentSleepTimer.remainingMs;
+            delete currentSleepTimer.pausedAt;
+            browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
               renderSleepTimerUI(currentSleepTimer);
-            } else {
-              const now = Date.now();
-              const rem = currentSleepTimer.remainingMs || 60000;
-              currentSleepTimer.state = 'RUNNING';
-              currentSleepTimer.targetTime = now + rem;
-              delete currentSleepTimer.remainingMs;
-              delete currentSleepTimer.pausedAt;
-              browserAPI.storage.local.set({ sentinel_sleep_timer: currentSleepTimer }, () => {
-                renderSleepTimerUI(currentSleepTimer);
-              });
-            }
-            showPopupToast('Sleep timer resumed', 'success');
-          });
-        } catch (_) {
+            });
+          }
+          showPopupToast('Sleep timer resumed', 'success');
+        });
+        if (!sentResume) {
           const now = Date.now();
           const rem = currentSleepTimer.remainingMs || 60000;
           currentSleepTimer.state = 'RUNNING';
@@ -5099,17 +5080,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Proactively cache active tabId for instant media targeting parity with dashboard
   if (browserAPI.tabs && typeof browserAPI.tabs.query === 'function') {
-    try {
-      browserAPI.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-        if (tabs && tabs[0] && tabs[0].id) {
-          activeTabId = tabs[0].id;
-        } else {
-          browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs2) => {
-            if (tabs2 && tabs2[0] && tabs2[0].id) activeTabId = tabs2[0].id;
-          });
-        }
-      });
-    } catch (_) {}
+    safePopupTabsQuery({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        activeTabId = tabs[0].id;
+      } else {
+        safePopupTabsQuery({ active: true, currentWindow: true }, (tabs2) => {
+          if (tabs2 && tabs2[0] && tabs2[0].id) activeTabId = tabs2[0].id;
+        });
+      }
+    });
   }
 
   // Load language preference, browser filter, tracking mode, and category from storage

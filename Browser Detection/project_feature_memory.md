@@ -3,9 +3,9 @@
 
 > **दस्तावेज़ प्रकार (Document Type):** Local Project Feature Memory & Diagnostic Matrix (Rule 20 & 23)  
 > **प्रोजेक्ट पाथ (Project Path):** [`c:\Users\Atul Verma\Desktop\Win App Tracker\Browser Detection`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection)  
-> **अंतिम सिंक्रोनाइज़ेशन (Last Synchronized):** 2026-11-25  
-> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261125-SVGCLASS-001`  
-> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (`TASK-SVG-CLASSNAME-FIX-001` certified Grade A+ with 129/129 test suites PASSED cleanly, Exit Code 0)  
+> **अंतिम सिंक्रोनाइज़ेशन (Last Synchronized):** 2026-11-26  
+> **सक्रिय ऑथराइजेशन टोकन (Active Auth Token):** `AUTH-MGR-20261126-BFCACHE-QA-001` (`AUTH-MGR-20261126-BFCACHE-LASTERROR-001`)  
+> **वर्तमान गेट स्थिति (Current Gate State):** `COMPLETED` (`TASK-BFCACHE-PORT-LASTERROR-FIX-001` certified Grade A+ with 130/130 test suites PASSED cleanly, Exit Code 0)  
 > **संबंधित दस्तावेज़ (Associated Deliverables):**  
 > - डैशबोर्ड भविष्य के फीचर्स मास्टर प्रॉम्प्ट (Future Features): [`dashboard_future_features_prompt.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_future_features_prompt.md)  
 > - डैशबोर्ड यूआई/यूएक्स पुनर्स्थापना मास्टर प्रॉम्प्ट (UI/UX Restoration): [`dashboard_ui_ux_restoration_prompt.md`](file:///c:/Users/Atul%20Verma/Desktop/Win%20App%20Tracker/Browser%20Detection/dashboard_ui_ux_restoration_prompt.md)  
@@ -22,12 +22,12 @@
 
 ## 🚦 0. लाइव एजेंट स्थिति एवं स्टेटफुल हैंडऑफ लेजर (Decision Gate State Ledger)
 
-- **सक्रिय कार्य आईडी (Task ID):** `TASK-SVG-CLASSNAME-FIX-001`
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-BFCACHE-PORT-LASTERROR-FIX-001`
 - **वर्तमान गेट अवस्था (Current State):** `COMPLETED` (Grade A+ Certified)
-- **सत्यापित ऑथराइजेशन टोकन (Verified Token):** `AUTH-MGR-20261125-SVGCLASS-001` (QA Certified)
+- **सत्यापित ऑथराइजेशन टोकन (Verified Token):** `AUTH-MGR-20261126-BFCACHE-LASTERROR-001` / `AUTH-MGR-20261126-BFCACHE-QA-001` (QA Certified)
 - **आगामी ऑथराइजेशन टोकन (Next Token):** `IDLE / READY FOR NEXT TASK`
 - **सब-मैनेजर हार्टबीट (Sub Manager Heartbeat):** `HEALTHY` (Zero zombie processes, zero stalled tasks)
-- **सक्रिय माइलस्टोन (Active Milestone):** SVGElement `className` Getter-Only TypeError Fix in Productivity Gauge (`TASK-SVG-CLASSNAME-FIX-001`, Grade A+ Certified). Replaced `circle.className = ...` with `circle.setAttribute('class', `gauge-progress tier-${resolvedTier}`);` in `dashboard/dashboard.js` (`L2690`) and `src/dashboard/features/temporal_productivity_feature.js` (`L788`), audited 226 `.className =` sites across `dashboard/` and `src/dashboard/` (0 other SVG targets), added 4-battery strict getter-only SVG mock regression test (`tests/test_svg_classname_regression.js`, `205` lines), and certified **129/129 test suites PASSED** (`node run_all_tests.js`, `36.39s`, Exit Code `0`).
+- **सक्रिय माइलस्टोन (Active Milestone):** BFCache Port Disconnect `runtime.lastError` & IPC Messaging Hardening (`TASK-BFCACHE-PORT-LASTERROR-FIX-001`, Grade A+ Certified). Consumed `browserAPI.runtime.lastError` across all `onDisconnect.addListener` (`timestamp_reconciliation.js`, `background.js`, `content_media.js`), hardened `pagehide`/`pageshow` (`event.persisted`) BFCache keepalive lifecycle in `content_media.js`, hardened `sendMessage`/`tabs.sendMessage`/`tabs.query`/`sendNativeMessage` sites across 14 source modules (`0` diff lines in `commitBackgroundMediaDelta` & background media loops), added `tests/test_bfcache_port_lasterror_regression.js` (`321` lines), aligned `tests/test_media_controls_and_fullscreen_fix.js`, and certified **130/130 test suites PASSED** (`node run_all_tests.js`, `37.29s`, Exit Code `0`).
 
 ---
 
@@ -438,6 +438,27 @@
 - **फॉरेंसिक सत्यापन एवं सुरक्षा मानक (Independent QA Grade A+ Signoff):**
   - ✅ **AST सिंटैक्स एवं मास्टर टेस्ट सुइट्स:** `node run_all_tests.js` उत्तीर्ण (**129 PASSED, 0 FAILED**, `36.39s`, Exit Code `0`); `node --check` PASS across modified/added `.js` files; `tests/test_svg_classname_regression.js` (4 batteries) PASS.
   - ✅ **कोड एवं सिक्योरिटी मानक:** 0 net line growth in production `.js` files; 226 `.className =` sites audited across `dashboard/` and `src/dashboard/` with 0 other SVG targets; UTF-8 BOM (`0xEF, 0xBB, 0xBF`) PASS; `gitleaks` 0 leaks.
+
+---
+
+## 🔌 16. BFCache पोर्ट डिस्कनेक्ट `runtime.lastError` एवं IPC मैसेजिंग हार्डनिंग माइलस्टोन (BFCache Port Disconnect `runtime.lastError` & Messaging Hardening Milestone - 2026-11-26)
+
+- **सक्रिय कार्य आईडी (Task ID):** `TASK-BFCACHE-PORT-LASTERROR-FIX-001`
+- **ऑथराइजेशन टोकन (Authorization Token):** `AUTH-MGR-20261126-BFCACHE-LASTERROR-001` / `AUTH-MGR-20261126-BFCACHE-QA-001` (Certified by Independent Level 4 QA Verification Subagent)
+- **स्थिति (Current Status):** `COMPLETED` (Grade A+ Certified — `130/130` test suites PASSED cleanly, `37.29s`, Exit Code `0`)
+- **डायग्नोस्टिक मैट्रिक्स (Diagnostic Matrix - Universal Rule 20):**
+
+| S.No | File | Root Cause | Proposed Fix | Post-Fix Impact | Phase # | Test Gate |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **01** | `src/background/telemetry/timestamp_reconciliation.js` (`479` lines, `24,396` B)<br>`background.js` | `port.onDisconnect` listeners (`handleKeepaliveConnect` & `runtime.onConnect` fallback) and `sendNativeMessage` / `safeSendRuntimeMessage` / `safeSendTabMessage` lacked defensive `consumeRuntimeLastError()` & `try/catch` guards when pages moved into Chromium BFCache or native host exited. | Added `consumeRuntimeLastError()` in `timestamp_reconciliation.js`, drained `runtime.lastError` in `handleKeepaliveConnect` & `background.js` `runtime.onConnect`, guarded `LAUNCH_DESKTOP_HUD` & `LAUNCH_DATA_HUB` `sendNativeMessage` callbacks with `try/catch`, routed `handleDoomscrollCheck` through `safeSendRuntimeMessage`, and preserved **0 diff lines** in background media paths. | Eliminates `Unchecked runtime.lastError: The page keeping the extension port is moved into back/forward cache` warnings in Service Worker while keeping `timestamp_reconciliation.js` `< 500` lines / `< 24 KB` and background media 100% untouched. | Fix | `node tests/test_bfcache_port_lasterror_regression.js`<br>`node run_all_tests.js` (`130/130 PASSED`) |
+| **02** | `content_media.js` | `keepalivePort.onDisconnect` did not consume `browserAPI.runtime.lastError` and `pagehide` (`event.persisted === true`) / `pageshow` lacked explicit `isPageInBfcache` freeze gating, risking reconnect storms during BFCache entry and context invalidation uncaught errors. | Added `consumeKeepaliveLastError()`, `isPageInBfcache` flag, `handlePagehideKeepaliveSync(event)` final flush + clean disconnect, `handlePageshowKeepaliveSync(event)` backoff reset + visible reconnect, and `keepaliveTimer` cleanup on disconnect. | Zero `runtime.lastError` console leaks on BFCache navigation, zero reconnect storms while frozen, and instant keepalive restoration upon BFCache `pageshow`. | Fix | `node tests/test_bfcache_port_lasterror_regression.js` (Batteries 2–3 PASS) |
+| **03** | `popup/popup.js`, `dashboard/dashboard.js`, `src/background/handlers/tab_listeners.js`, `src/content/bridge/runtime_client.js`, `src/core/safe-messaging.js`, `src/dashboard/audio/audio_lab_controller.js`, `src/dashboard/features/media_deck_visualizer_feature.js`, `src/popup/services/*`, `src/popup/tabs/*` | Multiple `sendMessage`, `tabs.sendMessage`, and `tabs.query` callbacks across Popup, Dashboard, Bridge, and Tab Listeners omitted `runtime.lastError` consumption or Promise `.catch(() => {})` rejection handlers. | Introduced/hardened `safePopupRuntimeSendMessage`, `safePopupTabSendMessage`, `safePopupTabsQuery`, `SafeMessaging.consumeRuntimeLastError`, `safeVisualizerSendMessage`, and `drainLastError` across all 12 extension UI/bridge modules. | 100% `runtime.lastError` and MV3 Promise rejection immunity across Popup, Dashboard, Content Bridge, and Background handlers. | Fix | `node tests/test_bfcache_port_lasterror_regression.js` (Battery 4 PASS)<br>`node tests/test_media_controls_and_fullscreen_fix.js` |
+| **04** | `tests/test_bfcache_port_lasterror_regression.js` (`321` lines)<br>`tests/test_media_controls_and_fullscreen_fix.js` | No dedicated BFCache port disconnect `runtime.lastError` regression suite existed; `test_media_controls_and_fullscreen_fix.js` sliced `sendMediaControl` without `safePopupRuntimeSendMessage` / `safePopupTabsQuery`. | Authored 5-battery `tests/test_bfcache_port_lasterror_regression.js` covering SW/content `lastError` spies, BFCache `pagehide`/`pageshow`, messaging audit, and zero-touch media/BOM checks; aligned `tests/test_media_controls_and_fullscreen_fix.js` Sections 9.11, 10.3, and 10.5. | Deterministic regression coverage across all 130 test suites (`130/130 PASSED`, `37.29s`, Exit Code `0`). | Verification | `node run_all_tests.js` (`130/130 PASSED`, `37.29s`, Exit Code `0`) |
+
+- **फॉरेंसिक सत्यापन एवं सुरक्षा मानक (Independent QA Grade A+ Signoff):**
+  - ✅ **AST सिंटैक्स एवं मास्टर टेस्ट सुइट्स:** `node run_all_tests.js` उत्तीर्ण (**130 PASSED, 0 FAILED**, `37.29s`, Exit Code `0`); `node --check` PASS across all 16 modified/new `.js` files.
+  - ✅ **बैकग्राउंड मीडिया Zero-Mutation एवं आकार मानक:** `git diff -U0 -- background.js` में `commitBackgroundMediaDelta` / `trackMediaSession` / `finalizeMediaSession` / `activeMediaSessions` में `0` diff पंक्तियाँ; `src/background/telemetry/domain_tracker.js` में `0` diff; `timestamp_reconciliation.js` `479` lines (`<= 500`) और `24,396` bytes (`< 24,576`).
+  - ✅ **सीक्रेट सुरक्षा एवं UTF-8 BOM:** `gitleaks detect --source . --no-git --redact` (`0` leaks) & `gitleaks detect --redact` (`342` commits, `0` leaks); समस्त `.js` व `.md` डिलीवरेबल्स पर `0xEF, 0xBB, 0xBF` BOM प्रीफिक्स सत्यापित।
 
 
 

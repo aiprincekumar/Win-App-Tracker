@@ -1574,6 +1574,11 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
 
   // 9.11 Test Real sendMediaControl Envelope Construction and Message Dispatch
   {
+    const safePopupStart = popupJsCode.indexOf('function safePopupRuntimeSendMessage(');
+    const safePopupEnd = popupJsCode.indexOf('// Modular Popup Subsystems', safePopupStart);
+    assert(safePopupStart !== -1 && safePopupEnd !== -1, 'Must find safePopup helpers in popup.js');
+    const safePopupHelpersCode = popupJsCode.slice(safePopupStart, safePopupEnd);
+
     const sendMediaControlStart = popupJsCode.indexOf('function sendMediaControl(action, data = {}, tabId = null) {');
     assert(sendMediaControlStart !== -1, 'Must find sendMediaControl definition in popup.js');
     const sendMediaControlEnd = popupJsCode.indexOf('function getDomainSecondsForMode(', sendMediaControlStart);
@@ -1593,8 +1598,10 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
       setTimeout: () => {},
       browserAPI: {
         runtime: {
+          lastError: null,
           sendMessage: (msg, cb) => {
             runtimeMessages.push(msg);
+            if (typeof cb === 'function') cb({ success: true });
             return Promise.resolve({ success: true });
           }
         }
@@ -1605,6 +1612,7 @@ console.log('\nTest 9: Runtime Simulated Functional Mock Test Suite');
     };
 
     const smcContext = vm.createContext(smcScope);
+    if (safePopupHelpersCode) vm.runInContext(safePopupHelpersCode, smcContext);
     vm.runInContext(getActiveMediaTabIdCode, smcContext);
     vm.runInContext(sendMediaControlCode, smcContext);
 
@@ -1745,12 +1753,21 @@ console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabI
   assert(popupCode.includes('function getActiveMediaTabId()'), 'popup/popup.js must define getActiveMediaTabId');
   assert(popupCode.includes('const resolvedTabId = tabId || getActiveMediaTabId();') || popupCode.includes('tabId || getActiveMediaTabId()'), 
     'popup/popup.js sendMediaControl must auto-resolve tabId using getActiveMediaTabId');
-  assert(popupCode.includes("browserAPI.tabs.query({ active: true, lastFocusedWindow: true }"),
-    'popup/popup.js sendMediaControl must query active tab in lastFocusedWindow');
-  assert(popupCode.includes("browserAPI.tabs.query({ active: true, currentWindow: true }"),
-    'popup/popup.js sendMediaControl must query active tab in currentWindow fallback');
-  assert(popupCode.includes("browserAPI.tabs.query({ audible: true }"),
-    'popup/popup.js sendMediaControl must query audible tab as ultimate fallback');
+  assert(
+    popupCode.includes('browserAPI.tabs.query({ active: true, lastFocusedWindow: true }') ||
+    popupCode.includes('safePopupTabsQuery({ active: true, lastFocusedWindow: true }'),
+    'popup/popup.js sendMediaControl must query active tab in lastFocusedWindow'
+  );
+  assert(
+    popupCode.includes('browserAPI.tabs.query({ active: true, currentWindow: true }') ||
+    popupCode.includes('safePopupTabsQuery({ active: true, currentWindow: true }'),
+    'popup/popup.js sendMediaControl must query active tab in currentWindow fallback'
+  );
+  assert(
+    popupCode.includes('browserAPI.tabs.query({ audible: true }') ||
+    popupCode.includes('safePopupTabsQuery({ audible: true }'),
+    'popup/popup.js sendMediaControl must query audible tab as ultimate fallback'
+  );
   console.log('  ✅ 10.3: popup/popup.js targetTabId resolution parity with dashboard verified');
 
   // 10.4 popup/popup.js: Strict Invariant Guards
@@ -1807,6 +1824,11 @@ console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabI
     assert.strictEqual(tier4Scope.getActiveMediaTabId(), null, 'Tier 4 must resolve to null when no tab is cached');
 
     // Multi-tier query fallback inside sendMediaControl
+    const safePopupStart = popupCode.indexOf('function safePopupRuntimeSendMessage(');
+    const safePopupEnd = popupCode.indexOf('// Modular Popup Subsystems', safePopupStart);
+    assert(safePopupStart !== -1 && safePopupEnd !== -1, 'Must find safePopup helpers in popup.js');
+    const safePopupHelpersCode = popupCode.slice(safePopupStart, safePopupEnd);
+
     const sendMediaControlStart = popupCode.indexOf('function sendMediaControl(action, data = {}, tabId = null) {');
     const sendMediaControlEnd = popupCode.indexOf('function getDomainSecondsForMode(', sendMediaControlStart);
     const sendMediaControlCode = popupCode.slice(sendMediaControlStart, sendMediaControlEnd);
@@ -1824,8 +1846,10 @@ console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabI
       setTimeout: () => {},
       browserAPI: {
         runtime: {
+          lastError: null,
           sendMessage: (msg, cb) => {
             dispatchedMessages.push(msg);
+            if (typeof cb === 'function') cb({ success: true });
             return Promise.resolve({ success: true });
           }
         },
@@ -1845,6 +1869,7 @@ console.log('\nTest 10: Parity Resilience, Mute Single Inversion, and targetTabI
     };
 
     const multiTierCtx = vm.createContext(multiTierScope);
+    if (safePopupHelpersCode) vm.runInContext(safePopupHelpersCode, multiTierCtx);
     vm.runInContext(getActiveMediaTabIdCode, multiTierCtx);
     vm.runInContext(sendMediaControlCode, multiTierCtx);
 

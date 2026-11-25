@@ -29,13 +29,16 @@
 
     return new Promise((resolve) => {
       try {
-        api.runtime.sendMessage(message, (res) => {
-          if (api.runtime.lastError || !res) {
+        const p = api.runtime.sendMessage(message, (res) => {
+          let err = null;
+          try { err = api.runtime ? api.runtime.lastError : null; } catch (_) {}
+          if (err || !res) {
             resolve({ success: false, offlineFallback: true });
           } else {
             resolve(res);
           }
         });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (_) {
         resolve({ success: false, offlineFallback: true });
       }

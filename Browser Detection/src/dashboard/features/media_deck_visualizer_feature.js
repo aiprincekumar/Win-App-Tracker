@@ -85,32 +85,45 @@
       }
     }
 
+    function safeVisualizerSendMessage(rtApi, message, onResponse) {
+      if (!rtApi || !rtApi.runtime || typeof rtApi.runtime.sendMessage !== 'function') return false;
+      try {
+        const p = rtApi.runtime.sendMessage(message, (res) => {
+          let err = null;
+          try { err = rtApi.runtime ? rtApi.runtime.lastError : null; } catch (_) {}
+          if (typeof onResponse === 'function') onResponse(res, err);
+        });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
     if (command === 'switch_tab' || command === 'focus_tab') {
       if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
         return new Promise((resolve) => {
-          try {
-            api.runtime.sendMessage({
-              action: 'DASHBOARD_REMOTE_MEDIA_CMD',
-              tabId: numTabId,
-              command: 'switch_tab',
-              value
-            }, (res) => {
-              if (res && res.success) {
-                resolve(res);
-              } else {
-                try {
-                  api.runtime.sendMessage({
-                    type: 'JUMP_TO_MEDIA_TAB',
-                    tabId: numTabId
-                  }, (fallbackRes) => {
-                    resolve(fallbackRes || res || { success: true, tabId: numTabId, command });
-                  });
-                } catch (_) {
-                  resolve(res || { success: true, simulated: true, tabId: numTabId, command });
-                }
+          const sent = safeVisualizerSendMessage(api, {
+            action: 'DASHBOARD_REMOTE_MEDIA_CMD',
+            tabId: numTabId,
+            command: 'switch_tab',
+            value
+          }, (res) => {
+            if (res && res.success) {
+              resolve(res);
+            } else {
+              const sentFallback = safeVisualizerSendMessage(api, {
+                type: 'JUMP_TO_MEDIA_TAB',
+                tabId: numTabId
+              }, (fallbackRes) => {
+                resolve(fallbackRes || res || { success: true, tabId: numTabId, command });
+              });
+              if (!sentFallback) {
+                resolve(res || { success: true, simulated: true, tabId: numTabId, command });
               }
-            });
-          } catch (_) {
+            }
+          });
+          if (!sent) {
             resolve({ success: true, simulated: true, tabId: numTabId, command });
           }
         });
@@ -119,16 +132,15 @@
 
     if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
       return new Promise((resolve) => {
-        try {
-          api.runtime.sendMessage({
-            action: 'DASHBOARD_REMOTE_MEDIA_CMD',
-            tabId: numTabId,
-            command,
-            value
-          }, (res) => {
-            resolve(res || { success: true, tabId: numTabId, command });
-          });
-        } catch (_) {
+        const sent = safeVisualizerSendMessage(api, {
+          action: 'DASHBOARD_REMOTE_MEDIA_CMD',
+          tabId: numTabId,
+          command,
+          value
+        }, (res) => {
+          resolve(res || { success: true, tabId: numTabId, command });
+        });
+        if (!sent) {
           resolve({ success: true, simulated: true, tabId: numTabId, command });
         }
       });
@@ -196,9 +208,11 @@
       return new Promise((resolve) => {
         try {
           const msg = Object.assign({ action: canonicalAction, type: canonicalAction, mediaAction: action }, data);
-          api.runtime.sendMessage(msg, (res) => {
+          const p = api.runtime.sendMessage(msg, (res) => {
+            try { void (api.runtime && api.runtime.lastError); } catch (_) {}
             resolve(res || Object.assign({ success: true }, data));
           });
+          if (p && typeof p.catch === 'function') p.catch(() => {});
         } catch (_) {
           resolve(Object.assign({ success: true, simulated: true }, data));
         }
@@ -354,7 +368,8 @@
     if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
       return new Promise((resolve) => {
         try {
-          api.runtime.sendMessage({ action: 'DASHBOARD_GET_ALL_MEDIA_STREAMS' }, (response) => {
+          const p = api.runtime.sendMessage({ action: 'DASHBOARD_GET_ALL_MEDIA_STREAMS' }, (response) => {
+            try { void (api.runtime && api.runtime.lastError); } catch (_) {}
             let streams = [];
             if (response) {
               if (Array.isArray(response.streams)) {
@@ -381,6 +396,7 @@
             }
             resolve(sanitizedStreams);
           });
+          if (p && typeof p.catch === 'function') p.catch(() => {});
         } catch (_) {
           resolve(cachedStreams);
         }

@@ -26,13 +26,17 @@
   let fallbackQueue = Promise.resolve();
 
   function getSessionStorageArea(browserAPI) {
-    if (browserAPI && browserAPI.storage && browserAPI.storage.session) {
-      return browserAPI.storage.session;
-    }
-    if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
-      return browserAPI.storage.local;
-    }
+    if (browserAPI?.storage?.session) return browserAPI.storage.session;
+    if (browserAPI?.storage?.local) return browserAPI.storage.local;
     return null;
+  }
+
+  function consumeRuntimeLastError(browserAPI) {
+    try {
+      const rt = (browserAPI && browserAPI.runtime) ? browserAPI.runtime : (typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime : null);
+      const err = rt ? rt.lastError : null;
+      return err || null;
+    } catch (_) { return null; }
   }
 
   async function readCheckpointRaw(browserAPI) {
@@ -79,17 +83,9 @@
     return next;
   }
 
-  function getActiveSessionCheckpoint(browserAPI) {
-    return enqueueCheckpointOp(browserAPI, () => readCheckpointRaw(browserAPI));
-  }
-
-  function saveActiveSessionCheckpoint(browserAPI, sessionData) {
-    return enqueueCheckpointOp(browserAPI, () => writeCheckpointRaw(browserAPI, sessionData));
-  }
-
-  function clearActiveSessionCheckpoint(browserAPI) {
-    return enqueueCheckpointOp(browserAPI, () => removeCheckpointRaw(browserAPI));
-  }
+  const getActiveSessionCheckpoint = (browserAPI) => enqueueCheckpointOp(browserAPI, () => readCheckpointRaw(browserAPI));
+  const saveActiveSessionCheckpoint = (browserAPI, sessionData) => enqueueCheckpointOp(browserAPI, () => writeCheckpointRaw(browserAPI, sessionData));
+  const clearActiveSessionCheckpoint = (browserAPI) => enqueueCheckpointOp(browserAPI, () => removeCheckpointRaw(browserAPI));
 
   function calculateReconciledDelta(session, now = Date.now()) {
     if (!session) return { deltaSeconds: 0, isSleepGap: false, rawElapsedSec: 0 };
@@ -458,6 +454,7 @@
     });
 
     port.onDisconnect.addListener(() => {
+      consumeRuntimeLastError(context && context.browserAPI);
       activeKeepalivePorts.delete(tabId);
       if (typeof context?.onKeepaliveDisconnect === 'function') {
         context.onKeepaliveDisconnect(tabId);
@@ -468,26 +465,11 @@
   }
 
   const TimestampReconciliation = Object.freeze({
-    STORAGE_KEY_ACTIVE_SESSION,
-    PORT_NAME_KEEPALIVE,
-    KEEPALIVE_HEARTBEAT_INTERVAL_MS,
-    MAX_RECONCILE_DRIFT_SEC,
-    SLEEP_THRESHOLD_SEC,
-    activeKeepalivePorts,
-    getSessionStorageArea,
-    getActiveSessionCheckpoint,
-    saveActiveSessionCheckpoint,
-    clearActiveSessionCheckpoint,
-    calculateReconciledDelta,
-    formatLocalDateKey,
-    splitIntervalAcrossHourAndDateBuckets,
-    resolveReconciliationPlan,
-    applyMergedSessionUpdates,
-    updateActiveSession,
-    creditDomainTime,
-    reconcileSessionDelta,
-    processKeepaliveHeartbeat,
-    handleKeepaliveConnect
+    STORAGE_KEY_ACTIVE_SESSION, PORT_NAME_KEEPALIVE, KEEPALIVE_HEARTBEAT_INTERVAL_MS, MAX_RECONCILE_DRIFT_SEC, SLEEP_THRESHOLD_SEC,
+    activeKeepalivePorts, consumeRuntimeLastError, getSessionStorageArea, getActiveSessionCheckpoint,
+    saveActiveSessionCheckpoint, clearActiveSessionCheckpoint, calculateReconciledDelta, formatLocalDateKey,
+    splitIntervalAcrossHourAndDateBuckets, resolveReconciliationPlan, applyMergedSessionUpdates,
+    updateActiveSession, creditDomainTime, reconcileSessionDelta, processKeepaliveHeartbeat, handleKeepaliveConnect
   });
 
   if (typeof module !== 'undefined' && module.exports) {

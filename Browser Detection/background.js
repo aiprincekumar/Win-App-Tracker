@@ -243,7 +243,8 @@ function safeSendRuntimeMessage(message, callback) {
       }
 
       const maybePromise = browserAPI.runtime.sendMessage(message, (response) => {
-        const lastErr = browserAPI.runtime.lastError;
+        let lastErr = null;
+        try { lastErr = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null; } catch (_) {}
         handleResult(response, lastErr || null);
       });
 
@@ -312,7 +313,8 @@ async function safeSendTabMessage(tabId, message, callback) {
       }
 
       const maybePromise = browserAPI.tabs.sendMessage(tabId, message, (response) => {
-        const lastErr = browserAPI.runtime.lastError;
+        let lastErr = null;
+        try { lastErr = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null; } catch (_) {}
         handleResult(response, lastErr || null);
       });
 
@@ -4887,6 +4889,12 @@ if (browserAPI.runtime && browserAPI.runtime.onConnect) {
   browserAPI.runtime.onConnect.addListener((port) => {
     if (port && port.name === 'sentinel_tracking_keepalive') {
       handleTrackingKeepaliveConnect(port);
+      return;
+    }
+    if (port && port.onDisconnect && typeof port.onDisconnect.addListener === 'function') {
+      port.onDisconnect.addListener(() => {
+        try { void (browserAPI && browserAPI.runtime && browserAPI.runtime.lastError); } catch (_) {}
+      });
     }
   });
 }
@@ -4940,12 +4948,10 @@ async function handleDoomscrollCheck() {
             priority: 2
           });
         }
-        if (browserAPI.runtime && typeof browserAPI.runtime.sendMessage === 'function') {
-          browserAPI.runtime.sendMessage({
-            type: 'DOOMSCROLL_ALERT',
-            text: `Break recommended: ${doomscrollConsecutiveMinutes}m on ${url.hostname}`
-          }).catch(() => {});
-        }
+        safeSendRuntimeMessage({
+          type: 'DOOMSCROLL_ALERT',
+          text: `Break recommended: ${doomscrollConsecutiveMinutes}m on ${url.hostname}`
+        });
         doomscrollConsecutiveMinutes = 0;
       }
     } else {
@@ -5379,7 +5385,8 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'com.antigravity.videohud',
           { action: 'launch', timestamp: Date.now() },
           (response) => {
-            const err = browserAPI.runtime.lastError;
+            let err = null;
+            try { err = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null; } catch (_) {}
             if (err || !response || response.status === 'error') {
               console.warn('[Sentinel Native] Native host launch warning / unavailable:', err ? err.message : response);
               try {
@@ -5871,6 +5878,12 @@ browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
           'com.antigravity.videohud',
           { action: 'launch_hub', timestamp: Date.now() },
           (response) => {
+            let err = null;
+            try { err = (browserAPI && browserAPI.runtime) ? browserAPI.runtime.lastError : null; } catch (_) {}
+            if (err) {
+              console.warn('[MediaSentinel] Native Data Hub launch warning:', err.message || err);
+              return;
+            }
             console.log('[MediaSentinel] Data Hub launch signal sent to Native Host:', response);
           }
         );

@@ -29,7 +29,8 @@ function safeRuntimeSendMessage(message, callback) {
   try {
     if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
       const p = browserAPI.runtime.sendMessage(message, (res) => {
-        const err = browserAPI.runtime.lastError;
+        let err = null;
+        try { err = browserAPI.runtime ? browserAPI.runtime.lastError : null; } catch (_) {}
         if (callback && typeof callback === 'function') {
           try { callback(res, err); } catch (_) {}
         }
@@ -2420,12 +2421,15 @@ function dispatchAudioLabSettings(settings) {
     : (typeof chrome !== 'undefined' && chrome.runtime ? chrome : (typeof browser !== 'undefined' && browser.runtime ? browser : (typeof globalThis !== 'undefined' && globalThis.browserAPI ? globalThis.browserAPI : null)));
   const pm = dashboardData && dashboardData.globalMediaState && dashboardData.globalMediaState.primaryMedia;
   const targetTabId = (pm && pm.tabId) ? pm.tabId : undefined;
+  const drainLastError = () => {
+    try { void (api && api.runtime && api.runtime.lastError); } catch (_) {}
+  };
   if (targetTabId && api && api.tabs && typeof api.tabs.sendMessage === 'function') {
     try {
       const p = api.tabs.sendMessage(targetTabId, {
         type: 'APPLY_AUDIO_LAB_SETTINGS',
         settings: settings
-      });
+      }, drainLastError);
       if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (_) {}
   }
@@ -2435,7 +2439,7 @@ function dispatchAudioLabSettings(settings) {
         type: 'APPLY_AUDIO_LAB_SETTINGS',
         settings: settings,
         tabId: targetTabId
-      });
+      }, drainLastError);
       if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
     } catch (_) {}
   }
@@ -4831,9 +4835,7 @@ async function addBlacklistPattern(pattern) {
     if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
       await browserAPI.storage.local.set({ tracking_blacklist: trackingBlacklist });
     }
-    if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-      browserAPI.runtime.sendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist }).catch(() => {});
-    }
+    safeRuntimeSendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist });
     renderBlacklistChips();
   }
 }
@@ -4845,9 +4847,7 @@ async function removeBlacklistPattern(pattern) {
   if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
     await browserAPI.storage.local.set({ tracking_blacklist: trackingBlacklist });
   }
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist }).catch(() => {});
-  }
+  safeRuntimeSendMessage({ action: 'UPDATE_TRACKING_BLACKLIST', blacklist: trackingBlacklist });
   renderBlacklistChips();
 }
 
@@ -4858,7 +4858,16 @@ async function purgeDomainData(targetDomain) {
 
   if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
     try {
-      const resp = await browserAPI.runtime.sendMessage({ action: 'PURGE_DOMAIN_HISTORY', domain: clean });
+      const resp = await new Promise((resolve) => {
+        let settled = false;
+        const done = (val) => { if (!settled) { settled = true; resolve(val || null); } };
+        const p = safeRuntimeSendMessage({ action: 'PURGE_DOMAIN_HISTORY', domain: clean }, (res, err) => {
+          done(err ? null : res);
+        });
+        if (p && typeof p.then === 'function') {
+          p.then((res) => done(res)).catch(() => done(null));
+        }
+      });
       if (resp && resp.success) {
         if (dashboardData && dashboardData.domains) {
           delete dashboardData.domains[clean];
@@ -4947,9 +4956,7 @@ async function setDomainBudget(domain, minutes) {
   if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
     await browserAPI.storage.local.set({ domain_budgets: domainBudgets });
   }
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets }).catch(() => {});
-  }
+  safeRuntimeSendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets });
   renderDomainBudgetsList();
   if (dashboardData && dashboardData.domains) {
     renderTimeTrackingTab(dashboardData);
@@ -4963,9 +4970,7 @@ async function removeDomainBudget(domain) {
   if (browserAPI && browserAPI.storage && browserAPI.storage.local) {
     await browserAPI.storage.local.set({ domain_budgets: domainBudgets });
   }
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets }).catch(() => {});
-  }
+  safeRuntimeSendMessage({ action: 'UPDATE_DOMAIN_BUDGETS', budgets: domainBudgets });
   renderDomainBudgetsList();
   if (dashboardData && dashboardData.domains) {
     renderTimeTrackingTab(dashboardData);
@@ -11927,14 +11932,20 @@ function stopDashSleepTicker() {
  */
 function fetchSleepTimerState() {
   try {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'GET_SLEEP_TIMER_STATE' }, (res) => {
-        if (res && res.success && res.state) {
+    const rtApi = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage)
+      ? chrome
+      : (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage ? browserAPI : null);
+    if (rtApi) {
+      const p = rtApi.runtime.sendMessage({ type: 'GET_SLEEP_TIMER_STATE' }, (res) => {
+        let err = null;
+        try { err = rtApi.runtime ? rtApi.runtime.lastError : null; } catch (_) {}
+        if (!err && res && res.success && res.state) {
           renderDashSleepTimer(res.state);
         } else {
           loadSleepTimerFromStorage();
         }
       });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } else {
       loadSleepTimerFromStorage();
     }
@@ -12228,33 +12239,28 @@ function triggerSetSleepTimer(minutes) {
   const toggleInactivity = document.getElementById('toggleDashSleepInactivity');
   const inactChecked = toggleInactivity ? toggleInactivity.checked : false;
 
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({
-      type: 'SET_SLEEP_TIMER',
-      action: 'SET_SLEEP_TIMER',
-      durationMinutes: minutes,
-      enableFade: enableFade,
-      options: {
-        enableFadeOut: enableFade,
-        endOfVideo: endVideo,
-        fadeDurationSeconds: fadeSeconds,
-        fade_curve_duration: fadeSeconds,
-        fade_duration: fadeSeconds,
-        timeoutAction: timeoutAction,
-        timeout_action: timeoutAction,
-        enableInactivityAutoSleep: inactChecked,
-        inactivity_auto_sleep: inactChecked,
-        inactivity_enabled: inactChecked
-      }
-    }, (res) => {
-      if (browserAPI.runtime.lastError) {
-        // Suppress lastError gracefully
-      }
-      if (res && res.success && res.state) {
-        renderDashSleepTimer(res.state);
-      }
-    });
-  }
+  safeRuntimeSendMessage({
+    type: 'SET_SLEEP_TIMER',
+    action: 'SET_SLEEP_TIMER',
+    durationMinutes: minutes,
+    enableFade: enableFade,
+    options: {
+      enableFadeOut: enableFade,
+      endOfVideo: endVideo,
+      fadeDurationSeconds: fadeSeconds,
+      fade_curve_duration: fadeSeconds,
+      fade_duration: fadeSeconds,
+      timeoutAction: timeoutAction,
+      timeout_action: timeoutAction,
+      enableInactivityAutoSleep: inactChecked,
+      inactivity_auto_sleep: inactChecked,
+      inactivity_enabled: inactChecked
+    }
+  }, (res) => {
+    if (res && res.success && res.state) {
+      renderDashSleepTimer(res.state);
+    }
+  });
 }
 
 function triggerPauseSleepTimer() {
@@ -12276,18 +12282,11 @@ function triggerPauseSleepTimer() {
     } catch (_) {}
 
     // Dispatch message with graceful runtime error suppression
-    try {
-      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-        browserAPI.runtime.sendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
-          if (browserAPI.runtime.lastError) {
-            // Gracefully ignore/suppress
-          }
-          if (res && res.success && res.state) {
-            renderDashSleepTimer(res.state);
-          }
-        });
+    safeRuntimeSendMessage({ type: 'PAUSE_SLEEP_TIMER', action: 'PAUSE_SLEEP_TIMER' }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
       }
-    } catch (_) {}
+    });
 
     showToast('Sleep timer paused', false);
   }
@@ -12316,18 +12315,11 @@ function triggerResumeSleepTimer() {
     } catch (_) {}
 
     // Dispatch message with graceful runtime error suppression
-    try {
-      if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-        browserAPI.runtime.sendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
-          if (browserAPI.runtime.lastError) {
-            // Gracefully ignore/suppress
-          }
-          if (res && res.success && res.state) {
-            renderDashSleepTimer(res.state);
-          }
-        });
+    safeRuntimeSendMessage({ type: 'RESUME_SLEEP_TIMER', action: 'RESUME_SLEEP_TIMER' }, (res) => {
+      if (res && res.success && res.state) {
+        renderDashSleepTimer(res.state);
       }
-    } catch (_) {}
+    });
 
     showToast('Sleep timer resumed', false);
   }
@@ -12404,21 +12396,16 @@ function triggerExtendSleepTimer(extraMinutes) {
     }
   } catch (_) {}
 
-  try {
-    if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-      browserAPI.runtime.sendMessage({
-        type: 'EXTEND_SLEEP_TIMER',
-        action: 'EXTEND_SLEEP_TIMER',
-        extraMinutes: minsToAdd
-      }, (res) => {
-        if (browserAPI.runtime.lastError) {}
-        if (res && res.success && res.state) {
-          currentDashSleepTimer = res.state;
-          renderDashSleepTimer(currentDashSleepTimer);
-        }
-      });
+  safeRuntimeSendMessage({
+    type: 'EXTEND_SLEEP_TIMER',
+    action: 'EXTEND_SLEEP_TIMER',
+    extraMinutes: minsToAdd
+  }, (res) => {
+    if (res && res.success && res.state) {
+      currentDashSleepTimer = res.state;
+      renderDashSleepTimer(currentDashSleepTimer);
     }
-  } catch (_) {}
+  });
 
   showToast(`Added +${minsToAdd}m to sleep timer`, false);
 }
@@ -12433,14 +12420,11 @@ function triggerCancelSleepTimer() {
       }
     } catch (_) {}
   }
-  if (browserAPI && browserAPI.runtime && browserAPI.runtime.sendMessage) {
-    browserAPI.runtime.sendMessage({ type: 'CANCEL_SLEEP_TIMER', action: 'CANCEL_SLEEP_TIMER' }, (res) => {
-      if (browserAPI.runtime.lastError) {}
-      if (res && res.success && res.state) {
-        renderDashSleepTimer(res.state);
-      }
-    });
-  }
+  safeRuntimeSendMessage({ type: 'CANCEL_SLEEP_TIMER', action: 'CANCEL_SLEEP_TIMER' }, (res) => {
+    if (res && res.success && res.state) {
+      renderDashSleepTimer(res.state);
+    }
+  });
   showToast('Sleep timer reset', false);
 }
 

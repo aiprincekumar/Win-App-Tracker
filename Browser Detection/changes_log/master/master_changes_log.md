@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-11-26 03:46:00 IST] `BFCACHE001` — `TASK-BFCACHE-PORT-LASTERROR-FIX-001`
+- **Authorization Token:** `AUTH-MGR-20261126-BFCACHE-LASTERROR-001` / `AUTH-MGR-20261126-BFCACHE-QA-001`
+- **Type:** `fix(ipc)` — BFCache Port Disconnect `runtime.lastError` Consumption & Messaging Hardening
+- **Summary:**
+  - Added `consumeRuntimeLastError()` and drained `runtime.lastError` in `port.onDisconnect` across `src/background/telemetry/timestamp_reconciliation.js` (`479` lines, `24,396` B), `background.js` (`runtime.onConnect` fallback), and `content_media.js` (`consumeKeepaliveLastError()`).
+  - Hardened `pagehide` / `pageshow` (`event.persisted`) BFCache keepalive lifecycle in `content_media.js` with `isPageInBfcache` freeze gating, pre-freeze final flush, and backoff reset on BFCache restore.
+  - Hardened `sendMessage`, `tabs.sendMessage`, `sendNativeMessage`, and `tabs.query` callbacks + Promise rejections across `background.js`, `popup/popup.js`, `dashboard/dashboard.js`, `src/background/handlers/tab_listeners.js`, `src/content/bridge/runtime_client.js`, `src/core/safe-messaging.js`, `src/dashboard/audio/audio_lab_controller.js`, `src/dashboard/features/media_deck_visualizer_feature.js`, `src/popup/services/*`, and `src/popup/tabs/*` while keeping **0 diff lines** in `commitBackgroundMediaDelta` & background media accounting loops.
+  - Added 5-battery regression suite (`tests/test_bfcache_port_lasterror_regression.js`, `321` lines) and aligned `tests/test_media_controls_and_fullscreen_fix.js`; certified **130/130 PASSED** (`node run_all_tests.js`, `37.29s`, Exit Code `0`), `node --check` PASS, BOM PASS, and `0` leaks in `gitleaks`.
+- **Entry Record:** [`entries/2026-11-26/change_BFCACHE001_2026-11-26_03-46-00.md`](../entries/2026-11-26/change_BFCACHE001_2026-11-26_03-46-00.md)
+
 ## [2026-11-25 02:46:00 IST] `SVGCLASS001` — `TASK-SVG-CLASSNAME-FIX-001`
 - **Authorization Token:** `AUTH-MGR-20261125-SVGCLASS-001`
 - **Type:** `fix(dashboard)` — `SVGElement.className` Getter-Only `TypeError` in `renderProductivityGauge`

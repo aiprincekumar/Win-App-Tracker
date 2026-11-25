@@ -41,13 +41,16 @@
   function dispatchAudioLabSettings(settings, api = null, primaryMedia = null) {
     const runtimeApi = api || (typeof browserAPI !== 'undefined' ? browserAPI : (typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null)));
     const targetTabId = (primaryMedia && primaryMedia.tabId) ? primaryMedia.tabId : undefined;
+    const drainLastError = () => {
+      try { void (runtimeApi && runtimeApi.runtime && runtimeApi.runtime.lastError); } catch (_) {}
+    };
 
     if (targetTabId && runtimeApi && runtimeApi.tabs && typeof runtimeApi.tabs.sendMessage === 'function') {
       try {
         const p = runtimeApi.tabs.sendMessage(targetTabId, {
           type: 'APPLY_AUDIO_LAB_SETTINGS',
           settings: settings
-        });
+        }, drainLastError);
         if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (_) {}
     }
@@ -58,7 +61,7 @@
           type: 'APPLY_AUDIO_LAB_SETTINGS',
           settings: settings,
           tabId: targetTabId
-        });
+        }, drainLastError);
         if (p2 && typeof p2.catch === 'function') p2.catch(() => {});
       } catch (_) {}
     }

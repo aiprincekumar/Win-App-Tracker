@@ -79,6 +79,7 @@
   let reconnectTimeout = null;
   let reconnectBackoffMs = 1000;
   let lastHeartbeatSentAt = 0;
+  let isPageInBfcache = false;
 
   // Tracked listeners for clean unregistration on context invalidation
   let storageListenerAd = null;
@@ -190,6 +191,15 @@
     );
   }
 
+  function consumeKeepaliveLastError() {
+    try {
+      return (browserAPI && browserAPI.runtime) ? (browserAPI.runtime.lastError || null) : null;
+    } catch (err) {
+      if (isInvalidationError(err)) teardownMediaSentinel();
+      return null;
+    }
+  }
+
   function handleHeartbeatPostError(err, isFinal) {
     if (isInvalidationError(err)) {
       teardownMediaSentinel();
@@ -197,7 +207,7 @@
     }
     disconnectTrackingKeepalivePort();
     const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
-    if (!isFinal && isExtensionContextValid() && isVisible) {
+    if (!isFinal && !isPageInBfcache && isExtensionContextValid() && isVisible) {
       reconnectTimeout = safeSetTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
       reconnectBackoffMs = Math.min(8000, reconnectBackoffMs * 2);
     }
@@ -244,6 +254,7 @@
   }
 
   function connectTrackingKeepalivePort() {
+    if (isPageInBfcache) return;
     if (typeof window === 'undefined' || window !== window.top) return;
     if (!isExtensionContextValid()) return;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
@@ -261,12 +272,17 @@
 
       if (keepalivePort && keepalivePort.onDisconnect) {
         keepalivePort.onDisconnect.addListener(() => {
+          consumeKeepaliveLastError();
           keepalivePort = null;
           if (reconnectTimeout) {
-            clearTimeout(reconnectTimeout);
+            safeClearTimeout(reconnectTimeout);
             reconnectTimeout = null;
           }
-          if (isExtensionContextValid() && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+          if (keepaliveTimer) {
+            try { clearInterval(keepaliveTimer); } catch (_) {}
+            keepaliveTimer = null;
+          }
+          if (!isPageInBfcache && !isContextInvalidated && isExtensionContextValid() && typeof document !== 'undefined' && document.visibilityState === 'visible') {
             reconnectTimeout = safeSetTimeout(connectTrackingKeepalivePort, reconnectBackoffMs);
             reconnectBackoffMs = Math.min(8000, reconnectBackoffMs * 2);
           }
@@ -283,21 +299,44 @@
   function handleVisibilityKeepaliveSync() {
     if (isContextInvalidated || !isExtensionContextValid()) return;
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      connectTrackingKeepalivePort();
+      if (!isPageInBfcache) connectTrackingKeepalivePort();
       return;
     }
     if (keepalivePort) sendTrackingHeartbeat(true);
     disconnectTrackingKeepalivePort();
   }
 
-  function handlePagehideKeepaliveSync() {
-    if (isContextInvalidated || !isExtensionContextValid()) return;
+  function handlePagehideKeepaliveSync(event) {
+    if (event && event.persisted === true) {
+      isPageInBfcache = true;
+    }
+    if (isContextInvalidated || !isExtensionContextValid()) {
+      disconnectTrackingKeepalivePort();
+      return;
+    }
     if (keepalivePort) sendTrackingHeartbeat(true);
     disconnectTrackingKeepalivePort();
   }
 
-  function handleWindowFocusKeepaliveSync() {
+  function handlePageshowKeepaliveSync(event) {
     if (isContextInvalidated || !isExtensionContextValid()) return;
+    isPageInBfcache = false;
+    if (event && event.persisted) {
+      reconnectBackoffMs = 1000;
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (!keepalivePort) {
+          connectTrackingKeepalivePort();
+        } else {
+          sendTrackingHeartbeat(false);
+        }
+      }
+      return;
+    }
+    handleWindowFocusKeepaliveSync();
+  }
+
+  function handleWindowFocusKeepaliveSync() {
+    if (isPageInBfcache || isContextInvalidated || !isExtensionContextValid()) return;
     if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
     if (!keepalivePort) {
       connectTrackingKeepalivePort();
@@ -3254,7 +3293,7 @@
           document.addEventListener('visibilitychange', handleVisibilityKeepaliveSync);
           window.addEventListener('pagehide', handlePagehideKeepaliveSync);
           window.addEventListener('focus', handleWindowFocusKeepaliveSync);
-          window.addEventListener('pageshow', handleWindowFocusKeepaliveSync);
+          window.addEventListener('pageshow', handlePageshowKeepaliveSync);
           if (document.visibilityState === 'visible') {
             connectTrackingKeepalivePort();
           }
@@ -3290,7 +3329,10 @@
       sendTrackingHeartbeat,
       handleVisibilityKeepaliveSync,
       handlePagehideKeepaliveSync,
+      handlePageshowKeepaliveSync,
       handleWindowFocusKeepaliveSync,
+      consumeKeepaliveLastError,
+      isPageInBfcache: () => isPageInBfcache,
       getKeepalivePort: () => keepalivePort,
       isExcludedTrackingHost,
       setupUserActivityListeners,

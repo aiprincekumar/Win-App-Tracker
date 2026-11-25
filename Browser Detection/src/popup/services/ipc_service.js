@@ -16,13 +16,16 @@
 
     return new Promise((resolve) => {
       try {
-        api.runtime.sendMessage(message, (response) => {
-          if (api.runtime.lastError) {
-            resolve({ success: false, error: api.runtime.lastError.message });
+        const p = api.runtime.sendMessage(message, (response) => {
+          let err = null;
+          try { err = api.runtime ? api.runtime.lastError : null; } catch (_) {}
+          if (err) {
+            resolve({ success: false, error: err.message });
           } else {
             resolve(response || { success: true });
           }
         });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (err) {
         resolve({ success: false, error: err.message });
       }

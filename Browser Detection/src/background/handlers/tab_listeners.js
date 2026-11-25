@@ -120,7 +120,10 @@
 
         try {
           if (api && api.tabs && typeof api.tabs.query === 'function') {
-            api.tabs.query({ active: true, windowId }, (tabs) => {
+            const p = api.tabs.query({ active: true, windowId }, (tabs) => {
+              try {
+                if (api.runtime && api.runtime.lastError) return;
+              } catch (_) {}
               if (tabs && tabs[0] && tabs[0].url) {
                 state.activeTabId = tabs[0].id;
                 const domain = extractDomain ? extractDomain(tabs[0].url) : null;
@@ -129,6 +132,7 @@
                 }
               }
             });
+            if (p && typeof p.catch === 'function') p.catch(() => {});
           }
         } catch (_) {}
       }

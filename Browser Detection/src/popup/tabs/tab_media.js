@@ -110,9 +110,10 @@
     };
 
     try {
-      api.runtime.sendMessage(message, () => {
-        if (api.runtime.lastError) {}
+      const p = api.runtime.sendMessage(message, () => {
+        try { void (api.runtime && api.runtime.lastError); } catch (_) {}
       });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (_) {}
   }
 

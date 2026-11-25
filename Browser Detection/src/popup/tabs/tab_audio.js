@@ -178,12 +178,13 @@
     const api = typeof browser !== 'undefined' && browser.runtime ? browser : (typeof chrome !== 'undefined' ? chrome : null);
     if (api && api.runtime && api.runtime.sendMessage) {
       try {
-        api.runtime.sendMessage({
+        const p = api.runtime.sendMessage({
           type: 'APPLY_AUDIO_LAB_SETTINGS',
           settings: _audioLabSettings
         }, () => {
-          if (api.runtime.lastError) {}
+          try { void (api.runtime && api.runtime.lastError); } catch (_) {}
         });
+        if (p && typeof p.catch === 'function') p.catch(() => {});
       } catch (_) {}
     }
 

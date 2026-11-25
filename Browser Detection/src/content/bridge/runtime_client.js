@@ -41,13 +41,16 @@
     }
 
     try {
-      api.runtime.sendMessage(message, (res) => {
-        if (api.runtime.lastError) {
-          if (typeof callback === 'function') callback(null, api.runtime.lastError);
+      const p = api.runtime.sendMessage(message, (res) => {
+        let err = null;
+        try { err = api.runtime ? api.runtime.lastError : null; } catch (_) {}
+        if (err) {
+          if (typeof callback === 'function') callback(null, err);
         } else {
           if (typeof callback === 'function') callback(res, null);
         }
       });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     } catch (e) {
       if (typeof callback === 'function') callback(null, e);
     }

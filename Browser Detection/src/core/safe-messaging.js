@@ -27,6 +27,16 @@
     );
   }
 
+  function consumeRuntimeLastError(api) {
+    try {
+      const target = api || (typeof browser !== 'undefined' && browser.runtime ? browser : (typeof chrome !== 'undefined' ? chrome : null));
+      const err = target && target.runtime ? target.runtime.lastError : null;
+      return err || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async function safeSendRuntimeMessage(message, maxRetries = 2) {
     const api = typeof browser !== 'undefined' && browser.runtime ? browser : (typeof chrome !== 'undefined' ? chrome : null);
     if (!api || !api.runtime || !api.runtime.sendMessage) return null;
@@ -35,14 +45,15 @@
       try {
         const response = await new Promise((resolve) => {
           try {
-            api.runtime.sendMessage(message, (res) => {
-              const err = api.runtime.lastError;
+            const p = api.runtime.sendMessage(message, (res) => {
+              const err = consumeRuntimeLastError(api);
               if (err) {
                 resolve({ __error: err.message });
               } else {
                 resolve(res);
               }
             });
+            if (p && typeof p.catch === 'function') p.catch(() => {});
           } catch (syncErr) {
             resolve({ __error: syncErr.message });
           }
@@ -73,14 +84,15 @@
       try {
         const response = await new Promise((resolve) => {
           try {
-            api.tabs.sendMessage(Number(tabId), message, (res) => {
-              const err = api.runtime && api.runtime.lastError;
+            const p = api.tabs.sendMessage(Number(tabId), message, (res) => {
+              const err = consumeRuntimeLastError(api);
               if (err) {
                 resolve({ __error: err.message });
               } else {
                 resolve(res);
               }
             });
+            if (p && typeof p.catch === 'function') p.catch(() => {});
           } catch (syncErr) {
             resolve({ __error: syncErr.message });
           }
@@ -124,6 +136,7 @@
 
   const SafeMessaging = Object.freeze({
     isRestrictedTabUrl,
+    consumeRuntimeLastError,
     safeSendRuntimeMessage,
     safeSendTabMessage,
     setupUnhandledRejectionGuard
